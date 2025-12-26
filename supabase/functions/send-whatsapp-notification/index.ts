@@ -28,12 +28,23 @@ interface WhatsAppConfigRow {
   is_active: boolean;
 }
 
-// Z-PRO Provider
+// Z-PRO Provider - Uses full URL and Bearer Token
 const zproProvider: ProviderConfig = {
   async sendMessage(phone: string, message: string, config: ProviderSettings) {
-    const response = await fetch(`${config.apiUrl}/instances/${config.instanceId}/token/${config.apiKey}/send-text`, {
+    // Z-PRO uses the full URL directly, with Bearer token authentication
+    // The URL already contains the session ID
+    const sendUrl = config.apiUrl.endsWith("/send-text") 
+      ? config.apiUrl 
+      : `${config.apiUrl}/send-text`;
+    
+    console.log("Z-PRO sending to:", sendUrl);
+    
+    const response = await fetch(sendUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${config.apiKey}`,
+      },
       body: JSON.stringify({
         phone: phone.replace(/\D/g, ""),
         message: message,
@@ -43,10 +54,15 @@ const zproProvider: ProviderConfig = {
     const data = await response.json();
     console.log("Z-PRO response:", data);
     
-    if (response.ok && data.zapiMessageId) {
-      return { success: true, messageId: data.zapiMessageId };
+    if (response.ok && (data.id || data.messageId || data.zapiMessageId)) {
+      return { success: true, messageId: data.id || data.messageId || data.zapiMessageId };
     }
-    return { success: false, error: data.message || "Erro ao enviar mensagem" };
+    
+    if (response.ok && data.status === "success") {
+      return { success: true, messageId: data.id || "sent" };
+    }
+    
+    return { success: false, error: data.message || data.error || "Erro ao enviar mensagem" };
   },
 };
 
@@ -178,7 +194,8 @@ serve(async (req) => {
     const whatsappInstanceId = typedConfig.instance_id;
     const whatsappProvider = (typedConfig.provider || "zpro") as WhatsAppProvider;
 
-    console.log(`Using WhatsApp provider: ${whatsappProvider}, instance: ${whatsappInstanceId}`);
+    console.log(`Using WhatsApp provider: ${whatsappProvider}`);
+    console.log(`API URL: ${whatsappApiUrl.substring(0, 50)}...`);
 
     const { occurrence_id, resident_id, message_template }: SendNotificationRequest = await req.json();
 
@@ -301,6 +318,7 @@ Este link é pessoal e intransferível.`;
     }
 
     // Send WhatsApp message
+    console.log(`Sending WhatsApp message to: ${resident.phone}`);
     const provider = providers[whatsappProvider];
     const result = await provider.sendMessage(resident.phone, message, {
       apiUrl: whatsappApiUrl,

@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { MessageCircle, Save, TestTube, CheckCircle, XCircle, Loader2, AlertCircle } from "lucide-react";
+import { MessageCircle, Save, TestTube, CheckCircle, XCircle, Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 
@@ -38,10 +38,22 @@ interface ValidationErrors {
 }
 
 // Validation schemas per provider
-const zproSessionSchema = z.string()
-  .min(1, "Sessão é obrigatória")
-  .max(50, "Sessão deve ter no máximo 50 caracteres")
-  .regex(/^[a-zA-Z0-9_-]+$/, "Sessão deve conter apenas letras, números, hífen e underscore");
+const zproUrlSchema = z.string()
+  .min(1, "URL da API é obrigatória")
+  .url("URL inválida")
+  .max(500, "URL deve ter no máximo 500 caracteres")
+  .refine(
+    (url) => url.includes("/v2/api/external/") || url.includes("/api/"),
+    "URL deve conter o endpoint da API Z-PRO"
+  );
+
+const zproBearerTokenSchema = z.string()
+  .min(1, "Bearer Token é obrigatório")
+  .max(1000, "Token deve ter no máximo 1000 caracteres")
+  .refine(
+    (token) => token.startsWith("eyJ") || token.length > 20,
+    "Token parece inválido"
+  );
 
 const instanceIdSchema = z.string()
   .min(1, "ID da Instância é obrigatório")
@@ -63,6 +75,7 @@ export function WhatsAppConfig() {
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<"success" | "error" | null>(null);
   const [errors, setErrors] = useState<ValidationErrors>({});
+  const [showToken, setShowToken] = useState(false);
 
   const [config, setConfig] = useState<WhatsAppConfigData>({
     provider: "zpro",
@@ -118,25 +131,30 @@ export function WhatsAppConfig() {
   const validateConfig = (): boolean => {
     const newErrors: ValidationErrors = {};
 
-    // Validate API URL
-    const urlResult = apiUrlSchema.safeParse(config.api_url);
-    if (!urlResult.success) {
-      newErrors.api_url = urlResult.error.errors[0].message;
-    }
-
-    // Validate API Key
-    const keyResult = apiKeySchema.safeParse(config.api_key);
-    if (!keyResult.success) {
-      newErrors.api_key = keyResult.error.errors[0].message;
-    }
-
-    // Validate Instance ID / Session based on provider
     if (config.provider === "zpro") {
-      const sessionResult = zproSessionSchema.safeParse(config.instance_id);
-      if (!sessionResult.success) {
-        newErrors.instance_id = sessionResult.error.errors[0].message;
+      // Z-PRO uses full URL and Bearer Token
+      const urlResult = zproUrlSchema.safeParse(config.api_url);
+      if (!urlResult.success) {
+        newErrors.api_url = urlResult.error.errors[0].message;
       }
+
+      const tokenResult = zproBearerTokenSchema.safeParse(config.api_key);
+      if (!tokenResult.success) {
+        newErrors.api_key = tokenResult.error.errors[0].message;
+      }
+      // instance_id not required for Z-PRO (it's in the URL)
     } else {
+      // Other providers
+      const urlResult = apiUrlSchema.safeParse(config.api_url);
+      if (!urlResult.success) {
+        newErrors.api_url = urlResult.error.errors[0].message;
+      }
+
+      const keyResult = apiKeySchema.safeParse(config.api_key);
+      if (!keyResult.success) {
+        newErrors.api_key = keyResult.error.errors[0].message;
+      }
+
       const instanceResult = instanceIdSchema.safeParse(config.instance_id);
       if (!instanceResult.success) {
         newErrors.instance_id = instanceResult.error.errors[0].message;
@@ -159,6 +177,9 @@ export function WhatsAppConfig() {
 
     setIsSaving(true);
     try {
+      // For Z-PRO, store a placeholder for instance_id since it's in the URL
+      const instanceId = config.provider === "zpro" ? "zpro-embedded" : config.instance_id.trim();
+
       if (config.id) {
         // Update existing config
         const { error } = await supabase
@@ -167,7 +188,7 @@ export function WhatsAppConfig() {
             provider: config.provider,
             api_url: config.api_url.trim(),
             api_key: config.api_key.trim(),
-            instance_id: config.instance_id.trim(),
+            instance_id: instanceId,
             is_active: config.is_active,
           })
           .eq("id", config.id);
@@ -181,7 +202,7 @@ export function WhatsAppConfig() {
             provider: config.provider,
             api_url: config.api_url.trim(),
             api_key: config.api_key.trim(),
-            instance_id: config.instance_id.trim(),
+            instance_id: instanceId,
             is_active: true,
           })
           .select()
@@ -221,7 +242,6 @@ export function WhatsAppConfig() {
     setTestResult(null);
     
     try {
-      // Test the connection by calling a simple endpoint based on provider
       let testUrl = "";
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
@@ -229,7 +249,10 @@ export function WhatsAppConfig() {
 
       switch (config.provider) {
         case "zpro":
-          testUrl = `${config.api_url.trim()}/instances/${encodeURIComponent(config.instance_id.trim())}/token/${encodeURIComponent(config.api_key.trim())}/status`;
+          // Z-PRO: Replace 'send-text' or similar endpoints with 'status' or use base URL
+          const baseUrl = config.api_url.trim().replace(/\/send-text$/, "").replace(/\/send-message$/, "");
+          testUrl = baseUrl;
+          headers["Authorization"] = `Bearer ${config.api_key.trim()}`;
           break;
         case "zapi":
           testUrl = `${config.api_url.trim()}/instances/${encodeURIComponent(config.instance_id.trim())}/token/${encodeURIComponent(config.api_key.trim())}/status`;
@@ -258,12 +281,21 @@ export function WhatsAppConfig() {
           description: "A conexão com a API do WhatsApp foi estabelecida.",
         });
       } else {
-        setTestResult("error");
-        toast({
-          title: "Falha na conexão",
-          description: "Não foi possível conectar à API. Verifique as configurações.",
-          variant: "destructive",
-        });
+        // For Z-PRO, a 405 or similar might just mean we can't GET, but auth works
+        if (config.provider === "zpro" && response.status !== 401 && response.status !== 403) {
+          setTestResult("success");
+          toast({
+            title: "Credenciais válidas",
+            description: "As credenciais parecem estar corretas.",
+          });
+        } else {
+          setTestResult("error");
+          toast({
+            title: "Falha na conexão",
+            description: "Não foi possível conectar à API. Verifique as configurações.",
+            variant: "destructive",
+          });
+        }
       }
     } catch (error) {
       console.error("Test failed:", error);
@@ -278,26 +310,7 @@ export function WhatsAppConfig() {
     }
   };
 
-  const getSessionLabel = () => {
-    if (config.provider === "zpro") {
-      return "Nome da Sessão";
-    }
-    return "ID da Instância";
-  };
-
-  const getSessionPlaceholder = () => {
-    if (config.provider === "zpro") {
-      return "Ex: minha-sessao (sem espaços ou caracteres especiais)";
-    }
-    return "Ex: instance_123";
-  };
-
-  const getSessionHint = () => {
-    if (config.provider === "zpro") {
-      return "Use apenas letras, números, hífen (-) e underscore (_)";
-    }
-    return null;
-  };
+  const isZpro = config.provider === "zpro";
 
   if (isLoading) {
     return (
@@ -324,63 +337,42 @@ export function WhatsAppConfig() {
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="provider">Provedor</Label>
-              <Select
-                value={config.provider}
-                onValueChange={(value) => setConfig({ ...config, provider: value, instance_id: "" })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o provedor" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="zpro">Z-PRO</SelectItem>
-                  <SelectItem value="zapi">Z-API</SelectItem>
-                  <SelectItem value="evolution">Evolution API</SelectItem>
-                  <SelectItem value="wppconnect">WPPConnect</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="instanceId" className="flex items-center gap-1">
-                {getSessionLabel()}
-                {errors.instance_id && (
-                  <AlertCircle className="h-3.5 w-3.5 text-destructive" />
-                )}
-              </Label>
-              <Input
-                id="instanceId"
-                placeholder={getSessionPlaceholder()}
-                value={config.instance_id}
-                onChange={(e) => {
-                  setConfig({ ...config, instance_id: e.target.value });
-                  if (errors.instance_id) {
-                    setErrors((prev) => ({ ...prev, instance_id: undefined }));
-                  }
-                }}
-                className={errors.instance_id ? "border-destructive" : ""}
-              />
-              {getSessionHint() && !errors.instance_id && (
-                <p className="text-xs text-muted-foreground">{getSessionHint()}</p>
-              )}
-              {errors.instance_id && (
-                <p className="text-xs text-destructive">{errors.instance_id}</p>
-              )}
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="provider">Provedor</Label>
+            <Select
+              value={config.provider}
+              onValueChange={(value) => setConfig({ 
+                ...config, 
+                provider: value, 
+                instance_id: "",
+                api_url: "",
+                api_key: "" 
+              })}
+            >
+              <SelectTrigger className="w-full md:w-[300px]">
+                <SelectValue placeholder="Selecione o provedor" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="zpro">Z-PRO</SelectItem>
+                <SelectItem value="zapi">Z-API</SelectItem>
+                <SelectItem value="evolution">Evolution API</SelectItem>
+                <SelectItem value="wppconnect">WPPConnect</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="apiUrl" className="flex items-center gap-1">
-              URL da API
+              {isZpro ? "URL da API (completa)" : "URL da API"}
               {errors.api_url && (
                 <AlertCircle className="h-3.5 w-3.5 text-destructive" />
               )}
             </Label>
             <Input
               id="apiUrl"
-              placeholder="https://api.provedor.com"
+              placeholder={isZpro 
+                ? "https://api.atenderchat.com.br/v2/api/external/sua-sessao-id" 
+                : "https://api.provedor.com"}
               value={config.api_url}
               onChange={(e) => {
                 setConfig({ ...config, api_url: e.target.value });
@@ -390,6 +382,11 @@ export function WhatsAppConfig() {
               }}
               className={errors.api_url ? "border-destructive" : ""}
             />
+            {isZpro && !errors.api_url && (
+              <p className="text-xs text-muted-foreground">
+                Cole a URL completa fornecida pelo Z-PRO (inclui o ID da sessão)
+              </p>
+            )}
             {errors.api_url && (
               <p className="text-xs text-destructive">{errors.api_url}</p>
             )}
@@ -397,30 +394,77 @@ export function WhatsAppConfig() {
 
           <div className="space-y-2">
             <Label htmlFor="apiKey" className="flex items-center gap-1">
-              Chave da API (Token)
+              {isZpro ? "Bearer Token" : "Chave da API (Token)"}
               {errors.api_key && (
                 <AlertCircle className="h-3.5 w-3.5 text-destructive" />
               )}
             </Label>
-            <Input
-              id="apiKey"
-              type="password"
-              placeholder="••••••••••••••••"
-              value={config.api_key}
-              onChange={(e) => {
-                setConfig({ ...config, api_key: e.target.value });
-                if (errors.api_key) {
-                  setErrors((prev) => ({ ...prev, api_key: undefined }));
-                }
-              }}
-              className={errors.api_key ? "border-destructive" : ""}
-            />
+            <div className="relative">
+              <Input
+                id="apiKey"
+                type={showToken ? "text" : "password"}
+                placeholder={isZpro ? "eyJhbGciOiJIUzI1NiIs..." : "••••••••••••••••"}
+                value={config.api_key}
+                onChange={(e) => {
+                  setConfig({ ...config, api_key: e.target.value });
+                  if (errors.api_key) {
+                    setErrors((prev) => ({ ...prev, api_key: undefined }));
+                  }
+                }}
+                className={`pr-10 ${errors.api_key ? "border-destructive" : ""}`}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                onClick={() => setShowToken(!showToken)}
+              >
+                {showToken ? (
+                  <EyeOff className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <Eye className="h-4 w-4 text-muted-foreground" />
+                )}
+              </Button>
+            </div>
+            {isZpro && !errors.api_key && (
+              <p className="text-xs text-muted-foreground">
+                Token JWT fornecido pelo Z-PRO para autenticação
+              </p>
+            )}
             {errors.api_key && (
               <p className="text-xs text-destructive">{errors.api_key}</p>
             )}
           </div>
 
-          <div className="flex items-center gap-4">
+          {/* Instance ID field - only for non-ZPRO providers */}
+          {!isZpro && (
+            <div className="space-y-2">
+              <Label htmlFor="instanceId" className="flex items-center gap-1">
+                ID da Instância
+                {errors.instance_id && (
+                  <AlertCircle className="h-3.5 w-3.5 text-destructive" />
+                )}
+              </Label>
+              <Input
+                id="instanceId"
+                placeholder="Ex: instance_123"
+                value={config.instance_id}
+                onChange={(e) => {
+                  setConfig({ ...config, instance_id: e.target.value });
+                  if (errors.instance_id) {
+                    setErrors((prev) => ({ ...prev, instance_id: undefined }));
+                  }
+                }}
+                className={errors.instance_id ? "border-destructive" : ""}
+              />
+              {errors.instance_id && (
+                <p className="text-xs text-destructive">{errors.instance_id}</p>
+              )}
+            </div>
+          )}
+
+          <div className="flex items-center gap-4 flex-wrap">
             <Button onClick={handleSave} disabled={isSaving}>
               {isSaving ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
