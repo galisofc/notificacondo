@@ -1,9 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Shield, Menu, X } from "lucide-react";
 import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
@@ -37,12 +41,20 @@ const Header = () => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <Button variant="ghost" size="sm">
-              Entrar
-            </Button>
-            <Button variant="hero" size="sm">
-              Começar Grátis
-            </Button>
+            {user ? (
+              <Button variant="hero" size="sm" onClick={() => navigate("/dashboard")}>
+                Painel
+              </Button>
+            ) : (
+              <>
+                <Button variant="ghost" size="sm" onClick={() => navigate("/auth")}>
+                  Entrar
+                </Button>
+                <Button variant="hero" size="sm" onClick={() => navigate("/auth")}>
+                  Começar Grátis
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Toggle */}
@@ -71,12 +83,20 @@ const Header = () => {
                 Contato
               </a>
               <div className="flex flex-col gap-2 pt-4">
-                <Button variant="ghost" className="w-full justify-center">
-                  Entrar
-                </Button>
-                <Button variant="hero" className="w-full justify-center">
-                  Começar Grátis
-                </Button>
+                {user ? (
+                  <Button variant="hero" className="w-full justify-center" onClick={() => navigate("/dashboard")}>
+                    Painel
+                  </Button>
+                ) : (
+                  <>
+                    <Button variant="ghost" className="w-full justify-center" onClick={() => navigate("/auth")}>
+                      Entrar
+                    </Button>
+                    <Button variant="hero" className="w-full justify-center" onClick={() => navigate("/auth")}>
+                      Começar Grátis
+                    </Button>
+                  </>
+                )}
               </div>
             </nav>
           </div>
