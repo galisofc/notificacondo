@@ -173,7 +173,8 @@ const Reports = () => {
     const byType = {
       advertencia: filteredOccurrences.filter((o) => o.type === "advertencia").length,
       notificacao: filteredOccurrences.filter((o) => o.type === "notificacao").length,
-      multa: filteredOccurrences.filter((o) => o.type === "multa").length,
+      // Multas aplicadas = tipo multa E status multado (exclui arquivadas e em andamento)
+      multa: filteredOccurrences.filter((o) => o.type === "multa" && o.status === "multado").length,
     };
     const byStatus = {
       registrada: filteredOccurrences.filter((o) => o.status === "registrada").length,
@@ -264,7 +265,8 @@ const Reports = () => {
         ocorrencias: monthOccurrences.length,
         advertencias: monthOccurrences.filter((o) => o.type === "advertencia").length,
         notificacoes: monthOccurrences.filter((o) => o.type === "notificacao").length,
-        multas: monthOccurrences.filter((o) => o.type === "multa").length,
+        // Multas aplicadas = tipo multa E status multado (exclui arquivadas)
+        multas: monthOccurrences.filter((o) => o.type === "multa" && o.status === "multado").length,
         valorMultas: finesAmount,
       };
     });
