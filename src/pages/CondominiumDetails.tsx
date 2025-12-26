@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import { isValidCPF } from "@/lib/utils";
 
 interface Block {
   id: string;
@@ -309,6 +310,15 @@ const CondominiumDetails = () => {
   // Resident handlers
   const handleResidentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate CPF if provided
+    if (residentForm.cpf && residentForm.cpf.replace(/\D/g, "").length > 0) {
+      if (!isValidCPF(residentForm.cpf)) {
+        toast({ title: "Erro", description: "CPF inválido", variant: "destructive" });
+        return;
+      }
+    }
+    
     setSaving(true);
     try {
       if (editingResident) {
