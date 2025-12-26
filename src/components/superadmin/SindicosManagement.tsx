@@ -45,7 +45,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, MoreHorizontal, UserCheck, UserX, Mail, Building2, Plus, Loader2 } from "lucide-react";
+import { Search, MoreHorizontal, Mail, Building2, Plus, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface SindicoWithProfile {
@@ -57,10 +57,14 @@ interface SindicoWithProfile {
     email: string;
     phone: string | null;
   } | null;
-  subscription: {
-    plan: string;
-    active: boolean;
-  } | null;
+  condominiums: {
+    id: string;
+    name: string;
+    subscription: {
+      plan: string;
+      active: boolean;
+    } | null;
+  }[];
   condominiums_count: number;
 }
 
@@ -98,17 +102,35 @@ export function SindicosManagement() {
 
       const sindicosWithDetails = await Promise.all(
         (roles || []).map(async (role) => {
-          const [profileRes, subscriptionRes, condominiumsRes] = await Promise.all([
-            supabase.from("profiles").select("full_name, email, phone").eq("user_id", role.user_id).single(),
-            supabase.from("subscriptions").select("plan, active").eq("user_id", role.user_id).single(),
-            supabase.from("condominiums").select("id", { count: "exact" }).eq("owner_id", role.user_id),
-          ]);
+          // Get profile
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("full_name, email, phone")
+            .eq("user_id", role.user_id)
+            .single();
+
+          // Get condominiums with their subscriptions
+          const { data: condos } = await supabase
+            .from("condominiums")
+            .select("id, name")
+            .eq("owner_id", role.user_id);
+
+          const condominiumsWithSubs = await Promise.all(
+            (condos || []).map(async (condo) => {
+              const { data: subscription } = await supabase
+                .from("subscriptions")
+                .select("plan, active")
+                .eq("condominium_id", condo.id)
+                .single();
+              return { ...condo, subscription };
+            })
+          );
 
           return {
             ...role,
-            profile: profileRes.data,
-            subscription: subscriptionRes.data,
-            condominiums_count: condominiumsRes.count || 0,
+            profile,
+            condominiums: condominiumsWithSubs,
+            condominiums_count: condominiumsWithSubs.length,
           } as SindicoWithProfile;
         })
       );
@@ -148,19 +170,19 @@ export function SindicosManagement() {
   });
 
   const toggleSubscriptionMutation = useMutation({
-    mutationFn: async ({ userId, active }: { userId: string; active: boolean }) => {
+    mutationFn: async ({ condominiumId, active }: { condominiumId: string; active: boolean }) => {
       const { error } = await supabase
         .from("subscriptions")
         .update({ active })
-        .eq("user_id", userId);
+        .eq("condominium_id", condominiumId);
       if (error) throw error;
     },
     onSuccess: (_, { active }) => {
       queryClient.invalidateQueries({ queryKey: ["superadmin-sindicos"] });
       queryClient.invalidateQueries({ queryKey: ["superadmin-stats"] });
       toast({
-        title: active ? "Conta ativada" : "Conta desativada",
-        description: `A conta do síndico foi ${active ? "ativada" : "desativada"} com sucesso.`,
+        title: active ? "Assinatura ativada" : "Assinatura desativada",
+        description: `A assinatura do condomínio foi ${active ? "ativada" : "desativada"} com sucesso.`,
       });
     },
   });
@@ -355,9 +377,20 @@ export function SindicosManagement() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={getPlanBadge(sindico.subscription?.plan)}>
-                        {sindico.subscription?.plan?.toUpperCase() || "START"}
-                      </Badge>
+                      <div className="flex flex-wrap gap-1">
+                        {sindico.condominiums.length > 0 ? (
+                          sindico.condominiums.slice(0, 2).map((c) => (
+                            <Badge key={c.id} variant="outline" className={getPlanBadge(c.subscription?.plan)}>
+                              {c.subscription?.plan?.toUpperCase() || "START"}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-muted-foreground text-sm">Sem condomínios</span>
+                        )}
+                        {sindico.condominiums.length > 2 && (
+                          <Badge variant="outline">+{sindico.condominiums.length - 2}</Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -366,16 +399,25 @@ export function SindicosManagement() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={
-                          sindico.subscription?.active
-                            ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-                            : "bg-destructive/10 text-destructive border-destructive/20"
-                        }
-                      >
-                        {sindico.subscription?.active ? "Ativo" : "Inativo"}
-                      </Badge>
+                      {sindico.condominiums.length > 0 ? (
+                        sindico.condominiums.every((c) => c.subscription?.active) ? (
+                          <Badge
+                            variant="outline"
+                            className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                          >
+                            Todos Ativos
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className="bg-amber-500/10 text-amber-500 border-amber-500/20"
+                          >
+                            Parcial
+                          </Badge>
+                        )
+                      ) : (
+                        <span className="text-muted-foreground text-sm">—</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <p className="text-sm">
@@ -390,26 +432,6 @@ export function SindicosManagement() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() =>
-                              toggleSubscriptionMutation.mutate({
-                                userId: sindico.user_id,
-                                active: !sindico.subscription?.active,
-                              })
-                            }
-                          >
-                            {sindico.subscription?.active ? (
-                              <>
-                                <UserX className="h-4 w-4 mr-2" />
-                                Desativar conta
-                              </>
-                            ) : (
-                              <>
-                                <UserCheck className="h-4 w-4 mr-2" />
-                                Ativar conta
-                              </>
-                            )}
-                          </DropdownMenuItem>
                           <DropdownMenuItem>
                             <Mail className="h-4 w-4 mr-2" />
                             Enviar email

@@ -20,18 +20,22 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 
-interface Subscription {
+interface CondominiumWithSubscription {
   id: string;
-  plan: "start" | "essencial" | "profissional" | "enterprise";
-  active: boolean;
-  notifications_limit: number;
-  notifications_used: number;
-  warnings_limit: number;
-  warnings_used: number;
-  fines_limit: number;
-  fines_used: number;
-  current_period_start: string | null;
-  current_period_end: string | null;
+  name: string;
+  subscription: {
+    id: string;
+    plan: "start" | "essencial" | "profissional" | "enterprise";
+    active: boolean;
+    notifications_limit: number;
+    notifications_used: number;
+    warnings_limit: number;
+    warnings_used: number;
+    fines_limit: number;
+    fines_used: number;
+    current_period_start: string | null;
+    current_period_end: string | null;
+  } | null;
 }
 
 interface Profile {
@@ -77,23 +81,39 @@ const SindicoSettings = () => {
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [condominiums, setCondominiums] = useState<CondominiumWithSubscription[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [selectedCondo, setSelectedCondo] = useState<CondominiumWithSubscription | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       if (!user) return;
 
       try {
-        // Fetch subscription
-        const { data: subData, error: subError } = await supabase
-          .from("subscriptions")
-          .select("*")
-          .eq("user_id", user.id)
-          .maybeSingle();
+        // Fetch user's condominiums
+        const { data: condosData, error: condosError } = await supabase
+          .from("condominiums")
+          .select("id, name")
+          .eq("owner_id", user.id);
 
-        if (subError) throw subError;
-        setSubscription(subData);
+        if (condosError) throw condosError;
+
+        // Fetch subscriptions for each condominium
+        const condosWithSubs = await Promise.all(
+          (condosData || []).map(async (condo) => {
+            const { data: subData } = await supabase
+              .from("subscriptions")
+              .select("*")
+              .eq("condominium_id", condo.id)
+              .maybeSingle();
+            return { ...condo, subscription: subData } as CondominiumWithSubscription;
+          })
+        );
+
+        setCondominiums(condosWithSubs);
+        if (condosWithSubs.length > 0) {
+          setSelectedCondo(condosWithSubs[0]);
+        }
 
         // Fetch profile
         const { data: profileData, error: profileError } = await supabase
@@ -140,6 +160,7 @@ const SindicoSettings = () => {
     );
   }
 
+  const subscription = selectedCondo?.subscription;
   const currentPlan = subscription?.plan || "start";
   const planInfo = PLAN_DETAILS[currentPlan];
   const PlanIcon = planInfo.icon;
@@ -160,12 +181,36 @@ const SindicoSettings = () => {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
+          {/* Condominium Selector */}
+          {condominiums.length > 1 && (
+            <Card className="lg:col-span-3 bg-gradient-card border-border/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Selecionar Condomínio</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {condominiums.map((condo) => (
+                    <Button
+                      key={condo.id}
+                      variant={selectedCondo?.id === condo.id ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSelectedCondo(condo)}
+                    >
+                      <Building2 className="w-4 h-4 mr-2" />
+                      {condo.name}
+                    </Button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Current Plan Card */}
           <Card className="lg:col-span-2 bg-gradient-card border-border/50">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <CreditCard className="w-5 h-5 text-primary" />
-                Plano Atual
+                {selectedCondo ? `Plano - ${selectedCondo.name}` : "Plano Atual"}
               </CardTitle>
             </CardHeader>
             <CardContent>
