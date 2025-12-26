@@ -452,6 +452,30 @@ const Occurrences = () => {
           </Button>
         </div>
 
+        {/* Results Counter */}
+        {!loading && (
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-muted-foreground">
+              Exibindo <span className="font-medium text-foreground">{filteredOccurrences.length}</span> de{" "}
+              <span className="font-medium text-foreground">{occurrences.length}</span> ocorrência{occurrences.length !== 1 ? "s" : ""}
+            </p>
+            {(statusFilter !== "all" || typeFilter !== "all") && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setStatusFilter("all");
+                  setTypeFilter("all");
+                }}
+                className="text-xs"
+              >
+                <X className="w-3 h-3 mr-1" />
+                Limpar filtros
+              </Button>
+            )}
+          </div>
+        )}
+
         {/* List */}
         {loading ? (
           <div className="flex items-center justify-center py-12">
