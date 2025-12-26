@@ -159,14 +159,14 @@ const Dashboard = () => {
       label: "Ocorrências",
       value: stats.occurrences,
       color: "from-amber-500 to-orange-500",
-      action: () => toast({ title: "Em breve", description: "Funcionalidade em desenvolvimento" }),
+      action: () => navigate("/occurrences"),
     },
     {
       icon: DollarSign,
       label: "Multas Pendentes",
       value: stats.pendingFines,
       color: "from-rose-500 to-red-500",
-      action: () => toast({ title: "Em breve", description: "Funcionalidade em desenvolvimento" }),
+      action: () => navigate("/occurrences"),
     },
   ];
 
