@@ -31,135 +31,36 @@ interface SendResult {
 }
 
 // Z-PRO Provider - Uses full URL and Bearer Token
-// Based on Z-PRO API documentation: POST SendMessageAPIText
-// Endpoint format: {api_url}/api/{instance_id}/send-message
+// API expects: POST to {api_url} with body { number, message }
 async function sendZproMessage(phone: string, message: string, config: ProviderSettings): Promise<SendResult> {
-  // Z-PRO API expects the base URL (without instance in path) + /api/{instance}/send-message
-  // Or if the URL already contains the instance, we need to extract the base URL
-  
-  let sendUrl: string;
   const baseUrl = config.apiUrl.replace(/\/$/, ""); // Remove trailing slash
-  
-  // Check if instance_id is already in the URL
-  if (baseUrl.includes(config.instanceId)) {
-    // URL format: https://domain.com/v2/api/external/{instance_id}
-    // We need to append the action: /send-message OR try different endpoint structures
-    // Based on Z-PRO docs, try: POST to base URL with action in body or different endpoint
-    
-    // Try the API v1 structure - remove v2/api/external/{instance} and use /api/{instance}/send-message
-    const urlParts = baseUrl.split('/');
-    const domainIndex = urlParts.findIndex(p => p.includes('.'));
-    const domain = urlParts.slice(0, domainIndex + 1).join('/');
-    
-    // Try multiple endpoint formats
-    sendUrl = `${domain}/api/${config.instanceId}/send-message`;
-    console.log("Z-PRO: Trying API v1 format:", sendUrl);
-  } else {
-    // Standard format
-    sendUrl = `${baseUrl}/api/${config.instanceId}/send-message`;
-  }
-  
   const phoneClean = phone.replace(/\D/g, "");
-  console.log("Z-PRO sending to:", sendUrl);
+  
+  // Z-PRO API format: POST to the URL with { number, message }
+  // The error "Cannot read properties of undefined (reading 'replace')" indicates
+  // the API expects 'number' field, not 'phone'
+  const requestBody = {
+    number: phoneClean,
+    message: message,
+  };
+  
+  console.log("Z-PRO sending to:", baseUrl);
   console.log("Phone:", phoneClean);
+  console.log("Request body:", JSON.stringify(requestBody));
   
   try {
-    // Try with multiple body formats as Z-PRO may expect different structures
-    const bodyV1 = {
-      phone: phoneClean,
-      message: message,
-    };
-    
-    console.log("Request body:", JSON.stringify(bodyV1));
-    
-    const response = await fetch(sendUrl, {
+    const response = await fetch(baseUrl, {
       method: "POST",
       headers: { 
         "Content-Type": "application/json",
         "Authorization": `Bearer ${config.apiKey}`,
       },
-      body: JSON.stringify(bodyV1),
+      body: JSON.stringify(requestBody),
     });
     
     const responseText = await response.text();
     console.log("Z-PRO response status:", response.status);
-    console.log("Z-PRO response body:", responseText.substring(0, 500));
-    
-    // Check if response is HTML (error page) - try alternative endpoint
-    if (responseText.startsWith("<!DOCTYPE") || responseText.startsWith("<html")) {
-      console.log("Z-PRO: First endpoint failed, trying alternative...");
-      
-      // Try alternative: POST to {baseUrl}/message/send-text
-      const altUrl = `${baseUrl.replace(/\/v2\/api\/external\/[^/]+$/, "")}/message/send-text`;
-      console.log("Z-PRO: Trying alternative URL:", altUrl);
-      
-      const altResponse = await fetch(altUrl, {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${config.apiKey}`,
-          "Client-Token": config.apiKey,
-        },
-        body: JSON.stringify({
-          phone: phoneClean,
-          message: message,
-          instanceId: config.instanceId,
-        }),
-      });
-      
-      const altResponseText = await altResponse.text();
-      console.log("Z-PRO alt response status:", altResponse.status);
-      console.log("Z-PRO alt response body:", altResponseText.substring(0, 500));
-      
-      if (altResponseText.startsWith("<!DOCTYPE") || altResponseText.startsWith("<html")) {
-        // Try one more format - direct with query params
-        const directUrl = `${config.apiUrl}`;
-        console.log("Z-PRO: Trying direct POST to configured URL:", directUrl);
-        
-        const directResponse = await fetch(directUrl, {
-          method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${config.apiKey}`,
-          },
-          body: JSON.stringify({
-            action: "send-message",
-            phone: phoneClean,
-            message: message,
-          }),
-        });
-        
-        const directText = await directResponse.text();
-        console.log("Z-PRO direct response:", directText.substring(0, 500));
-        
-        if (directText.startsWith("<!DOCTYPE") || directText.startsWith("<html")) {
-          return { 
-            success: false, 
-            error: "Endpoint não encontrado. Verifique a URL da API e o formato correto na documentação Z-PRO." 
-          };
-        }
-        
-        try {
-          const directData = JSON.parse(directText);
-          if (directResponse.ok) {
-            return { success: true, messageId: directData.id || directData.messageId || "sent" };
-          }
-          return { success: false, error: directData.message || directData.error || `Erro ${directResponse.status}` };
-        } catch {
-          return { success: false, error: `Resposta inválida: ${directText.substring(0, 100)}` };
-        }
-      }
-      
-      try {
-        const altData = JSON.parse(altResponseText);
-        if (altResponse.ok) {
-          return { success: true, messageId: altData.id || altData.messageId || "sent" };
-        }
-        return { success: false, error: altData.message || altData.error || `Erro ${altResponse.status}` };
-      } catch {
-        return { success: false, error: `Resposta inválida: ${altResponseText.substring(0, 100)}` };
-      }
-    }
+    console.log("Z-PRO response body:", responseText);
     
     // Try to parse as JSON
     let data;
@@ -169,7 +70,7 @@ async function sendZproMessage(phone: string, message: string, config: ProviderS
       console.error("Failed to parse response as JSON:", e);
       return { 
         success: false, 
-        error: `Resposta inválida da API: ${responseText.substring(0, 100)}` 
+        error: `Resposta inválida da API: ${responseText.substring(0, 200)}` 
       };
     }
     
@@ -177,10 +78,10 @@ async function sendZproMessage(phone: string, message: string, config: ProviderS
     
     // Check for success indicators
     if (response.ok) {
-      if (data.id || data.messageId || data.zapiMessageId || data.message_id) {
-        return { success: true, messageId: data.id || data.messageId || data.zapiMessageId || data.message_id };
+      if (data.id || data.messageId || data.zapiMessageId || data.message_id || data.key?.id) {
+        return { success: true, messageId: data.id || data.messageId || data.zapiMessageId || data.message_id || data.key?.id };
       }
-      if (data.status === "success" || data.success === true) {
+      if (data.status === "success" || data.success === true || data.status === "PENDING") {
         return { success: true, messageId: data.id || "sent" };
       }
       // Even if no ID, if status is OK consider it success
