@@ -752,6 +752,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_owner_of_apartment: {
+        Args: { _apartment_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_resident_of_apartment: {
+        Args: { _apartment_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_resident_of_condominium: {
         Args: { _condominium_id: string; _user_id: string }
         Returns: boolean
