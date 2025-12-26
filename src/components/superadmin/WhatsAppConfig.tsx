@@ -18,8 +18,9 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { MessageCircle, Save, TestTube, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { MessageCircle, Save, TestTube, CheckCircle, XCircle, Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { z } from "zod";
 
 interface WhatsAppConfigData {
   id?: string;
@@ -30,12 +31,38 @@ interface WhatsAppConfigData {
   is_active: boolean;
 }
 
+interface ValidationErrors {
+  api_url?: string;
+  api_key?: string;
+  instance_id?: string;
+}
+
+// Validation schemas per provider
+const zproSessionSchema = z.string()
+  .min(1, "Sessão é obrigatória")
+  .max(50, "Sessão deve ter no máximo 50 caracteres")
+  .regex(/^[a-zA-Z0-9_-]+$/, "Sessão deve conter apenas letras, números, hífen e underscore");
+
+const instanceIdSchema = z.string()
+  .min(1, "ID da Instância é obrigatório")
+  .max(100, "ID deve ter no máximo 100 caracteres");
+
+const apiUrlSchema = z.string()
+  .min(1, "URL da API é obrigatória")
+  .url("URL inválida. Use o formato: https://api.exemplo.com")
+  .max(500, "URL deve ter no máximo 500 caracteres");
+
+const apiKeySchema = z.string()
+  .min(1, "Chave da API é obrigatória")
+  .max(500, "Chave deve ter no máximo 500 caracteres");
+
 export function WhatsAppConfig() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<"success" | "error" | null>(null);
+  const [errors, setErrors] = useState<ValidationErrors>({});
 
   const [config, setConfig] = useState<WhatsAppConfigData>({
     provider: "zpro",
@@ -49,6 +76,11 @@ export function WhatsAppConfig() {
   useEffect(() => {
     loadConfig();
   }, []);
+
+  // Clear errors when provider changes
+  useEffect(() => {
+    setErrors({});
+  }, [config.provider]);
 
   const loadConfig = async () => {
     setIsLoading(true);
@@ -83,11 +115,43 @@ export function WhatsAppConfig() {
     }
   };
 
+  const validateConfig = (): boolean => {
+    const newErrors: ValidationErrors = {};
+
+    // Validate API URL
+    const urlResult = apiUrlSchema.safeParse(config.api_url);
+    if (!urlResult.success) {
+      newErrors.api_url = urlResult.error.errors[0].message;
+    }
+
+    // Validate API Key
+    const keyResult = apiKeySchema.safeParse(config.api_key);
+    if (!keyResult.success) {
+      newErrors.api_key = keyResult.error.errors[0].message;
+    }
+
+    // Validate Instance ID / Session based on provider
+    if (config.provider === "zpro") {
+      const sessionResult = zproSessionSchema.safeParse(config.instance_id);
+      if (!sessionResult.success) {
+        newErrors.instance_id = sessionResult.error.errors[0].message;
+      }
+    } else {
+      const instanceResult = instanceIdSchema.safeParse(config.instance_id);
+      if (!instanceResult.success) {
+        newErrors.instance_id = instanceResult.error.errors[0].message;
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSave = async () => {
-    if (!config.api_url || !config.api_key || !config.instance_id) {
+    if (!validateConfig()) {
       toast({
-        title: "Campos obrigatórios",
-        description: "Preencha URL da API, Chave da API e ID da Instância.",
+        title: "Erro de validação",
+        description: "Corrija os campos destacados antes de salvar.",
         variant: "destructive",
       });
       return;
@@ -101,9 +165,9 @@ export function WhatsAppConfig() {
           .from("whatsapp_config")
           .update({
             provider: config.provider,
-            api_url: config.api_url,
-            api_key: config.api_key,
-            instance_id: config.instance_id,
+            api_url: config.api_url.trim(),
+            api_key: config.api_key.trim(),
+            instance_id: config.instance_id.trim(),
             is_active: config.is_active,
           })
           .eq("id", config.id);
@@ -115,9 +179,9 @@ export function WhatsAppConfig() {
           .from("whatsapp_config")
           .insert({
             provider: config.provider,
-            api_url: config.api_url,
-            api_key: config.api_key,
-            instance_id: config.instance_id,
+            api_url: config.api_url.trim(),
+            api_key: config.api_key.trim(),
+            instance_id: config.instance_id.trim(),
             is_active: true,
           })
           .select()
@@ -144,10 +208,10 @@ export function WhatsAppConfig() {
   };
 
   const handleTest = async () => {
-    if (!config.api_url || !config.api_key || !config.instance_id) {
+    if (!validateConfig()) {
       toast({
-        title: "Campos obrigatórios",
-        description: "Preencha todos os campos antes de testar.",
+        title: "Erro de validação",
+        description: "Corrija os campos destacados antes de testar.",
         variant: "destructive",
       });
       return;
@@ -165,19 +229,21 @@ export function WhatsAppConfig() {
 
       switch (config.provider) {
         case "zpro":
+          testUrl = `${config.api_url.trim()}/instances/${encodeURIComponent(config.instance_id.trim())}/token/${encodeURIComponent(config.api_key.trim())}/status`;
+          break;
         case "zapi":
-          testUrl = `${config.api_url}/instances/${config.instance_id}/token/${config.api_key}/status`;
+          testUrl = `${config.api_url.trim()}/instances/${encodeURIComponent(config.instance_id.trim())}/token/${encodeURIComponent(config.api_key.trim())}/status`;
           break;
         case "evolution":
-          testUrl = `${config.api_url}/instance/connectionState/${config.instance_id}`;
-          headers["apikey"] = config.api_key;
+          testUrl = `${config.api_url.trim()}/instance/connectionState/${encodeURIComponent(config.instance_id.trim())}`;
+          headers["apikey"] = config.api_key.trim();
           break;
         case "wppconnect":
-          testUrl = `${config.api_url}/api/${config.instance_id}/status`;
-          headers["Authorization"] = `Bearer ${config.api_key}`;
+          testUrl = `${config.api_url.trim()}/api/${encodeURIComponent(config.instance_id.trim())}/status`;
+          headers["Authorization"] = `Bearer ${config.api_key.trim()}`;
           break;
         default:
-          testUrl = `${config.api_url}/status`;
+          testUrl = `${config.api_url.trim()}/status`;
       }
 
       const response = await fetch(testUrl, {
@@ -212,6 +278,27 @@ export function WhatsAppConfig() {
     }
   };
 
+  const getSessionLabel = () => {
+    if (config.provider === "zpro") {
+      return "Nome da Sessão";
+    }
+    return "ID da Instância";
+  };
+
+  const getSessionPlaceholder = () => {
+    if (config.provider === "zpro") {
+      return "Ex: minha-sessao (sem espaços ou caracteres especiais)";
+    }
+    return "Ex: instance_123";
+  };
+
+  const getSessionHint = () => {
+    if (config.provider === "zpro") {
+      return "Use apenas letras, números, hífen (-) e underscore (_)";
+    }
+    return null;
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -242,7 +329,7 @@ export function WhatsAppConfig() {
               <Label htmlFor="provider">Provedor</Label>
               <Select
                 value={config.provider}
-                onValueChange={(value) => setConfig({ ...config, provider: value })}
+                onValueChange={(value) => setConfig({ ...config, provider: value, instance_id: "" })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o provedor" />
@@ -257,37 +344,80 @@ export function WhatsAppConfig() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="instanceId">
-                {config.provider === "zpro" ? "Sessão" : "ID da Instância"}
+              <Label htmlFor="instanceId" className="flex items-center gap-1">
+                {getSessionLabel()}
+                {errors.instance_id && (
+                  <AlertCircle className="h-3.5 w-3.5 text-destructive" />
+                )}
               </Label>
               <Input
                 id="instanceId"
-                placeholder={config.provider === "zpro" ? "Ex: minha-sessao" : "Ex: instance_123"}
+                placeholder={getSessionPlaceholder()}
                 value={config.instance_id}
-                onChange={(e) => setConfig({ ...config, instance_id: e.target.value })}
+                onChange={(e) => {
+                  setConfig({ ...config, instance_id: e.target.value });
+                  if (errors.instance_id) {
+                    setErrors((prev) => ({ ...prev, instance_id: undefined }));
+                  }
+                }}
+                className={errors.instance_id ? "border-destructive" : ""}
               />
+              {getSessionHint() && !errors.instance_id && (
+                <p className="text-xs text-muted-foreground">{getSessionHint()}</p>
+              )}
+              {errors.instance_id && (
+                <p className="text-xs text-destructive">{errors.instance_id}</p>
+              )}
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="apiUrl">URL da API</Label>
+            <Label htmlFor="apiUrl" className="flex items-center gap-1">
+              URL da API
+              {errors.api_url && (
+                <AlertCircle className="h-3.5 w-3.5 text-destructive" />
+              )}
+            </Label>
             <Input
               id="apiUrl"
               placeholder="https://api.provedor.com"
               value={config.api_url}
-              onChange={(e) => setConfig({ ...config, api_url: e.target.value })}
+              onChange={(e) => {
+                setConfig({ ...config, api_url: e.target.value });
+                if (errors.api_url) {
+                  setErrors((prev) => ({ ...prev, api_url: undefined }));
+                }
+              }}
+              className={errors.api_url ? "border-destructive" : ""}
             />
+            {errors.api_url && (
+              <p className="text-xs text-destructive">{errors.api_url}</p>
+            )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="apiKey">Chave da API (Token)</Label>
+            <Label htmlFor="apiKey" className="flex items-center gap-1">
+              Chave da API (Token)
+              {errors.api_key && (
+                <AlertCircle className="h-3.5 w-3.5 text-destructive" />
+              )}
+            </Label>
             <Input
               id="apiKey"
               type="password"
               placeholder="••••••••••••••••"
               value={config.api_key}
-              onChange={(e) => setConfig({ ...config, api_key: e.target.value })}
+              onChange={(e) => {
+                setConfig({ ...config, api_key: e.target.value });
+                if (errors.api_key) {
+                  setErrors((prev) => ({ ...prev, api_key: undefined }));
+                }
+              }}
+              className={errors.api_key ? "border-destructive" : ""}
             />
+            {errors.api_key && (
+              <p className="text-xs text-destructive">{errors.api_key}</p>
+            )}
           </div>
 
           <div className="flex items-center gap-4">
