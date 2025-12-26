@@ -18,12 +18,16 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { z } from "zod";
+import { isValidCPF } from "@/lib/utils";
 
 const profileSchema = z.object({
   full_name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres").max(100),
   email: z.string().email("Email inválido"),
   phone: z.string().optional(),
-  cpf: z.string().optional(),
+  cpf: z.string().optional().refine(
+    (val) => !val || val.replace(/\D/g, "").length === 0 || isValidCPF(val),
+    { message: "CPF inválido" }
+  ),
 });
 
 interface Profile {
