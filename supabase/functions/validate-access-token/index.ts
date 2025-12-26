@@ -138,8 +138,10 @@ serve(async (req) => {
         .from("residents")
         .update({ user_id: userId })
         .eq("id", resident.id);
+    }
 
-      // Create user role for morador
+    // Always ensure user role exists for morador (even for existing users)
+    if (userId) {
       await supabase
         .from("user_roles")
         .upsert({
