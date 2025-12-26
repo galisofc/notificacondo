@@ -32,6 +32,7 @@ interface Block {
   id: string;
   name: string;
   description: string | null;
+  floors: number;
 }
 
 interface Apartment {
@@ -76,7 +77,7 @@ const CondominiumDetails = () => {
   const [editingResident, setEditingResident] = useState<Resident | null>(null);
 
   // Form data
-  const [blockForm, setBlockForm] = useState({ name: "", description: "" });
+  const [blockForm, setBlockForm] = useState({ name: "", description: "", floors: "1" });
   const [apartmentForm, setApartmentForm] = useState({
     block_id: "",
     number: "",
@@ -169,7 +170,11 @@ const CondominiumDetails = () => {
       if (editingBlock) {
         const { error } = await supabase
           .from("blocks")
-          .update({ name: blockForm.name, description: blockForm.description || null })
+          .update({ 
+            name: blockForm.name, 
+            description: blockForm.description || null,
+            floors: parseInt(blockForm.floors) || 1,
+          })
           .eq("id", editingBlock.id);
         if (error) throw error;
         toast({ title: "Sucesso", description: "Bloco atualizado!" });
@@ -178,13 +183,14 @@ const CondominiumDetails = () => {
           condominium_id: id,
           name: blockForm.name,
           description: blockForm.description || null,
+          floors: parseInt(blockForm.floors) || 1,
         });
         if (error) throw error;
         toast({ title: "Sucesso", description: "Bloco cadastrado!" });
       }
       setBlockDialog(false);
       setEditingBlock(null);
-      setBlockForm({ name: "", description: "" });
+      setBlockForm({ name: "", description: "", floors: "1" });
       fetchData();
     } catch (error: any) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
@@ -377,7 +383,7 @@ const CondominiumDetails = () => {
                 variant="hero"
                 onClick={() => {
                   setEditingBlock(null);
-                  setBlockForm({ name: "", description: "" });
+                  setBlockForm({ name: "", description: "", floors: "1" });
                   setBlockDialog(true);
                 }}
               >
@@ -421,7 +427,7 @@ const CondominiumDetails = () => {
                           size="icon"
                           onClick={() => {
                             setEditingBlock(block);
-                            setBlockForm({ name: block.name, description: block.description || "" });
+                            setBlockForm({ name: block.name, description: block.description || "", floors: String(block.floors || 1) });
                             setBlockDialog(true);
                           }}
                         >
@@ -511,8 +517,10 @@ const CondominiumDetails = () => {
                     </div>
                     <h4 className="font-semibold text-foreground">Apto {apt.number}</h4>
                     <p className="text-sm text-muted-foreground">{getBlockName(apt.block_id)}</p>
-                    {apt.floor && (
-                      <p className="text-xs text-muted-foreground">Andar: {apt.floor}</p>
+                    {apt.floor !== null && (
+                      <p className="text-xs text-muted-foreground">
+                        {apt.floor === 0 ? "Térreo" : `${apt.floor}º Andar`}
+                      </p>
                     )}
                     <p className="text-xs text-muted-foreground mt-1">
                       {residents.filter((r) => r.apartment_id === apt.id).length} moradores
@@ -662,6 +670,19 @@ const CondominiumDetails = () => {
                   className="bg-secondary/50"
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="blockFloors">Quantidade de Andares *</Label>
+                <Input
+                  id="blockFloors"
+                  type="number"
+                  min="1"
+                  value={blockForm.floors}
+                  onChange={(e) => setBlockForm({ ...blockForm, floors: e.target.value })}
+                  required
+                  className="bg-secondary/50"
+                  placeholder="Ex: 10"
+                />
+              </div>
               <div className="flex justify-end gap-3">
                 <Button type="button" variant="outline" onClick={() => setBlockDialog(false)}>
                   Cancelar
@@ -685,13 +706,14 @@ const CondominiumDetails = () => {
                 <Label>Bloco *</Label>
                 <select
                   value={apartmentForm.block_id}
-                  onChange={(e) => setApartmentForm({ ...apartmentForm, block_id: e.target.value })}
+                  onChange={(e) => setApartmentForm({ ...apartmentForm, block_id: e.target.value, floor: "" })}
                   required
                   className="w-full h-10 px-3 rounded-lg bg-secondary/50 border border-border text-foreground"
                 >
+                  <option value="">Selecione um bloco...</option>
                   {blocks.map((b) => (
                     <option key={b.id} value={b.id}>
-                      {b.name}
+                      {b.name} ({b.floors} andares)
                     </option>
                   ))}
                 </select>
@@ -709,13 +731,22 @@ const CondominiumDetails = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="aptFloor">Andar</Label>
-                  <Input
+                  <select
                     id="aptFloor"
-                    type="number"
                     value={apartmentForm.floor}
                     onChange={(e) => setApartmentForm({ ...apartmentForm, floor: e.target.value })}
-                    className="bg-secondary/50"
-                  />
+                    className="w-full h-10 px-3 rounded-lg bg-secondary/50 border border-border text-foreground"
+                  >
+                    <option value="">Selecione...</option>
+                    <option value="0">Térreo</option>
+                    {apartmentForm.block_id && (() => {
+                      const selectedBlock = blocks.find(b => b.id === apartmentForm.block_id);
+                      const floorsCount = selectedBlock?.floors || 1;
+                      return Array.from({ length: floorsCount }, (_, i) => (
+                        <option key={i + 1} value={String(i + 1)}>{i + 1}º Andar</option>
+                      ));
+                    })()}
+                  </select>
                 </div>
               </div>
               <div className="space-y-2">
