@@ -93,35 +93,8 @@ serve(async (req) => {
       // Don't rollback, profile was created by trigger with basic info
     }
 
-    // User role is already created as 'sindico' by the trigger, no action needed
-
-    // Get plan limits based on plan type
-    const planLimits = {
-      start: { notifications_limit: 10, warnings_limit: 10, fines_limit: 0 },
-      essencial: { notifications_limit: 50, warnings_limit: 50, fines_limit: 25 },
-      profissional: { notifications_limit: 200, warnings_limit: 200, fines_limit: 100 },
-      enterprise: { notifications_limit: 999999, warnings_limit: 999999, fines_limit: 999999 },
-    };
-
-    const limits = planLimits[plan] || planLimits.start;
-
-    // Update subscription with correct plan (trigger creates with 'start' plan)
-    const { error: subscriptionError } = await supabaseAdmin
-      .from("subscriptions")
-      .update({
-        plan,
-        active: true,
-        notifications_limit: limits.notifications_limit,
-        warnings_limit: limits.warnings_limit,
-        fines_limit: limits.fines_limit,
-        current_period_start: new Date().toISOString(),
-        current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      })
-      .eq("user_id", userId);
-
-    if (subscriptionError) {
-      console.error("Subscription update error:", subscriptionError);
-    }
+    // Note: Subscription will be created when the sindico creates a condominium (via trigger)
+    // No need to create subscription here anymore
 
     return new Response(
       JSON.stringify({

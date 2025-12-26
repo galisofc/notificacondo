@@ -712,6 +712,7 @@ export type Database = {
       subscriptions: {
         Row: {
           active: boolean
+          condominium_id: string | null
           created_at: string
           current_period_end: string | null
           current_period_start: string | null
@@ -723,12 +724,12 @@ export type Database = {
           notifications_used: number
           plan: Database["public"]["Enums"]["plan_type"]
           updated_at: string
-          user_id: string
           warnings_limit: number
           warnings_used: number
         }
         Insert: {
           active?: boolean
+          condominium_id?: string | null
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
@@ -740,12 +741,12 @@ export type Database = {
           notifications_used?: number
           plan?: Database["public"]["Enums"]["plan_type"]
           updated_at?: string
-          user_id: string
           warnings_limit?: number
           warnings_used?: number
         }
         Update: {
           active?: boolean
+          condominium_id?: string | null
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
@@ -757,11 +758,18 @@ export type Database = {
           notifications_used?: number
           plan?: Database["public"]["Enums"]["plan_type"]
           updated_at?: string
-          user_id?: string
           warnings_limit?: number
           warnings_used?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_condominium_id_fkey"
+            columns: ["condominium_id"]
+            isOneToOne: true
+            referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

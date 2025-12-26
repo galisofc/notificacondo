@@ -30,9 +30,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CreditCard, TrendingUp, AlertCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
-interface SubscriptionWithProfile {
+interface SubscriptionWithCondominium {
   id: string;
-  user_id: string;
+  condominium_id: string;
   plan: string;
   active: boolean;
   notifications_limit: number;
@@ -43,7 +43,11 @@ interface SubscriptionWithProfile {
   fines_used: number;
   created_at: string;
   current_period_end: string | null;
-  profile: {
+  condominium: {
+    name: string;
+    owner_id: string;
+  } | null;
+  owner_profile: {
     full_name: string;
     email: string;
   } | null;
@@ -67,19 +71,35 @@ export function SubscriptionsMonitor() {
       const { data, error } = await query;
       if (error) throw error;
 
-      const subsWithProfiles = await Promise.all(
+      const subsWithDetails = await Promise.all(
         (data || []).map(async (sub) => {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("full_name, email")
-            .eq("user_id", sub.user_id)
+          // Get condominium details
+          const { data: condo } = await supabase
+            .from("condominiums")
+            .select("name, owner_id")
+            .eq("id", sub.condominium_id)
             .single();
 
-          return { ...sub, profile } as SubscriptionWithProfile;
+          // Get owner profile if condominium exists
+          let ownerProfile = null;
+          if (condo?.owner_id) {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("full_name, email")
+              .eq("user_id", condo.owner_id)
+              .single();
+            ownerProfile = profile;
+          }
+
+          return { 
+            ...sub, 
+            condominium: condo,
+            owner_profile: ownerProfile 
+          } as SubscriptionWithCondominium;
         })
       );
 
-      return subsWithProfiles;
+      return subsWithDetails;
     },
   });
 
@@ -154,7 +174,7 @@ export function SubscriptionsMonitor() {
             <div>
               <CardTitle>Monitoramento de Assinaturas</CardTitle>
               <CardDescription>
-                Acompanhe planos e uso de recursos dos síndicos
+                Acompanhe planos e uso de recursos dos condomínios
               </CardDescription>
             </div>
             <Select value={planFilter} onValueChange={setPlanFilter}>
@@ -188,6 +208,7 @@ export function SubscriptionsMonitor() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Condomínio</TableHead>
                     <TableHead>Síndico</TableHead>
                     <TableHead>Plano</TableHead>
                     <TableHead>Status</TableHead>
@@ -200,9 +221,12 @@ export function SubscriptionsMonitor() {
                   {subscriptions?.map((sub) => (
                     <TableRow key={sub.id}>
                       <TableCell>
+                        <p className="font-medium">{sub.condominium?.name || "—"}</p>
+                      </TableCell>
+                      <TableCell>
                         <div>
-                          <p className="font-medium">{sub.profile?.full_name || "—"}</p>
-                          <p className="text-sm text-muted-foreground">{sub.profile?.email}</p>
+                          <p className="font-medium">{sub.owner_profile?.full_name || "—"}</p>
+                          <p className="text-sm text-muted-foreground">{sub.owner_profile?.email}</p>
                         </div>
                       </TableCell>
                       <TableCell>

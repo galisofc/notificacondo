@@ -12,7 +12,7 @@ export default function Subscriptions() {
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground">Assinaturas</h1>
           <p className="text-muted-foreground mt-1">
-            Monitore as assinaturas e uso da plataforma
+            Monitore as assinaturas dos condomínios na plataforma
           </p>
         </div>
         <SubscriptionsMonitor />
