@@ -15,6 +15,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import ResidentBreadcrumbs from "@/components/resident/ResidentBreadcrumbs";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -196,6 +197,9 @@ const ResidentOccurrences = () => {
       </Helmet>
 
       <div className="space-y-6 animate-fade-up">
+        {/* Breadcrumbs */}
+        <ResidentBreadcrumbs items={[{ label: "Minhas Ocorrências" }]} />
+
         {/* Header */}
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground">
