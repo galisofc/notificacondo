@@ -27,6 +27,7 @@ import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import Sindicos from "./pages/superadmin/Sindicos";
 import SuperAdminCondominiums from "./pages/superadmin/Condominiums";
 import Subscriptions from "./pages/superadmin/Subscriptions";
+import SubscriptionDetails from "./pages/superadmin/SubscriptionDetails";
 import Logs from "./pages/superadmin/Logs";
 import WhatsApp from "./pages/superadmin/WhatsApp";
 import SuperAdminSettings from "./pages/superadmin/Settings";
@@ -194,6 +195,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole="super_admin">
                     <Subscriptions />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/superadmin/subscriptions/:id"
+                element={
+                  <ProtectedRoute requiredRole="super_admin">
+                    <SubscriptionDetails />
                   </ProtectedRoute>
                 }
               />
