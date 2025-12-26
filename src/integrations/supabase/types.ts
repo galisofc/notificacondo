@@ -427,6 +427,42 @@ export type Database = {
           },
         ]
       }
+      mercadopago_config: {
+        Row: {
+          access_token_encrypted: string
+          created_at: string
+          id: string
+          is_active: boolean
+          is_sandbox: boolean
+          notification_url: string | null
+          public_key: string | null
+          updated_at: string
+          webhook_secret: string | null
+        }
+        Insert: {
+          access_token_encrypted: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_sandbox?: boolean
+          notification_url?: string | null
+          public_key?: string | null
+          updated_at?: string
+          webhook_secret?: string | null
+        }
+        Update: {
+          access_token_encrypted?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_sandbox?: boolean
+          notification_url?: string | null
+          public_key?: string | null
+          updated_at?: string
+          webhook_secret?: string | null
+        }
+        Relationships: []
+      }
       notifications_sent: {
         Row: {
           acknowledged_at: string | null
@@ -644,6 +680,7 @@ export type Database = {
           fines_limit: number
           id: string
           is_active: boolean
+          mercadopago_plan_id: string | null
           name: string
           notifications_limit: number
           price: number
@@ -659,6 +696,7 @@ export type Database = {
           fines_limit?: number
           id?: string
           is_active?: boolean
+          mercadopago_plan_id?: string | null
           name: string
           notifications_limit?: number
           price?: number
@@ -674,6 +712,7 @@ export type Database = {
           fines_limit?: number
           id?: string
           is_active?: boolean
+          mercadopago_plan_id?: string | null
           name?: string
           notifications_limit?: number
           price?: number
@@ -786,6 +825,7 @@ export type Database = {
           fines_used: number
           id: string
           mercado_pago_subscription_id: string | null
+          mercadopago_preapproval_id: string | null
           notifications_limit: number
           notifications_used: number
           plan: Database["public"]["Enums"]["plan_type"]
@@ -803,6 +843,7 @@ export type Database = {
           fines_used?: number
           id?: string
           mercado_pago_subscription_id?: string | null
+          mercadopago_preapproval_id?: string | null
           notifications_limit?: number
           notifications_used?: number
           plan?: Database["public"]["Enums"]["plan_type"]
@@ -820,6 +861,7 @@ export type Database = {
           fines_used?: number
           id?: string
           mercado_pago_subscription_id?: string | null
+          mercadopago_preapproval_id?: string | null
           notifications_limit?: number
           notifications_used?: number
           plan?: Database["public"]["Enums"]["plan_type"]
