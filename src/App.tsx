@@ -11,6 +11,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import ResidentDashboard from "./pages/ResidentDashboard";
 import ResidentOccurrenceDetails from "./pages/ResidentOccurrenceDetails";
+import ResidentProfile from "./pages/ResidentProfile";
 import Condominiums from "./pages/Condominiums";
 import CondominiumDetails from "./pages/CondominiumDetails";
 import Occurrences from "./pages/Occurrences";
@@ -92,6 +93,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <ResidentOccurrenceDetails />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/resident/profile"
+                element={
+                  <ProtectedRoute>
+                    <ResidentProfile />
                   </ProtectedRoute>
                 }
               />

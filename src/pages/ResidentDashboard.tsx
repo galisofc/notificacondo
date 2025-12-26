@@ -249,10 +249,15 @@ const ResidentDashboard = () => {
             </div>
             <span className="font-display font-bold text-foreground">CondoMaster</span>
           </div>
-          <Button variant="ghost" onClick={handleSignOut}>
-            <LogOut className="w-4 h-4 mr-2" />
-            Sair
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/resident/profile")}>
+              <User className="w-5 h-5" />
+            </Button>
+            <Button variant="ghost" onClick={handleSignOut}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Sair
+            </Button>
+          </div>
         </div>
       </header>
 
