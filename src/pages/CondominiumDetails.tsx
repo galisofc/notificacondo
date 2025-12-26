@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MaskedInput } from "@/components/ui/masked-input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -981,19 +982,21 @@ const CondominiumDetails = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="resPhone">Telefone</Label>
-                  <Input
+                  <MaskedInput
                     id="resPhone"
+                    mask="phone"
                     value={residentForm.phone}
-                    onChange={(e) => setResidentForm({ ...residentForm, phone: e.target.value })}
+                    onChange={(value) => setResidentForm({ ...residentForm, phone: value })}
                     className="bg-secondary/50"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="resCpf">CPF</Label>
-                  <Input
+                  <MaskedInput
                     id="resCpf"
+                    mask="cpf"
                     value={residentForm.cpf}
-                    onChange={(e) => setResidentForm({ ...residentForm, cpf: e.target.value })}
+                    onChange={(value) => setResidentForm({ ...residentForm, cpf: value })}
                     className="bg-secondary/50"
                   />
                 </div>

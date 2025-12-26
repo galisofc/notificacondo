@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { MaskedInput } from "@/components/ui/masked-input";
 import { Label } from "@/components/ui/label";
 import {
   Building2,
@@ -271,12 +272,11 @@ const ResidentProfile = () => {
                   <Phone className="w-4 h-4 text-muted-foreground" />
                   Telefone
                 </Label>
-                <Input
+                <MaskedInput
                   id="phone"
-                  type="tel"
+                  mask="phone"
                   value={formData.phone}
-                  onChange={(e) => handleChange("phone", e.target.value)}
-                  placeholder="(11) 99999-9999"
+                  onChange={(value) => handleChange("phone", value)}
                   className={errors.phone ? "border-destructive" : ""}
                 />
                 {errors.phone && (

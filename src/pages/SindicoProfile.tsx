@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { MaskedInput } from "@/components/ui/masked-input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -343,23 +344,21 @@ const SindicoProfile = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="phone">Telefone</Label>
-                <Input
+                <MaskedInput
                   id="phone"
-                  name="phone"
+                  mask="phone"
                   value={formData.phone}
-                  onChange={handleInputChange}
-                  placeholder="(00) 00000-0000"
+                  onChange={(value) => setFormData((prev) => ({ ...prev, phone: value }))}
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="cpf">CPF</Label>
-                <Input
+                <MaskedInput
                   id="cpf"
-                  name="cpf"
+                  mask="cpf"
                   value={formData.cpf}
-                  onChange={handleInputChange}
-                  placeholder="000.000.000-00"
+                  onChange={(value) => setFormData((prev) => ({ ...prev, cpf: value }))}
                 />
               </div>
 
