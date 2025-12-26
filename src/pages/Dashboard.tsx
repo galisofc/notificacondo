@@ -1,21 +1,22 @@
 import { useEffect, useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { 
-  Building2, 
-  FileText, 
-  AlertTriangle, 
-  DollarSign, 
+import {
+  Building2,
+  FileText,
+  DollarSign,
   Users,
   Plus,
-  Bell,
   ChevronRight,
-  BarChart3
+  ArrowUpRight,
+  AlertTriangle,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
-import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import DashboardLayout from "@/components/layouts/DashboardLayout";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface DashboardStats {
   condominiums: number;
@@ -27,7 +28,6 @@ interface DashboardStats {
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [stats, setStats] = useState<DashboardStats>({
     condominiums: 0,
     residents: 0,
@@ -42,83 +42,78 @@ const Dashboard = () => {
       if (!user) return;
 
       try {
-        // Fetch profile
         const { data: profileData } = await supabase
           .from("profiles")
           .select("full_name")
           .eq("user_id", user.id)
           .maybeSingle();
-        
+
         setProfile(profileData);
 
-        // Fetch condominiums count
         const { count: condoCount } = await supabase
           .from("condominiums")
           .select("*", { count: "exact", head: true })
           .eq("owner_id", user.id);
 
-        // Fetch user's condominium IDs for other queries
         const { data: condos } = await supabase
           .from("condominiums")
           .select("id")
           .eq("owner_id", user.id);
 
-        const condoIds = condos?.map(c => c.id) || [];
+        const condoIds = condos?.map((c) => c.id) || [];
 
         let residentsCount = 0;
         let occurrencesCount = 0;
         let finesCount = 0;
 
         if (condoIds.length > 0) {
-          // Fetch blocks for these condominiums
           const { data: blocks } = await supabase
             .from("blocks")
             .select("id")
             .in("condominium_id", condoIds);
-          
-          const blockIds = blocks?.map(b => b.id) || [];
+
+          const blockIds = blocks?.map((b) => b.id) || [];
 
           if (blockIds.length > 0) {
-            // Fetch apartments
             const { data: apartments } = await supabase
               .from("apartments")
               .select("id")
               .in("block_id", blockIds);
-            
-            const apartmentIds = apartments?.map(a => a.id) || [];
+
+            const apartmentIds = apartments?.map((a) => a.id) || [];
 
             if (apartmentIds.length > 0) {
-              // Count residents
               const { count: resCount } = await supabase
                 .from("residents")
                 .select("*", { count: "exact", head: true })
                 .in("apartment_id", apartmentIds);
-              
+
               residentsCount = resCount || 0;
             }
           }
 
-          // Count occurrences
           const { count: occCount } = await supabase
             .from("occurrences")
             .select("*", { count: "exact", head: true })
             .in("condominium_id", condoIds);
-          
+
           occurrencesCount = occCount || 0;
 
-          // Count pending fines
           const { data: occurrencesData } = await supabase
             .from("occurrences")
             .select("id")
             .in("condominium_id", condoIds);
-          
+
           if (occurrencesData && occurrencesData.length > 0) {
             const { count: fCount } = await supabase
               .from("fines")
               .select("*", { count: "exact", head: true })
-              .in("occurrence_id", occurrencesData.map(o => o.id))
+              .in(
+                "occurrence_id",
+                occurrencesData.map((o) => o.id)
+              )
               .eq("status", "em_aberto");
-            
+
             finesCount = fCount || 0;
           }
         }
@@ -141,31 +136,31 @@ const Dashboard = () => {
 
   const statCards = [
     {
-      icon: Building2,
-      label: "Condomínios",
+      title: "Condomínios",
       value: stats.condominiums,
-      color: "from-emerald-500 to-emerald-600",
+      icon: Building2,
+      gradient: "from-emerald-500 to-emerald-600",
       action: () => navigate("/condominiums"),
     },
     {
-      icon: Users,
-      label: "Moradores",
+      title: "Moradores",
       value: stats.residents,
-      color: "from-blue-500 to-blue-600",
+      icon: Users,
+      gradient: "from-blue-500 to-blue-600",
       action: () => navigate("/condominiums"),
     },
     {
-      icon: FileText,
-      label: "Ocorrências",
+      title: "Ocorrências",
       value: stats.occurrences,
-      color: "from-amber-500 to-orange-500",
+      icon: FileText,
+      gradient: "from-amber-500 to-orange-500",
       action: () => navigate("/occurrences"),
     },
     {
-      icon: DollarSign,
-      label: "Multas Pendentes",
+      title: "Multas Pendentes",
       value: stats.pendingFines,
-      color: "from-rose-500 to-red-500",
+      icon: DollarSign,
+      gradient: "from-rose-500 to-red-500",
       action: () => navigate("/occurrences"),
     },
   ];
@@ -183,60 +178,64 @@ const Dashboard = () => {
       description: "Registrar uma nova ocorrência",
       action: () => navigate("/occurrences"),
     },
-    {
-      icon: Bell,
-      label: "Enviar Notificação",
-      description: "Notificar um morador",
-      action: () => navigate("/occurrences"),
-    },
-    {
-      icon: BarChart3,
-      label: "Relatórios",
-      description: "Estatísticas e análises",
-      action: () => navigate("/reports"),
-    },
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      <DashboardHeader />
+    <DashboardLayout>
+      <Helmet>
+        <title>Dashboard | NotificaCondo</title>
+        <meta name="description" content="Painel de gestão condominial" />
+      </Helmet>
 
-      <main className="container mx-auto px-4 py-8">
+      <div className="space-y-8 animate-fade-up">
         {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="font-display text-3xl font-bold text-foreground mb-2">
+        <div>
+          <h1 className="font-display text-3xl font-bold text-foreground">
             Olá, {profile?.full_name?.split(" ")[0] || "Síndico"}! 👋
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mt-1">
             Bem-vindo ao seu painel de gestão condominial.
           </p>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {statCards.map((stat, index) => (
-            <button
+            <Card
               key={index}
+              className="bg-gradient-card border-border/50 hover:border-primary/30 transition-all duration-300 cursor-pointer group"
               onClick={stat.action}
-              className="p-6 rounded-2xl bg-gradient-card border border-border/50 hover:border-primary/30 transition-all text-left"
             >
-              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center mb-4`}>
-                <stat.icon className="w-6 h-6 text-white" />
-              </div>
-              <div className="font-display text-3xl font-bold text-foreground mb-1">
-                {loading ? "..." : stat.value}
-              </div>
-              <div className="text-sm text-muted-foreground">{stat.label}</div>
-            </button>
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between mb-4">
+                  <div
+                    className={`w-11 h-11 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-lg`}
+                  >
+                    <stat.icon className="w-5 h-5 text-white" />
+                  </div>
+                  <ArrowUpRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+                <div>
+                  {loading ? (
+                    <Skeleton className="h-9 w-16 mb-1" />
+                  ) : (
+                    <p className="font-display text-3xl font-bold text-foreground">
+                      {stat.value}
+                    </p>
+                  )}
+                  <p className="text-sm text-muted-foreground">{stat.title}</p>
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
 
         {/* Quick Actions */}
-        <div className="mb-8">
+        <div>
           <h2 className="font-display text-xl font-semibold text-foreground mb-4">
             Ações Rápidas
           </h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {quickActions.map((action, index) => (
               <button
                 key={index}
@@ -258,25 +257,27 @@ const Dashboard = () => {
 
         {/* Empty State */}
         {stats.condominiums === 0 && !loading && (
-          <div className="text-center py-12 px-4 rounded-2xl bg-gradient-card border border-border/50">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-              <Building2 className="w-8 h-8 text-primary" />
-            </div>
-            <h3 className="font-display text-xl font-semibold text-foreground mb-2">
-              Nenhum condomínio cadastrado
-            </h3>
-            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-              Comece cadastrando seu primeiro condomínio para gerenciar ocorrências, 
-              notificações e multas.
-            </p>
-            <Button variant="hero" onClick={() => navigate("/condominiums")}>
-              <Plus className="w-4 h-4 mr-2" />
-              Cadastrar Condomínio
-            </Button>
-          </div>
+          <Card className="bg-gradient-card border-border/50">
+            <CardContent className="text-center py-12">
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                <Building2 className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="font-display text-xl font-semibold text-foreground mb-2">
+                Nenhum condomínio cadastrado
+              </h3>
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                Comece cadastrando seu primeiro condomínio para gerenciar ocorrências,
+                notificações e multas.
+              </p>
+              <Button onClick={() => navigate("/condominiums")}>
+                <Plus className="w-4 h-4 mr-2" />
+                Cadastrar Condomínio
+              </Button>
+            </CardContent>
+          </Card>
         )}
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 };
 

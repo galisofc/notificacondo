@@ -1,24 +1,22 @@
 import { useEffect, useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Building2,
   FileText,
-  AlertTriangle,
   DollarSign,
   Home,
-  User,
   Calendar,
-  Eye,
-  Shield,
-  LogOut,
   ChevronRight,
+  Shield,
+  AlertTriangle,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import DashboardLayout from "@/components/layouts/DashboardLayout";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface ResidentStats {
   totalOccurrences: number;
@@ -45,11 +43,11 @@ interface Fine {
 }
 
 const ResidentDashboard = () => {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const { residentInfo, loading: roleLoading } = useUserRole();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
   const [stats, setStats] = useState<ResidentStats>({
     totalOccurrences: 0,
     pendingDefenses: 0,
@@ -65,7 +63,6 @@ const ResidentDashboard = () => {
       if (!residentInfo) return;
 
       try {
-        // Fetch occurrences for this resident
         const { data: occurrencesData, error: occError } = await supabase
           .from("occurrences")
           .select("*")
@@ -77,12 +74,10 @@ const ResidentDashboard = () => {
         const occurrences = occurrencesData || [];
         setRecentOccurrences(occurrences.slice(0, 5));
 
-        // Count pending defenses (occurrences in 'notificado' or 'em_defesa' status)
         const pendingDefenseCount = occurrences.filter(
           (o) => o.status === "notificado" || o.status === "em_defesa"
         ).length;
 
-        // Fetch fines for this resident
         const { data: finesData, error: finesError } = await supabase
           .from("fines")
           .select("*")
@@ -91,7 +86,9 @@ const ResidentDashboard = () => {
         if (finesError) throw finesError;
 
         const fines = finesData || [];
-        const pendingFinesList = fines.filter((f) => f.status === "em_aberto" || f.status === "vencido");
+        const pendingFinesList = fines.filter(
+          (f) => f.status === "em_aberto" || f.status === "vencido"
+        );
         setPendingFines(pendingFinesList);
 
         setStats({
@@ -118,11 +115,6 @@ const ResidentDashboard = () => {
       setLoading(false);
     }
   }, [residentInfo, roleLoading]);
-
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/");
-  };
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
@@ -177,103 +169,72 @@ const ResidentDashboard = () => {
 
   if (loading || roleLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </DashboardLayout>
     );
   }
 
   if (!residentInfo) {
     return (
-      <div className="min-h-screen bg-background">
-        <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-          <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
-                <Building2 className="w-4 h-4 text-primary-foreground" />
-              </div>
-              <span className="font-display font-bold text-foreground">CondoMaster</span>
-            </div>
-            <Button variant="ghost" onClick={handleSignOut}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Sair
-            </Button>
+      <DashboardLayout>
+        <div className="text-center py-12 px-4 rounded-2xl bg-gradient-card border border-border/50">
+          <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="w-8 h-8 text-amber-500" />
           </div>
-        </header>
-        <main className="container mx-auto px-4 py-8">
-          <div className="text-center py-12 px-4 rounded-2xl bg-gradient-card border border-border/50">
-            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle className="w-8 h-8 text-amber-500" />
-            </div>
-            <h3 className="font-display text-xl font-semibold text-foreground mb-2">
-              Perfil não encontrado
-            </h3>
-            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-              Seu perfil de morador ainda não foi cadastrado. Entre em contato com o síndico do seu condomínio.
-            </p>
-          </div>
-        </main>
-      </div>
+          <h3 className="font-display text-xl font-semibold text-foreground mb-2">
+            Perfil não encontrado
+          </h3>
+          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+            Seu perfil de morador ainda não foi cadastrado. Entre em contato com o síndico do
+            seu condomínio.
+          </p>
+        </div>
+      </DashboardLayout>
     );
   }
 
   const statCards = [
     {
-      icon: FileText,
-      label: "Ocorrências",
+      title: "Ocorrências",
       value: stats.totalOccurrences,
-      color: "from-blue-500 to-blue-600",
+      icon: FileText,
+      gradient: "from-blue-500 to-blue-600",
     },
     {
-      icon: Shield,
-      label: "Defesas Pendentes",
+      title: "Defesas Pendentes",
       value: stats.pendingDefenses,
-      color: "from-purple-500 to-purple-600",
+      icon: Shield,
+      gradient: "from-purple-500 to-purple-600",
     },
     {
-      icon: DollarSign,
-      label: "Multas Pendentes",
+      title: "Multas Pendentes",
       value: stats.pendingFines,
-      color: "from-red-500 to-red-600",
+      icon: DollarSign,
+      gradient: "from-red-500 to-red-600",
     },
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
-              <Building2 className="w-4 h-4 text-primary-foreground" />
-            </div>
-            <span className="font-display font-bold text-foreground">CondoMaster</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/resident/profile")}>
-              <User className="w-5 h-5" />
-            </Button>
-            <Button variant="ghost" onClick={handleSignOut}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Sair
-            </Button>
-          </div>
-        </div>
-      </header>
+    <DashboardLayout>
+      <Helmet>
+        <title>Dashboard | Área do Morador</title>
+        <meta name="description" content="Painel do morador" />
+      </Helmet>
 
-      <main className="container mx-auto px-4 py-8">
+      <div className="space-y-8 animate-fade-up">
         {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="font-display text-3xl font-bold text-foreground mb-2">
+        <div>
+          <h1 className="font-display text-3xl font-bold text-foreground">
             Olá, {residentInfo.full_name.split(" ")[0]}! 👋
           </h1>
-          <p className="text-muted-foreground">
-            Bem-vindo ao seu painel de morador.
-          </p>
+          <p className="text-muted-foreground mt-1">Bem-vindo ao seu painel de morador.</p>
         </div>
 
         {/* Apartment Info Card */}
-        <Card className="bg-gradient-card border-border/50 mb-8">
+        <Card className="bg-gradient-card border-border/50">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg flex items-center gap-2">
               <Home className="w-5 h-5 text-primary" />
@@ -306,25 +267,37 @@ const ResidentDashboard = () => {
         </Card>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {statCards.map((stat, index) => (
-            <div
+            <Card
               key={index}
-              className="p-6 rounded-2xl bg-gradient-card border border-border/50"
+              className="bg-gradient-card border-border/50 hover:border-primary/30 transition-all duration-300"
             >
-              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center mb-4`}>
-                <stat.icon className="w-6 h-6 text-white" />
-              </div>
-              <div className="font-display text-3xl font-bold text-foreground mb-1">
-                {stat.value}
-              </div>
-              <div className="text-sm text-muted-foreground">{stat.label}</div>
-            </div>
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between mb-4">
+                  <div
+                    className={`w-11 h-11 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-lg`}
+                  >
+                    <stat.icon className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+                <div>
+                  {loading ? (
+                    <Skeleton className="h-9 w-16 mb-1" />
+                  ) : (
+                    <p className="font-display text-3xl font-bold text-foreground">
+                      {stat.value}
+                    </p>
+                  )}
+                  <p className="text-sm text-muted-foreground">{stat.title}</p>
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
 
         {/* Recent Occurrences */}
-        <Card className="bg-gradient-card border-border/50 mb-8">
+        <Card className="bg-gradient-card border-border/50">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-primary" />
@@ -355,9 +328,7 @@ const ResidentDashboard = () => {
                           {getTypeBadge(occurrence.type)}
                           {getStatusBadge(occurrence.status)}
                         </div>
-                        <h4 className="font-medium text-foreground mb-1">
-                          {occurrence.title}
-                        </h4>
+                        <h4 className="font-medium text-foreground mb-1">{occurrence.title}</h4>
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
                           {new Date(occurrence.occurred_at).toLocaleDateString("pt-BR")}
@@ -397,11 +368,13 @@ const ResidentDashboard = () => {
                           Vencimento: {new Date(fine.due_date).toLocaleDateString("pt-BR")}
                         </p>
                       </div>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        fine.status === "vencido" 
-                          ? "bg-red-500/10 text-red-500" 
-                          : "bg-amber-500/10 text-amber-500"
-                      }`}>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          fine.status === "vencido"
+                            ? "bg-red-500/10 text-red-500"
+                            : "bg-amber-500/10 text-amber-500"
+                        }`}
+                      >
                         {fine.status === "vencido" ? "Vencida" : "Em Aberto"}
                       </span>
                     </div>
@@ -411,8 +384,8 @@ const ResidentDashboard = () => {
             </CardContent>
           </Card>
         )}
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 };
 
