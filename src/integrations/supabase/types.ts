@@ -99,6 +99,7 @@ export type Database = {
           condominium_id: string
           created_at: string
           description: string | null
+          floors: number
           id: string
           name: string
           updated_at: string
@@ -107,6 +108,7 @@ export type Database = {
           condominium_id: string
           created_at?: string
           description?: string | null
+          floors?: number
           id?: string
           name: string
           updated_at?: string
@@ -115,6 +117,7 @@ export type Database = {
           condominium_id?: string
           created_at?: string
           description?: string | null
+          floors?: number
           id?: string
           name?: string
           updated_at?: string
