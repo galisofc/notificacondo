@@ -132,7 +132,7 @@ const ResidentOccurrences = () => {
       registrada: "Registrada",
       notificado: "Notificado",
       em_defesa: "Em Defesa",
-      analisando: "Analisando",
+      analisando: "Defesa em Análise",
       arquivada: "Arquivada",
       advertido: "Advertido",
       multado: "Multado",
@@ -300,7 +300,7 @@ const ResidentOccurrences = () => {
                   <SelectItem value="registrada">Registrada</SelectItem>
                   <SelectItem value="notificado">Notificado</SelectItem>
                   <SelectItem value="em_defesa">Em Defesa</SelectItem>
-                  <SelectItem value="analisando">Analisando</SelectItem>
+                  <SelectItem value="analisando">Defesa em Análise</SelectItem>
                   <SelectItem value="arquivada">Arquivada</SelectItem>
                   <SelectItem value="advertido">Advertido</SelectItem>
                   <SelectItem value="multado">Multado</SelectItem>

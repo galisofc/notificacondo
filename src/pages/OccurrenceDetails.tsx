@@ -313,7 +313,7 @@ const OccurrenceDetails = () => {
       registrada: "Registrada",
       notificado: "Notificado",
       em_defesa: "Em Defesa",
-      analisando: "Analisando",
+      analisando: "Defesa em Análise",
       arquivada: "Arquivada",
       advertido: "Advertido",
       multado: "Multado",
