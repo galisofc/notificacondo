@@ -18,6 +18,7 @@ import Occurrences from "./pages/Occurrences";
 import OccurrenceDetails from "./pages/OccurrenceDetails";
 import Reports from "./pages/Reports";
 import SindicoSettings from "./pages/SindicoSettings";
+import SindicoProfile from "./pages/SindicoProfile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -86,6 +87,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <SindicoSettings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/settings/profile"
+                element={
+                  <ProtectedRoute>
+                    <SindicoProfile />
                   </ProtectedRoute>
                 }
               />

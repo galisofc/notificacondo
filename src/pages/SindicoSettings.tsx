@@ -358,6 +358,14 @@ const SindicoSettings = () => {
                 <p className="font-medium text-foreground">{profile?.phone || "-"}</p>
               </div>
             </div>
+            <div className="mt-6 pt-6 border-t border-border/50">
+              <Button 
+                variant="outline" 
+                onClick={() => navigate("/settings/profile")}
+              >
+                Editar Perfil
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </main>
