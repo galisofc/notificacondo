@@ -18,6 +18,13 @@ interface ResidentInfo {
   is_responsible: boolean;
 }
 
+interface ProfileInfo {
+  id: string;
+  full_name: string;
+  email: string;
+  phone: string | null;
+}
+
 interface UseUserRoleReturn {
   role: UserRole;
   loading: boolean;
@@ -25,6 +32,7 @@ interface UseUserRoleReturn {
   isSindico: boolean;
   isSuperAdmin: boolean;
   residentInfo: ResidentInfo | null;
+  profileInfo: ProfileInfo | null;
 }
 
 export const useUserRole = (): UseUserRoleReturn => {
@@ -32,11 +40,13 @@ export const useUserRole = (): UseUserRoleReturn => {
   const [role, setRole] = useState<UserRole>(null);
   const [loading, setLoading] = useState(true);
   const [residentInfo, setResidentInfo] = useState<ResidentInfo | null>(null);
+  const [profileInfo, setProfileInfo] = useState<ProfileInfo | null>(null);
 
   useEffect(() => {
     const fetchUserRole = async () => {
       if (!user) {
         setRole(null);
+        setProfileInfo(null);
         setLoading(false);
         return;
       }
@@ -55,6 +65,28 @@ export const useUserRole = (): UseUserRoleReturn => {
 
         const userRole = roleData?.role as UserRole || "morador";
         setRole(userRole);
+
+        // Fetch profile info for sindico and super_admin
+        if (userRole === "sindico" || userRole === "super_admin") {
+          const { data: profileData, error: profileError } = await supabase
+            .from("profiles")
+            .select("id, full_name, email, phone")
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+          if (profileError) {
+            console.error("Error fetching profile info:", profileError);
+          }
+
+          if (profileData) {
+            setProfileInfo({
+              id: profileData.id,
+              full_name: profileData.full_name,
+              email: profileData.email,
+              phone: profileData.phone,
+            });
+          }
+        }
 
         // If user is a resident, fetch their resident info
         if (userRole === "morador") {
@@ -120,5 +152,6 @@ export const useUserRole = (): UseUserRoleReturn => {
     isSindico: role === "sindico",
     isSuperAdmin: role === "super_admin",
     residentInfo,
+    profileInfo,
   };
 };
