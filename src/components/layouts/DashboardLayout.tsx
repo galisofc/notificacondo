@@ -56,6 +56,7 @@ const superAdminNavItems: NavItem[] = [
   { title: "Assinaturas", url: "/superadmin/subscriptions", icon: CreditCard },
   { title: "Logs", url: "/superadmin/logs", icon: FileText },
   { title: "WhatsApp", url: "/superadmin/whatsapp", icon: MessageCircle },
+  { title: "Configurações", url: "/superadmin/settings", icon: Settings },
 ];
 
 const sindicoNavItems: NavItem[] = [
