@@ -13,6 +13,7 @@ import Condominiums from "./pages/Condominiums";
 import CondominiumDetails from "./pages/CondominiumDetails";
 import Occurrences from "./pages/Occurrences";
 import OccurrenceDetails from "./pages/OccurrenceDetails";
+import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -65,6 +66,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <OccurrenceDetails />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/reports"
+                element={
+                  <ProtectedRoute>
+                    <Reports />
                   </ProtectedRoute>
                 }
               />

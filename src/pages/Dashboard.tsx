@@ -10,7 +10,8 @@ import {
   Users,
   Plus,
   Bell,
-  ChevronRight
+  ChevronRight,
+  BarChart3
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -189,10 +190,10 @@ const Dashboard = () => {
       action: () => toast({ title: "Em breve", description: "Funcionalidade em desenvolvimento" }),
     },
     {
-      icon: FileText,
-      label: "Gerar Relatório",
-      description: "Exportar dossiê jurídico",
-      action: () => toast({ title: "Em breve", description: "Funcionalidade em desenvolvimento" }),
+      icon: BarChart3,
+      label: "Relatórios",
+      description: "Estatísticas e análises",
+      action: () => navigate("/reports"),
     },
   ];
 
