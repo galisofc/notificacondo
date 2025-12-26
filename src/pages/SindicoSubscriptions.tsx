@@ -8,6 +8,7 @@ import { format, differenceInDays, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
+import { MercadoPagoCheckout } from "@/components/mercadopago/MercadoPagoCheckout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -94,6 +95,22 @@ const SindicoSubscriptions = () => {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [planFilter, setPlanFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  // Fetch user profile to get email
+  const { data: userProfile } = useQuery({
+    queryKey: ["user-profile", user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("email")
+        .eq("user_id", user.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
 
   // Fetch plans
   const { data: plans } = useQuery({
@@ -599,15 +616,27 @@ const SindicoSubscriptions = () => {
                         )}
                       </div>
 
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="w-full"
-                        onClick={() => openChangePlanDialog(sub)}
-                      >
-                        <ArrowUpCircle className="h-4 w-4 mr-2" />
-                        Alterar Plano
-                      </Button>
+                      <div className="flex flex-col gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="w-full"
+                          onClick={() => openChangePlanDialog(sub)}
+                        >
+                          <ArrowUpCircle className="h-4 w-4 mr-2" />
+                          Alterar Plano
+                        </Button>
+                        
+                        {userProfile?.email && (
+                          <MercadoPagoCheckout
+                            condominiumId={sub.condominium.id}
+                            planSlug={sub.plan}
+                            payerEmail={userProfile.email}
+                            buttonText="Pagar com MP"
+                            variant="outline"
+                          />
+                        )}
+                      </div>
                     </div>
                   );
                 })}
