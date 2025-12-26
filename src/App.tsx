@@ -17,6 +17,7 @@ import CondominiumDetails from "./pages/CondominiumDetails";
 import Occurrences from "./pages/Occurrences";
 import OccurrenceDetails from "./pages/OccurrenceDetails";
 import Reports from "./pages/Reports";
+import Notifications from "./pages/Notifications";
 import SindicoSettings from "./pages/SindicoSettings";
 import SindicoProfile from "./pages/SindicoProfile";
 import ResidentAccess from "./pages/ResidentAccess";
@@ -80,6 +81,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <Reports />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/notifications"
+                element={
+                  <ProtectedRoute>
+                    <Notifications />
                   </ProtectedRoute>
                 }
               />
