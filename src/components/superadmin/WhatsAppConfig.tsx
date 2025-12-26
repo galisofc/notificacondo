@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { MessageCircle, Save, TestTube, CheckCircle, XCircle, Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { MessageCircle, Save, TestTube, CheckCircle, XCircle, Loader2, AlertCircle, Eye, EyeOff, Send, Phone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const SUPABASE_URL = "https://iyeljkdrypcxvljebqtn.supabase.co";
@@ -75,9 +75,11 @@ export function WhatsAppConfig() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [isSendingTest, setIsSendingTest] = useState(false);
   const [testResult, setTestResult] = useState<"success" | "error" | null>(null);
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [showToken, setShowToken] = useState(false);
+  const [testPhone, setTestPhone] = useState("");
 
   const [config, setConfig] = useState<WhatsAppConfigData>({
     provider: "zpro",
@@ -292,6 +294,66 @@ export function WhatsAppConfig() {
     }
   };
 
+  const handleSendTest = async () => {
+    if (!testPhone) {
+      toast({
+        title: "Número obrigatório",
+        description: "Digite um número de telefone para enviar o teste.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!config.id) {
+      toast({
+        title: "Salve primeiro",
+        description: "Salve as configurações antes de enviar um teste.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSendingTest(true);
+
+    try {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp-test`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          phone: testPhone,
+        }),
+      });
+
+      const data = await response.json();
+      console.log("Send test result:", data);
+
+      if (data.success) {
+        toast({
+          title: "Mensagem enviada!",
+          description: "Verifique seu WhatsApp para confirmar o recebimento.",
+        });
+        setTestPhone("");
+      } else {
+        toast({
+          title: "Erro ao enviar",
+          description: data.error || "Não foi possível enviar a mensagem de teste.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Send test failed:", error);
+      toast({
+        title: "Erro ao enviar",
+        description: "Não foi possível enviar a mensagem de teste.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingTest(false);
+    }
+  };
+
   const isZpro = config.provider === "zpro";
 
   if (isLoading) {
@@ -486,6 +548,60 @@ export function WhatsAppConfig() {
               </Badge>
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Test Message */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Send className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">Enviar Mensagem de Teste</CardTitle>
+              <CardDescription>
+                Teste a integração enviando uma mensagem para seu WhatsApp
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="testPhone">Número de Telefone</Label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="testPhone"
+                  placeholder="5511999999999"
+                  value={testPhone}
+                  onChange={(e) => setTestPhone(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Digite o número com código do país (55) e DDD, sem espaços ou caracteres especiais
+              </p>
+            </div>
+          </div>
+          <Button 
+            onClick={handleSendTest} 
+            disabled={isSendingTest || !config.id}
+            className="w-full sm:w-auto"
+          >
+            {isSendingTest ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4 mr-2" />
+            )}
+            {isSendingTest ? "Enviando..." : "Enviar Teste"}
+          </Button>
+          {!config.id && (
+            <p className="text-xs text-amber-600">
+              Salve as configurações antes de enviar um teste.
+            </p>
+          )}
         </CardContent>
       </Card>
 
