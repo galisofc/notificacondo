@@ -33,7 +33,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useToast } from "@/hooks/use-toast";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
-import { format, startOfMonth, endOfMonth, subMonths, parseISO, isWithinInterval } from "date-fns";
+import { format, startOfMonth, endOfMonth, subMonths, parseISO, isWithinInterval, eachMonthOfInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   BarChart,
@@ -47,6 +47,10 @@ import {
   Pie,
   Cell,
   Legend,
+  LineChart,
+  Line,
+  Area,
+  AreaChart,
 } from "recharts";
 
 interface Occurrence {
@@ -232,6 +236,39 @@ const Reports = () => {
     { name: "Advertido", count: stats.byStatus.advertido },
     { name: "Multado", count: stats.byStatus.multado },
   ].filter((s) => s.count > 0);
+
+  // Monthly evolution data
+  const monthlyEvolutionData = useMemo(() => {
+    const from = parseISO(dateFrom);
+    const to = parseISO(dateTo);
+    const months = eachMonthOfInterval({ start: from, end: to });
+
+    return months.map((month) => {
+      const monthStart = startOfMonth(month);
+      const monthEnd = endOfMonth(month);
+
+      const monthOccurrences = filteredOccurrences.filter((o) => {
+        const date = parseISO(o.created_at);
+        return isWithinInterval(date, { start: monthStart, end: monthEnd });
+      });
+
+      const monthFines = filteredFines.filter((f) => {
+        const date = parseISO(f.created_at);
+        return isWithinInterval(date, { start: monthStart, end: monthEnd });
+      });
+
+      const finesAmount = monthFines.reduce((sum, f) => sum + Number(f.amount), 0);
+
+      return {
+        month: format(month, "MMM/yy", { locale: ptBR }),
+        ocorrencias: monthOccurrences.length,
+        advertencias: monthOccurrences.filter((o) => o.type === "advertencia").length,
+        notificacoes: monthOccurrences.filter((o) => o.type === "notificacao").length,
+        multas: monthOccurrences.filter((o) => o.type === "multa").length,
+        valorMultas: finesAmount,
+      };
+    });
+  }, [filteredOccurrences, filteredFines, dateFrom, dateTo]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -629,6 +666,128 @@ const Reports = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Monthly Evolution Chart */}
+        <Card className="bg-gradient-card border-border/50 mb-8">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-primary" />
+              Evolução Mensal
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {monthlyEvolutionData.length === 0 ? (
+              <div className="flex items-center justify-center h-64 text-muted-foreground">
+                Nenhum dado no período
+              </div>
+            ) : (
+              <div className="space-y-8">
+                {/* Occurrences Evolution */}
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-4">Ocorrências por Mês</h4>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <AreaChart data={monthlyEvolutionData}>
+                      <defs>
+                        <linearGradient id="colorAdvertencias" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={COLORS.warning} stopOpacity={0.3} />
+                          <stop offset="95%" stopColor={COLORS.warning} stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="colorNotificacoes" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={COLORS.blue} stopOpacity={0.3} />
+                          <stop offset="95%" stopColor={COLORS.blue} stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="colorMultas" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={COLORS.danger} stopOpacity={0.3} />
+                          <stop offset="95%" stopColor={COLORS.danger} stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis 
+                        dataKey="month" 
+                        stroke="hsl(var(--muted-foreground))" 
+                        fontSize={12}
+                      />
+                      <YAxis 
+                        stroke="hsl(var(--muted-foreground))" 
+                        fontSize={12}
+                        allowDecimals={false}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--card))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "8px",
+                        }}
+                      />
+                      <Legend />
+                      <Area
+                        type="monotone"
+                        dataKey="advertencias"
+                        name="Advertências"
+                        stroke={COLORS.warning}
+                        fillOpacity={1}
+                        fill="url(#colorAdvertencias)"
+                        strokeWidth={2}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="notificacoes"
+                        name="Notificações"
+                        stroke={COLORS.blue}
+                        fillOpacity={1}
+                        fill="url(#colorNotificacoes)"
+                        strokeWidth={2}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="multas"
+                        name="Multas"
+                        stroke={COLORS.danger}
+                        fillOpacity={1}
+                        fill="url(#colorMultas)"
+                        strokeWidth={2}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Fines Amount Evolution */}
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-4">Valor de Multas por Mês</h4>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={monthlyEvolutionData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis 
+                        dataKey="month" 
+                        stroke="hsl(var(--muted-foreground))" 
+                        fontSize={12}
+                      />
+                      <YAxis 
+                        stroke="hsl(var(--muted-foreground))" 
+                        fontSize={12}
+                        tickFormatter={(value) => `R$${value}`}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--card))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "8px",
+                        }}
+                        formatter={(value: number) => [formatCurrency(value), "Valor"]}
+                      />
+                      <Bar 
+                        dataKey="valorMultas" 
+                        name="Valor em Multas"
+                        fill="hsl(var(--primary))" 
+                        radius={[4, 4, 0, 0]} 
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Fines Details */}
         <Card className="bg-gradient-card border-border/50 mb-8">
