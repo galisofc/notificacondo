@@ -56,3 +56,7 @@ verify_jwt = false
 # Cancelamento de assinatura - requer autenticação do usuário
 [functions.mercadopago-cancel-subscription]
 verify_jwt = false
+
+# Teste de conexão com Mercado Pago
+[functions.mercadopago-test-connection]
+verify_jwt = false
