@@ -380,15 +380,19 @@ const ResidentOccurrenceDetails = () => {
       <main className="container mx-auto px-4 py-8">
         {/* Back Button */}
         <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/resident")}>
-            <ArrowLeft className="w-5 h-5" />
+          <Button 
+            variant="outline" 
+            onClick={() => navigate("/resident")}
+            className="gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Minhas Ocorrências
           </Button>
-          <div>
-            <h1 className="font-display text-2xl font-bold text-foreground">
-              Detalhes da Ocorrência
-            </h1>
-          </div>
         </div>
+
+        <h1 className="font-display text-2xl font-bold text-foreground mb-6">
+          Detalhes da Ocorrência
+        </h1>
 
         {/* Occurrence Details */}
         <Card className="bg-gradient-card border-border/50 mb-8">
