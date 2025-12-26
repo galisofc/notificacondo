@@ -39,6 +39,8 @@ import {
   AlertTriangle,
   CreditCard,
   Search,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 
 interface Plan {
@@ -476,9 +478,30 @@ const SindicoSubscriptions = () => {
                       className="p-4 rounded-xl border border-border bg-card hover:border-primary/30 transition-all"
                     >
                       <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium text-sm">{sub.condominium.name}</span>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Building2 className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium text-sm">{sub.condominium.name}</span>
+                          </div>
+                          <Badge 
+                            variant={sub.active ? "default" : "secondary"}
+                            className={sub.active 
+                              ? "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/20" 
+                              : "bg-muted text-muted-foreground"
+                            }
+                          >
+                            {sub.active ? (
+                              <>
+                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                Ativo
+                              </>
+                            ) : (
+                              <>
+                                <XCircle className="h-3 w-3 mr-1" />
+                                Inativo
+                              </>
+                            )}
+                          </Badge>
                         </div>
                         <Badge className={`${getPlanColor(sub.plan)} text-white`}>
                           {PLAN_NAMES[sub.plan] || sub.plan}
