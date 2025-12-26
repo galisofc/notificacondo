@@ -38,7 +38,10 @@ import {
   Search,
   Radio,
   TrendingUp,
+  RefreshCw,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import {
   AreaChart,
   Area,
@@ -98,6 +101,41 @@ export function NotificationsMonitor() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLive, setIsLive] = useState(true);
   const [chartPeriod, setChartPeriod] = useState<"7" | "14" | "30">("7");
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSyncStatus = async () => {
+    setIsSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-notification-status");
+      
+      if (error) {
+        toast.error("Erro ao sincronizar status", {
+          description: error.message,
+        });
+        return;
+      }
+
+      if (data.synced > 0) {
+        toast.success("Sincronização concluída", {
+          description: `${data.synced} notificações atualizadas de ${data.checked} verificadas.`,
+        });
+        // Refresh data
+        queryClient.invalidateQueries({ queryKey: ["notifications-monitor"] });
+        queryClient.invalidateQueries({ queryKey: ["notifications-stats"] });
+        queryClient.invalidateQueries({ queryKey: ["notifications-chart"] });
+      } else {
+        toast.info("Nenhuma atualização necessária", {
+          description: `${data.checked} notificações verificadas, todas já sincronizadas.`,
+        });
+      }
+    } catch (err) {
+      toast.error("Erro ao sincronizar", {
+        description: "Não foi possível conectar ao servidor.",
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   // Realtime subscription
   useEffect(() => {
@@ -466,17 +504,29 @@ export function NotificationsMonitor() {
                 Monitoramento de status das mensagens WhatsApp
               </CardDescription>
             </div>
-            <button
-              onClick={() => setIsLive(!isLive)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                isLive
-                  ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
-                  : "bg-muted text-muted-foreground border border-border"
-              }`}
-            >
-              <Radio className={`h-3 w-3 ${isLive ? "animate-pulse" : ""}`} />
-              {isLive ? "Ao vivo" : "Pausado"}
-            </button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSyncStatus}
+                disabled={isSyncing}
+                className="gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} />
+                {isSyncing ? "Sincronizando..." : "Sincronizar Status"}
+              </Button>
+              <button
+                onClick={() => setIsLive(!isLive)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  isLive
+                    ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                    : "bg-muted text-muted-foreground border border-border"
+                }`}
+              >
+                <Radio className={`h-3 w-3 ${isLive ? "animate-pulse" : ""}`} />
+                {isLive ? "Ao vivo" : "Pausado"}
+              </button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
