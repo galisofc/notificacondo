@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.notify-resident-decision]
 verify_jwt = false
+
+[functions.generate-invoices]
+verify_jwt = false
