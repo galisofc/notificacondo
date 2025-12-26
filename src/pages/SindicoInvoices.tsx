@@ -41,7 +41,14 @@ import {
   TrendingUp,
   FileText,
   RefreshCw,
+  ShieldCheck,
+  ShieldX,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 type InvoiceStatus = "all" | "pending" | "paid" | "overdue" | "cancelled";
 
@@ -119,6 +126,31 @@ const SindicoInvoices = () => {
     },
     enabled: !!user,
   });
+
+  // Fetch MercadoPago config status
+  const { data: mpConfig } = useQuery({
+    queryKey: ["mercadopago-public-config"],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke(
+        "get-mercadopago-public-config",
+        { body: {} }
+      );
+      if (error) {
+        console.error("Error fetching MercadoPago config:", error);
+        return null;
+      }
+      return (data?.config as
+        | { public_key: string | null; is_sandbox: boolean; is_active: boolean }
+        | null) ?? null;
+    },
+  });
+
+  // Mask public key for display
+  const maskPublicKey = (key: string | null) => {
+    if (!key) return null;
+    if (key.length <= 12) return key;
+    return `${key.slice(0, 8)}...${key.slice(-4)}`;
+  };
 
   const handleGenerateInvoices = async () => {
     setIsGenerating(true);
@@ -245,26 +277,74 @@ const SindicoInvoices = () => {
         <SindicoBreadcrumbs items={[{ label: "Faturas" }]} />
 
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Faturas</h1>
             <p className="text-muted-foreground">
               Acompanhe as faturas de cada condomínio
             </p>
           </div>
-          <Button onClick={handleGenerateInvoices} disabled={isGenerating}>
-            {isGenerating ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Gerando...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Gerar Faturas
-              </>
-            )}
-          </Button>
+          <div className="flex items-center gap-3">
+            {/* MercadoPago Status Indicator */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm ${
+                    mpConfig?.is_active
+                      ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                      : "bg-muted text-muted-foreground border-border"
+                  }`}
+                >
+                  {mpConfig?.is_active ? (
+                    <ShieldCheck className="h-4 w-4" />
+                  ) : (
+                    <ShieldX className="h-4 w-4" />
+                  )}
+                  <span className="hidden sm:inline">
+                    {mpConfig?.is_active ? "Pagamentos Ativos" : "Pagamentos Inativos"}
+                  </span>
+                  {mpConfig?.is_sandbox && (
+                    <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/20">
+                      Sandbox
+                    </Badge>
+                  )}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs">
+                <div className="space-y-1">
+                  <p className="font-medium">
+                    {mpConfig?.is_active
+                      ? "Mercado Pago configurado"
+                      : "Mercado Pago não configurado"}
+                  </p>
+                  {mpConfig?.public_key && (
+                    <p className="text-xs text-muted-foreground">
+                      Public Key: {maskPublicKey(mpConfig.public_key)}
+                    </p>
+                  )}
+                  {!mpConfig?.is_active && (
+                    <p className="text-xs text-muted-foreground">
+                      Entre em contato com o administrador para ativar pagamentos.
+                    </p>
+                  )}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+
+            <Button onClick={handleGenerateInvoices} disabled={isGenerating}>
+              {isGenerating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Gerando...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Gerar Faturas
+                </>
+              )}
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}
