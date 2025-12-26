@@ -184,6 +184,51 @@ const SindicoSettings = () => {
     return "bg-primary";
   };
 
+  // Calculate proration details
+  const calculateProration = () => {
+    if (!subscription?.current_period_start || !subscription?.current_period_end || !selectedPlan) {
+      return null;
+    }
+
+    const periodStart = new Date(subscription.current_period_start);
+    const periodEnd = new Date(subscription.current_period_end);
+    const now = new Date();
+
+    const totalDays = Math.ceil((periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24));
+    const usedDays = Math.ceil((now.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24));
+    const remainingDays = Math.max(totalDays - usedDays, 0);
+
+    const currentPlanPrice = PLAN_DETAILS[currentPlan].price;
+    const newPlanPrice = PLAN_DETAILS[selectedPlan].price;
+
+    // Calculate daily rates
+    const currentDailyRate = currentPlanPrice / totalDays;
+    const newDailyRate = newPlanPrice / totalDays;
+
+    // Credit for unused portion of current plan
+    const unusedCredit = currentDailyRate * remainingDays;
+    
+    // Cost for remaining portion of new plan
+    const newPlanCost = newDailyRate * remainingDays;
+
+    // Difference to charge (can be negative if downgrading, but we only show upgrades)
+    const proratedAmount = Math.max(newPlanCost - unusedCredit, 0);
+
+    return {
+      totalDays,
+      usedDays,
+      remainingDays,
+      usedPercentage: Math.round((usedDays / totalDays) * 100),
+      unusedCredit,
+      newPlanCost,
+      proratedAmount,
+      currentPlanPrice,
+      newPlanPrice,
+    };
+  };
+
+  const prorationDetails = selectedPlan ? calculateProration() : null;
+
   const handleUpgrade = async () => {
     if (!selectedCondo?.subscription?.id || !selectedPlan) return;
 
@@ -225,7 +270,9 @@ const SindicoSettings = () => {
 
       toast({
         title: "Plano atualizado!",
-        description: `Seu plano foi alterado para ${PLAN_DETAILS[selectedPlan].name}.`,
+        description: prorationDetails 
+          ? `Upgrade para ${PLAN_DETAILS[selectedPlan].name}. Valor proporcional: R$ ${prorationDetails.proratedAmount.toFixed(2)}`
+          : `Seu plano foi alterado para ${PLAN_DETAILS[selectedPlan].name}.`,
       });
 
       setIsUpgradeDialogOpen(false);
@@ -570,6 +617,59 @@ const SindicoSettings = () => {
                   </Card>
                 );
               })}
+
+              {/* Proration Details */}
+              {prorationDetails && selectedPlan && (
+                <Card className="bg-muted/50 border-dashed">
+                  <CardContent className="p-4">
+                    <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+                      <DollarSign className="w-4 h-4 text-primary" />
+                      Cálculo Proporcional
+                    </h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Período usado</span>
+                        <span className="font-medium text-foreground">
+                          {prorationDetails.usedDays} de {prorationDetails.totalDays} dias ({prorationDetails.usedPercentage}%)
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Dias restantes</span>
+                        <span className="font-medium text-foreground">{prorationDetails.remainingDays} dias</span>
+                      </div>
+                      <div className="border-t border-border/50 my-2 pt-2">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">
+                            Crédito não usado ({PLAN_DETAILS[currentPlan].name})
+                          </span>
+                          <span className="font-medium text-green-500">
+                            - R$ {prorationDetails.unusedCredit.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">
+                            Custo restante ({PLAN_DETAILS[selectedPlan].name})
+                          </span>
+                          <span className="font-medium text-foreground">
+                            + R$ {prorationDetails.newPlanCost.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="border-t border-border/50 pt-2">
+                        <div className="flex justify-between text-base">
+                          <span className="font-semibold text-foreground">Valor a pagar agora</span>
+                          <span className="font-bold text-primary">
+                            R$ {prorationDetails.proratedAmount.toFixed(2)}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          A partir do próximo ciclo: R$ {prorationDetails.newPlanPrice.toFixed(2)}/mês
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
             <DialogFooter>
@@ -587,7 +687,7 @@ const SindicoSettings = () => {
                   </>
                 ) : (
                   <>
-                    Fazer Upgrade
+                    {prorationDetails ? `Pagar R$ ${prorationDetails.proratedAmount.toFixed(2)}` : "Fazer Upgrade"}
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </>
                 )}
