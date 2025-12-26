@@ -65,13 +65,22 @@ const zproProvider: ProviderConfig = {
       }
       
       if (response.ok) {
-        if (data.id || data.messageId || data.key?.id) {
-          return { success: true, messageId: data.id || data.messageId || data.key?.id };
+        // Extract message ID from various response formats
+        const extractedMessageId = data.id || data.messageId || data.key?.id || data.msgId || data.message_id;
+        
+        if (extractedMessageId && extractedMessageId !== "sent") {
+          return { success: true, messageId: String(extractedMessageId) };
         }
-        if (data.status === "success" || data.status === "PENDING") {
-          return { success: true, messageId: data.id || "sent" };
+        
+        // If no valid ID but status indicates success, generate a tracking ID
+        if (data.status === "success" || data.status === "PENDING" || response.status === 200) {
+          // Generate a unique tracking ID if provider doesn't return one
+          const trackingId = `zpro_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          console.log(`Z-PRO: No message ID in response, using tracking ID: ${trackingId}`);
+          return { success: true, messageId: trackingId };
         }
-        return { success: true, messageId: "sent" };
+        
+        return { success: true, messageId: `zpro_${Date.now()}` };
       }
       
       return { success: false, error: data.message || data.error || `Erro ${response.status}` };
@@ -343,12 +352,12 @@ Este link é pessoal e intransferível.`;
     });
 
     // Update notification with result
+    // Note: delivered_at and read_at are updated by the webhook when provider confirms delivery/read
     await supabase
       .from("notifications_sent")
       .update({
         zpro_message_id: result.messageId,
         zpro_status: result.success ? "sent" : "failed",
-        delivered_at: result.success ? new Date().toISOString() : null,
       })
       .eq("id", notification.id);
 
