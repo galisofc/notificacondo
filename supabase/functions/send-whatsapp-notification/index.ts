@@ -19,6 +19,15 @@ interface ProviderSettings {
   instanceId: string;
 }
 
+interface WhatsAppConfigRow {
+  id: string;
+  provider: string;
+  api_url: string;
+  api_key: string;
+  instance_id: string;
+  is_active: boolean;
+}
+
 // Z-PRO Provider
 const zproProvider: ProviderConfig = {
   async sendMessage(phone: string, message: string, config: ProviderSettings) {
@@ -135,20 +144,42 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const whatsappApiUrl = Deno.env.get("WHATSAPP_API_URL");
-    const whatsappApiKey = Deno.env.get("WHATSAPP_API_KEY");
-    const whatsappInstanceId = Deno.env.get("WHATSAPP_INSTANCE_ID");
-    const whatsappProvider = (Deno.env.get("WHATSAPP_PROVIDER") || "zpro") as WhatsAppProvider;
 
-    if (!whatsappApiUrl || !whatsappApiKey || !whatsappInstanceId) {
-      console.error("WhatsApp credentials not configured");
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Fetch WhatsApp config from database
+    const { data: whatsappConfig, error: configError } = await supabase
+      .from("whatsapp_config")
+      .select("*")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (configError) {
+      console.error("Error fetching WhatsApp config:", configError);
       return new Response(
-        JSON.stringify({ error: "WhatsApp não configurado. Configure WHATSAPP_API_URL, WHATSAPP_API_KEY e WHATSAPP_INSTANCE_ID" }),
+        JSON.stringify({ error: "Erro ao buscar configuração do WhatsApp" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    if (!whatsappConfig) {
+      console.error("WhatsApp not configured in database");
+      return new Response(
+        JSON.stringify({ error: "WhatsApp não configurado. Configure no painel do Super Admin em Configurações > WhatsApp" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const typedConfig = whatsappConfig as WhatsAppConfigRow;
+    const whatsappApiUrl = typedConfig.api_url;
+    const whatsappApiKey = typedConfig.api_key;
+    const whatsappInstanceId = typedConfig.instance_id;
+    const whatsappProvider = (typedConfig.provider || "zpro") as WhatsAppProvider;
+
+    console.log(`Using WhatsApp provider: ${whatsappProvider}, instance: ${whatsappInstanceId}`);
+
     const { occurrence_id, resident_id, message_template }: SendNotificationRequest = await req.json();
 
     if (!occurrence_id || !resident_id) {
