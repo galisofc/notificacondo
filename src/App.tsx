@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import ResidentDashboard from "./pages/ResidentDashboard";
+import ResidentOccurrences from "./pages/ResidentOccurrences";
 import ResidentOccurrenceDetails from "./pages/ResidentOccurrenceDetails";
 import ResidentProfile from "./pages/ResidentProfile";
 import Condominiums from "./pages/Condominiums";
@@ -124,6 +125,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole="morador">
                     <ResidentDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/resident/occurrences"
+                element={
+                  <ProtectedRoute requiredRole="morador">
+                    <ResidentOccurrences />
                   </ProtectedRoute>
                 }
               />

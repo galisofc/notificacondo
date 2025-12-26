@@ -298,11 +298,20 @@ const ResidentDashboard = () => {
 
         {/* Recent Occurrences */}
         <Card className="bg-gradient-card border-border/50">
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-primary" />
-              Minhas Ocorrências
+              Ocorrências Recentes
             </CardTitle>
+            {recentOccurrences.length > 0 && (
+              <button
+                onClick={() => navigate("/resident/occurrences")}
+                className="text-sm text-primary hover:underline flex items-center gap-1"
+              >
+                Ver todas
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            )}
           </CardHeader>
           <CardContent>
             {recentOccurrences.length === 0 ? (
