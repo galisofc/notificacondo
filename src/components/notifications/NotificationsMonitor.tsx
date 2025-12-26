@@ -147,11 +147,15 @@ export function NotificationsMonitor() {
 
       if (statusFilter !== "all") {
         // Some providers don't reliably set a "read" zpro_status,
-        // so we infer read/delivered from timestamps.
+        // so we infer read/delivered from timestamps OR zpro_status.
         if (statusFilter === "read") {
           query = query.not("read_at", "is", null);
         } else if (statusFilter === "delivered") {
-          query = query.is("read_at", null).not("delivered_at", "is", null);
+          // Entregue = tem delivered_at OU zpro_status = delivered/read (exclui só os lidos pelo read_at)
+          query = query.or("delivered_at.not.is.null,zpro_status.eq.delivered,zpro_status.eq.read");
+        } else if (statusFilter === "sent") {
+          // Enviado = zpro_status = sent OU tem sent_at mas sem delivered_at
+          query = query.or("zpro_status.eq.sent");
         } else {
           query = query.eq("zpro_status", statusFilter);
         }
