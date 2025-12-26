@@ -22,6 +22,7 @@ import Notifications from "./pages/Notifications";
 import DefenseAnalysis from "./pages/DefenseAnalysis";
 import SindicoSettings from "./pages/SindicoSettings";
 import SindicoInvoices from "./pages/SindicoInvoices";
+import SindicoSubscriptions from "./pages/SindicoSubscriptions";
 import SindicoProfile from "./pages/SindicoProfile";
 import ResidentAccess from "./pages/ResidentAccess";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
@@ -126,6 +127,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole="sindico">
                     <SindicoInvoices />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/sindico/subscriptions"
+                element={
+                  <ProtectedRoute requiredRole="sindico">
+                    <SindicoSubscriptions />
                   </ProtectedRoute>
                 }
               />

@@ -204,6 +204,7 @@ function SidebarNavigation() {
     { title: "Análise de Defesas", url: "/defenses", icon: Scale, badge: pendingDefenses },
     { title: "Notificações", url: "/notifications", icon: Bell },
     { title: "Relatórios", url: "/reports", icon: BarChart3 },
+    { title: "Assinaturas", url: "/sindico/subscriptions", icon: CreditCard },
     { title: "Faturas", url: "/sindico/invoices", icon: Receipt },
     { title: "Configurações", url: "/sindico/settings", icon: Settings },
   ];
