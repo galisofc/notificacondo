@@ -18,9 +18,26 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
@@ -28,7 +45,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, MoreHorizontal, UserCheck, UserX, Mail, Building2 } from "lucide-react";
+import { Search, MoreHorizontal, UserCheck, UserX, Mail, Building2, Plus, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface SindicoWithProfile {
@@ -47,15 +64,31 @@ interface SindicoWithProfile {
   condominiums_count: number;
 }
 
+type PlanType = "start" | "essencial" | "profissional" | "enterprise";
+
+const planInfo: Record<PlanType, { name: string; description: string }> = {
+  start: { name: "Start", description: "10 notificações/mês" },
+  essencial: { name: "Essencial", description: "50 notificações/mês" },
+  profissional: { name: "Profissional", description: "200 notificações/mês" },
+  enterprise: { name: "Enterprise", description: "Ilimitado" },
+};
+
 export function SindicosManagement() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    full_name: "",
+    email: "",
+    password: "",
+    phone: "",
+    plan: "start" as PlanType,
+  });
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: sindicos, isLoading } = useQuery({
     queryKey: ["superadmin-sindicos"],
     queryFn: async () => {
-      // Get all sindicos from user_roles
       const { data: roles, error: rolesError } = await supabase
         .from("user_roles")
         .select("id, user_id, created_at")
@@ -63,7 +96,6 @@ export function SindicosManagement() {
 
       if (rolesError) throw rolesError;
 
-      // For each sindico, get their profile, subscription and condominiums count
       const sindicosWithDetails = await Promise.all(
         (roles || []).map(async (role) => {
           const [profileRes, subscriptionRes, condominiumsRes] = await Promise.all([
@@ -82,6 +114,36 @@ export function SindicosManagement() {
       );
 
       return sindicosWithDetails;
+    },
+  });
+
+  const createSindicoMutation = useMutation({
+    mutationFn: async (data: typeof formData) => {
+      const { data: result, error } = await supabase.functions.invoke("create-sindico", {
+        body: data,
+      });
+
+      if (error) throw error;
+      if (!result?.success) throw new Error(result?.error || "Erro ao criar síndico");
+
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["superadmin-sindicos"] });
+      queryClient.invalidateQueries({ queryKey: ["superadmin-stats"] });
+      setIsCreateDialogOpen(false);
+      setFormData({ full_name: "", email: "", password: "", phone: "", plan: "start" });
+      toast({
+        title: "Síndico criado!",
+        description: "O novo síndico foi cadastrado com sucesso.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao criar síndico",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -122,13 +184,130 @@ export function SindicosManagement() {
     return planColors[plan || "start"] || planColors.start;
   };
 
+  const handleCreateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.full_name || !formData.email || !formData.password) {
+      toast({
+        title: "Preencha todos os campos obrigatórios",
+        variant: "destructive",
+      });
+      return;
+    }
+    createSindicoMutation.mutate(formData);
+  };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Gestão de Síndicos</CardTitle>
-        <CardDescription>
-          Gerencie os síndicos cadastrados na plataforma
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Gestão de Síndicos</CardTitle>
+            <CardDescription>
+              Gerencie os síndicos cadastrados na plataforma
+            </CardDescription>
+          </div>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Síndico
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <form onSubmit={handleCreateSubmit}>
+                <DialogHeader>
+                  <DialogTitle>Criar Novo Síndico</DialogTitle>
+                  <DialogDescription>
+                    Cadastre um novo síndico e escolha o plano de assinatura.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="full_name">Nome Completo *</Label>
+                    <Input
+                      id="full_name"
+                      placeholder="João da Silva"
+                      value={formData.full_name}
+                      onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="email">Email *</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="joao@email.com"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="password">Senha *</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="Mínimo 6 caracteres"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="phone">Telefone</Label>
+                    <Input
+                      id="phone"
+                      placeholder="(11) 99999-9999"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="plan">Plano de Assinatura *</Label>
+                    <Select
+                      value={formData.plan}
+                      onValueChange={(value: PlanType) => setFormData({ ...formData, plan: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um plano" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(Object.entries(planInfo) as [PlanType, { name: string; description: string }][]).map(
+                          ([key, info]) => (
+                            <SelectItem key={key} value={key}>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{info.name}</span>
+                                <span className="text-xs text-muted-foreground">{info.description}</span>
+                              </div>
+                            </SelectItem>
+                          )
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsCreateDialogOpen(false)}
+                    disabled={createSindicoMutation.isPending}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={createSindicoMutation.isPending}>
+                    {createSindicoMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Criando...
+                      </>
+                    ) : (
+                      "Criar Síndico"
+                    )}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="mb-6">
