@@ -41,6 +41,7 @@ import {
   Search,
   CheckCircle2,
   XCircle,
+  Clock,
 } from "lucide-react";
 
 interface Plan {
@@ -515,9 +516,33 @@ const SindicoSubscriptions = () => {
                       )}
 
                       {sub.current_period_end && (
-                        <p className="text-xs text-muted-foreground mb-3">
-                          Próxima renovação: {formatDate(sub.current_period_end)}
-                        </p>
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            <span>Renovação: {formatDate(sub.current_period_end)}</span>
+                          </div>
+                          {(() => {
+                            const daysRemaining = differenceInDays(new Date(sub.current_period_end), new Date());
+                            const isUrgent = daysRemaining <= 7;
+                            const isWarning = daysRemaining <= 15;
+                            return (
+                              <Badge 
+                                variant="outline" 
+                                className={
+                                  isUrgent 
+                                    ? "bg-destructive/10 text-destructive border-destructive/20" 
+                                    : isWarning 
+                                    ? "bg-amber-500/10 text-amber-600 border-amber-500/20" 
+                                    : "bg-primary/10 text-primary border-primary/20"
+                                }
+                              >
+                                {daysRemaining <= 0 
+                                  ? "Vencido" 
+                                  : `${daysRemaining} dia${daysRemaining !== 1 ? "s" : ""}`}
+                              </Badge>
+                            );
+                          })()}
+                        </div>
                       )}
 
                       <div className="space-y-2 mb-4">
