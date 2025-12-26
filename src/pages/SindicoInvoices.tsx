@@ -27,6 +27,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Loader2,
   Receipt,
   Building2,
@@ -40,9 +48,44 @@ import {
   TrendingUp,
   FileText,
   RefreshCw,
+  Crown,
+  ArrowUpCircle,
+  Bell,
+  AlertOctagon,
+  Gavel,
 } from "lucide-react";
 
 type InvoiceStatus = "all" | "pending" | "paid" | "overdue" | "cancelled";
+
+interface Plan {
+  id: string;
+  name: string;
+  slug: string;
+  price: number;
+  color: string;
+  notifications_limit: number;
+  warnings_limit: number;
+  fines_limit: number;
+  description: string | null;
+}
+
+interface Subscription {
+  id: string;
+  plan: string;
+  active: boolean;
+  notifications_limit: number;
+  notifications_used: number;
+  warnings_limit: number;
+  warnings_used: number;
+  fines_limit: number;
+  fines_used: number;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  condominium: {
+    id: string;
+    name: string;
+  };
+}
 
 interface Invoice {
   id: string;
@@ -102,6 +145,12 @@ const SindicoInvoices = () => {
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus>("all");
   const [condominiumFilter, setCondominiumFilter] = useState<string>("all");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [changePlanDialog, setChangePlanDialog] = useState<{ open: boolean; subscription: Subscription | null }>({
+    open: false,
+    subscription: null,
+  });
+  const [selectedPlan, setSelectedPlan] = useState<string>("");
+  const [isChangingPlan, setIsChangingPlan] = useState(false);
 
   const handleGenerateInvoices = async () => {
     setIsGenerating(true);
@@ -117,8 +166,8 @@ const SindicoInvoices = () => {
         description: `${data.results.invoicesCreated} fatura(s) criada(s) com sucesso.`,
       });
 
-      // Refresh invoices list
       queryClient.invalidateQueries({ queryKey: ["sindico-invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["sindico-subscriptions"] });
     } catch (error: any) {
       console.error("Error generating invoices:", error);
       toast({
@@ -130,6 +179,48 @@ const SindicoInvoices = () => {
       setIsGenerating(false);
     }
   };
+
+  // Fetch plans
+  const { data: plans } = useQuery({
+    queryKey: ["active-plans"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("plans")
+        .select("*")
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
+      if (error) throw error;
+      return data as Plan[];
+    },
+  });
+
+  // Fetch subscriptions with condominiums
+  const { data: subscriptions } = useQuery({
+    queryKey: ["sindico-subscriptions", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from("subscriptions")
+        .select(`
+          id,
+          plan,
+          active,
+          notifications_limit,
+          notifications_used,
+          warnings_limit,
+          warnings_used,
+          fines_limit,
+          fines_used,
+          current_period_start,
+          current_period_end,
+          condominium:condominiums!inner(id, name, owner_id)
+        `)
+        .eq("condominiums.owner_id", user.id);
+      if (error) throw error;
+      return (data as unknown as Subscription[]) || [];
+    },
+    enabled: !!user,
+  });
 
   // Fetch condominiums for filter
   const { data: condominiums } = useQuery({
@@ -148,7 +239,7 @@ const SindicoInvoices = () => {
   });
 
   // Fetch invoices
-  const { data: invoices, isLoading } = useQuery({
+  const { data: invoices, isLoading: isLoadingInvoices } = useQuery({
     queryKey: ["sindico-invoices", user?.id, statusFilter, condominiumFilter],
     queryFn: async () => {
       if (!user) return [];
@@ -208,7 +299,57 @@ const SindicoInvoices = () => {
     return format(new Date(dateString), "dd/MM/yyyy", { locale: ptBR });
   };
 
-  if (isLoading) {
+  const getPlanColor = (planSlug: string) => {
+    const plan = plans?.find((p) => p.slug === planSlug);
+    return plan?.color || "bg-gray-500";
+  };
+
+  const openChangePlanDialog = (subscription: Subscription) => {
+    setSelectedPlan(subscription.plan);
+    setChangePlanDialog({ open: true, subscription });
+  };
+
+  const handleChangePlan = async () => {
+    if (!changePlanDialog.subscription || !selectedPlan) return;
+
+    setIsChangingPlan(true);
+    try {
+      const newPlan = plans?.find((p) => p.slug === selectedPlan);
+      if (!newPlan) throw new Error("Plano não encontrado");
+
+      const { error } = await supabase
+        .from("subscriptions")
+        .update({
+          plan: selectedPlan as "start" | "essencial" | "profissional" | "enterprise",
+          notifications_limit: newPlan.notifications_limit,
+          warnings_limit: newPlan.warnings_limit,
+          fines_limit: newPlan.fines_limit,
+        })
+        .eq("id", changePlanDialog.subscription.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Plano alterado!",
+        description: `O plano foi alterado para ${newPlan.name} com sucesso.`,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["sindico-subscriptions"] });
+      queryClient.invalidateQueries({ queryKey: ["sindico-invoices"] });
+      setChangePlanDialog({ open: false, subscription: null });
+    } catch (error: any) {
+      console.error("Error changing plan:", error);
+      toast({
+        title: "Erro ao alterar plano",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsChangingPlan(false);
+    }
+  };
+
+  if (isLoadingInvoices) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-96">
@@ -309,6 +450,124 @@ const SindicoInvoices = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Subscriptions */}
+        {subscriptions && subscriptions.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Crown className="h-5 w-5" />
+                Assinaturas por Condomínio
+              </CardTitle>
+              <CardDescription>
+                Gerencie os planos de cada condomínio
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {subscriptions.map((sub) => {
+                  const currentPlan = plans?.find((p) => p.slug === sub.plan);
+                  const notificationsPercent = sub.notifications_limit > 0 
+                    ? Math.round((sub.notifications_used / sub.notifications_limit) * 100) 
+                    : 0;
+                  const warningsPercent = sub.warnings_limit > 0 
+                    ? Math.round((sub.warnings_used / sub.warnings_limit) * 100) 
+                    : 0;
+                  const finesPercent = sub.fines_limit > 0 
+                    ? Math.round((sub.fines_used / sub.fines_limit) * 100) 
+                    : 0;
+
+                  return (
+                    <div
+                      key={sub.id}
+                      className="p-4 rounded-xl border border-border bg-card hover:border-primary/30 transition-all"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium text-sm">{sub.condominium.name}</span>
+                        </div>
+                        <Badge className={`${getPlanColor(sub.plan)} text-white`}>
+                          {PLAN_NAMES[sub.plan] || sub.plan}
+                        </Badge>
+                      </div>
+
+                      {currentPlan && (
+                        <p className="text-lg font-bold text-foreground mb-3">
+                          {formatCurrency(currentPlan.price)}<span className="text-sm font-normal text-muted-foreground">/mês</span>
+                        </p>
+                      )}
+
+                      <div className="space-y-2 mb-4">
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-1">
+                            <Bell className="h-3 w-3 text-muted-foreground" />
+                            <span>Notificações</span>
+                          </div>
+                          <span className={notificationsPercent >= 80 ? "text-destructive" : "text-muted-foreground"}>
+                            {sub.notifications_used}/{sub.notifications_limit}
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full ${notificationsPercent >= 80 ? "bg-destructive" : "bg-primary"}`}
+                            style={{ width: `${Math.min(notificationsPercent, 100)}%` }}
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs mt-2">
+                          <div className="flex items-center gap-1">
+                            <AlertOctagon className="h-3 w-3 text-muted-foreground" />
+                            <span>Advertências</span>
+                          </div>
+                          <span className={warningsPercent >= 80 ? "text-destructive" : "text-muted-foreground"}>
+                            {sub.warnings_used}/{sub.warnings_limit}
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full ${warningsPercent >= 80 ? "bg-destructive" : "bg-amber-500"}`}
+                            style={{ width: `${Math.min(warningsPercent, 100)}%` }}
+                          />
+                        </div>
+
+                        {sub.fines_limit > 0 && (
+                          <>
+                            <div className="flex items-center justify-between text-xs mt-2">
+                              <div className="flex items-center gap-1">
+                                <Gavel className="h-3 w-3 text-muted-foreground" />
+                                <span>Multas</span>
+                              </div>
+                              <span className={finesPercent >= 80 ? "text-destructive" : "text-muted-foreground"}>
+                                {sub.fines_used}/{sub.fines_limit}
+                              </span>
+                            </div>
+                            <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full rounded-full ${finesPercent >= 80 ? "bg-destructive" : "bg-emerald-500"}`}
+                                style={{ width: `${Math.min(finesPercent, 100)}%` }}
+                              />
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full"
+                        onClick={() => openChangePlanDialog(sub)}
+                      >
+                        <ArrowUpCircle className="h-4 w-4 mr-2" />
+                        Alterar Plano
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Filters */}
         <Card>
@@ -430,6 +689,80 @@ const SindicoInvoices = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Change Plan Dialog */}
+        <Dialog open={changePlanDialog.open} onOpenChange={(open) => setChangePlanDialog({ open, subscription: open ? changePlanDialog.subscription : null })}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Alterar Plano</DialogTitle>
+              <DialogDescription>
+                Selecione um novo plano para {changePlanDialog.subscription?.condominium.name}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              {plans?.map((plan) => {
+                const isCurrentPlan = plan.slug === changePlanDialog.subscription?.plan;
+                const isSelected = plan.slug === selectedPlan;
+
+                return (
+                  <div
+                    key={plan.id}
+                    onClick={() => setSelectedPlan(plan.slug)}
+                    className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                      isSelected 
+                        ? "border-primary bg-primary/5" 
+                        : "border-border hover:border-primary/30"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${plan.color}`}>
+                          <Crown className="h-4 w-4 text-white" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold">{plan.name}</span>
+                            {isCurrentPlan && (
+                              <Badge variant="secondary" className="text-xs">Atual</Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {plan.notifications_limit} notificações • {plan.warnings_limit} advertências
+                            {plan.fines_limit > 0 && ` • ${plan.fines_limit} multas`}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold">{formatCurrency(plan.price)}</p>
+                        <p className="text-xs text-muted-foreground">/mês</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setChangePlanDialog({ open: false, subscription: null })}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleChangePlan} 
+                disabled={isChangingPlan || selectedPlan === changePlanDialog.subscription?.plan}
+              >
+                {isChangingPlan ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Alterando...
+                  </>
+                ) : (
+                  "Confirmar Alteração"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
