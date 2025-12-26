@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
+import { MercadoPagoPaymentButton } from "@/components/mercadopago/MercadoPagoPaymentButton";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -102,6 +103,22 @@ const SindicoInvoices = () => {
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus>("all");
   const [condominiumFilter, setCondominiumFilter] = useState<string>("all");
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // Fetch user profile to get email
+  const { data: userProfile } = useQuery({
+    queryKey: ["user-profile", user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("email")
+        .eq("user_id", user.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
 
   const handleGenerateInvoices = async () => {
     setIsGenerating(true);
@@ -402,10 +419,19 @@ const SindicoInvoices = () => {
                           </TableCell>
                           <TableCell>
                             {invoice.status === "pending" || invoice.status === "overdue" ? (
-                              <Button size="sm" variant="outline">
-                                <CreditCard className="h-4 w-4 mr-1" />
-                                Pagar
-                              </Button>
+                              userProfile?.email ? (
+                                <MercadoPagoPaymentButton
+                                  invoiceId={invoice.id}
+                                  payerEmail={userProfile.email}
+                                  amount={invoice.amount}
+                                  buttonText="Pagar"
+                                />
+                              ) : (
+                                <Button size="sm" variant="outline" disabled>
+                                  <CreditCard className="h-4 w-4 mr-1" />
+                                  Pagar
+                                </Button>
+                              )
                             ) : invoice.status === "paid" ? (
                               <span className="text-xs text-muted-foreground">
                                 Pago em {invoice.paid_at && formatDate(invoice.paid_at)}
