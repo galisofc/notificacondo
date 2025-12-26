@@ -1,7 +1,8 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
   Sidebar,
@@ -48,6 +49,7 @@ interface NavItem {
   title: string;
   url: string;
   icon: React.ComponentType<{ className?: string }>;
+  badge?: number;
 }
 
 const superAdminNavItems: NavItem[] = [
@@ -60,15 +62,7 @@ const superAdminNavItems: NavItem[] = [
   { title: "Configurações", url: "/superadmin/settings", icon: Settings },
 ];
 
-const sindicoNavItems: NavItem[] = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Condomínios", url: "/condominiums", icon: Building2 },
-  { title: "Ocorrências", url: "/occurrences", icon: FileText },
-  { title: "Análise de Defesas", url: "/defenses", icon: Scale },
-  { title: "Notificações", url: "/notifications", icon: Bell },
-  { title: "Relatórios", url: "/reports", icon: BarChart3 },
-  { title: "Configurações", url: "/sindico/settings", icon: Settings },
-];
+// sindicoNavItems moved to getSindicoNavItems() function for dynamic badge
 
 const residentNavItems: NavItem[] = [
   { title: "Dashboard", url: "/resident", icon: LayoutDashboard },
@@ -84,6 +78,38 @@ function SidebarNavigation() {
   const { signOut, user } = useAuth();
   const { role, residentInfo, loading } = useUserRole();
   const { toast } = useToast();
+  const [pendingDefenses, setPendingDefenses] = useState(0);
+
+  // Fetch pending defenses count for sindico
+  useEffect(() => {
+    const fetchPendingDefenses = async () => {
+      if (!user || role !== "sindico") return;
+
+      try {
+        // Get user's condominiums
+        const { data: condos } = await supabase
+          .from("condominiums")
+          .select("id")
+          .eq("owner_id", user.id);
+
+        const condoIds = condos?.map((c) => c.id) || [];
+
+        if (condoIds.length > 0) {
+          const { count } = await supabase
+            .from("occurrences")
+            .select("*", { count: "exact", head: true })
+            .in("condominium_id", condoIds)
+            .eq("status", "em_defesa");
+
+          setPendingDefenses(count || 0);
+        }
+      } catch (error) {
+        console.error("Error fetching pending defenses:", error);
+      }
+    };
+
+    fetchPendingDefenses();
+  }, [user, role]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -91,11 +117,21 @@ function SidebarNavigation() {
     navigate("/");
   };
 
+  const getSindicoNavItems = (): NavItem[] => [
+    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    { title: "Condomínios", url: "/condominiums", icon: Building2 },
+    { title: "Ocorrências", url: "/occurrences", icon: FileText },
+    { title: "Análise de Defesas", url: "/defense-analysis", icon: Scale, badge: pendingDefenses },
+    { title: "Notificações", url: "/notifications", icon: Bell },
+    { title: "Relatórios", url: "/reports", icon: BarChart3 },
+    { title: "Configurações", url: "/sindico/settings", icon: Settings },
+  ];
+
   const navItems =
     role === "super_admin"
       ? superAdminNavItems
       : role === "sindico"
-      ? sindicoNavItems
+      ? getSindicoNavItems()
       : residentNavItems;
 
   const getRoleConfig = () => {
@@ -187,7 +223,7 @@ function SidebarNavigation() {
               {navItems.map((item) => {
                 const isActive = location.pathname === item.url;
                 return (
-                  <SidebarMenuItem key={item.title}>
+                  <SidebarMenuItem key={item.title} className="relative">
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
@@ -202,11 +238,23 @@ function SidebarNavigation() {
                       <NavLink
                         to={item.url}
                         end={item.url === "/superadmin" || item.url === "/dashboard" || item.url === "/resident"}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg"
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg w-full"
                         activeClassName=""
                       >
                         <item.icon className={cn("shrink-0", collapsed ? "w-5 h-5" : "w-5 h-5")} />
-                        {!collapsed && <span className="font-medium">{item.title}</span>}
+                        {!collapsed && (
+                          <span className="font-medium flex-1">{item.title}</span>
+                        )}
+                        {item.badge !== undefined && item.badge > 0 && (
+                          <span
+                            className={cn(
+                              "flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-bold",
+                              collapsed ? "w-5 h-5 absolute -top-1 -right-1" : "min-w-5 h-5 px-1.5"
+                            )}
+                          >
+                            {item.badge > 99 ? "99+" : item.badge}
+                          </span>
+                        )}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
