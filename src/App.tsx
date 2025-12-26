@@ -144,6 +144,7 @@ const App = () => (
                 }
               />
               <Route path="/acesso/:token" element={<ResidentAccess />} />
+              <Route path="/resident/access" element={<ResidentAccess />} />
 
               {/* Super Admin Routes */}
               <Route

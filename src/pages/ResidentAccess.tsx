@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +21,11 @@ interface ResidentData {
 }
 
 const ResidentAccess = () => {
-  const { token } = useParams<{ token: string }>();
+  const { token: paramToken } = useParams<{ token: string }>();
+  const [searchParams] = useSearchParams();
+  const queryToken = searchParams.get("token");
+  const token = paramToken || queryToken;
+  
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
