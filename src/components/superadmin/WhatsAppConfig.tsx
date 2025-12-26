@@ -31,12 +31,14 @@ interface WhatsAppConfigData {
   api_key: string;
   instance_id: string;
   is_active: boolean;
+  app_url: string;
 }
 
 interface ValidationErrors {
   api_url?: string;
   api_key?: string;
   instance_id?: string;
+  app_url?: string;
 }
 
 // Validation schemas per provider
@@ -87,6 +89,7 @@ export function WhatsAppConfig() {
     api_key: "",
     instance_id: "",
     is_active: true,
+    app_url: "https://notificacondo.com.br",
   });
 
   // Load existing config on mount
@@ -123,6 +126,7 @@ export function WhatsAppConfig() {
           api_key: data.api_key,
           instance_id: data.instance_id,
           is_active: data.is_active,
+          app_url: (data as any).app_url || "https://notificacondo.com.br",
         });
       }
     } catch (error) {
@@ -194,7 +198,8 @@ export function WhatsAppConfig() {
             api_key: config.api_key.trim(),
             instance_id: instanceId,
             is_active: config.is_active,
-          })
+            app_url: config.app_url.trim(),
+          } as any)
           .eq("id", config.id);
 
         if (error) throw error;
@@ -208,7 +213,8 @@ export function WhatsAppConfig() {
             api_key: config.api_key.trim(),
             instance_id: instanceId,
             is_active: true,
-          })
+            app_url: config.app_url.trim(),
+          } as any)
           .select()
           .single();
 
@@ -507,6 +513,34 @@ export function WhatsAppConfig() {
               )}
             </div>
           )}
+
+          {/* URL do Sistema - para gerar links de acesso do morador */}
+          <div className="space-y-2">
+            <Label htmlFor="appUrl" className="flex items-center gap-1">
+              URL do Sistema (para links do morador)
+              {errors.app_url && (
+                <AlertCircle className="h-3.5 w-3.5 text-destructive" />
+              )}
+            </Label>
+            <Input
+              id="appUrl"
+              placeholder="https://notificacondo.com.br"
+              value={config.app_url}
+              onChange={(e) => {
+                setConfig({ ...config, app_url: e.target.value });
+                if (errors.app_url) {
+                  setErrors((prev) => ({ ...prev, app_url: undefined }));
+                }
+              }}
+              className={errors.app_url ? "border-destructive" : ""}
+            />
+            <p className="text-xs text-muted-foreground">
+              URL base usada nos links enviados aos moradores via WhatsApp
+            </p>
+            {errors.app_url && (
+              <p className="text-xs text-destructive">{errors.app_url}</p>
+            )}
+          </div>
 
           <div className="flex items-center gap-4 flex-wrap">
             <Button onClick={handleSave} disabled={isSaving}>

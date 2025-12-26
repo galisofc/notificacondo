@@ -26,6 +26,7 @@ interface WhatsAppConfigRow {
   api_key: string;
   instance_id: string;
   is_active: boolean;
+  app_url?: string;
 }
 
 // Z-PRO Provider - Uses query parameters via GET
@@ -207,9 +208,11 @@ serve(async (req) => {
     const whatsappApiKey = typedConfig.api_key;
     const whatsappInstanceId = typedConfig.instance_id;
     const whatsappProvider = (typedConfig.provider || "zpro") as WhatsAppProvider;
+    const appBaseUrl = typedConfig.app_url || "https://notificacondo.com.br";
 
     console.log(`Using WhatsApp provider: ${whatsappProvider}`);
     console.log(`API URL: ${whatsappApiUrl.substring(0, 50)}...`);
+    console.log(`App URL: ${appBaseUrl}`);
 
     const { occurrence_id, resident_id, message_template }: SendNotificationRequest = await req.json();
 
@@ -273,8 +276,7 @@ serve(async (req) => {
 
     // Generate secure token for the link
     const secureToken = crypto.randomUUID();
-    const baseUrl = Deno.env.get("APP_URL") || "https://iyeljkdrypcxvljebqtn.lovableproject.com";
-    const secureLink = `${baseUrl}/resident/access?token=${secureToken}`;
+    const secureLink = `${appBaseUrl}/resident/access?token=${secureToken}`;
 
     const apt = resident.apartments as any;
     const condoName = apt.blocks.condominiums.name;
