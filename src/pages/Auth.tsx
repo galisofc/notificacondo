@@ -54,6 +54,18 @@ const Auth = () => {
 
           const role = roleData?.role || "morador";
 
+          // Super Admin goes to superadmin dashboard
+          if (role === "super_admin") {
+            navigate("/superadmin", { replace: true });
+            return;
+          }
+
+          // Síndico goes to main dashboard
+          if (role === "sindico") {
+            navigate("/dashboard", { replace: true });
+            return;
+          }
+
           // Check if user is a resident
           if (role === "morador") {
             const { data: residentData } = await supabase
@@ -67,12 +79,6 @@ const Auth = () => {
               navigate("/resident", { replace: true });
               return;
             }
-          }
-
-          // Síndico or super_admin goes to main dashboard
-          if (role === "sindico" || role === "super_admin") {
-            navigate("/dashboard", { replace: true });
-            return;
           }
 
           // Default fallback
@@ -98,6 +104,16 @@ const Auth = () => {
 
       const role = roleData?.role || "morador";
 
+      // Super Admin goes to superadmin dashboard
+      if (role === "super_admin") {
+        return "/superadmin";
+      }
+
+      // Síndico goes to main dashboard
+      if (role === "sindico") {
+        return "/dashboard";
+      }
+
       // Check if user is a resident
       if (role === "morador") {
         const { data: residentData } = await supabase
@@ -112,7 +128,7 @@ const Auth = () => {
         }
       }
 
-      // Síndico or super_admin goes to main dashboard
+      // Default fallback
       return "/dashboard";
     } catch (error) {
       console.error("Error checking role:", error);
