@@ -257,10 +257,12 @@ export function WhatsAppConfig() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="instanceId">ID da Instância</Label>
+              <Label htmlFor="instanceId">
+                {config.provider === "zpro" ? "Sessão" : "ID da Instância"}
+              </Label>
               <Input
                 id="instanceId"
-                placeholder="Ex: instance_123"
+                placeholder={config.provider === "zpro" ? "Ex: minha-sessao" : "Ex: instance_123"}
                 value={config.instance_id}
                 onChange={(e) => setConfig({ ...config, instance_id: e.target.value })}
               />
