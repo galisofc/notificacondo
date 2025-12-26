@@ -241,22 +241,6 @@ export function MercadoPagoSettings() {
                 </p>
               </div>
 
-              {/* Notification URL */}
-              <div className="space-y-2">
-                <Label htmlFor="notification_url">URL de Notificação</Label>
-                <Input
-                  id="notification_url"
-                  value={formData.notification_url}
-                  onChange={(e) =>
-                    setFormData({ ...formData, notification_url: e.target.value })
-                  }
-                  placeholder="https://seu-dominio.com"
-                />
-                <p className="text-xs text-muted-foreground">
-                  URL base para redirecionamentos e webhooks
-                </p>
-              </div>
-
               {/* Switches */}
               <div className="space-y-4 pt-4 border-t">
                 <div className="flex items-center justify-between">
