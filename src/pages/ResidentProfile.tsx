@@ -1,27 +1,26 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { MaskedInput } from "@/components/ui/masked-input";
 import { Label } from "@/components/ui/label";
 import {
-  Building2,
-  ArrowLeft,
   User,
   Mail,
   Phone,
   Home,
   Save,
   Loader2,
-  LogOut,
-  CheckCircle2,
+  AlertTriangle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import DashboardLayout from "@/components/layouts/DashboardLayout";
+import ResidentBreadcrumbs from "@/components/resident/ResidentBreadcrumbs";
 
 const profileSchema = z.object({
   full_name: z.string().trim().min(2, "Nome deve ter pelo menos 2 caracteres").max(100, "Nome deve ter no máximo 100 caracteres"),
@@ -57,14 +56,8 @@ const ResidentProfile = () => {
     }
   }, [residentInfo, roleLoading]);
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/");
-  };
-
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
     if (errors[field]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
@@ -77,7 +70,6 @@ const ResidentProfile = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate form data
     const result = profileSchema.safeParse(formData);
     if (!result.success) {
       const fieldErrors: Record<string, string> = {};
@@ -123,74 +115,56 @@ const ResidentProfile = () => {
 
   if (loading || roleLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
     );
   }
 
   if (!residentInfo) {
     return (
-      <div className="min-h-screen bg-background">
-        <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-          <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
-                <Building2 className="w-4 h-4 text-primary-foreground" />
-              </div>
-              <span className="font-display font-bold text-foreground">CondoMaster</span>
-            </div>
-            <Button variant="ghost" onClick={handleSignOut}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Sair
-            </Button>
+      <DashboardLayout>
+        <div className="text-center py-12 px-4 rounded-2xl bg-gradient-card border border-border/50">
+          <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="w-8 h-8 text-amber-500" />
           </div>
-        </header>
-        <main className="container mx-auto px-4 py-8">
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">Perfil não encontrado.</p>
-          </div>
-        </main>
-      </div>
+          <h3 className="font-display text-xl font-semibold text-foreground mb-2">
+            Perfil não encontrado
+          </h3>
+          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+            Seu perfil de morador ainda não foi cadastrado. Entre em contato com o síndico do
+            seu condomínio.
+          </p>
+        </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
-              <Building2 className="w-4 h-4 text-primary-foreground" />
-            </div>
-            <span className="font-display font-bold text-foreground">CondoMaster</span>
-          </div>
-          <Button variant="ghost" onClick={handleSignOut}>
-            <LogOut className="w-4 h-4 mr-2" />
-            Sair
-          </Button>
-        </div>
-      </header>
+    <DashboardLayout>
+      <Helmet>
+        <title>Meu Perfil | Área do Morador</title>
+        <meta name="description" content="Gerencie seus dados pessoais" />
+      </Helmet>
 
-      <main className="container mx-auto px-4 py-8 max-w-2xl">
-        {/* Back Button */}
-        <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/resident")}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h1 className="font-display text-2xl font-bold text-foreground">
-              Meu Perfil
-            </h1>
-            <p className="text-muted-foreground">
-              Gerencie seus dados pessoais
-            </p>
-          </div>
+      <div className="space-y-6 animate-fade-up max-w-2xl">
+        {/* Breadcrumbs */}
+        <ResidentBreadcrumbs items={[{ label: "Meu Perfil" }]} />
+
+        {/* Header */}
+        <div>
+          <h1 className="font-display text-3xl font-bold text-foreground">
+            Meu Perfil
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Gerencie seus dados pessoais
+          </p>
         </div>
 
         {/* Apartment Info Card (Read-only) */}
-        <Card className="bg-gradient-card border-border/50 mb-6">
+        <Card className="bg-gradient-card border-border/50">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg flex items-center gap-2">
               <Home className="w-5 h-5 text-primary" />
@@ -298,8 +272,8 @@ const ResidentProfile = () => {
             </form>
           </CardContent>
         </Card>
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 };
 
