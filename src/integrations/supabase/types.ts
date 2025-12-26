@@ -463,6 +463,57 @@ export type Database = {
         }
         Relationships: []
       }
+      mercadopago_webhook_logs: {
+        Row: {
+          created_at: string
+          data_id: string | null
+          error_message: string | null
+          event_action: string | null
+          event_type: string
+          id: string
+          ip_address: string | null
+          payload: Json
+          processing_duration_ms: number | null
+          processing_result: Json | null
+          processing_status: string
+          received_at: string
+          signature_valid: boolean | null
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          data_id?: string | null
+          error_message?: string | null
+          event_action?: string | null
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          payload: Json
+          processing_duration_ms?: number | null
+          processing_result?: Json | null
+          processing_status?: string
+          received_at?: string
+          signature_valid?: boolean | null
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          data_id?: string | null
+          error_message?: string | null
+          event_action?: string | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          payload?: Json
+          processing_duration_ms?: number | null
+          processing_result?: Json | null
+          processing_status?: string
+          received_at?: string
+          signature_valid?: boolean | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       notifications_sent: {
         Row: {
           acknowledged_at: string | null
