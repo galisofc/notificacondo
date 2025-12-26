@@ -1,10 +1,10 @@
 import { Helmet } from "react-helmet-async";
-import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { NotificationsMonitor } from "@/components/notifications/NotificationsMonitor";
 
 export default function Notifications() {
   return (
-    <>
+    <DashboardLayout>
       <Helmet>
         <title>Monitoramento de Notificações | CondoManager</title>
         <meta
@@ -13,19 +13,18 @@ export default function Notifications() {
         />
       </Helmet>
 
-      <div className="min-h-screen bg-background">
-        <DashboardHeader />
-        <main className="container mx-auto px-4 py-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold">Notificações WhatsApp</h1>
-            <p className="text-muted-foreground mt-1">
-              Acompanhe o status de entrega das mensagens enviadas
-            </p>
-          </div>
+      <div className="space-y-6 animate-fade-up">
+        <div>
+          <h1 className="font-display text-3xl font-bold text-foreground">
+            Notificações WhatsApp
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Acompanhe o status de entrega das mensagens enviadas
+          </p>
+        </div>
 
-          <NotificationsMonitor />
-        </main>
+        <NotificationsMonitor />
       </div>
-    </>
+    </DashboardLayout>
   );
 }
