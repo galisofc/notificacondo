@@ -24,6 +24,8 @@ import {
   Phone,
   Mail,
   User,
+  Search,
+  Filter,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
@@ -95,6 +97,17 @@ const CondominiumDetails = () => {
   });
 
   const [saving, setSaving] = useState(false);
+
+  // Filters
+  const [apartmentFilterBlock, setApartmentFilterBlock] = useState("");
+  const [apartmentFilterNumber, setApartmentFilterNumber] = useState("");
+
+  // Filtered apartments
+  const filteredApartments = apartments.filter((apt) => {
+    const matchesBlock = !apartmentFilterBlock || apt.block_id === apartmentFilterBlock;
+    const matchesNumber = !apartmentFilterNumber || apt.number.toLowerCase().includes(apartmentFilterNumber.toLowerCase());
+    return matchesBlock && matchesNumber;
+  });
 
   const fetchData = async () => {
     if (!id || !user) return;
@@ -468,7 +481,33 @@ const CondominiumDetails = () => {
 
           {/* APARTMENTS TAB */}
           <TabsContent value="apartments">
-            <div className="flex justify-end mb-4">
+            {/* Filters */}
+            <div className="flex flex-col md:flex-row gap-4 mb-6">
+              <div className="flex-1 flex gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar por número do apartamento..."
+                      value={apartmentFilterNumber}
+                      onChange={(e) => setApartmentFilterNumber(e.target.value)}
+                      className="pl-10 bg-secondary/50"
+                    />
+                  </div>
+                </div>
+                <div className="w-48">
+                  <select
+                    value={apartmentFilterBlock}
+                    onChange={(e) => setApartmentFilterBlock(e.target.value)}
+                    className="w-full h-10 px-3 rounded-lg bg-secondary/50 border border-border text-foreground"
+                  >
+                    <option value="">Todos os blocos</option>
+                    {blocks.map((b) => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
               <Button
                 variant="hero"
                 onClick={() => {
@@ -496,9 +535,19 @@ const CondominiumDetails = () => {
                   Cadastre apartamentos nos blocos.
                 </p>
               </div>
+            ) : filteredApartments.length === 0 ? (
+              <div className="text-center py-12 rounded-2xl bg-gradient-card border border-border/50">
+                <Filter className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="font-display text-lg font-semibold text-foreground mb-2">
+                  Nenhum resultado encontrado
+                </h3>
+                <p className="text-muted-foreground">
+                  Ajuste os filtros para ver os apartamentos.
+                </p>
+              </div>
             ) : (
               <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {apartments.map((apt) => (
+                {filteredApartments.map((apt) => (
                   <div
                     key={apt.id}
                     className="p-4 rounded-xl bg-gradient-card border border-border/50"
