@@ -9,6 +9,8 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import Condominiums from "./pages/Condominiums";
+import CondominiumDetails from "./pages/CondominiumDetails";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +31,22 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/condominiums"
+                element={
+                  <ProtectedRoute>
+                    <Condominiums />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/condominiums/:id"
+                element={
+                  <ProtectedRoute>
+                    <CondominiumDetails />
                   </ProtectedRoute>
                 }
               />
