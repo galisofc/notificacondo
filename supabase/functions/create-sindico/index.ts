@@ -79,35 +79,21 @@ serve(async (req) => {
 
     const userId = newUser.user.id;
 
-    // Create profile
+    // Update profile (trigger already created it, so we update with additional info)
     const { error: profileError } = await supabaseAdmin
       .from("profiles")
-      .insert({
-        user_id: userId,
-        email,
+      .update({
         full_name,
         phone: phone || null,
-      });
+      })
+      .eq("user_id", userId);
 
     if (profileError) {
-      // Rollback: delete user if profile creation fails
-      await supabaseAdmin.auth.admin.deleteUser(userId);
-      throw new Error(`Erro ao criar perfil: ${profileError.message}`);
+      console.error("Profile update error:", profileError);
+      // Don't rollback, profile was created by trigger with basic info
     }
 
-    // Create user_role as sindico
-    const { error: roleError } = await supabaseAdmin
-      .from("user_roles")
-      .insert({
-        user_id: userId,
-        role: "sindico",
-      });
-
-    if (roleError) {
-      // Rollback
-      await supabaseAdmin.auth.admin.deleteUser(userId);
-      throw new Error(`Erro ao atribuir role: ${roleError.message}`);
-    }
+    // User role is already created as 'sindico' by the trigger, no action needed
 
     // Get plan limits based on plan type
     const planLimits = {
@@ -119,24 +105,22 @@ serve(async (req) => {
 
     const limits = planLimits[plan] || planLimits.start;
 
-    // Create subscription
+    // Update subscription with correct plan (trigger creates with 'start' plan)
     const { error: subscriptionError } = await supabaseAdmin
       .from("subscriptions")
-      .insert({
-        user_id: userId,
+      .update({
         plan,
         active: true,
         notifications_limit: limits.notifications_limit,
         warnings_limit: limits.warnings_limit,
         fines_limit: limits.fines_limit,
         current_period_start: new Date().toISOString(),
-        current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
-      });
+        current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      })
+      .eq("user_id", userId);
 
     if (subscriptionError) {
-      // Rollback
-      await supabaseAdmin.auth.admin.deleteUser(userId);
-      throw new Error(`Erro ao criar assinatura: ${subscriptionError.message}`);
+      console.error("Subscription update error:", subscriptionError);
     }
 
     return new Response(
