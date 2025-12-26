@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { initMercadoPago, CardPayment } from "@mercadopago/sdk-react";
+import { initMercadoPago, Payment } from "@mercadopago/sdk-react";
 import {
   Dialog,
   DialogContent,
@@ -9,27 +9,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-
-// Types for MercadoPago Card Payment Brick
-interface ICardPaymentBrickPayer {
-  email?: string;
-  identification?: {
-    type?: string;
-    number?: string;
-  };
-}
-
-interface ICardPaymentFormData {
-  token: string;
-  issuer_id: string;
-  payment_method_id: string;
-  transaction_amount: number;
-  installments: number;
-  payer: ICardPaymentBrickPayer;
-}
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, CreditCard, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2, CreditCard, CheckCircle2, XCircle, QrCode, FileText, Copy } from "lucide-react";
 
 interface MercadoPagoTransparentCheckoutProps {
   invoiceId: string;
@@ -42,7 +24,18 @@ interface MercadoPagoTransparentCheckoutProps {
   onPaymentError?: (error: string) => void;
 }
 
-type PaymentStatus = "idle" | "loading" | "success" | "error";
+type PaymentStatus = "idle" | "loading" | "success" | "error" | "pending_pix" | "pending_boleto";
+
+interface PaymentResult {
+  success: boolean;
+  payment_id?: number;
+  status?: string;
+  status_detail?: string;
+  qr_code?: string;
+  qr_code_base64?: string;
+  ticket_url?: string;
+  error?: string;
+}
 
 export function MercadoPagoTransparentCheckout({
   invoiceId,
@@ -58,6 +51,7 @@ export function MercadoPagoTransparentCheckout({
   const [showDialog, setShowDialog] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("idle");
   const [sdkInitialized, setSdkInitialized] = useState(false);
+  const [paymentResult, setPaymentResult] = useState<PaymentResult | null>(null);
 
   // Fetch MercadoPago config (via backend function to avoid RLS issues)
   const { data: mpConfig, isLoading: isLoadingConfig } = useQuery({
@@ -104,14 +98,13 @@ export function MercadoPagoTransparentCheckout({
   // Cleanup on dialog close
   useEffect(() => {
     if (!showDialog) {
-      // Reset state when dialog closes
       setPaymentStatus("idle");
-      // Unmount brick controller if it exists
-      if (typeof window !== "undefined" && (window as any).cardPaymentBrickController) {
+      setPaymentResult(null);
+      if (typeof window !== "undefined" && (window as any).paymentBrickController) {
         try {
-          (window as any).cardPaymentBrickController.unmount();
+          (window as any).paymentBrickController.unmount();
         } catch (e) {
-          console.log("Error unmounting card payment brick:", e);
+          console.log("Error unmounting payment brick:", e);
         }
       }
     }
@@ -119,32 +112,24 @@ export function MercadoPagoTransparentCheckout({
 
   // Process payment mutation
   const processPaymentMutation = useMutation({
-    mutationFn: async (paymentData: {
-      token: string;
-      payment_method_id: string;
-      installments: number;
-      issuer_id: string;
-      payer_email: string;
-    }) => {
+    mutationFn: async (formData: any) => {
       const { data, error } = await supabase.functions.invoke(
         "mercadopago-process-payment",
         {
           body: {
             invoice_id: invoiceId,
-            token: paymentData.token,
-            payment_method_id: paymentData.payment_method_id,
-            installments: paymentData.installments,
-            issuer_id: paymentData.issuer_id,
-            payer_email: paymentData.payer_email,
             amount: amount,
+            form_data: formData,
           },
         }
       );
 
       if (error) throw error;
-      return data;
+      return data as PaymentResult;
     },
     onSuccess: (data) => {
+      setPaymentResult(data);
+      
       if (data.status === "approved") {
         setPaymentStatus("success");
         toast({
@@ -152,6 +137,20 @@ export function MercadoPagoTransparentCheckout({
           description: "Seu pagamento foi processado com sucesso.",
         });
         onPaymentSuccess?.();
+      } else if (data.status === "pending" && data.qr_code) {
+        // PIX pending
+        setPaymentStatus("pending_pix");
+        toast({
+          title: "PIX gerado!",
+          description: "Escaneie o QR Code ou copie o código para pagar.",
+        });
+      } else if (data.status === "pending" && data.ticket_url) {
+        // Boleto pending
+        setPaymentStatus("pending_boleto");
+        toast({
+          title: "Boleto gerado!",
+          description: "Clique no botão para visualizar o boleto.",
+        });
       } else if (data.status === "pending" || data.status === "in_process") {
         setPaymentStatus("success");
         toast({
@@ -183,23 +182,16 @@ export function MercadoPagoTransparentCheckout({
   });
 
   const handlePaymentSubmit = useCallback(
-    async (formData: ICardPaymentFormData) => {
-      console.log("Card payment form submitted:", formData);
+    async (formData: any) => {
+      console.log("Payment form submitted:", formData);
       setPaymentStatus("loading");
-
-      processPaymentMutation.mutate({
-        token: formData.token,
-        payment_method_id: formData.payment_method_id,
-        installments: formData.installments,
-        issuer_id: formData.issuer_id?.toString() || "",
-        payer_email: formData.payer?.email || payerEmail,
-      });
+      processPaymentMutation.mutate(formData);
     },
-    [processPaymentMutation, payerEmail]
+    [processPaymentMutation]
   );
 
   const handleError = useCallback((error: any) => {
-    console.error("Card payment error:", error);
+    console.error("Payment brick error:", error);
   }, []);
 
   const handleOpenDialog = () => {
@@ -227,6 +219,22 @@ export function MercadoPagoTransparentCheckout({
     setSdkInitialized(false);
   };
 
+  const handleCopyPixCode = async () => {
+    if (paymentResult?.qr_code) {
+      await navigator.clipboard.writeText(paymentResult.qr_code);
+      toast({
+        title: "Código PIX copiado!",
+        description: "Cole no seu app de banco para pagar.",
+      });
+    }
+  };
+
+  const handleOpenBoleto = () => {
+    if (paymentResult?.ticket_url) {
+      window.open(paymentResult.ticket_url, "_blank");
+    }
+  };
+
   return (
     <>
       <Button
@@ -244,10 +252,10 @@ export function MercadoPagoTransparentCheckout({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5 text-primary" />
-              Pagamento via Cartão
+              Pagamento
             </DialogTitle>
             <DialogDescription>
-              Preencha os dados do cartão para realizar o pagamento
+              Escolha a forma de pagamento
             </DialogDescription>
           </DialogHeader>
 
@@ -260,7 +268,7 @@ export function MercadoPagoTransparentCheckout({
               </div>
             </div>
 
-            {/* Payment Status */}
+            {/* Payment Status - Success */}
             {paymentStatus === "success" && (
               <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-center">
                 <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto mb-2" />
@@ -271,6 +279,67 @@ export function MercadoPagoTransparentCheckout({
               </div>
             )}
 
+            {/* Payment Status - PIX Pending */}
+            {paymentStatus === "pending_pix" && paymentResult && (
+              <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 text-center space-y-4">
+                <QrCode className="h-8 w-8 text-primary mx-auto" />
+                <p className="font-medium">Pague com PIX</p>
+                
+                {paymentResult.qr_code_base64 && (
+                  <div className="flex justify-center">
+                    <img 
+                      src={`data:image/png;base64,${paymentResult.qr_code_base64}`} 
+                      alt="QR Code PIX" 
+                      className="w-48 h-48 border rounded-lg"
+                    />
+                  </div>
+                )}
+                
+                <p className="text-sm text-muted-foreground">
+                  Escaneie o QR Code acima ou copie o código PIX
+                </p>
+                
+                <Button onClick={handleCopyPixCode} variant="outline" className="w-full">
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copiar código PIX
+                </Button>
+                
+                <p className="text-xs text-muted-foreground">
+                  Após o pagamento, a confirmação pode levar alguns minutos.
+                </p>
+                
+                <Button variant="ghost" onClick={handleCloseDialog}>
+                  Fechar
+                </Button>
+              </div>
+            )}
+
+            {/* Payment Status - Boleto Pending */}
+            {paymentStatus === "pending_boleto" && paymentResult && (
+              <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 text-center space-y-4">
+                <FileText className="h-8 w-8 text-primary mx-auto" />
+                <p className="font-medium">Boleto gerado!</p>
+                
+                <p className="text-sm text-muted-foreground">
+                  Clique no botão abaixo para visualizar e pagar o boleto.
+                </p>
+                
+                <Button onClick={handleOpenBoleto} className="w-full">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Visualizar Boleto
+                </Button>
+                
+                <p className="text-xs text-muted-foreground">
+                  O boleto pode levar até 3 dias úteis para ser compensado.
+                </p>
+                
+                <Button variant="ghost" onClick={handleCloseDialog}>
+                  Fechar
+                </Button>
+              </div>
+            )}
+
+            {/* Payment Status - Error */}
             {paymentStatus === "error" && (
               <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-center">
                 <XCircle className="h-12 w-12 text-destructive mx-auto mb-2" />
@@ -278,9 +347,17 @@ export function MercadoPagoTransparentCheckout({
                 <p className="text-sm text-muted-foreground mt-1">
                   Por favor, verifique os dados e tente novamente.
                 </p>
+                <Button 
+                  className="mt-4" 
+                  variant="outline" 
+                  onClick={() => setPaymentStatus("idle")}
+                >
+                  Tentar novamente
+                </Button>
               </div>
             )}
 
+            {/* Payment Status - Loading */}
             {paymentStatus === "loading" && (
               <div className="flex flex-col items-center justify-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
@@ -288,10 +365,10 @@ export function MercadoPagoTransparentCheckout({
               </div>
             )}
 
-            {/* Card Payment Brick */}
+            {/* Payment Brick */}
             {paymentStatus === "idle" && sdkInitialized && (
-              <div className="min-h-[400px]">
-                <CardPayment
+              <div className="min-h-[450px]">
+                <Payment
                   initialization={{
                     amount: amount,
                     payer: {
@@ -300,8 +377,11 @@ export function MercadoPagoTransparentCheckout({
                   }}
                   customization={{
                     paymentMethods: {
+                      creditCard: "all",
+                      debitCard: "all",
+                      bankTransfer: "all",
+                      ticket: "all",
                       maxInstallments: 1,
-                      minInstallments: 1,
                     },
                     visual: {
                       style: {
@@ -319,7 +399,7 @@ export function MercadoPagoTransparentCheckout({
             {paymentStatus === "idle" && !sdkInitialized && showDialog && (
               <div className="flex flex-col items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                <p className="text-muted-foreground">Carregando formulário de pagamento...</p>
+                <p className="text-muted-foreground">Carregando formas de pagamento...</p>
               </div>
             )}
           </div>
