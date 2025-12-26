@@ -32,3 +32,7 @@ verify_jwt = false
 
 [functions.sync-notification-status]
 verify_jwt = false
+
+# Public config used by the web app to initialize Mercado Pago (only returns public_key + flags)
+[functions.get-mercadopago-public-config]
+verify_jwt = false
