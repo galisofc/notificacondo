@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-signature, x-request-id",
 };
 
 // WhatsApp Provider configurations (same as send-whatsapp-notification)
@@ -21,6 +21,98 @@ interface WhatsAppConfigRow {
   instance_id: string;
   is_active: boolean;
   app_url?: string;
+}
+
+interface MercadoPagoConfigRow {
+  id: string;
+  webhook_secret: string | null;
+  is_active: boolean;
+}
+
+// Validate MercadoPago webhook signature
+// MercadoPago sends: x-signature header with format "ts=timestamp,v1=hash"
+// The hash is HMAC-SHA256 of: "id:{data.id};request-id:{x-request-id};ts:{timestamp};"
+async function validateWebhookSignature(
+  req: Request,
+  dataId: string,
+  webhookSecret: string
+): Promise<{ valid: boolean; error?: string }> {
+  try {
+    const xSignature = req.headers.get("x-signature");
+    const xRequestId = req.headers.get("x-request-id");
+
+    if (!xSignature) {
+      console.log("No x-signature header found, skipping validation");
+      return { valid: true }; // Allow if no signature (for backwards compatibility)
+    }
+
+    if (!xRequestId) {
+      console.log("No x-request-id header found");
+      return { valid: false, error: "Missing x-request-id header" };
+    }
+
+    // Parse x-signature: "ts=1234567890,v1=abc123..."
+    const signatureParts: Record<string, string> = {};
+    xSignature.split(",").forEach((part) => {
+      const [key, value] = part.split("=");
+      if (key && value) {
+        signatureParts[key.trim()] = value.trim();
+      }
+    });
+
+    const timestamp = signatureParts["ts"];
+    const receivedHash = signatureParts["v1"];
+
+    if (!timestamp || !receivedHash) {
+      console.log("Invalid x-signature format:", xSignature);
+      return { valid: false, error: "Invalid signature format" };
+    }
+
+    // Build the manifest string according to MercadoPago docs
+    // Template: "id:{data.id};request-id:{x-request-id};ts:{ts};"
+    const manifest = `id:${dataId};request-id:${xRequestId};ts:${timestamp};`;
+    console.log("Signature manifest:", manifest);
+
+    // Calculate HMAC-SHA256
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(webhookSecret);
+    const messageData = encoder.encode(manifest);
+    
+    const cryptoKey = await crypto.subtle.importKey(
+      "raw",
+      keyData,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    
+    const signature = await crypto.subtle.sign("HMAC", cryptoKey, messageData);
+    const calculatedHash = Array.from(new Uint8Array(signature))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+
+    console.log("Calculated hash:", calculatedHash);
+    console.log("Received hash:", receivedHash);
+
+    if (calculatedHash !== receivedHash) {
+      return { valid: false, error: "Signature mismatch" };
+    }
+
+    // Optionally check timestamp to prevent replay attacks (within 5 minutes)
+    const timestampMs = parseInt(timestamp) * 1000;
+    const now = Date.now();
+    const fiveMinutes = 5 * 60 * 1000;
+    
+    if (Math.abs(now - timestampMs) > fiveMinutes) {
+      console.log("Timestamp too old or in future:", timestamp);
+      // Log but don't reject - some notifications might be delayed
+    }
+
+    return { valid: true };
+  } catch (error) {
+    console.error("Error validating webhook signature:", error);
+    return { valid: false, error: `Validation error: ${error}` };
+  }
 }
 
 async function sendWhatsAppMessage(
@@ -191,10 +283,56 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const notification = await req.json();
+    // Clone request to read body multiple times
+    const bodyText = await req.text();
+    let notification;
+    
+    try {
+      notification = JSON.parse(bodyText);
+    } catch (parseError) {
+      console.error("Failed to parse webhook body:", bodyText);
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON body" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     console.log("MercadoPago webhook received:", notification);
 
     const { type, data } = notification;
+    const dataId = data?.id;
+
+    // Fetch MercadoPago config to get webhook secret
+    const { data: mpConfig, error: mpConfigError } = await supabase
+      .from("mercadopago_config")
+      .select("webhook_secret, is_active")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    // Validate webhook signature if secret is configured
+    if (mpConfig?.webhook_secret && dataId) {
+      const validationResult = await validateWebhookSignature(
+        req,
+        String(dataId),
+        mpConfig.webhook_secret
+      );
+
+      if (!validationResult.valid) {
+        console.error("Webhook signature validation failed:", validationResult.error);
+        return new Response(
+          JSON.stringify({ error: "Invalid signature", details: validationResult.error }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      console.log("Webhook signature validated successfully");
+    } else if (mpConfig?.webhook_secret && !dataId) {
+      console.log("Webhook secret configured but no data.id in payload, skipping validation");
+    } else {
+      console.log("No webhook secret configured, skipping signature validation");
+    }
 
     // Handle subscription notifications
     if (type === "subscription_preapproval" || type === "subscription_authorized_payment") {
