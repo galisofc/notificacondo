@@ -22,6 +22,11 @@ import {
   ExternalLink,
   Zap,
   XCircle,
+  RefreshCw,
+  Activity,
+  Server,
+  Webhook,
+  Settings,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -37,6 +42,26 @@ interface MercadoPagoConfig {
   updated_at: string;
 }
 
+interface ConnectionTestResult {
+  success: boolean;
+  overall_status: "healthy" | "unhealthy" | "partial";
+  tests: {
+    config: { status: string; message: string };
+    api: { status: string; message: string };
+    webhook: { status: string; message: string; url?: string };
+  };
+  config_info?: {
+    is_sandbox: boolean;
+    has_public_key: boolean;
+    has_webhook_secret: boolean;
+    has_notification_url: boolean;
+  };
+  duration_ms: number;
+  tested_at: string;
+  error?: string;
+  message?: string;
+}
+
 export function MercadoPagoSettings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -50,6 +75,8 @@ export function MercadoPagoSettings() {
   });
   const [webhookTestStatus, setWebhookTestStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
   const [webhookTestMessage, setWebhookTestMessage] = useState("");
+  const [connectionTestResult, setConnectionTestResult] = useState<ConnectionTestResult | null>(null);
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
 
   // Fetch config
   const { data: config, isLoading } = useQuery({
@@ -313,6 +340,233 @@ export function MercadoPagoSettings() {
                   )}
                   Salvar Configurações
                 </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Connection Test Card */}
+      <Card className="bg-gradient-card border-border/50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Activity className="w-5 h-5 text-primary" />
+            Diagnóstico de Conexão
+          </CardTitle>
+          <CardDescription>
+            Teste completo da integração com Mercado Pago
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Executar teste completo</p>
+              <p className="text-xs text-muted-foreground">
+                Verifica configuração, API e webhook
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isTestingConnection}
+              onClick={async () => {
+                setIsTestingConnection(true);
+                setConnectionTestResult(null);
+
+                try {
+                  const { data, error } = await supabase.functions.invoke(
+                    "mercadopago-test-connection"
+                  );
+
+                  if (error) throw error;
+                  setConnectionTestResult(data);
+
+                  toast({
+                    title:
+                      data.overall_status === "healthy"
+                        ? "Conexão saudável"
+                        : data.overall_status === "partial"
+                        ? "Conexão parcial"
+                        : "Problemas detectados",
+                    description:
+                      data.overall_status === "healthy"
+                        ? "Todos os testes passaram com sucesso!"
+                        : "Verifique os detalhes abaixo",
+                    variant:
+                      data.overall_status === "healthy" ? "default" : "destructive",
+                  });
+                } catch (error: any) {
+                  toast({
+                    title: "Erro no teste",
+                    description: error.message,
+                    variant: "destructive",
+                  });
+                  setConnectionTestResult({
+                    success: false,
+                    overall_status: "unhealthy",
+                    tests: {
+                      config: { status: "error", message: "Falha ao executar teste" },
+                      api: { status: "skipped", message: "Teste pulado" },
+                      webhook: { status: "skipped", message: "Teste pulado" },
+                    },
+                    duration_ms: 0,
+                    tested_at: new Date().toISOString(),
+                    error: error.message,
+                  });
+                } finally {
+                  setIsTestingConnection(false);
+                }
+              }}
+            >
+              {isTestingConnection ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Testando...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Testar Conexão
+                </>
+              )}
+            </Button>
+          </div>
+
+          {connectionTestResult && (
+            <div className="space-y-3 pt-4 border-t border-border/50">
+              {/* Overall Status */}
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                <span className="text-sm font-medium">Status Geral</span>
+                <Badge
+                  variant="outline"
+                  className={
+                    connectionTestResult.overall_status === "healthy"
+                      ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                      : connectionTestResult.overall_status === "partial"
+                      ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                      : "bg-destructive/10 text-destructive border-destructive/20"
+                  }
+                >
+                  {connectionTestResult.overall_status === "healthy" && (
+                    <>
+                      <CheckCircle2 className="w-3 h-3 mr-1" />
+                      Saudável
+                    </>
+                  )}
+                  {connectionTestResult.overall_status === "partial" && (
+                    <>
+                      <AlertTriangle className="w-3 h-3 mr-1" />
+                      Parcial
+                    </>
+                  )}
+                  {connectionTestResult.overall_status === "unhealthy" && (
+                    <>
+                      <XCircle className="w-3 h-3 mr-1" />
+                      Com Problemas
+                    </>
+                  )}
+                </Badge>
+              </div>
+
+              {/* Individual Tests */}
+              <div className="space-y-2">
+                {/* Config Test */}
+                <div className="flex items-start gap-3 p-3 rounded-lg border border-border/50">
+                  <Settings className="w-4 h-4 mt-0.5 text-muted-foreground" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Configuração</span>
+                      {connectionTestResult.tests.config.status === "success" ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                      ) : connectionTestResult.tests.config.status === "error" ? (
+                        <XCircle className="w-4 h-4 text-destructive" />
+                      ) : (
+                        <AlertTriangle className="w-4 h-4 text-amber-500" />
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {connectionTestResult.tests.config.message}
+                    </p>
+                  </div>
+                </div>
+
+                {/* API Test */}
+                <div className="flex items-start gap-3 p-3 rounded-lg border border-border/50">
+                  <Server className="w-4 h-4 mt-0.5 text-muted-foreground" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">API Mercado Pago</span>
+                      {connectionTestResult.tests.api.status === "success" ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                      ) : connectionTestResult.tests.api.status === "error" ? (
+                        <XCircle className="w-4 h-4 text-destructive" />
+                      ) : connectionTestResult.tests.api.status === "skipped" ? (
+                        <span className="text-xs text-muted-foreground">Pulado</span>
+                      ) : (
+                        <AlertTriangle className="w-4 h-4 text-amber-500" />
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1 break-all">
+                      {connectionTestResult.tests.api.message}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Webhook Test */}
+                <div className="flex items-start gap-3 p-3 rounded-lg border border-border/50">
+                  <Webhook className="w-4 h-4 mt-0.5 text-muted-foreground" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Webhook Endpoint</span>
+                      {connectionTestResult.tests.webhook.status === "success" ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                      ) : connectionTestResult.tests.webhook.status === "error" ? (
+                        <XCircle className="w-4 h-4 text-destructive" />
+                      ) : connectionTestResult.tests.webhook.status === "skipped" ? (
+                        <span className="text-xs text-muted-foreground">Pulado</span>
+                      ) : (
+                        <AlertTriangle className="w-4 h-4 text-amber-500" />
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {connectionTestResult.tests.webhook.message}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Config Info */}
+              {connectionTestResult.config_info && (
+                <div className="grid grid-cols-2 gap-2 pt-3 border-t border-border/50">
+                  <div className="flex items-center gap-2 text-xs">
+                    {connectionTestResult.config_info.is_sandbox ? (
+                      <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-600 border-amber-500/20">
+                        Sandbox
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                        Produção
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    Public Key: {connectionTestResult.config_info.has_public_key ? "✓" : "✗"}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    Webhook Secret: {connectionTestResult.config_info.has_webhook_secret ? "✓" : "✗"}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    URL Notificação: {connectionTestResult.config_info.has_notification_url ? "✓" : "✗"}
+                  </div>
+                </div>
+              )}
+
+              {/* Test metadata */}
+              <div className="flex items-center justify-between text-xs text-muted-foreground pt-2">
+                <span>
+                  Testado em: {new Date(connectionTestResult.tested_at).toLocaleString("pt-BR")}
+                </span>
+                <span>{connectionTestResult.duration_ms}ms</span>
               </div>
             </div>
           )}
