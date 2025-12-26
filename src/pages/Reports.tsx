@@ -555,37 +555,6 @@ const Reports = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-card border-border/50">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-green-500" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Taxa de Pagamento</p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {stats.paymentRate.toFixed(1)}%
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-card border-border/50">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center">
-                  <TrendingDown className="w-6 h-6 text-red-500" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Taxa de Inadimplência</p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {stats.delinquencyRate.toFixed(1)}%
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Charts Row */}
