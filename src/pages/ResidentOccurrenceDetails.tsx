@@ -230,22 +230,22 @@ const ResidentOccurrenceDetails = () => {
         }
       }
 
-      // Update occurrence status
+      // Update occurrence status to "analisando" when defense is submitted
       await supabase
         .from("occurrences")
-        .update({ status: "em_defesa" })
+        .update({ status: "analisando" })
         .eq("id", occurrence.id);
 
       toast({
         title: "Sucesso!",
-        description: "Sua defesa foi enviada com sucesso.",
+        description: "Sua defesa foi enviada com sucesso. O síndico irá analisar.",
       });
 
       // Refresh data
       setDefenseContent("");
       setUploadedFiles([]);
       setDefenses([defenseData, ...defenses]);
-      setOccurrence({ ...occurrence, status: "em_defesa" });
+      setOccurrence({ ...occurrence, status: "analisando" });
     } catch (error: any) {
       console.error("Error submitting defense:", error);
       toast({
