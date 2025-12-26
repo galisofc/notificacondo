@@ -79,7 +79,7 @@ const ResidentOccurrenceDetails = () => {
   const [submitting, setSubmitting] = useState(false);
   const [defenseContent, setDefenseContent] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
-
+  const [accessError, setAccessError] = useState<string | null>(null);
   useEffect(() => {
     const fetchData = async () => {
       if (!id || !residentInfo) return;
@@ -98,14 +98,16 @@ const ResidentOccurrenceDetails = () => {
           .eq("resident_id", residentInfo.id)
           .maybeSingle();
 
-        if (occError) throw occError;
+        if (occError) {
+          console.error("Error fetching occurrence:", occError);
+          setAccessError("Erro ao carregar a ocorrência. Tente novamente.");
+          setLoading(false);
+          return;
+        }
+        
         if (!occData) {
-          toast({
-            title: "Erro",
-            description: "Ocorrência não encontrada.",
-            variant: "destructive",
-          });
-          navigate("/resident");
+          setAccessError("Você não tem permissão para visualizar esta ocorrência ou ela não existe.");
+          setLoading(false);
           return;
         }
 
@@ -310,16 +312,49 @@ const ResidentOccurrenceDetails = () => {
 
   if (loading || roleLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md bg-gradient-card border-border/50">
+          <CardContent className="pt-8 pb-8">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
+                <Building2 className="w-8 h-8 text-primary" />
+              </div>
+              <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
+              <h2 className="font-display text-xl font-semibold text-foreground mb-2">
+                Carregando...
+              </h2>
+              <p className="text-muted-foreground">
+                Buscando detalhes da ocorrência.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
-  if (!occurrence) {
+  if (!occurrence || accessError) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Ocorrência não encontrada.</p>
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md bg-gradient-card border-border/50">
+          <CardContent className="pt-8 pb-8">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 rounded-2xl bg-destructive/10 flex items-center justify-center mb-6">
+                <AlertTriangle className="w-8 h-8 text-destructive" />
+              </div>
+              <h2 className="font-display text-xl font-semibold text-foreground mb-2">
+                Acesso Negado
+              </h2>
+              <p className="text-muted-foreground mb-6">
+                {accessError || "Você não tem permissão para visualizar esta ocorrência."}
+              </p>
+              <Button variant="outline" onClick={() => navigate("/resident")}>
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Voltar para Minhas Ocorrências
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
