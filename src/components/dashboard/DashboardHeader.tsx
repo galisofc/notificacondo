@@ -1,12 +1,18 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Shield, Bell, Settings, LogOut } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Shield, MessageCircle, Settings, LogOut } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const DashboardHeader = () => {
   const { signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
 
   const handleSignOut = async () => {
@@ -35,12 +41,32 @@ const DashboardHeader = () => {
           </button>
 
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon">
-              <Bell className="w-5 h-5" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => navigate("/settings")}>
-              <Settings className="w-5 h-5" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => navigate("/notifications")}
+                  className={location.pathname === "/notifications" ? "bg-muted" : ""}
+                >
+                  <MessageCircle className="w-5 h-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Notificações WhatsApp</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => navigate("/settings")}
+                  className={location.pathname.startsWith("/settings") ? "bg-muted" : ""}
+                >
+                  <Settings className="w-5 h-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Configurações</TooltipContent>
+            </Tooltip>
             <div className="h-8 w-px bg-border" />
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="w-4 h-4 mr-2" />
