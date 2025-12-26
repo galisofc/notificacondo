@@ -33,7 +33,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useToast } from "@/hooks/use-toast";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
-import { format, startOfMonth, endOfMonth, subMonths, parseISO, isWithinInterval, eachMonthOfInterval } from "date-fns";
+import { format, startOfMonth, endOfMonth, subMonths, parseISO, isWithinInterval, eachMonthOfInterval, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   BarChart,
@@ -150,8 +150,8 @@ const Reports = () => {
   const filteredOccurrences = useMemo(() => {
     return occurrences.filter((o) => {
       const date = parseISO(o.created_at);
-      const from = parseISO(dateFrom);
-      const to = parseISO(dateTo);
+      const from = startOfDay(parseISO(dateFrom));
+      const to = endOfDay(parseISO(dateTo));
       const withinPeriod = isWithinInterval(date, { start: from, end: to });
       const matchesCondo = selectedCondominium === "all" || o.condominium_id === selectedCondominium;
       return withinPeriod && matchesCondo;
@@ -161,8 +161,8 @@ const Reports = () => {
   const filteredFines = useMemo(() => {
     return fines.filter((f) => {
       const date = parseISO(f.created_at);
-      const from = parseISO(dateFrom);
-      const to = parseISO(dateTo);
+      const from = startOfDay(parseISO(dateFrom));
+      const to = endOfDay(parseISO(dateTo));
       return isWithinInterval(date, { start: from, end: to });
     });
   }, [fines, dateFrom, dateTo]);
