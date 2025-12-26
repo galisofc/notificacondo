@@ -538,6 +538,28 @@ const CondominiumDetails = () => {
               </Button>
             </div>
 
+            {/* Results counter */}
+            {apartments.length > 0 && (
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm text-muted-foreground">
+                  Mostrando <span className="font-medium text-foreground">{filteredApartments.length}</span> de <span className="font-medium text-foreground">{apartments.length}</span> apartamentos
+                </p>
+                {(apartmentFilterBlock || apartmentFilterNumber) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setApartmentFilterBlock("");
+                      setApartmentFilterNumber("");
+                    }}
+                    className="text-xs"
+                  >
+                    Limpar filtros
+                  </Button>
+                )}
+              </div>
+            )}
+
             {apartments.length === 0 ? (
               <div className="text-center py-12 rounded-2xl bg-gradient-card border border-border/50">
                 <Home className="w-12 h-12 text-primary mx-auto mb-4" />
@@ -666,6 +688,28 @@ const CondominiumDetails = () => {
                 Novo Morador
               </Button>
             </div>
+
+            {/* Results counter */}
+            {residents.length > 0 && (
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm text-muted-foreground">
+                  Mostrando <span className="font-medium text-foreground">{filteredResidents.length}</span> de <span className="font-medium text-foreground">{residents.length}</span> moradores
+                </p>
+                {(residentFilterSearch || residentFilterApartment) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setResidentFilterSearch("");
+                      setResidentFilterApartment("");
+                    }}
+                    className="text-xs"
+                  >
+                    Limpar filtros
+                  </Button>
+                )}
+              </div>
+            )}
 
             {residents.length === 0 ? (
               <div className="text-center py-12 rounded-2xl bg-gradient-card border border-border/50">
