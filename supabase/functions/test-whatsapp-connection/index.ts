@@ -51,10 +51,10 @@ serve(async (req) => {
 
     switch (provider) {
       case "zpro":
-        // Z-PRO: Test with a status check or the base URL
-        // Try to access the API to verify credentials
-        testUrl = api_url.replace(/\/send-text$/, "").replace(/\/send-message$/, "");
-        headers["Authorization"] = `Bearer ${api_key}`;
+        // Z-PRO: Use the params endpoint to verify connection
+        // The API uses query parameters, so we just need to check if it responds
+        const baseUrl = api_url.replace(/\/$/, "");
+        testUrl = `${baseUrl}/params/?externalKey=${encodeURIComponent(api_key)}&bearertoken=${encodeURIComponent(api_key)}`;
         break;
       case "zapi":
         testUrl = `${api_url}/instances/${instance_id}/token/${api_key}/status`;

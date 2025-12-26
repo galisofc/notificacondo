@@ -28,41 +28,55 @@ interface WhatsAppConfigRow {
   is_active: boolean;
 }
 
-// Z-PRO Provider - Uses full URL and Bearer Token
+// Z-PRO Provider - Uses query parameters via GET
+// API format: GET {api_url}/params/?body=message&number=phone&externalKey=apiKey&bearertoken=token
 const zproProvider: ProviderConfig = {
   async sendMessage(phone: string, message: string, config: ProviderSettings) {
-    // Z-PRO uses the full URL directly, with Bearer token authentication
-    // The URL already contains the session ID
-    const sendUrl = config.apiUrl.endsWith("/send-text") 
-      ? config.apiUrl 
-      : `${config.apiUrl}/send-text`;
+    const baseUrl = config.apiUrl.replace(/\/$/, "");
+    const phoneClean = phone.replace(/\D/g, "");
     
-    console.log("Z-PRO sending to:", sendUrl);
-    
-    const response = await fetch(sendUrl, {
-      method: "POST",
-      headers: { 
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${config.apiKey}`,
-      },
-      body: JSON.stringify({
-        phone: phone.replace(/\D/g, ""),
-        message: message,
-      }),
+    const params = new URLSearchParams({
+      body: message,
+      number: phoneClean,
+      externalKey: config.apiKey,
+      bearertoken: config.apiKey,
+      isClosed: "false"
     });
     
-    const data = await response.json();
-    console.log("Z-PRO response:", data);
+    const sendUrl = `${baseUrl}/params/?${params.toString()}`;
+    console.log("Z-PRO sending to:", sendUrl.substring(0, 150) + "...");
     
-    if (response.ok && (data.id || data.messageId || data.zapiMessageId)) {
-      return { success: true, messageId: data.id || data.messageId || data.zapiMessageId };
+    try {
+      const response = await fetch(sendUrl, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+      
+      const responseText = await response.text();
+      console.log("Z-PRO response status:", response.status);
+      console.log("Z-PRO response:", responseText.substring(0, 200));
+      
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        return { success: false, error: `Resposta inválida: ${responseText.substring(0, 100)}` };
+      }
+      
+      if (response.ok) {
+        if (data.id || data.messageId || data.key?.id) {
+          return { success: true, messageId: data.id || data.messageId || data.key?.id };
+        }
+        if (data.status === "success" || data.status === "PENDING") {
+          return { success: true, messageId: data.id || "sent" };
+        }
+        return { success: true, messageId: "sent" };
+      }
+      
+      return { success: false, error: data.message || data.error || `Erro ${response.status}` };
+    } catch (error: any) {
+      return { success: false, error: `Erro de conexão: ${error.message}` };
     }
-    
-    if (response.ok && data.status === "success") {
-      return { success: true, messageId: data.id || "sent" };
-    }
-    
-    return { success: false, error: data.message || data.error || "Erro ao enviar mensagem" };
   },
 };
 
