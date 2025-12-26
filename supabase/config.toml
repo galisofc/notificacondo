@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.send-whatsapp-test]
 verify_jwt = false
+
+[functions.notify-sindico-defense]
+verify_jwt = false

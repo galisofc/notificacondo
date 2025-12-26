@@ -236,6 +236,23 @@ const ResidentOccurrenceDetails = () => {
         .update({ status: "analisando" })
         .eq("id", occurrence.id);
 
+      // Notify síndico via WhatsApp (fire and forget - don't block on result)
+      supabase.functions.invoke("notify-sindico-defense", {
+        body: {
+          occurrence_id: occurrence.id,
+          resident_name: residentInfo.full_name,
+          occurrence_title: occurrence.title,
+        },
+      }).then((result) => {
+        if (result.error) {
+          console.log("Notification to síndico failed (non-blocking):", result.error);
+        } else {
+          console.log("Síndico notified successfully");
+        }
+      }).catch((err) => {
+        console.log("Error notifying síndico (non-blocking):", err);
+      });
+
       toast({
         title: "Sucesso!",
         description: "Sua defesa foi enviada com sucesso. O síndico irá analisar.",
