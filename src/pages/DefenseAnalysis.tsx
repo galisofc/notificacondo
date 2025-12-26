@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -329,6 +330,9 @@ const DefenseAnalysis = () => {
       </Helmet>
 
       <div className="space-y-6">
+        {/* Breadcrumbs */}
+        <SindicoBreadcrumbs items={[{ label: "Análise de Defesas" }]} />
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
