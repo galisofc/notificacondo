@@ -163,8 +163,8 @@ const ResidentOccurrences = () => {
   };
 
   const getDefenseDeadline = (occurrence: Occurrence) => {
-    // Only show deadline for pending defense statuses
-    if (occurrence.status !== "notificado" && occurrence.status !== "em_defesa") {
+    // Only show deadline for occurrences awaiting defense (not yet submitted)
+    if (occurrence.status !== "notificado") {
       return null;
     }
 
