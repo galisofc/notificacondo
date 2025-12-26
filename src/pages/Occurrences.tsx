@@ -97,6 +97,7 @@ const Occurrences = () => {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [condominiumFilter, setCondominiumFilter] = useState<string>("all");
 
   // Form states
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -123,11 +124,12 @@ const Occurrences = () => {
   const filteredApartments = apartments.filter((a) => a.block_id === formData.block_id);
   const filteredResidents = residents.filter((r) => r.apartment_id === formData.apartment_id);
 
-  // Filter occurrences based on status and type filters
+  // Filter occurrences based on status, type and condominium filters
   const filteredOccurrences = occurrences.filter((occ) => {
     const matchesStatus = statusFilter === "all" || occ.status === statusFilter;
     const matchesType = typeFilter === "all" || occ.type === typeFilter;
-    return matchesStatus && matchesType;
+    const matchesCondominium = condominiumFilter === "all" || occ.condominium_id === condominiumFilter;
+    return matchesStatus && matchesType && matchesCondominium;
   });
 
   const fetchData = async () => {
@@ -405,7 +407,20 @@ const Occurrences = () => {
 
         {/* Filters and Add Button */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <div className="flex flex-1 gap-3">
+          <div className="flex flex-1 flex-wrap gap-3">
+            <Select value={condominiumFilter} onValueChange={setCondominiumFilter}>
+              <SelectTrigger className="w-[200px] bg-card border-border">
+                <SelectValue placeholder="Condomínio" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Condomínios</SelectItem>
+                {condominiums.map((condo) => (
+                  <SelectItem key={condo.id} value={condo.id}>
+                    {condo.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[180px] bg-card border-border">
                 <SelectValue placeholder="Status" />
@@ -459,13 +474,14 @@ const Occurrences = () => {
               Exibindo <span className="font-medium text-foreground">{filteredOccurrences.length}</span> de{" "}
               <span className="font-medium text-foreground">{occurrences.length}</span> ocorrência{occurrences.length !== 1 ? "s" : ""}
             </p>
-            {(statusFilter !== "all" || typeFilter !== "all") && (
+            {(statusFilter !== "all" || typeFilter !== "all" || condominiumFilter !== "all") && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => {
                   setStatusFilter("all");
                   setTypeFilter("all");
+                  setCondominiumFilter("all");
                 }}
                 className="text-xs"
               >
