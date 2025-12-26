@@ -187,7 +187,7 @@ const Dashboard = () => {
       icon: Bell,
       label: "Enviar Notificação",
       description: "Notificar um morador",
-      action: () => toast({ title: "Em breve", description: "Funcionalidade em desenvolvimento" }),
+      action: () => navigate("/occurrences"),
     },
     {
       icon: BarChart3,
