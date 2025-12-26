@@ -1,0 +1,321 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+// Multi-provider WhatsApp configuration
+type WhatsAppProvider = "zpro" | "zapi" | "evolution" | "wppconnect";
+
+interface ProviderConfig {
+  sendMessage: (phone: string, message: string, config: ProviderSettings) => Promise<{ success: boolean; messageId?: string; error?: string }>;
+}
+
+interface ProviderSettings {
+  apiUrl: string;
+  apiKey: string;
+  instanceId: string;
+}
+
+// Z-PRO Provider
+const zproProvider: ProviderConfig = {
+  async sendMessage(phone: string, message: string, config: ProviderSettings) {
+    const response = await fetch(`${config.apiUrl}/instances/${config.instanceId}/token/${config.apiKey}/send-text`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        phone: phone.replace(/\D/g, ""),
+        message: message,
+      }),
+    });
+    
+    const data = await response.json();
+    console.log("Z-PRO response:", data);
+    
+    if (response.ok && data.zapiMessageId) {
+      return { success: true, messageId: data.zapiMessageId };
+    }
+    return { success: false, error: data.message || "Erro ao enviar mensagem" };
+  },
+};
+
+// Z-API Provider
+const zapiProvider: ProviderConfig = {
+  async sendMessage(phone: string, message: string, config: ProviderSettings) {
+    const response = await fetch(`${config.apiUrl}/instances/${config.instanceId}/token/${config.apiKey}/send-text`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        phone: phone.replace(/\D/g, ""),
+        message: message,
+      }),
+    });
+    
+    const data = await response.json();
+    console.log("Z-API response:", data);
+    
+    if (response.ok && data.zapiMessageId) {
+      return { success: true, messageId: data.zapiMessageId };
+    }
+    return { success: false, error: data.message || "Erro ao enviar mensagem" };
+  },
+};
+
+// Evolution API Provider
+const evolutionProvider: ProviderConfig = {
+  async sendMessage(phone: string, message: string, config: ProviderSettings) {
+    const response = await fetch(`${config.apiUrl}/message/sendText/${config.instanceId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": config.apiKey,
+      },
+      body: JSON.stringify({
+        number: phone.replace(/\D/g, ""),
+        text: message,
+      }),
+    });
+    
+    const data = await response.json();
+    console.log("Evolution API response:", data);
+    
+    if (response.ok && data.key?.id) {
+      return { success: true, messageId: data.key.id };
+    }
+    return { success: false, error: data.message || "Erro ao enviar mensagem" };
+  },
+};
+
+// WPPConnect Provider
+const wppconnectProvider: ProviderConfig = {
+  async sendMessage(phone: string, message: string, config: ProviderSettings) {
+    const response = await fetch(`${config.apiUrl}/api/${config.instanceId}/send-message`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({
+        phone: phone.replace(/\D/g, ""),
+        message: message,
+        isGroup: false,
+      }),
+    });
+    
+    const data = await response.json();
+    console.log("WPPConnect response:", data);
+    
+    if (response.ok && data.status === "success") {
+      return { success: true, messageId: data.id };
+    }
+    return { success: false, error: data.message || "Erro ao enviar mensagem" };
+  },
+};
+
+const providers: Record<WhatsAppProvider, ProviderConfig> = {
+  zpro: zproProvider,
+  zapi: zapiProvider,
+  evolution: evolutionProvider,
+  wppconnect: wppconnectProvider,
+};
+
+interface SendNotificationRequest {
+  occurrence_id: string;
+  resident_id: string;
+  message_template?: string;
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const whatsappApiUrl = Deno.env.get("WHATSAPP_API_URL");
+    const whatsappApiKey = Deno.env.get("WHATSAPP_API_KEY");
+    const whatsappInstanceId = Deno.env.get("WHATSAPP_INSTANCE_ID");
+    const whatsappProvider = (Deno.env.get("WHATSAPP_PROVIDER") || "zpro") as WhatsAppProvider;
+
+    if (!whatsappApiUrl || !whatsappApiKey || !whatsappInstanceId) {
+      console.error("WhatsApp credentials not configured");
+      return new Response(
+        JSON.stringify({ error: "WhatsApp não configurado. Configure WHATSAPP_API_URL, WHATSAPP_API_KEY e WHATSAPP_INSTANCE_ID" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const { occurrence_id, resident_id, message_template }: SendNotificationRequest = await req.json();
+
+    if (!occurrence_id || !resident_id) {
+      return new Response(
+        JSON.stringify({ error: "occurrence_id e resident_id são obrigatórios" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Fetch resident and occurrence details
+    const { data: resident, error: residentError } = await supabase
+      .from("residents")
+      .select(`
+        id,
+        full_name,
+        phone,
+        email,
+        apartments!inner (
+          number,
+          blocks!inner (
+            name,
+            condominiums!inner (
+              id,
+              name
+            )
+          )
+        )
+      `)
+      .eq("id", resident_id)
+      .single();
+
+    if (residentError || !resident) {
+      console.error("Resident not found:", residentError);
+      return new Response(
+        JSON.stringify({ error: "Morador não encontrado" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!resident.phone) {
+      return new Response(
+        JSON.stringify({ error: "Morador não possui telefone cadastrado" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { data: occurrence, error: occError } = await supabase
+      .from("occurrences")
+      .select("id, title, type, status")
+      .eq("id", occurrence_id)
+      .single();
+
+    if (occError || !occurrence) {
+      console.error("Occurrence not found:", occError);
+      return new Response(
+        JSON.stringify({ error: "Ocorrência não encontrada" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Generate secure token for the link
+    const secureToken = crypto.randomUUID();
+    const baseUrl = Deno.env.get("APP_URL") || "https://iyeljkdrypcxvljebqtn.lovableproject.com";
+    const secureLink = `${baseUrl}/resident/access?token=${secureToken}`;
+
+    const apt = resident.apartments as any;
+    const condoName = apt.blocks.condominiums.name;
+
+    // Type label mapping
+    const typeLabels: Record<string, string> = {
+      advertencia: "Advertência",
+      notificacao: "Notificação",
+      multa: "Multa",
+    };
+
+    // Build message
+    const defaultMessage = `🏢 *${condoName}*
+
+Olá, *${resident.full_name}*!
+
+Você recebeu uma *${typeLabels[occurrence.type] || occurrence.type}*:
+📋 *${occurrence.title}*
+
+Acesse o link abaixo para ver os detalhes e apresentar sua defesa:
+👉 ${secureLink}
+
+Este link é pessoal e intransferível.`;
+
+    const message = message_template 
+      ? message_template
+          .replace("{nome}", resident.full_name)
+          .replace("{tipo}", typeLabels[occurrence.type] || occurrence.type)
+          .replace("{titulo}", occurrence.title)
+          .replace("{condominio}", condoName)
+          .replace("{link}", secureLink)
+      : defaultMessage;
+
+    // Save notification record
+    const { data: notification, error: notifError } = await supabase
+      .from("notifications_sent")
+      .insert({
+        occurrence_id,
+        resident_id,
+        message_content: message,
+        sent_via: `whatsapp_${whatsappProvider}`,
+        secure_link: secureLink,
+        secure_link_token: secureToken,
+        sent_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (notifError) {
+      console.error("Failed to save notification:", notifError);
+      return new Response(
+        JSON.stringify({ error: "Erro ao salvar notificação" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Send WhatsApp message
+    const provider = providers[whatsappProvider];
+    const result = await provider.sendMessage(resident.phone, message, {
+      apiUrl: whatsappApiUrl,
+      apiKey: whatsappApiKey,
+      instanceId: whatsappInstanceId,
+    });
+
+    // Update notification with result
+    await supabase
+      .from("notifications_sent")
+      .update({
+        zpro_message_id: result.messageId,
+        zpro_status: result.success ? "sent" : "failed",
+        delivered_at: result.success ? new Date().toISOString() : null,
+      })
+      .eq("id", notification.id);
+
+    if (!result.success) {
+      console.error("WhatsApp send failed:", result.error);
+      return new Response(
+        JSON.stringify({ 
+          error: "Falha ao enviar WhatsApp", 
+          details: result.error,
+          notification_id: notification.id 
+        }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("WhatsApp sent successfully:", result.messageId);
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message_id: result.messageId,
+        notification_id: notification.id,
+        secure_link: secureLink,
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Unexpected error:", error);
+    return new Response(
+      JSON.stringify({ error: "Erro interno do servidor" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});
