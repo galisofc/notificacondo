@@ -4,7 +4,7 @@ import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, differenceInDays, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
@@ -312,12 +312,46 @@ const SindicoInvoices = () => {
   const handleChangePlan = async () => {
     if (!changePlanDialog.subscription || !selectedPlan) return;
 
+    const sub = changePlanDialog.subscription;
     setIsChangingPlan(true);
+    
     try {
       const newPlan = plans?.find((p) => p.slug === selectedPlan);
+      const oldPlan = plans?.find((p) => p.slug === sub.plan);
+      
       if (!newPlan) throw new Error("Plano não encontrado");
+      if (!oldPlan) throw new Error("Plano atual não encontrado");
 
-      const { error } = await supabase
+      const priceDifference = newPlan.price - oldPlan.price;
+      const isUpgrade = priceDifference > 0;
+
+      // Calculate pro-rata if upgrading
+      let proratedAmount = 0;
+      let proratedDescription = "";
+
+      if (isUpgrade && sub.current_period_start && sub.current_period_end) {
+        const periodStart = new Date(sub.current_period_start);
+        const periodEnd = new Date(sub.current_period_end);
+        const today = new Date();
+
+        const totalDays = differenceInDays(periodEnd, periodStart);
+        const daysUsed = differenceInDays(today, periodStart);
+        const daysRemaining = Math.max(0, totalDays - daysUsed);
+
+        if (daysRemaining > 0 && totalDays > 0) {
+          // Credit for unused time on old plan
+          const oldPlanCredit = (daysRemaining / totalDays) * oldPlan.price;
+          // Charge for remaining time on new plan
+          const newPlanCharge = (daysRemaining / totalDays) * newPlan.price;
+          // Net amount to charge
+          proratedAmount = Math.max(0, newPlanCharge - oldPlanCredit);
+
+          proratedDescription = `Upgrade de ${oldPlan.name} para ${newPlan.name} - Proporcional ${daysRemaining} dias restantes`;
+        }
+      }
+
+      // Update subscription
+      const { error: subError } = await supabase
         .from("subscriptions")
         .update({
           plan: selectedPlan as "start" | "essencial" | "profissional" | "enterprise",
@@ -325,14 +359,45 @@ const SindicoInvoices = () => {
           warnings_limit: newPlan.warnings_limit,
           fines_limit: newPlan.fines_limit,
         })
-        .eq("id", changePlanDialog.subscription.id);
+        .eq("id", sub.id);
 
-      if (error) throw error;
+      if (subError) throw subError;
 
-      toast({
-        title: "Plano alterado!",
-        description: `O plano foi alterado para ${newPlan.name} com sucesso.`,
-      });
+      // Create prorated invoice if upgrading with amount > 0
+      if (isUpgrade && proratedAmount > 0) {
+        const today = new Date();
+        const dueDate = addDays(today, 7); // 7 days to pay the upgrade difference
+
+        const { error: invoiceError } = await supabase
+          .from("invoices")
+          .insert({
+            subscription_id: sub.id,
+            condominium_id: sub.condominium.id,
+            amount: Math.round(proratedAmount * 100) / 100, // Round to 2 decimal places
+            status: "pending",
+            due_date: dueDate.toISOString().split("T")[0],
+            period_start: today.toISOString().split("T")[0],
+            period_end: sub.current_period_end?.split("T")[0] || today.toISOString().split("T")[0],
+            description: proratedDescription,
+          });
+
+        if (invoiceError) throw invoiceError;
+
+        toast({
+          title: "Plano alterado com sucesso!",
+          description: `Upgrade realizado. Uma fatura proporcional de ${formatCurrency(proratedAmount)} foi gerada.`,
+        });
+      } else if (isUpgrade) {
+        toast({
+          title: "Plano alterado!",
+          description: `O plano foi alterado para ${newPlan.name}. A diferença será cobrada no próximo ciclo.`,
+        });
+      } else {
+        toast({
+          title: "Plano alterado!",
+          description: `O plano foi alterado para ${newPlan.name}. A alteração será aplicada no próximo ciclo.`,
+        });
+      }
 
       queryClient.invalidateQueries({ queryKey: ["sindico-subscriptions"] });
       queryClient.invalidateQueries({ queryKey: ["sindico-invoices"] });
@@ -348,6 +413,45 @@ const SindicoInvoices = () => {
       setIsChangingPlan(false);
     }
   };
+
+  // Calculate prorated amount for display in dialog
+  const calculateProratedAmount = () => {
+    if (!changePlanDialog.subscription || !selectedPlan || !plans) return null;
+
+    const sub = changePlanDialog.subscription;
+    const newPlan = plans.find((p) => p.slug === selectedPlan);
+    const oldPlan = plans.find((p) => p.slug === sub.plan);
+
+    if (!newPlan || !oldPlan) return null;
+
+    const priceDifference = newPlan.price - oldPlan.price;
+    if (priceDifference <= 0) return null; // No charge for downgrade
+
+    if (!sub.current_period_start || !sub.current_period_end) return null;
+
+    const periodStart = new Date(sub.current_period_start);
+    const periodEnd = new Date(sub.current_period_end);
+    const today = new Date();
+
+    const totalDays = differenceInDays(periodEnd, periodStart);
+    const daysUsed = differenceInDays(today, periodStart);
+    const daysRemaining = Math.max(0, totalDays - daysUsed);
+
+    if (daysRemaining <= 0 || totalDays <= 0) return null;
+
+    const oldPlanCredit = (daysRemaining / totalDays) * oldPlan.price;
+    const newPlanCharge = (daysRemaining / totalDays) * newPlan.price;
+    const proratedAmount = Math.max(0, newPlanCharge - oldPlanCredit);
+
+    return {
+      amount: Math.round(proratedAmount * 100) / 100,
+      daysRemaining,
+      oldPlanName: oldPlan.name,
+      newPlanName: newPlan.name,
+    };
+  };
+
+  const proratedInfo = calculateProratedAmount();
 
   if (isLoadingInvoices) {
     return (
@@ -743,6 +847,45 @@ const SindicoInvoices = () => {
               })}
             </div>
 
+            {/* Prorated Amount Info */}
+            {proratedInfo && selectedPlan !== changePlanDialog.subscription?.plan && (
+              <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <TrendingUp className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">Cobrança Proporcional</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Como ainda restam {proratedInfo.daysRemaining} dias no período atual, 
+                      será gerada uma fatura proporcional pela diferença entre os planos.
+                    </p>
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Valor a pagar agora:</span>
+                      <span className="text-lg font-bold text-primary">{formatCurrency(proratedInfo.amount)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Downgrade Warning */}
+            {selectedPlan !== changePlanDialog.subscription?.plan && 
+             plans?.find(p => p.slug === selectedPlan)?.price! < plans?.find(p => p.slug === changePlanDialog.subscription?.plan)?.price! && (
+              <div className="p-4 rounded-lg bg-amber-500/5 border border-amber-500/20">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-sm">Downgrade de Plano</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Ao fazer downgrade, os novos limites serão aplicados imediatamente. 
+                      Se o uso atual exceder os limites do novo plano, você não poderá criar novas ocorrências até o próximo ciclo.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <DialogFooter>
               <Button variant="outline" onClick={() => setChangePlanDialog({ open: false, subscription: null })}>
                 Cancelar
@@ -756,6 +899,8 @@ const SindicoInvoices = () => {
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Alterando...
                   </>
+                ) : proratedInfo ? (
+                  `Confirmar e Pagar ${formatCurrency(proratedInfo.amount)}`
                 ) : (
                   "Confirmar Alteração"
                 )}
