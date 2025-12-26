@@ -213,17 +213,35 @@ export function MercadoPagoSettings() {
               {/* Webhook Secret */}
               <div className="space-y-2">
                 <Label htmlFor="webhook_secret">Webhook Secret</Label>
-                <Input
-                  id="webhook_secret"
-                  type="password"
-                  value={formData.webhook_secret}
-                  onChange={(e) =>
-                    setFormData({ ...formData, webhook_secret: e.target.value })
-                  }
-                  placeholder="Secret para validação de webhooks"
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="webhook_secret"
+                    type="password"
+                    value={formData.webhook_secret}
+                    onChange={(e) =>
+                      setFormData({ ...formData, webhook_secret: e.target.value })
+                    }
+                    placeholder="Secret para validação de webhooks"
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const secret = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+                      setFormData({ ...formData, webhook_secret: secret });
+                      toast({
+                        title: "Secret gerado",
+                        description: "Um novo webhook secret foi gerado. Lembre-se de salvar as configurações.",
+                      });
+                    }}
+                  >
+                    Gerar
+                  </Button>
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  Usado para validar notificações do Mercado Pago (opcional)
+                  Usado para validar notificações do Mercado Pago. Clique em "Gerar" para criar um secret seguro.
                 </p>
               </div>
 
