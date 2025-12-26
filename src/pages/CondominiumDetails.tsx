@@ -689,7 +689,7 @@ const CondominiumDetails = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="blockFloors">Quantidade de Andares *</Label>
+                <Label htmlFor="blockFloors">Quantidade de Pavimentos (incluindo Térreo) *</Label>
                 <Input
                   id="blockFloors"
                   type="number"
@@ -760,7 +760,8 @@ const CondominiumDetails = () => {
                     {apartmentForm.block_id && (() => {
                       const selectedBlock = blocks.find(b => b.id === apartmentForm.block_id);
                       const floorsCount = selectedBlock?.floors || 1;
-                      return Array.from({ length: floorsCount }, (_, i) => (
+                      // floors = total de pavimentos (inclui térreo), então andares = floors - 1
+                      return Array.from({ length: floorsCount - 1 }, (_, i) => (
                         <option key={i + 1} value={String(i + 1)}>{i + 1}º Andar</option>
                       ));
                     })()}
