@@ -30,32 +30,32 @@ interface SendResult {
   error?: string;
 }
 
-// Z-PRO Provider - Uses full URL and Bearer Token
-// API expects: POST to {api_url} with body { number, message }
+// Z-PRO Provider - Uses query parameters via GET
+// API format: GET {api_url}/params/?body=message&number=phone&externalKey=apiKey&bearertoken=token
 async function sendZproMessage(phone: string, message: string, config: ProviderSettings): Promise<SendResult> {
   const baseUrl = config.apiUrl.replace(/\/$/, ""); // Remove trailing slash
   const phoneClean = phone.replace(/\D/g, "");
   
-  // Z-PRO API format: POST to the URL with { number, message }
-  // The error "Cannot read properties of undefined (reading 'replace')" indicates
-  // the API expects 'number' field, not 'phone'
-  const requestBody = {
+  // Z-PRO API uses query parameters
+  const params = new URLSearchParams({
+    body: message,
     number: phoneClean,
-    message: message,
-  };
+    externalKey: config.apiKey,
+    bearertoken: config.apiKey,
+    isClosed: "false"
+  });
   
-  console.log("Z-PRO sending to:", baseUrl);
+  const sendUrl = `${baseUrl}/params/?${params.toString()}`;
+  
+  console.log("Z-PRO sending to:", sendUrl.substring(0, 150) + "...");
   console.log("Phone:", phoneClean);
-  console.log("Request body:", JSON.stringify(requestBody));
   
   try {
-    const response = await fetch(baseUrl, {
-      method: "POST",
+    const response = await fetch(sendUrl, {
+      method: "GET",
       headers: { 
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${config.apiKey}`,
       },
-      body: JSON.stringify(requestBody),
     });
     
     const responseText = await response.text();
