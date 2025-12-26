@@ -27,6 +27,7 @@ import SuperAdminCondominiums from "./pages/superadmin/Condominiums";
 import Subscriptions from "./pages/superadmin/Subscriptions";
 import Logs from "./pages/superadmin/Logs";
 import WhatsApp from "./pages/superadmin/WhatsApp";
+import SuperAdminSettings from "./pages/superadmin/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -190,6 +191,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole="super_admin">
                     <WhatsApp />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/superadmin/settings"
+                element={
+                  <ProtectedRoute requiredRole="super_admin">
+                    <SuperAdminSettings />
                   </ProtectedRoute>
                 }
               />
