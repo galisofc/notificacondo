@@ -9,6 +9,8 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import ResidentDashboard from "./pages/ResidentDashboard";
+import ResidentOccurrenceDetails from "./pages/ResidentOccurrenceDetails";
 import Condominiums from "./pages/Condominiums";
 import CondominiumDetails from "./pages/CondominiumDetails";
 import Occurrences from "./pages/Occurrences";
@@ -74,6 +76,22 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <Reports />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/resident"
+                element={
+                  <ProtectedRoute>
+                    <ResidentDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/resident/occurrences/:id"
+                element={
+                  <ProtectedRoute>
+                    <ResidentOccurrenceDetails />
                   </ProtectedRoute>
                 }
               />
