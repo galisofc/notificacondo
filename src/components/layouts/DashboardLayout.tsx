@@ -36,6 +36,7 @@ import {
   Home,
   User,
   ChevronLeft,
+  Scale,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -63,6 +64,7 @@ const sindicoNavItems: NavItem[] = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Condomínios", url: "/condominiums", icon: Building2 },
   { title: "Ocorrências", url: "/occurrences", icon: FileText },
+  { title: "Análise de Defesas", url: "/defenses", icon: Scale },
   { title: "Notificações", url: "/notifications", icon: Bell },
   { title: "Relatórios", url: "/reports", icon: BarChart3 },
   { title: "Configurações", url: "/sindico/settings", icon: Settings },
