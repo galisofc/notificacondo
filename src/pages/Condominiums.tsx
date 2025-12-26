@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MaskedInput } from "@/components/ui/masked-input";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
@@ -21,10 +22,12 @@ import {
   Loader2,
   MapPin,
   FileText,
+  Search,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import { isValidCNPJ } from "@/lib/utils";
 
 interface Condominium {
   id: string;
@@ -54,6 +57,7 @@ const Condominiums = () => {
     zip_code: "",
   });
   const [saving, setSaving] = useState(false);
+  const [fetchingCNPJ, setFetchingCNPJ] = useState(false);
 
   const fetchCondominiums = async () => {
     if (!user) return;
@@ -83,9 +87,66 @@ const Condominiums = () => {
     fetchCondominiums();
   }, [user]);
 
+  const fetchCNPJData = async (cnpj: string) => {
+    const cleanCNPJ = cnpj.replace(/\D/g, "");
+    
+    if (cleanCNPJ.length !== 14) return;
+    
+    if (!isValidCNPJ(cleanCNPJ)) {
+      toast({
+        title: "CNPJ inválido",
+        description: "Por favor, verifique o número do CNPJ.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setFetchingCNPJ(true);
+    try {
+      const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleanCNPJ}`);
+      
+      if (!response.ok) {
+        throw new Error("CNPJ não encontrado");
+      }
+
+      const data = await response.json();
+      
+      setFormData((prev) => ({
+        ...prev,
+        name: data.razao_social || data.nome_fantasia || prev.name,
+        address: data.logradouro ? `${data.logradouro}, ${data.numero}${data.complemento ? ` - ${data.complemento}` : ""}` : prev.address,
+        city: data.municipio || prev.city,
+        state: data.uf || prev.state,
+        zip_code: data.cep ? data.cep.replace(/\D/g, "").replace(/(\d{5})(\d{3})/, "$1-$2") : prev.zip_code,
+      }));
+
+      toast({
+        title: "Dados encontrados",
+        description: "Os dados do CNPJ foram preenchidos automaticamente.",
+      });
+    } catch (error) {
+      console.error("Error fetching CNPJ:", error);
+      toast({
+        title: "Erro ao consultar CNPJ",
+        description: "Não foi possível consultar os dados. Preencha manualmente.",
+        variant: "destructive",
+      });
+    } finally {
+      setFetchingCNPJ(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+
+    // Validate CNPJ if provided
+    if (formData.cnpj && formData.cnpj.replace(/\D/g, "").length > 0) {
+      if (!isValidCNPJ(formData.cnpj)) {
+        toast({ title: "Erro", description: "CNPJ inválido", variant: "destructive" });
+        return;
+      }
+    }
 
     setSaving(true);
     try {
@@ -214,21 +275,41 @@ const Condominiums = () => {
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
+                  <Label htmlFor="cnpj">CNPJ</Label>
+                  <div className="flex gap-2">
+                    <MaskedInput
+                      id="cnpj"
+                      mask="cnpj"
+                      value={formData.cnpj}
+                      onChange={(value) => setFormData({ ...formData, cnpj: value })}
+                      className="bg-secondary/50 flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => fetchCNPJData(formData.cnpj)}
+                      disabled={fetchingCNPJ || formData.cnpj.replace(/\D/g, "").length !== 14}
+                      title="Buscar dados do CNPJ"
+                    >
+                      {fetchingCNPJ ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Search className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Digite o CNPJ e clique na lupa para preencher automaticamente
+                  </p>
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="name">Nome do Condomínio *</Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     required
-                    className="bg-secondary/50"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="cnpj">CNPJ</Label>
-                  <Input
-                    id="cnpj"
-                    value={formData.cnpj}
-                    onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
                     className="bg-secondary/50"
                   />
                 </div>
@@ -264,10 +345,11 @@ const Condominiums = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="zip_code">CEP</Label>
-                  <Input
+                  <MaskedInput
                     id="zip_code"
+                    mask="cep"
                     value={formData.zip_code}
-                    onChange={(e) => setFormData({ ...formData, zip_code: e.target.value })}
+                    onChange={(value) => setFormData({ ...formData, zip_code: value })}
                     className="bg-secondary/50"
                   />
                 </div>
