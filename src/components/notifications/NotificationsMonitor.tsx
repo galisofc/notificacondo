@@ -161,7 +161,7 @@ export function NotificationsMonitor() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("notifications_sent")
-        .select("zpro_status");
+        .select("zpro_status, delivered_at, read_at");
 
       if (error) throw error;
 
@@ -175,9 +175,17 @@ export function NotificationsMonitor() {
       };
 
       data.forEach((n) => {
-        const status = n.zpro_status || "pending";
-        if (status in counts) {
-          counts[status as keyof typeof counts]++;
+        // Count based on actual state, not just zpro_status
+        if (n.read_at) {
+          counts.read++;
+        } else if (n.delivered_at) {
+          counts.delivered++;
+        } else if (n.zpro_status === "failed") {
+          counts.failed++;
+        } else if (n.zpro_status === "sent") {
+          counts.sent++;
+        } else {
+          counts.pending++;
         }
       });
 
