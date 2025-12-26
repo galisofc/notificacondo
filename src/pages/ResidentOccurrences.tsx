@@ -1,12 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Helmet } from "react-helmet-async";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   FileText,
   Calendar,
   ChevronRight,
+  ChevronLeft,
   AlertTriangle,
   Search,
 } from "lucide-react";
@@ -32,17 +34,19 @@ interface Occurrence {
   description: string;
 }
 
+const ITEMS_PER_PAGE = 10;
+
 const ResidentOccurrences = () => {
   const { residentInfo, loading: roleLoading } = useUserRole();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const [occurrences, setOccurrences] = useState<Occurrence[]>([]);
-  const [filteredOccurrences, setFilteredOccurrences] = useState<Occurrence[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const fetchOccurrences = async () => {
@@ -58,7 +62,6 @@ const ResidentOccurrences = () => {
         if (error) throw error;
 
         setOccurrences(data || []);
-        setFilteredOccurrences(data || []);
       } catch (error) {
         console.error("Error fetching occurrences:", error);
         toast({
@@ -78,7 +81,8 @@ const ResidentOccurrences = () => {
     }
   }, [residentInfo, roleLoading]);
 
-  useEffect(() => {
+  // Filter occurrences
+  const filteredOccurrences = useMemo(() => {
     let filtered = occurrences;
 
     if (searchTerm) {
@@ -97,8 +101,19 @@ const ResidentOccurrences = () => {
       filtered = filtered.filter((o) => o.type === typeFilter);
     }
 
-    setFilteredOccurrences(filtered);
+    return filtered;
   }, [searchTerm, statusFilter, typeFilter, occurrences]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredOccurrences.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedOccurrences = filteredOccurrences.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, typeFilter]);
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
@@ -258,33 +273,91 @@ const ResidentOccurrences = () => {
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {filteredOccurrences.map((occurrence) => (
-                  <div
-                    key={occurrence.id}
-                    className="p-4 rounded-xl bg-background/50 border border-border/30 hover:border-primary/30 transition-all cursor-pointer"
-                    onClick={() => navigate(`/resident/occurrences/${occurrence.id}`)}
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          {getTypeBadge(occurrence.type)}
-                          {getStatusBadge(occurrence.status)}
+              <>
+                <div className="space-y-3">
+                  {paginatedOccurrences.map((occurrence) => (
+                    <div
+                      key={occurrence.id}
+                      className="p-4 rounded-xl bg-background/50 border border-border/30 hover:border-primary/30 transition-all cursor-pointer"
+                      onClick={() => navigate(`/resident/occurrences/${occurrence.id}`)}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            {getTypeBadge(occurrence.type)}
+                            {getStatusBadge(occurrence.status)}
+                          </div>
+                          <h4 className="font-medium text-foreground mb-1">{occurrence.title}</h4>
+                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                            {occurrence.description}
+                          </p>
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            {new Date(occurrence.occurred_at).toLocaleDateString("pt-BR")}
+                          </p>
                         </div>
-                        <h4 className="font-medium text-foreground mb-1">{occurrence.title}</h4>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                          {occurrence.description}
-                        </p>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          {new Date(occurrence.occurred_at).toLocaleDateString("pt-BR")}
-                        </p>
+                        <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
                       </div>
-                      <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between mt-6 pt-4 border-t border-border/30">
+                    <p className="text-sm text-muted-foreground">
+                      Mostrando {startIndex + 1}-{Math.min(endIndex, filteredOccurrences.length)} de{" "}
+                      {filteredOccurrences.length}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        <ChevronLeft className="w-4 h-4 mr-1" />
+                        Anterior
+                      </Button>
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                          .filter((page) => {
+                            // Show first, last, current, and adjacent pages
+                            return (
+                              page === 1 ||
+                              page === totalPages ||
+                              Math.abs(page - currentPage) <= 1
+                            );
+                          })
+                          .map((page, index, array) => (
+                            <div key={page} className="flex items-center">
+                              {index > 0 && array[index - 1] !== page - 1 && (
+                                <span className="px-2 text-muted-foreground">...</span>
+                              )}
+                              <Button
+                                variant={currentPage === page ? "default" : "outline"}
+                                size="sm"
+                                className="w-9 h-9 p-0"
+                                onClick={() => setCurrentPage(page)}
+                              >
+                                {page}
+                              </Button>
+                            </div>
+                          ))}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                      >
+                        Próximo
+                        <ChevronRight className="w-4 h-4 ml-1" />
+                      </Button>
                     </div>
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
