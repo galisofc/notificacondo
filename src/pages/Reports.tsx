@@ -789,61 +789,6 @@ const Reports = () => {
           </CardContent>
         </Card>
 
-        {/* Fines Details */}
-        <Card className="bg-gradient-card border-border/50 mb-8">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-primary" />
-              Detalhamento de Multas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Paid */}
-              <div className="p-6 rounded-xl bg-green-500/5 border border-green-500/20">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                    <CheckCircle2 className="w-5 h-5 text-green-500" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Multas Pagas</p>
-                    <p className="text-xl font-bold text-green-500">{stats.paidCount}</p>
-                  </div>
-                </div>
-                <p className="text-2xl font-bold text-foreground">{formatCurrency(stats.paidAmount)}</p>
-              </div>
-
-              {/* Pending */}
-              <div className="p-6 rounded-xl bg-amber-500/5 border border-amber-500/20">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-amber-500" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Em Aberto</p>
-                    <p className="text-xl font-bold text-amber-500">{stats.pendingCount}</p>
-                  </div>
-                </div>
-                <p className="text-2xl font-bold text-foreground">{formatCurrency(stats.pendingAmount)}</p>
-              </div>
-
-              {/* Overdue */}
-              <div className="p-6 rounded-xl bg-red-500/5 border border-red-500/20">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center">
-                    <XCircle className="w-5 h-5 text-red-500" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Vencidas</p>
-                    <p className="text-xl font-bold text-red-500">{stats.overdueCount}</p>
-                  </div>
-                </div>
-                <p className="text-2xl font-bold text-foreground">{formatCurrency(stats.overdueAmount)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Occurrences Type Breakdown */}
         <Card className="bg-gradient-card border-border/50">
           <CardHeader>
