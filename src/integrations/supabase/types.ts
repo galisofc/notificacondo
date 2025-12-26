@@ -569,6 +569,54 @@ export type Database = {
           },
         ]
       }
+      plans: {
+        Row: {
+          color: string
+          created_at: string
+          description: string | null
+          display_order: number
+          fines_limit: number
+          id: string
+          is_active: boolean
+          name: string
+          notifications_limit: number
+          price: number
+          slug: string
+          updated_at: string
+          warnings_limit: number
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          fines_limit?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          notifications_limit?: number
+          price?: number
+          slug: string
+          updated_at?: string
+          warnings_limit?: number
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          fines_limit?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          notifications_limit?: number
+          price?: number
+          slug?: string
+          updated_at?: string
+          warnings_limit?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
