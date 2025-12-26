@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -80,6 +80,39 @@ function SidebarNavigation() {
   const { toast } = useToast();
   const [pendingDefenses, setPendingDefenses] = useState(0);
   const [condoIds, setCondoIds] = useState<string[]>([]);
+  const prevPendingDefensesRef = useRef<number>(0);
+  const audioContextRef = useRef<AudioContext | null>(null);
+
+  // Play notification sound using Web Audio API
+  const playNotificationSound = useCallback(() => {
+    try {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      
+      const ctx = audioContextRef.current;
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      
+      // Pleasant notification tone
+      oscillator.frequency.setValueAtTime(880, ctx.currentTime); // A5
+      oscillator.frequency.setValueAtTime(1100, ctx.currentTime + 0.1); // C#6
+      oscillator.frequency.setValueAtTime(1320, ctx.currentTime + 0.2); // E6
+      
+      oscillator.type = "sine";
+      
+      gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+      
+      oscillator.start(ctx.currentTime);
+      oscillator.stop(ctx.currentTime + 0.4);
+    } catch (error) {
+      console.error("Error playing notification sound:", error);
+    }
+  }, []);
 
   // Fetch pending defenses count for sindico
   useEffect(() => {
@@ -134,7 +167,15 @@ function SidebarNavigation() {
             .in("condominium_id", condoIds)
             .eq("status", "em_defesa");
 
-          setPendingDefenses(count || 0);
+          const newCount = count || 0;
+          
+          // Play notification sound if count increased
+          if (newCount > prevPendingDefensesRef.current) {
+            playNotificationSound();
+          }
+          
+          prevPendingDefensesRef.current = newCount;
+          setPendingDefenses(newCount);
         }
       )
       .subscribe();
@@ -142,7 +183,12 @@ function SidebarNavigation() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, role, condoIds]);
+  }, [user, role, condoIds, playNotificationSound]);
+
+  // Keep ref in sync with initial fetch
+  useEffect(() => {
+    prevPendingDefensesRef.current = pendingDefenses;
+  }, [pendingDefenses]);
 
   const handleSignOut = async () => {
     await signOut();
