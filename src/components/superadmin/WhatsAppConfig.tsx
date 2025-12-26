@@ -20,6 +20,8 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { MessageCircle, Save, TestTube, CheckCircle, XCircle, Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+
+const SUPABASE_URL = "https://iyeljkdrypcxvljebqtn.supabase.co";
 import { z } from "zod";
 
 interface WhatsAppConfigData {
@@ -238,64 +240,44 @@ export function WhatsAppConfig() {
       return;
     }
 
+    // First save the config before testing
+    if (!config.id) {
+      toast({
+        title: "Salve primeiro",
+        description: "Salve as configurações antes de testar a conexão.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsTesting(true);
     setTestResult(null);
     
     try {
-      let testUrl = "";
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-
-      switch (config.provider) {
-        case "zpro":
-          // Z-PRO: Replace 'send-text' or similar endpoints with 'status' or use base URL
-          const baseUrl = config.api_url.trim().replace(/\/send-text$/, "").replace(/\/send-message$/, "");
-          testUrl = baseUrl;
-          headers["Authorization"] = `Bearer ${config.api_key.trim()}`;
-          break;
-        case "zapi":
-          testUrl = `${config.api_url.trim()}/instances/${encodeURIComponent(config.instance_id.trim())}/token/${encodeURIComponent(config.api_key.trim())}/status`;
-          break;
-        case "evolution":
-          testUrl = `${config.api_url.trim()}/instance/connectionState/${encodeURIComponent(config.instance_id.trim())}`;
-          headers["apikey"] = config.api_key.trim();
-          break;
-        case "wppconnect":
-          testUrl = `${config.api_url.trim()}/api/${encodeURIComponent(config.instance_id.trim())}/status`;
-          headers["Authorization"] = `Bearer ${config.api_key.trim()}`;
-          break;
-        default:
-          testUrl = `${config.api_url.trim()}/status`;
-      }
-
-      const response = await fetch(testUrl, {
-        method: "GET",
-        headers,
+      // Use the edge function to test the connection (avoids CORS issues)
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/test-whatsapp-connection`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
 
-      if (response.ok) {
+      const data = await response.json();
+      console.log("Test result:", data);
+
+      if (data.success) {
         setTestResult("success");
         toast({
           title: "Conexão bem-sucedida",
-          description: "A conexão com a API do WhatsApp foi estabelecida.",
+          description: data.message || "A conexão com a API do WhatsApp foi estabelecida.",
         });
       } else {
-        // For Z-PRO, a 405 or similar might just mean we can't GET, but auth works
-        if (config.provider === "zpro" && response.status !== 401 && response.status !== 403) {
-          setTestResult("success");
-          toast({
-            title: "Credenciais válidas",
-            description: "As credenciais parecem estar corretas.",
-          });
-        } else {
-          setTestResult("error");
-          toast({
-            title: "Falha na conexão",
-            description: "Não foi possível conectar à API. Verifique as configurações.",
-            variant: "destructive",
-          });
-        }
+        setTestResult("error");
+        toast({
+          title: "Falha na conexão",
+          description: data.error || "Não foi possível conectar à API. Verifique as configurações.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Test failed:", error);
