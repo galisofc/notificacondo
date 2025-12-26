@@ -40,7 +40,7 @@ const App = () => (
               <Route
                 path="/dashboard"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredRole={["sindico", "super_admin"]}>
                     <Dashboard />
                   </ProtectedRoute>
                 }
@@ -48,7 +48,7 @@ const App = () => (
               <Route
                 path="/condominiums"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredRole={["sindico", "super_admin"]}>
                     <Condominiums />
                   </ProtectedRoute>
                 }
@@ -56,7 +56,7 @@ const App = () => (
               <Route
                 path="/condominiums/:id"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredRole={["sindico", "super_admin"]}>
                     <CondominiumDetails />
                   </ProtectedRoute>
                 }
@@ -64,7 +64,7 @@ const App = () => (
               <Route
                 path="/occurrences"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredRole={["sindico", "super_admin"]}>
                     <Occurrences />
                   </ProtectedRoute>
                 }
@@ -72,7 +72,7 @@ const App = () => (
               <Route
                 path="/occurrences/:id"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredRole={["sindico", "super_admin"]}>
                     <OccurrenceDetails />
                   </ProtectedRoute>
                 }
@@ -80,7 +80,7 @@ const App = () => (
               <Route
                 path="/reports"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredRole={["sindico", "super_admin"]}>
                     <Reports />
                   </ProtectedRoute>
                 }
@@ -88,7 +88,7 @@ const App = () => (
               <Route
                 path="/notifications"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredRole={["sindico", "super_admin"]}>
                     <Notifications />
                   </ProtectedRoute>
                 }
@@ -96,7 +96,7 @@ const App = () => (
               <Route
                 path="/settings"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredRole="sindico">
                     <SindicoSettings />
                   </ProtectedRoute>
                 }
@@ -104,7 +104,7 @@ const App = () => (
               <Route
                 path="/settings/profile"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredRole="sindico">
                     <SindicoProfile />
                   </ProtectedRoute>
                 }
@@ -112,7 +112,7 @@ const App = () => (
               <Route
                 path="/resident"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredRole="morador">
                     <ResidentDashboard />
                   </ProtectedRoute>
                 }
@@ -120,7 +120,7 @@ const App = () => (
               <Route
                 path="/resident/occurrences/:id"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredRole="morador">
                     <ResidentOccurrenceDetails />
                   </ProtectedRoute>
                 }
@@ -128,7 +128,7 @@ const App = () => (
               <Route
                 path="/resident/profile"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredRole="morador">
                     <ResidentProfile />
                   </ProtectedRoute>
                 }
@@ -137,7 +137,7 @@ const App = () => (
               <Route
                 path="/superadmin"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredRole="super_admin">
                     <SuperAdminDashboard />
                   </ProtectedRoute>
                 }
