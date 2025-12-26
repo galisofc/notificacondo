@@ -59,22 +59,23 @@ export function MercadoPagoTransparentCheckout({
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("idle");
   const [sdkInitialized, setSdkInitialized] = useState(false);
 
-  // Fetch MercadoPago config to get public key
+  // Fetch MercadoPago config (via backend function to avoid RLS issues)
   const { data: mpConfig, isLoading: isLoadingConfig } = useQuery({
     queryKey: ["mercadopago-public-config"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("mercadopago_config")
-        .select("public_key, is_sandbox, is_active")
-        .eq("is_active", true)
-        .limit(1)
-        .maybeSingle();
+      const { data, error } = await supabase.functions.invoke(
+        "get-mercadopago-public-config",
+        { body: {} }
+      );
 
       if (error) {
         console.error("Error fetching MercadoPago config:", error);
         return null;
       }
-      return data;
+
+      return (data?.config as
+        | { public_key: string | null; is_sandbox: boolean; is_active: boolean }
+        | null) ?? null;
     },
   });
 
