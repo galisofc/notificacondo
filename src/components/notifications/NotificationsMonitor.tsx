@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -36,9 +36,8 @@ import {
   AlertCircle,
   Clock,
   Search,
-  RefreshCw,
+  Radio,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 type NotificationStatus = "all" | "sent" | "delivered" | "read" | "failed" | "pending";
 
@@ -69,10 +68,39 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.R
 };
 
 export function NotificationsMonitor() {
+  const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<NotificationStatus>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isLive, setIsLive] = useState(true);
 
-  const { data: notifications, isLoading, refetch, isFetching } = useQuery({
+  // Realtime subscription
+  useEffect(() => {
+    if (!isLive) return;
+
+    const channel = supabase
+      .channel("notifications-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "notifications_sent",
+        },
+        (payload) => {
+          console.log("Realtime update:", payload);
+          // Invalidate queries to refetch data
+          queryClient.invalidateQueries({ queryKey: ["notifications-monitor"] });
+          queryClient.invalidateQueries({ queryKey: ["notifications-stats"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isLive, queryClient]);
+
+  const { data: notifications, isLoading } = useQuery({
     queryKey: ["notifications-monitor", statusFilter],
     queryFn: async () => {
       let query = supabase
@@ -233,17 +261,17 @@ export function NotificationsMonitor() {
                 Monitoramento de status das mensagens WhatsApp
               </CardDescription>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => refetch()}
-                disabled={isFetching}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />
-                Atualizar
-              </Button>
-            </div>
+            <button
+              onClick={() => setIsLive(!isLive)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                isLive
+                  ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                  : "bg-muted text-muted-foreground border border-border"
+              }`}
+            >
+              <Radio className={`h-3 w-3 ${isLive ? "animate-pulse" : ""}`} />
+              {isLive ? "Ao vivo" : "Pausado"}
+            </button>
           </div>
         </CardHeader>
         <CardContent>
