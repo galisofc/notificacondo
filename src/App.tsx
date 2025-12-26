@@ -113,14 +113,6 @@ const App = () => (
                 }
               />
               <Route
-                path="/defense-analysis"
-                element={
-                  <ProtectedRoute requiredRole={["sindico", "super_admin"]}>
-                    <DefenseAnalysis />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
                 path="/sindico/settings"
                 element={
                   <ProtectedRoute requiredRole="sindico">

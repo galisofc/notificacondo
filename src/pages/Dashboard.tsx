@@ -175,7 +175,7 @@ const Dashboard = () => {
       value: stats.pendingDefenses,
       icon: Shield,
       gradient: "from-purple-500 to-violet-600",
-      action: () => navigate("/defense-analysis"),
+      action: () => navigate("/defenses"),
     },
     {
       title: "Multas Pendentes",
@@ -203,7 +203,7 @@ const Dashboard = () => {
       icon: Shield,
       label: "Analisar Defesas",
       description: `${stats.pendingDefenses} defesa${stats.pendingDefenses !== 1 ? "s" : ""} pendente${stats.pendingDefenses !== 1 ? "s" : ""}`,
-      action: () => navigate("/defense-analysis"),
+      action: () => navigate("/defenses"),
     },
   ];
 
