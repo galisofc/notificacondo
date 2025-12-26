@@ -256,9 +256,15 @@ export function NotificationsMonitor() {
         const dayData = dayMap.get(key);
         if (dayData) {
           dayData.total++;
-          if (n.read_at) dayData.read++;
-          else if (n.delivered_at) dayData.delivered++;
-          else if (n.zpro_status === "failed") dayData.failed++;
+          // "Lidos" também conta como "entregue"
+          if (n.read_at) {
+            dayData.read++;
+            dayData.delivered++;
+          } else if (n.delivered_at) {
+            dayData.delivered++;
+          } else if (n.zpro_status === "failed") {
+            dayData.failed++;
+          }
         }
       });
 
