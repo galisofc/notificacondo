@@ -50,12 +50,20 @@ serve(async (req) => {
     };
 
     switch (provider) {
-      case "zpro":
-        // Z-PRO: Use the params endpoint to verify connection
-        // The API uses query parameters, so we just need to check if it responds
+      case "zpro": {
+        // Z-PRO: Test usando o mesmo endpoint /params/ do envio.
+        // Alguns tenants retornam 403/400 se faltarem parâmetros obrigatórios.
         const baseUrl = api_url.replace(/\/$/, "");
-        testUrl = `${baseUrl}/params/?externalKey=${encodeURIComponent(api_key)}&bearertoken=${encodeURIComponent(api_key)}`;
+        const params = new URLSearchParams({
+          body: "ping",
+          number: "5511999999999",
+          externalKey: api_key,
+          bearertoken: api_key,
+          isClosed: "false",
+        });
+        testUrl = `${baseUrl}/params/?${params.toString()}`;
         break;
+      }
       case "zapi":
         testUrl = `${api_url}/instances/${instance_id}/token/${api_key}/status`;
         break;
