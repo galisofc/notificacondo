@@ -14,6 +14,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Building2,
   Plus,
   Edit,
@@ -22,11 +29,24 @@ import {
   MapPin,
   FileText,
   Search,
+  Crown,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { isValidCNPJ } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+
+interface Plan {
+  id: string;
+  name: string;
+  slug: string;
+  price: number;
+  color: string;
+  notifications_limit: number;
+  warnings_limit: number;
+  fines_limit: number;
+}
 
 interface Condominium {
   id: string;
@@ -37,6 +57,9 @@ interface Condominium {
   state: string | null;
   zip_code: string | null;
   created_at: string;
+  subscription?: {
+    plan: string;
+  } | null;
 }
 
 const Condominiums = () => {
@@ -44,6 +67,7 @@ const Condominiums = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [condominiums, setCondominiums] = useState<Condominium[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCondo, setEditingCondo] = useState<Condominium | null>(null);
@@ -54,9 +78,25 @@ const Condominiums = () => {
     city: "",
     state: "",
     zip_code: "",
+    plan_slug: "start",
   });
   const [saving, setSaving] = useState(false);
   const [fetchingCNPJ, setFetchingCNPJ] = useState(false);
+
+  const fetchPlans = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("plans")
+        .select("*")
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
+
+      if (error) throw error;
+      setPlans(data || []);
+    } catch (error) {
+      console.error("Error fetching plans:", error);
+    }
+  };
 
   const fetchCondominiums = async () => {
     if (!user) return;
@@ -64,7 +104,10 @@ const Condominiums = () => {
     try {
       const { data, error } = await supabase
         .from("condominiums")
-        .select("*")
+        .select(`
+          *,
+          subscription:subscriptions(plan)
+        `)
         .eq("owner_id", user.id)
         .order("created_at", { ascending: false });
 
@@ -83,6 +126,7 @@ const Condominiums = () => {
   };
 
   useEffect(() => {
+    fetchPlans();
     fetchCondominiums();
   }, [user]);
 
@@ -150,6 +194,7 @@ const Condominiums = () => {
     setSaving(true);
     try {
       if (editingCondo) {
+        // Update condominium
         const { error } = await supabase
           .from("condominiums")
           .update({
@@ -163,25 +208,69 @@ const Condominiums = () => {
           .eq("id", editingCondo.id);
 
         if (error) throw error;
+
+        // Update subscription plan if changed
+        const selectedPlan = plans.find((p) => p.slug === formData.plan_slug);
+        if (selectedPlan) {
+          const { error: subError } = await supabase
+            .from("subscriptions")
+            .update({
+              plan: formData.plan_slug as "start" | "essencial" | "profissional" | "enterprise",
+              notifications_limit: selectedPlan.notifications_limit,
+              warnings_limit: selectedPlan.warnings_limit,
+              fines_limit: selectedPlan.fines_limit,
+            })
+            .eq("condominium_id", editingCondo.id);
+
+          if (subError) throw subError;
+        }
+
         toast({ title: "Sucesso", description: "Condomínio atualizado!" });
       } else {
-        const { error } = await supabase.from("condominiums").insert({
-          owner_id: user.id,
-          name: formData.name,
-          cnpj: formData.cnpj || null,
-          address: formData.address || null,
-          city: formData.city || null,
-          state: formData.state || null,
-          zip_code: formData.zip_code || null,
-        });
+        // Create condominium
+        const { data: newCondo, error } = await supabase
+          .from("condominiums")
+          .insert({
+            owner_id: user.id,
+            name: formData.name,
+            cnpj: formData.cnpj || null,
+            address: formData.address || null,
+            city: formData.city || null,
+            state: formData.state || null,
+            zip_code: formData.zip_code || null,
+          })
+          .select()
+          .single();
 
         if (error) throw error;
+
+        // Create subscription with selected plan
+        const selectedPlan = plans.find((p) => p.slug === formData.plan_slug);
+        if (selectedPlan && newCondo) {
+          const now = new Date();
+          const periodEnd = new Date(now);
+          periodEnd.setMonth(periodEnd.getMonth() + 1);
+
+          const { error: subError } = await supabase.from("subscriptions").insert({
+            condominium_id: newCondo.id,
+            plan: formData.plan_slug as "start" | "essencial" | "profissional" | "enterprise",
+            active: true,
+            notifications_limit: selectedPlan.notifications_limit,
+            warnings_limit: selectedPlan.warnings_limit,
+            fines_limit: selectedPlan.fines_limit,
+            current_period_start: now.toISOString(),
+            current_period_end: periodEnd.toISOString(),
+          });
+
+          if (subError) throw subError;
+        }
+
         toast({ title: "Sucesso", description: "Condomínio cadastrado!" });
       }
 
       setIsDialogOpen(false);
       setEditingCondo(null);
-      setFormData({ name: "", cnpj: "", address: "", city: "", state: "", zip_code: "" });
+      setFormData({ name: "", cnpj: "", address: "", city: "", state: "", zip_code: "", plan_slug: "start" });
       fetchCondominiums();
     } catch (error: any) {
       console.error("Error saving condominium:", error);
@@ -204,6 +293,7 @@ const Condominiums = () => {
       city: condo.city || "",
       state: condo.state || "",
       zip_code: condo.zip_code || "",
+      plan_slug: condo.subscription?.plan || "start",
     });
     setIsDialogOpen(true);
   };
@@ -234,8 +324,18 @@ const Condominiums = () => {
 
   const openNewDialog = () => {
     setEditingCondo(null);
-    setFormData({ name: "", cnpj: "", address: "", city: "", state: "", zip_code: "" });
+    setFormData({ name: "", cnpj: "", address: "", city: "", state: "", zip_code: "", plan_slug: "start" });
     setIsDialogOpen(true);
+  };
+
+  const getPlanColor = (planSlug: string) => {
+    const plan = plans.find((p) => p.slug === planSlug);
+    return plan?.color || "bg-gray-500";
+  };
+
+  const getPlanName = (planSlug: string) => {
+    const plan = plans.find((p) => p.slug === planSlug);
+    return plan?.name || planSlug;
   };
 
   return (
@@ -348,6 +448,33 @@ const Condominiums = () => {
                     className="bg-secondary/50"
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="plan">Plano *</Label>
+                  <Select
+                    value={formData.plan_slug}
+                    onValueChange={(value) => setFormData({ ...formData, plan_slug: value })}
+                  >
+                    <SelectTrigger className="bg-secondary/50">
+                      <SelectValue placeholder="Selecione um plano" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {plans.map((plan) => (
+                        <SelectItem key={plan.id} value={plan.slug}>
+                          <div className="flex items-center gap-2">
+                            <Crown className="w-4 h-4" />
+                            <span>{plan.name}</span>
+                            <span className="text-muted-foreground">
+                              - R$ {plan.price.toFixed(2)}/mês
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    O plano define os limites de notificações, advertências e multas
+                  </p>
+                </div>
                 <div className="flex justify-end gap-3 pt-4">
                   <Button
                     type="button"
@@ -401,8 +528,15 @@ const Condominiums = () => {
                 className="p-6 rounded-2xl bg-gradient-card border border-border/50 hover:border-primary/30 transition-all"
               >
                 <div className="flex items-start justify-between mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <Building2 className="w-6 h-6 text-primary" />
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <Building2 className="w-6 h-6 text-primary" />
+                    </div>
+                    {condo.subscription?.plan && (
+                      <Badge className={`${getPlanColor(condo.subscription.plan)} text-white`}>
+                        {getPlanName(condo.subscription.plan)}
+                      </Badge>
+                    )}
                   </div>
                   <div className="flex gap-1">
                     <Button
