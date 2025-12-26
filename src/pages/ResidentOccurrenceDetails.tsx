@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,8 +10,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
-  Building2,
-  ArrowLeft,
   Calendar,
   MapPin,
   FileText,
@@ -22,10 +21,11 @@ import {
   X,
   Image as ImageIcon,
   Video,
-  LogOut,
   CheckCircle2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import DashboardLayout from "@/components/layouts/DashboardLayout";
+import ResidentBreadcrumbs from "@/components/resident/ResidentBreadcrumbs";
 
 interface OccurrenceDetails {
   id: string;
@@ -67,7 +67,7 @@ interface UploadedFile {
 
 const ResidentOccurrenceDetails = () => {
   const { id } = useParams();
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const { residentInfo, loading: roleLoading } = useUserRole();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -149,10 +149,6 @@ const ResidentOccurrenceDetails = () => {
     }
   }, [id, residentInfo, roleLoading]);
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/");
-  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -312,93 +308,66 @@ const ResidentOccurrenceDetails = () => {
 
   if (loading || roleLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md bg-gradient-card border-border/50">
-          <CardContent className="pt-8 pb-8">
-            <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
-                <Building2 className="w-8 h-8 text-primary" />
-              </div>
-              <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
-              <h2 className="font-display text-xl font-semibold text-foreground mb-2">
-                Carregando...
-              </h2>
-              <p className="text-muted-foreground">
-                Buscando detalhes da ocorrência.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
+            <p className="text-muted-foreground">Carregando detalhes da ocorrência...</p>
+          </div>
+        </div>
+      </DashboardLayout>
     );
   }
 
   if (!occurrence || accessError) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md bg-gradient-card border-border/50">
-          <CardContent className="pt-8 pb-8">
-            <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 rounded-2xl bg-destructive/10 flex items-center justify-center mb-6">
-                <AlertTriangle className="w-8 h-8 text-destructive" />
-              </div>
-              <h2 className="font-display text-xl font-semibold text-foreground mb-2">
-                Acesso Negado
-              </h2>
-              <p className="text-muted-foreground mb-6">
-                {accessError || "Você não tem permissão para visualizar esta ocorrência."}
-              </p>
-              <Button variant="outline" onClick={() => navigate("/resident")}>
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Voltar para Minhas Ocorrências
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <DashboardLayout>
+        <div className="text-center py-12 px-4 rounded-2xl bg-gradient-card border border-border/50">
+          <div className="w-16 h-16 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="w-8 h-8 text-destructive" />
+          </div>
+          <h3 className="font-display text-xl font-semibold text-foreground mb-2">
+            Acesso Negado
+          </h3>
+          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+            {accessError || "Você não tem permissão para visualizar esta ocorrência."}
+          </p>
+          <Button variant="outline" onClick={() => navigate("/resident/occurrences")}>
+            Voltar para Minhas Ocorrências
+          </Button>
+        </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
-              <Building2 className="w-4 h-4 text-primary-foreground" />
-            </div>
-            <span className="font-display font-bold text-foreground">CondoMaster</span>
-          </div>
-          <Button variant="ghost" onClick={handleSignOut}>
-            <LogOut className="w-4 h-4 mr-2" />
-            Sair
-          </Button>
-        </div>
-      </header>
+    <DashboardLayout>
+      <Helmet>
+        <title>{occurrence.title} | Área do Morador</title>
+        <meta name="description" content="Detalhes da ocorrência" />
+      </Helmet>
 
-      <main className="container mx-auto px-4 py-8">
+      <div className="space-y-6 animate-fade-up">
         {/* Breadcrumbs */}
-        <nav className="mb-6 flex items-center gap-2 text-sm text-muted-foreground">
-          <a href="/resident" className="hover:text-foreground transition-colors">
-            Dashboard
-          </a>
-          <span>/</span>
-          <a href="/resident/occurrences" className="hover:text-foreground transition-colors">
-            Minhas Ocorrências
-          </a>
-          <span>/</span>
-          <span className="text-foreground font-medium truncate max-w-[200px]">
-            {occurrence.title}
-          </span>
-        </nav>
+        <ResidentBreadcrumbs
+          items={[
+            { label: "Minhas Ocorrências", href: "/resident/occurrences" },
+            { label: occurrence.title },
+          ]}
+        />
 
-        <h1 className="font-display text-2xl font-bold text-foreground mb-6">
-          Detalhes da Ocorrência
-        </h1>
+        {/* Header */}
+        <div>
+          <h1 className="font-display text-3xl font-bold text-foreground">
+            Detalhes da Ocorrência
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Visualize os detalhes e envie sua defesa se necessário.
+          </p>
+        </div>
 
         {/* Occurrence Details */}
-        <Card className="bg-gradient-card border-border/50 mb-8">
+        <Card className="bg-gradient-card border-border/50">
           <CardHeader>
             <div className="flex items-center gap-3 mb-2">
               {getTypeBadge(occurrence.type)}
@@ -458,7 +427,7 @@ const ResidentOccurrenceDetails = () => {
 
         {/* Evidences */}
         {evidences.length > 0 && (
-          <Card className="bg-gradient-card border-border/50 mb-8">
+          <Card className="bg-gradient-card border-border/50">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <FileText className="w-5 h-5 text-primary" />
@@ -495,84 +464,72 @@ const ResidentOccurrenceDetails = () => {
 
         {/* Defense Section */}
         {canSubmitDefense && (
-          <Card className="bg-gradient-card border-border/50 mb-8">
+          <Card className="bg-gradient-card border-border/50">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Scale className="w-5 h-5 text-primary" />
                 Enviar Defesa
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
                 <Label htmlFor="defense">Sua Defesa</Label>
                 <Textarea
                   id="defense"
-                  placeholder="Escreva sua defesa aqui..."
                   value={defenseContent}
                   onChange={(e) => setDefenseContent(e.target.value)}
-                  className="min-h-[150px] mt-2"
+                  placeholder="Escreva sua defesa aqui..."
+                  rows={6}
                 />
               </div>
 
               {/* File Upload */}
-              <div>
+              <div className="space-y-2">
                 <Label>Anexos (opcional)</Label>
-                <div className="mt-2">
-                  <label className="flex items-center justify-center w-full h-24 border-2 border-dashed border-border/50 rounded-lg cursor-pointer hover:border-primary/50 transition-colors">
-                    <div className="text-center">
-                      <Upload className="w-6 h-6 mx-auto text-muted-foreground mb-1" />
-                      <span className="text-sm text-muted-foreground">
-                        Clique para anexar arquivos
-                      </span>
+                <div className="flex flex-wrap gap-4">
+                  {uploadedFiles.map((file, index) => (
+                    <div
+                      key={index}
+                      className="relative w-24 h-24 rounded-lg border border-border/30 overflow-hidden"
+                    >
+                      {file.type === "image" ? (
+                        <img src={file.preview} alt="Preview" className="w-full h-full object-cover" />
+                      ) : file.type === "video" ? (
+                        <div className="w-full h-full flex items-center justify-center bg-muted">
+                          <Video className="w-8 h-8 text-muted-foreground" />
+                        </div>
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-muted">
+                          <FileText className="w-8 h-8 text-muted-foreground" />
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeFile(index)}
+                        className="absolute top-1 right-1 w-6 h-6 bg-destructive text-white rounded-full flex items-center justify-center"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
+                  ))}
+                  <label className="w-24 h-24 rounded-lg border-2 border-dashed border-border/50 flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 transition-colors">
+                    <Upload className="w-6 h-6 text-muted-foreground mb-1" />
+                    <span className="text-xs text-muted-foreground">Adicionar</span>
                     <Input
                       type="file"
                       className="hidden"
-                      multiple
                       accept="image/*,video/*,.pdf,.doc,.docx"
+                      multiple
                       onChange={handleFileUpload}
                     />
                   </label>
                 </div>
-
-                {uploadedFiles.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {uploadedFiles.map((file, index) => (
-                      <div
-                        key={index}
-                        className="relative w-16 h-16 rounded-lg overflow-hidden border border-border/50"
-                      >
-                        {file.type === "image" ? (
-                          <img
-                            src={file.preview}
-                            alt=""
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-muted">
-                            {file.type === "video" ? (
-                              <Video className="w-6 h-6 text-muted-foreground" />
-                            ) : (
-                              <FileText className="w-6 h-6 text-muted-foreground" />
-                            )}
-                          </div>
-                        )}
-                        <button
-                          onClick={() => removeFile(index)}
-                          className="absolute -top-1 -right-1 w-5 h-5 bg-destructive rounded-full flex items-center justify-center"
-                        >
-                          <X className="w-3 h-3 text-destructive-foreground" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
 
               <Button
-                variant="hero"
                 onClick={handleSubmitDefense}
                 disabled={submitting || !defenseContent.trim()}
+                className="w-full"
               >
                 {submitting ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -607,8 +564,8 @@ const ResidentOccurrenceDetails = () => {
             </CardContent>
           </Card>
         )}
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 };
 
