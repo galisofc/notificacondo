@@ -75,7 +75,7 @@ const ResidentDashboard = () => {
         setRecentOccurrences(occurrences.slice(0, 5));
 
         const pendingDefenseCount = occurrences.filter(
-          (o) => o.status === "notificado" || o.status === "em_defesa"
+          (o) => o.status === "notificado"
         ).length;
 
         const { data: finesData, error: finesError } = await supabase
