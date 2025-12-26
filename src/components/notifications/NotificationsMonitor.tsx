@@ -185,18 +185,32 @@ export function NotificationsMonitor() {
       };
 
       rows.forEach((n) => {
-        // Count based on actual state, not just zpro_status
-        if (n.read_at) {
+        // "Entregue" deve incluir também as mensagens já "Lidas" (pois para ler, precisa ter sido entregue)
+        const isRead = Boolean(n.read_at);
+        const isDelivered = Boolean(n.delivered_at) || isRead;
+
+        if (isRead) {
           counts.read++;
-        } else if (n.delivered_at) {
-          counts.delivered++;
-        } else if (n.zpro_status === "failed") {
-          counts.failed++;
-        } else if (n.zpro_status === "sent") {
-          counts.sent++;
-        } else {
-          counts.pending++;
+          counts.delivered++; // read ⊂ delivered
+          return;
         }
+
+        if (isDelivered) {
+          counts.delivered++;
+          return;
+        }
+
+        if (n.zpro_status === "failed") {
+          counts.failed++;
+          return;
+        }
+
+        if (n.zpro_status === "sent") {
+          counts.sent++;
+          return;
+        }
+
+        counts.pending++;
       });
 
       return counts;
