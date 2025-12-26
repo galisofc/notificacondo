@@ -238,6 +238,23 @@ const DefenseAnalysis = () => {
         }
       }
 
+      // Notify resident via WhatsApp (fire and forget)
+      supabase.functions.invoke("notify-resident-decision", {
+        body: {
+          occurrence_id: selectedDefense.occurrence_id,
+          decision: decisionType,
+          justification: justification.trim(),
+        },
+      }).then((result) => {
+        if (result.error) {
+          console.log("Notification to resident failed (non-blocking):", result.error);
+        } else {
+          console.log("Resident notified successfully");
+        }
+      }).catch((err) => {
+        console.log("Error notifying resident (non-blocking):", err);
+      });
+
       const decisionLabels = {
         arquivada: "Ocorrência arquivada",
         advertido: "Advertência aplicada",
@@ -246,7 +263,7 @@ const DefenseAnalysis = () => {
 
       toast({ 
         title: "Decisão registrada!", 
-        description: decisionLabels[decisionType] 
+        description: `${decisionLabels[decisionType]}. O morador será notificado.`
       });
       
       setIsDecisionDialogOpen(false);
