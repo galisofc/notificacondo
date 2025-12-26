@@ -39,6 +39,7 @@ import {
   Gavel,
   Download,
   X,
+  MessageCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
@@ -131,6 +132,9 @@ const OccurrenceDetails = () => {
 
   // Image preview
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+  // WhatsApp notification
+  const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
 
   useEffect(() => {
     if (id) fetchData();
@@ -387,6 +391,58 @@ const OccurrenceDetails = () => {
     }
   };
 
+  const handleSendWhatsApp = async () => {
+    if (!occurrence?.residents?.id) {
+      toast({ 
+        title: "Morador não encontrado", 
+        description: "Esta ocorrência não possui um morador vinculado.",
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    setSendingWhatsApp(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-whatsapp-notification", {
+        body: {
+          occurrence_id: occurrence.id,
+          resident_id: occurrence.residents.id,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast({ 
+          title: "Notificação enviada!", 
+          description: "O morador foi notificado via WhatsApp com sucesso." 
+        });
+        
+        // Update occurrence status if it was just registered
+        if (occurrence.status === "registrada") {
+          await supabase
+            .from("occurrences")
+            .update({ status: "notificado" })
+            .eq("id", occurrence.id);
+        }
+        
+        // Refresh data
+        fetchData();
+      } else {
+        throw new Error(data?.error || "Erro ao enviar notificação");
+      }
+    } catch (error: any) {
+      console.error("WhatsApp notification error:", error);
+      toast({ 
+        title: "Erro ao enviar notificação", 
+        description: error.message || "Verifique as configurações do WhatsApp.",
+        variant: "destructive" 
+      });
+    } finally {
+      setSendingWhatsApp(false);
+    }
+  };
+
   const getFileIcon = (type: string) => {
     if (type === "image") return <ImageIcon className="w-5 h-5" />;
     if (type === "video") return <Video className="w-5 h-5" />;
@@ -434,12 +490,29 @@ const OccurrenceDetails = () => {
               {occurrence.title}
             </h1>
           </div>
-          {!["arquivada", "advertido", "multado"].includes(occurrence.status) && (
-            <Button variant="hero" onClick={() => setIsDecisionDialogOpen(true)}>
-              <Gavel className="w-4 h-4 mr-2" />
-              Registrar Decisão
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {occurrence.residents && !["arquivada", "advertido", "multado"].includes(occurrence.status) && (
+              <Button 
+                variant="outline" 
+                onClick={handleSendWhatsApp}
+                disabled={sendingWhatsApp}
+                className="border-green-500/50 text-green-500 hover:bg-green-500/10 hover:text-green-400"
+              >
+                {sendingWhatsApp ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                )}
+                Notificar via WhatsApp
+              </Button>
+            )}
+            {!["arquivada", "advertido", "multado"].includes(occurrence.status) && (
+              <Button variant="hero" onClick={() => setIsDecisionDialogOpen(true)}>
+                <Gavel className="w-4 h-4 mr-2" />
+                Registrar Decisão
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
