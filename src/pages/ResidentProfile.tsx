@@ -258,13 +258,12 @@ const ResidentProfile = () => {
                   id="email"
                   type="email"
                   value={formData.email}
-                  onChange={(e) => handleChange("email", e.target.value)}
-                  placeholder="seu@email.com"
-                  className={errors.email ? "border-destructive" : ""}
+                  disabled
+                  className="bg-muted/50 cursor-not-allowed"
                 />
-                {errors.email && (
-                  <p className="text-sm text-destructive">{errors.email}</p>
-                )}
+                <p className="text-xs text-muted-foreground">
+                  Para alterar o email, entre em contato com o síndico.
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -272,16 +271,15 @@ const ResidentProfile = () => {
                   <Phone className="w-4 h-4 text-muted-foreground" />
                   Telefone
                 </Label>
-                <MaskedInput
+                <Input
                   id="phone"
-                  mask="phone"
                   value={formData.phone}
-                  onChange={(value) => handleChange("phone", value)}
-                  className={errors.phone ? "border-destructive" : ""}
+                  disabled
+                  className="bg-muted/50 cursor-not-allowed"
                 />
-                {errors.phone && (
-                  <p className="text-sm text-destructive">{errors.phone}</p>
-                )}
+                <p className="text-xs text-muted-foreground">
+                  Para alterar o telefone, entre em contato com o síndico.
+                </p>
               </div>
 
               <Button
