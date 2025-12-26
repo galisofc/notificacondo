@@ -18,6 +18,23 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import {
   Settings,
   Bell,
   Shield,
@@ -32,43 +49,69 @@ import {
   Loader2,
   Save,
   RefreshCw,
+  Plus,
+  Pencil,
+  Trash2,
+  Package,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-const PLAN_LIMITS = {
-  start: {
-    name: "Start",
-    notifications: 10,
-    warnings: 10,
-    fines: 0,
-    color: "bg-gray-500",
-  },
-  essencial: {
-    name: "Essencial",
-    notifications: 50,
-    warnings: 50,
-    fines: 25,
-    color: "bg-blue-500",
-  },
-  profissional: {
-    name: "Profissional",
-    notifications: 200,
-    warnings: 200,
-    fines: 100,
-    color: "bg-violet-500",
-  },
-  enterprise: {
-    name: "Enterprise",
-    notifications: 999999,
-    warnings: 999999,
-    fines: 999999,
-    color: "bg-amber-500",
-  },
-};
+interface Plan {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  notifications_limit: number;
+  warnings_limit: number;
+  fines_limit: number;
+  price: number;
+  is_active: boolean;
+  color: string;
+  display_order: number;
+}
+
+const COLOR_OPTIONS = [
+  { value: "bg-gray-500", label: "Cinza" },
+  { value: "bg-blue-500", label: "Azul" },
+  { value: "bg-violet-500", label: "Violeta" },
+  { value: "bg-amber-500", label: "Âmbar" },
+  { value: "bg-green-500", label: "Verde" },
+  { value: "bg-red-500", label: "Vermelho" },
+  { value: "bg-pink-500", label: "Rosa" },
+  { value: "bg-indigo-500", label: "Índigo" },
+];
 
 export default function SuperAdminSettings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    slug: "",
+    name: "",
+    description: "",
+    notifications_limit: 10,
+    warnings_limit: 10,
+    fines_limit: 0,
+    price: 0,
+    color: "bg-gray-500",
+    display_order: 0,
+    is_active: true,
+  });
+
+  // Fetch plans
+  const { data: plans, isLoading: plansLoading } = useQuery({
+    queryKey: ["superadmin-plans"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("plans")
+        .select("*")
+        .order("display_order", { ascending: true });
+      
+      if (error) throw error;
+      return data as Plan[];
+    },
+  });
 
   // Platform stats
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -82,12 +125,10 @@ export default function SuperAdminSettings() {
       ]);
 
       const subscriptions = subsRes.data || [];
-      const planCounts = {
-        start: subscriptions.filter((s) => s.plan === "start").length,
-        essencial: subscriptions.filter((s) => s.plan === "essencial").length,
-        profissional: subscriptions.filter((s) => s.plan === "profissional").length,
-        enterprise: subscriptions.filter((s) => s.plan === "enterprise").length,
-      };
+      const planCounts: Record<string, number> = {};
+      (plans || []).forEach((p) => {
+        planCounts[p.slug] = subscriptions.filter((s) => s.plan === p.slug).length;
+      });
 
       return {
         totalUsers: usersRes.count || 0,
@@ -96,6 +137,57 @@ export default function SuperAdminSettings() {
         activeSubscriptions: subscriptions.filter((s) => s.active).length,
         planCounts,
       };
+    },
+    enabled: !!plans,
+  });
+
+  // Create plan mutation
+  const createPlanMutation = useMutation({
+    mutationFn: async (data: Omit<Plan, "id">) => {
+      const { error } = await supabase.from("plans").insert(data);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["superadmin-plans"] });
+      toast({ title: "Plano criado com sucesso!" });
+      setIsDialogOpen(false);
+      resetForm();
+    },
+    onError: (error: any) => {
+      toast({ title: "Erro ao criar plano", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Update plan mutation
+  const updatePlanMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<Plan> }) => {
+      const { error } = await supabase.from("plans").update(data).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["superadmin-plans"] });
+      toast({ title: "Plano atualizado com sucesso!" });
+      setIsDialogOpen(false);
+      setEditingPlan(null);
+      resetForm();
+    },
+    onError: (error: any) => {
+      toast({ title: "Erro ao atualizar plano", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Delete plan mutation
+  const deletePlanMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("plans").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["superadmin-plans"] });
+      toast({ title: "Plano excluído com sucesso!" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Erro ao excluir plano", description: error.message, variant: "destructive" });
     },
   });
 
@@ -109,7 +201,7 @@ export default function SuperAdminSettings() {
           warnings_used: 0,
           fines_used: 0,
         })
-        .neq("id", "00000000-0000-0000-0000-000000000000"); // Update all
+        .neq("id", "00000000-0000-0000-0000-000000000000");
 
       if (error) throw error;
     },
@@ -128,6 +220,57 @@ export default function SuperAdminSettings() {
       });
     },
   });
+
+  const resetForm = () => {
+    setFormData({
+      slug: "",
+      name: "",
+      description: "",
+      notifications_limit: 10,
+      warnings_limit: 10,
+      fines_limit: 0,
+      price: 0,
+      color: "bg-gray-500",
+      display_order: 0,
+      is_active: true,
+    });
+  };
+
+  const handleOpenDialog = (plan?: Plan) => {
+    if (plan) {
+      setEditingPlan(plan);
+      setFormData({
+        slug: plan.slug,
+        name: plan.name,
+        description: plan.description || "",
+        notifications_limit: plan.notifications_limit,
+        warnings_limit: plan.warnings_limit,
+        fines_limit: plan.fines_limit,
+        price: plan.price,
+        color: plan.color,
+        display_order: plan.display_order,
+        is_active: plan.is_active,
+      });
+    } else {
+      setEditingPlan(null);
+      resetForm();
+    }
+    setIsDialogOpen(true);
+  };
+
+  const handleSubmit = () => {
+    if (editingPlan) {
+      updatePlanMutation.mutate({ id: editingPlan.id, data: formData });
+    } else {
+      createPlanMutation.mutate(formData as Omit<Plan, "id">);
+    }
+  };
+
+  const handleDelete = (plan: Plan) => {
+    if (confirm(`Tem certeza que deseja excluir o plano "${plan.name}"?`)) {
+      deletePlanMutation.mutate(plan.id);
+    }
+  };
 
   return (
     <DashboardLayout>
@@ -150,9 +293,13 @@ export default function SuperAdminSettings() {
               <Database className="w-4 h-4" />
               Visão Geral
             </TabsTrigger>
+            <TabsTrigger value="manage-plans" className="gap-2">
+              <Package className="w-4 h-4" />
+              Cadastro de Planos
+            </TabsTrigger>
             <TabsTrigger value="plans" className="gap-2">
               <CreditCard className="w-4 h-4" />
-              Planos
+              Distribuição
             </TabsTrigger>
             <TabsTrigger value="notifications" className="gap-2">
               <Bell className="w-4 h-4" />
@@ -310,7 +457,287 @@ export default function SuperAdminSettings() {
             </Card>
           </TabsContent>
 
-          {/* Plans Tab */}
+          {/* Manage Plans Tab */}
+          <TabsContent value="manage-plans" className="space-y-6">
+            <Card className="bg-gradient-card border-border/50">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Package className="w-5 h-5 text-primary" />
+                    Cadastro de Planos
+                  </CardTitle>
+                  <CardDescription>
+                    Gerencie os planos disponíveis na plataforma
+                  </CardDescription>
+                </div>
+                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button onClick={() => handleOpenDialog()}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Novo Plano
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                      <DialogTitle>
+                        {editingPlan ? "Editar Plano" : "Novo Plano"}
+                      </DialogTitle>
+                      <DialogDescription>
+                        {editingPlan
+                          ? "Edite as informações do plano"
+                          : "Preencha as informações para criar um novo plano"}
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="slug">Slug</Label>
+                          <Input
+                            id="slug"
+                            value={formData.slug}
+                            onChange={(e) =>
+                              setFormData({ ...formData, slug: e.target.value })
+                            }
+                            placeholder="ex: premium"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="name">Nome</Label>
+                          <Input
+                            id="name"
+                            value={formData.name}
+                            onChange={(e) =>
+                              setFormData({ ...formData, name: e.target.value })
+                            }
+                            placeholder="ex: Premium"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="description">Descrição</Label>
+                        <Textarea
+                          id="description"
+                          value={formData.description}
+                          onChange={(e) =>
+                            setFormData({ ...formData, description: e.target.value })
+                          }
+                          placeholder="Descrição do plano"
+                        />
+                      </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="notifications_limit">Notificações</Label>
+                          <Input
+                            id="notifications_limit"
+                            type="number"
+                            value={formData.notifications_limit}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                notifications_limit: parseInt(e.target.value) || 0,
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="warnings_limit">Advertências</Label>
+                          <Input
+                            id="warnings_limit"
+                            type="number"
+                            value={formData.warnings_limit}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                warnings_limit: parseInt(e.target.value) || 0,
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="fines_limit">Multas</Label>
+                          <Input
+                            id="fines_limit"
+                            type="number"
+                            value={formData.fines_limit}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                fines_limit: parseInt(e.target.value) || 0,
+                              })
+                            }
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="price">Preço (R$)</Label>
+                          <Input
+                            id="price"
+                            type="number"
+                            step="0.01"
+                            value={formData.price}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                price: parseFloat(e.target.value) || 0,
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="display_order">Ordem</Label>
+                          <Input
+                            id="display_order"
+                            type="number"
+                            value={formData.display_order}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                display_order: parseInt(e.target.value) || 0,
+                              })
+                            }
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Cor</Label>
+                          <Select
+                            value={formData.color}
+                            onValueChange={(value) =>
+                              setFormData({ ...formData, color: value })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {COLOR_OPTIONS.map((opt) => (
+                                <SelectItem key={opt.value} value={opt.value}>
+                                  <div className="flex items-center gap-2">
+                                    <div className={`w-4 h-4 rounded ${opt.value}`} />
+                                    {opt.label}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Status</Label>
+                          <div className="flex items-center space-x-2 pt-2">
+                            <Switch
+                              checked={formData.is_active}
+                              onCheckedChange={(checked) =>
+                                setFormData({ ...formData, is_active: checked })
+                              }
+                            />
+                            <Label>{formData.is_active ? "Ativo" : "Inativo"}</Label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                        Cancelar
+                      </Button>
+                      <Button
+                        onClick={handleSubmit}
+                        disabled={createPlanMutation.isPending || updatePlanMutation.isPending}
+                      >
+                        {(createPlanMutation.isPending || updatePlanMutation.isPending) && (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        )}
+                        {editingPlan ? "Salvar" : "Criar"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent>
+                {plansLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-border/50">
+                          <th className="text-left py-3 px-4 font-medium text-muted-foreground">Plano</th>
+                          <th className="text-center py-3 px-4 font-medium text-muted-foreground">Notificações</th>
+                          <th className="text-center py-3 px-4 font-medium text-muted-foreground">Advertências</th>
+                          <th className="text-center py-3 px-4 font-medium text-muted-foreground">Multas</th>
+                          <th className="text-center py-3 px-4 font-medium text-muted-foreground">Preço</th>
+                          <th className="text-center py-3 px-4 font-medium text-muted-foreground">Status</th>
+                          <th className="text-right py-3 px-4 font-medium text-muted-foreground">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {plans?.map((plan) => (
+                          <tr key={plan.id} className="border-b border-border/30">
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-3">
+                                <div className={`w-8 h-8 rounded-lg ${plan.color} flex items-center justify-center`}>
+                                  {plan.slug === "enterprise" ? (
+                                    <Crown className="w-4 h-4 text-white" />
+                                  ) : (
+                                    <Zap className="w-4 h-4 text-white" />
+                                  )}
+                                </div>
+                                <div>
+                                  <p className="font-semibold text-foreground">{plan.name}</p>
+                                  <p className="text-xs text-muted-foreground">{plan.slug}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="text-center py-3 px-4 font-mono">
+                              {plan.notifications_limit >= 999999 ? "∞" : plan.notifications_limit}
+                            </td>
+                            <td className="text-center py-3 px-4 font-mono">
+                              {plan.warnings_limit >= 999999 ? "∞" : plan.warnings_limit}
+                            </td>
+                            <td className="text-center py-3 px-4 font-mono">
+                              {plan.fines_limit >= 999999 ? "∞" : plan.fines_limit}
+                            </td>
+                            <td className="text-center py-3 px-4 font-mono">
+                              {plan.price === 0 ? "Grátis" : `R$ ${plan.price.toFixed(2)}`}
+                            </td>
+                            <td className="text-center py-3 px-4">
+                              <Badge variant={plan.is_active ? "default" : "secondary"}>
+                                {plan.is_active ? "Ativo" : "Inativo"}
+                              </Badge>
+                            </td>
+                            <td className="text-right py-3 px-4">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleOpenDialog(plan)}
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDelete(plan)}
+                                  disabled={deletePlanMutation.isPending}
+                                >
+                                  <Trash2 className="w-4 h-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Plans Distribution Tab */}
           <TabsContent value="plans" className="space-y-6">
             <Card className="bg-gradient-card border-border/50">
               <CardHeader>
@@ -323,36 +750,42 @@ export default function SuperAdminSettings() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                  {Object.entries(PLAN_LIMITS).map(([key, plan]) => (
-                    <div
-                      key={key}
-                      className="p-4 rounded-lg border border-border/50 bg-muted/20"
-                    >
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className={`w-10 h-10 rounded-lg ${plan.color} flex items-center justify-center`}>
-                          {key === "enterprise" ? (
-                            <Crown className="w-5 h-5 text-white" />
-                          ) : (
-                            <Zap className="w-5 h-5 text-white" />
-                          )}
+                {plansLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    {plans?.map((plan) => (
+                      <div
+                        key={plan.id}
+                        className="p-4 rounded-lg border border-border/50 bg-muted/20"
+                      >
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className={`w-10 h-10 rounded-lg ${plan.color} flex items-center justify-center`}>
+                            {plan.slug === "enterprise" ? (
+                              <Crown className="w-5 h-5 text-white" />
+                            ) : (
+                              <Zap className="w-5 h-5 text-white" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-foreground">{plan.name}</p>
+                            <p className="text-2xl font-bold text-primary">
+                              {statsLoading ? "..." : stats?.planCounts?.[plan.slug] || 0}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-semibold text-foreground">{plan.name}</p>
-                          <p className="text-2xl font-bold text-primary">
-                            {statsLoading ? "..." : stats?.planCounts?.[key as keyof typeof stats.planCounts] || 0}
-                          </p>
+                        <Separator className="my-3" />
+                        <div className="space-y-1 text-xs text-muted-foreground">
+                          <p>Notificações: {plan.notifications_limit >= 999999 ? "∞" : plan.notifications_limit}/mês</p>
+                          <p>Advertências: {plan.warnings_limit >= 999999 ? "∞" : plan.warnings_limit}/mês</p>
+                          <p>Multas: {plan.fines_limit >= 999999 ? "∞" : plan.fines_limit}/mês</p>
                         </div>
                       </div>
-                      <Separator className="my-3" />
-                      <div className="space-y-1 text-xs text-muted-foreground">
-                        <p>Notificações: {plan.notifications === 999999 ? "∞" : plan.notifications}/mês</p>
-                        <p>Advertências: {plan.warnings === 999999 ? "∞" : plan.warnings}/mês</p>
-                        <p>Multas: {plan.fines === 999999 ? "∞" : plan.fines}/mês</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -375,21 +808,21 @@ export default function SuperAdminSettings() {
                       </tr>
                     </thead>
                     <tbody>
-                      {Object.entries(PLAN_LIMITS).map(([key, plan]) => (
-                        <tr key={key} className="border-b border-border/30">
+                      {plans?.map((plan) => (
+                        <tr key={plan.id} className="border-b border-border/30">
                           <td className="py-3 px-4">
-                            <Badge variant="outline" className={`${plan.color}/10 text-foreground`}>
+                            <Badge variant="outline" className="text-foreground">
                               {plan.name}
                             </Badge>
                           </td>
                           <td className="text-center py-3 px-4 font-mono">
-                            {plan.notifications === 999999 ? "Ilimitado" : plan.notifications}
+                            {plan.notifications_limit >= 999999 ? "Ilimitado" : plan.notifications_limit}
                           </td>
                           <td className="text-center py-3 px-4 font-mono">
-                            {plan.warnings === 999999 ? "Ilimitado" : plan.warnings}
+                            {plan.warnings_limit >= 999999 ? "Ilimitado" : plan.warnings_limit}
                           </td>
                           <td className="text-center py-3 px-4 font-mono">
-                            {plan.fines === 999999 ? "Ilimitado" : plan.fines}
+                            {plan.fines_limit >= 999999 ? "Ilimitado" : plan.fines_limit}
                           </td>
                         </tr>
                       ))}
