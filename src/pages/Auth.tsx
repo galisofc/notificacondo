@@ -45,14 +45,14 @@ const Auth = () => {
     const checkRoleAndRedirect = async () => {
       if (user) {
         try {
-          // Check user role
+          // Check user role - this is the primary determinant
           const { data: roleData } = await supabase
             .from("user_roles")
             .select("role")
             .eq("user_id", user.id)
             .maybeSingle();
 
-          const role = roleData?.role || "morador";
+          const role = roleData?.role;
 
           // Super Admin goes to superadmin dashboard
           if (role === "super_admin") {
@@ -60,28 +60,19 @@ const Auth = () => {
             return;
           }
 
-          // Síndico goes to main dashboard
+          // Síndico goes to main dashboard (prioritize role over resident check)
           if (role === "sindico") {
             navigate("/dashboard", { replace: true });
             return;
           }
 
-          // Check if user is a resident
+          // Morador goes to resident dashboard
           if (role === "morador") {
-            const { data: residentData } = await supabase
-              .from("residents")
-              .select("id")
-              .eq("user_id", user.id)
-              .maybeSingle();
-
-            // If user is a resident, redirect to resident dashboard
-            if (residentData) {
-              navigate("/resident", { replace: true });
-              return;
-            }
+            navigate("/resident", { replace: true });
+            return;
           }
 
-          // Default fallback
+          // Default fallback for new users without explicit role
           navigate("/dashboard", { replace: true });
         } catch (error) {
           console.error("Error checking role:", error);
@@ -95,40 +86,31 @@ const Auth = () => {
 
   const redirectBasedOnRole = async (userId: string) => {
     try {
-      // Check user role
+      // Check user role - this is the primary determinant
       const { data: roleData } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", userId)
         .maybeSingle();
 
-      const role = roleData?.role || "morador";
+      const role = roleData?.role;
 
       // Super Admin goes to superadmin dashboard
       if (role === "super_admin") {
         return "/superadmin";
       }
 
-      // Síndico goes to main dashboard
+      // Síndico goes to main dashboard (prioritize role over resident check)
       if (role === "sindico") {
         return "/dashboard";
       }
 
-      // Check if user is a resident
+      // Only for "morador" role, check if user is a resident
       if (role === "morador") {
-        const { data: residentData } = await supabase
-          .from("residents")
-          .select("id")
-          .eq("user_id", userId)
-          .maybeSingle();
-
-        // If user is a resident, redirect to resident dashboard
-        if (residentData) {
-          return "/resident";
-        }
+        return "/resident";
       }
 
-      // Default fallback
+      // Default fallback for new users without explicit role
       return "/dashboard";
     } catch (error) {
       console.error("Error checking role:", error);
