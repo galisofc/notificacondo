@@ -95,6 +95,8 @@ const Occurrences = () => {
   const [residents, setResidents] = useState<Resident[]>([]);
   const [occurrences, setOccurrences] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
 
   // Form states
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -120,6 +122,13 @@ const Occurrences = () => {
   const filteredBlocks = blocks.filter((b) => b.condominium_id === formData.condominium_id);
   const filteredApartments = apartments.filter((a) => a.block_id === formData.block_id);
   const filteredResidents = residents.filter((r) => r.apartment_id === formData.apartment_id);
+
+  // Filter occurrences based on status and type filters
+  const filteredOccurrences = occurrences.filter((occ) => {
+    const matchesStatus = statusFilter === "all" || occ.status === statusFilter;
+    const matchesType = typeFilter === "all" || occ.type === typeFilter;
+    return matchesStatus && matchesType;
+  });
 
   const fetchData = async () => {
     if (!user) return;
@@ -394,8 +403,36 @@ const Occurrences = () => {
           </div>
         </div>
 
-        {/* Add Button */}
-        <div className="flex justify-end mb-6">
+        {/* Filters and Add Button */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="flex flex-1 gap-3">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[180px] bg-card border-border">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Status</SelectItem>
+                <SelectItem value="registrada">Registrada</SelectItem>
+                <SelectItem value="notificado">Notificado</SelectItem>
+                <SelectItem value="em_defesa">Em Defesa</SelectItem>
+                <SelectItem value="analisando">Analisando</SelectItem>
+                <SelectItem value="arquivada">Arquivada</SelectItem>
+                <SelectItem value="advertido">Advertido</SelectItem>
+                <SelectItem value="multado">Multado</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-[180px] bg-card border-border">
+                <SelectValue placeholder="Tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Tipos</SelectItem>
+                <SelectItem value="advertencia">Advertência</SelectItem>
+                <SelectItem value="notificacao">Notificação</SelectItem>
+                <SelectItem value="multa">Multa</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <Button
             variant="hero"
             onClick={() => {
@@ -420,25 +457,31 @@ const Occurrences = () => {
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
-        ) : occurrences.length === 0 ? (
+        ) : filteredOccurrences.length === 0 ? (
           <div className="text-center py-12 px-4 rounded-2xl bg-gradient-card border border-border/50">
             <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
               <AlertTriangle className="w-8 h-8 text-primary" />
             </div>
             <h3 className="font-display text-xl font-semibold text-foreground mb-2">
-              Nenhuma ocorrência registrada
+              {statusFilter !== "all" || typeFilter !== "all" 
+                ? "Nenhuma ocorrência encontrada" 
+                : "Nenhuma ocorrência registrada"}
             </h3>
             <p className="text-muted-foreground mb-6">
-              Registre ocorrências para iniciar o fluxo de notificações.
+              {statusFilter !== "all" || typeFilter !== "all" 
+                ? "Tente ajustar os filtros para ver mais resultados." 
+                : "Registre ocorrências para iniciar o fluxo de notificações."}
             </p>
-            <Button variant="hero" onClick={() => setIsDialogOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Registrar Ocorrência
-            </Button>
+            {statusFilter === "all" && typeFilter === "all" && (
+              <Button variant="hero" onClick={() => setIsDialogOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Registrar Ocorrência
+              </Button>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
-            {occurrences.map((occurrence) => (
+            {filteredOccurrences.map((occurrence) => (
               <div
                 key={occurrence.id}
                 className="p-4 rounded-xl bg-gradient-card border border-border/50 hover:border-primary/30 transition-all"
