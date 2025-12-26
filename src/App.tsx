@@ -19,6 +19,7 @@ import Occurrences from "./pages/Occurrences";
 import OccurrenceDetails from "./pages/OccurrenceDetails";
 import Reports from "./pages/Reports";
 import Notifications from "./pages/Notifications";
+import DefenseAnalysis from "./pages/DefenseAnalysis";
 import SindicoSettings from "./pages/SindicoSettings";
 import SindicoProfile from "./pages/SindicoProfile";
 import ResidentAccess from "./pages/ResidentAccess";
@@ -99,6 +100,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole={["sindico", "super_admin"]}>
                     <Notifications />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/defenses"
+                element={
+                  <ProtectedRoute requiredRole={["sindico", "super_admin"]}>
+                    <DefenseAnalysis />
                   </ProtectedRoute>
                 }
               />
