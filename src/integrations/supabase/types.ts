@@ -14,16 +14,759 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      apartments: {
+        Row: {
+          area_sqm: number | null
+          block_id: string
+          created_at: string
+          floor: number | null
+          id: string
+          monthly_fee: number | null
+          number: string
+          updated_at: string
+        }
+        Insert: {
+          area_sqm?: number | null
+          block_id: string
+          created_at?: string
+          floor?: number | null
+          id?: string
+          monthly_fee?: number | null
+          number: string
+          updated_at?: string
+        }
+        Update: {
+          area_sqm?: number | null
+          block_id?: string
+          created_at?: string
+          floor?: number | null
+          id?: string
+          monthly_fee?: number | null
+          number?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "apartments_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "blocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          ip_address: string | null
+          new_data: Json | null
+          old_data: Json | null
+          record_id: string | null
+          table_name: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          new_data?: Json | null
+          old_data?: Json | null
+          record_id?: string | null
+          table_name: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          new_data?: Json | null
+          old_data?: Json | null
+          record_id?: string | null
+          table_name?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      blocks: {
+        Row: {
+          condominium_id: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          condominium_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          condominium_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blocks_condominium_id_fkey"
+            columns: ["condominium_id"]
+            isOneToOne: false
+            referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      condominiums: {
+        Row: {
+          address: string | null
+          city: string | null
+          cnpj: string | null
+          convention_url: string | null
+          created_at: string
+          id: string
+          internal_rules_url: string | null
+          name: string
+          owner_id: string
+          state: string | null
+          updated_at: string
+          zip_code: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          cnpj?: string | null
+          convention_url?: string | null
+          created_at?: string
+          id?: string
+          internal_rules_url?: string | null
+          name: string
+          owner_id: string
+          state?: string | null
+          updated_at?: string
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          cnpj?: string | null
+          convention_url?: string | null
+          created_at?: string
+          id?: string
+          internal_rules_url?: string | null
+          name?: string
+          owner_id?: string
+          state?: string | null
+          updated_at?: string
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
+      decisions: {
+        Row: {
+          created_at: string
+          decided_at: string
+          decided_by: string
+          decision: Database["public"]["Enums"]["occurrence_status"]
+          id: string
+          justification: string
+          occurrence_id: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string
+          decided_by: string
+          decision: Database["public"]["Enums"]["occurrence_status"]
+          id?: string
+          justification: string
+          occurrence_id: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string
+          decided_by?: string
+          decision?: Database["public"]["Enums"]["occurrence_status"]
+          id?: string
+          justification?: string
+          occurrence_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "decisions_occurrence_id_fkey"
+            columns: ["occurrence_id"]
+            isOneToOne: false
+            referencedRelation: "occurrences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      defense_attachments: {
+        Row: {
+          created_at: string
+          defense_id: string
+          description: string | null
+          file_type: string
+          file_url: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          defense_id: string
+          description?: string | null
+          file_type: string
+          file_url: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          defense_id?: string
+          description?: string | null
+          file_type?: string
+          file_url?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "defense_attachments_defense_id_fkey"
+            columns: ["defense_id"]
+            isOneToOne: false
+            referencedRelation: "defenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      defenses: {
+        Row: {
+          content: string
+          created_at: string
+          deadline: string
+          id: string
+          occurrence_id: string
+          resident_id: string
+          submitted_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          deadline: string
+          id?: string
+          occurrence_id: string
+          resident_id: string
+          submitted_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          deadline?: string
+          id?: string
+          occurrence_id?: string
+          resident_id?: string
+          submitted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "defenses_occurrence_id_fkey"
+            columns: ["occurrence_id"]
+            isOneToOne: false
+            referencedRelation: "occurrences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "defenses_resident_id_fkey"
+            columns: ["resident_id"]
+            isOneToOne: false
+            referencedRelation: "residents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fines: {
+        Row: {
+          acknowledged_at: string | null
+          amount: number
+          created_at: string
+          due_date: string
+          id: string
+          multiplier: number
+          notified_at: string | null
+          occurrence_id: string
+          paid_at: string | null
+          payment_method: string | null
+          payment_reference: string | null
+          resident_id: string
+          status: Database["public"]["Enums"]["fine_status"]
+          updated_at: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          amount: number
+          created_at?: string
+          due_date: string
+          id?: string
+          multiplier?: number
+          notified_at?: string | null
+          occurrence_id: string
+          paid_at?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          resident_id: string
+          status?: Database["public"]["Enums"]["fine_status"]
+          updated_at?: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          amount?: number
+          created_at?: string
+          due_date?: string
+          id?: string
+          multiplier?: number
+          notified_at?: string | null
+          occurrence_id?: string
+          paid_at?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          resident_id?: string
+          status?: Database["public"]["Enums"]["fine_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fines_occurrence_id_fkey"
+            columns: ["occurrence_id"]
+            isOneToOne: false
+            referencedRelation: "occurrences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fines_resident_id_fkey"
+            columns: ["resident_id"]
+            isOneToOne: false
+            referencedRelation: "residents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications_sent: {
+        Row: {
+          acknowledged_at: string | null
+          created_at: string
+          delivered_at: string | null
+          device_info: Json | null
+          id: string
+          ip_address: string | null
+          location_info: Json | null
+          message_content: string
+          occurrence_id: string
+          read_at: string | null
+          resident_id: string
+          secure_link: string
+          secure_link_token: string
+          sent_at: string
+          sent_via: string
+          user_agent: string | null
+          zpro_message_id: string | null
+          zpro_status: string | null
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          device_info?: Json | null
+          id?: string
+          ip_address?: string | null
+          location_info?: Json | null
+          message_content: string
+          occurrence_id: string
+          read_at?: string | null
+          resident_id: string
+          secure_link: string
+          secure_link_token: string
+          sent_at?: string
+          sent_via?: string
+          user_agent?: string | null
+          zpro_message_id?: string | null
+          zpro_status?: string | null
+        }
+        Update: {
+          acknowledged_at?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          device_info?: Json | null
+          id?: string
+          ip_address?: string | null
+          location_info?: Json | null
+          message_content?: string
+          occurrence_id?: string
+          read_at?: string | null
+          resident_id?: string
+          secure_link?: string
+          secure_link_token?: string
+          sent_at?: string
+          sent_via?: string
+          user_agent?: string | null
+          zpro_message_id?: string | null
+          zpro_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_sent_occurrence_id_fkey"
+            columns: ["occurrence_id"]
+            isOneToOne: false
+            referencedRelation: "occurrences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_sent_resident_id_fkey"
+            columns: ["resident_id"]
+            isOneToOne: false
+            referencedRelation: "residents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      occurrence_evidences: {
+        Row: {
+          created_at: string
+          description: string | null
+          file_type: string
+          file_url: string
+          id: string
+          occurrence_id: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          file_type: string
+          file_url: string
+          id?: string
+          occurrence_id: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          file_type?: string
+          file_url?: string
+          id?: string
+          occurrence_id?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "occurrence_evidences_occurrence_id_fkey"
+            columns: ["occurrence_id"]
+            isOneToOne: false
+            referencedRelation: "occurrences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      occurrences: {
+        Row: {
+          apartment_id: string | null
+          block_id: string | null
+          civil_code_article: string | null
+          condominium_id: string
+          convention_article: string | null
+          created_at: string
+          description: string
+          id: string
+          internal_rules_article: string | null
+          legal_basis: string | null
+          location: string | null
+          occurred_at: string
+          registered_by: string
+          resident_id: string | null
+          status: Database["public"]["Enums"]["occurrence_status"]
+          title: string
+          type: Database["public"]["Enums"]["occurrence_type"]
+          updated_at: string
+        }
+        Insert: {
+          apartment_id?: string | null
+          block_id?: string | null
+          civil_code_article?: string | null
+          condominium_id: string
+          convention_article?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          internal_rules_article?: string | null
+          legal_basis?: string | null
+          location?: string | null
+          occurred_at: string
+          registered_by: string
+          resident_id?: string | null
+          status?: Database["public"]["Enums"]["occurrence_status"]
+          title: string
+          type: Database["public"]["Enums"]["occurrence_type"]
+          updated_at?: string
+        }
+        Update: {
+          apartment_id?: string | null
+          block_id?: string | null
+          civil_code_article?: string | null
+          condominium_id?: string
+          convention_article?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          internal_rules_article?: string | null
+          legal_basis?: string | null
+          location?: string | null
+          occurred_at?: string
+          registered_by?: string
+          resident_id?: string | null
+          status?: Database["public"]["Enums"]["occurrence_status"]
+          title?: string
+          type?: Database["public"]["Enums"]["occurrence_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "occurrences_apartment_id_fkey"
+            columns: ["apartment_id"]
+            isOneToOne: false
+            referencedRelation: "apartments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "occurrences_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "occurrences_condominium_id_fkey"
+            columns: ["condominium_id"]
+            isOneToOne: false
+            referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "occurrences_resident_id_fkey"
+            columns: ["resident_id"]
+            isOneToOne: false
+            referencedRelation: "residents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          cpf: string | null
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          cpf?: string | null
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          cpf?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      residents: {
+        Row: {
+          apartment_id: string
+          cpf: string | null
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          is_owner: boolean
+          is_responsible: boolean
+          move_in_date: string | null
+          move_out_date: string | null
+          phone: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          apartment_id: string
+          cpf?: string | null
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          is_owner?: boolean
+          is_responsible?: boolean
+          move_in_date?: string | null
+          move_out_date?: string | null
+          phone?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          apartment_id?: string
+          cpf?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          is_owner?: boolean
+          is_responsible?: boolean
+          move_in_date?: string | null
+          move_out_date?: string | null
+          phone?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "residents_apartment_id_fkey"
+            columns: ["apartment_id"]
+            isOneToOne: false
+            referencedRelation: "apartments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          active: boolean
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          fines_limit: number
+          fines_used: number
+          id: string
+          mercado_pago_subscription_id: string | null
+          notifications_limit: number
+          notifications_used: number
+          plan: Database["public"]["Enums"]["plan_type"]
+          updated_at: string
+          user_id: string
+          warnings_limit: number
+          warnings_used: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          fines_limit?: number
+          fines_used?: number
+          id?: string
+          mercado_pago_subscription_id?: string | null
+          notifications_limit?: number
+          notifications_used?: number
+          plan?: Database["public"]["Enums"]["plan_type"]
+          updated_at?: string
+          user_id: string
+          warnings_limit?: number
+          warnings_used?: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          fines_limit?: number
+          fines_used?: number
+          id?: string
+          mercado_pago_subscription_id?: string | null
+          notifications_limit?: number
+          notifications_used?: number
+          plan?: Database["public"]["Enums"]["plan_type"]
+          updated_at?: string
+          user_id?: string
+          warnings_limit?: number
+          warnings_used?: number
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_condominium_ids: {
+        Args: { _user_id: string }
+        Returns: string[]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_resident_of_condominium: {
+        Args: { _condominium_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "super_admin" | "sindico" | "morador"
+      fine_status: "em_aberto" | "pago" | "vencido"
+      occurrence_status:
+        | "registrada"
+        | "notificado"
+        | "em_defesa"
+        | "analisando"
+        | "arquivada"
+        | "advertido"
+        | "multado"
+      occurrence_type: "advertencia" | "notificacao" | "multa"
+      plan_type: "start" | "essencial" | "profissional" | "enterprise"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +893,20 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["super_admin", "sindico", "morador"],
+      fine_status: ["em_aberto", "pago", "vencido"],
+      occurrence_status: [
+        "registrada",
+        "notificado",
+        "em_defesa",
+        "analisando",
+        "arquivada",
+        "advertido",
+        "multado",
+      ],
+      occurrence_type: ["advertencia", "notificacao", "multa"],
+      plan_type: ["start", "essencial", "profissional", "enterprise"],
+    },
   },
 } as const
