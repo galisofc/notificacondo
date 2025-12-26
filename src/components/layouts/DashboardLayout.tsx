@@ -79,6 +79,7 @@ function SidebarNavigation() {
   const { role, residentInfo, loading } = useUserRole();
   const { toast } = useToast();
   const [pendingDefenses, setPendingDefenses] = useState(0);
+  const [condoIds, setCondoIds] = useState<string[]>([]);
 
   // Fetch pending defenses count for sindico
   useEffect(() => {
@@ -92,13 +93,14 @@ function SidebarNavigation() {
           .select("id")
           .eq("owner_id", user.id);
 
-        const condoIds = condos?.map((c) => c.id) || [];
+        const ids = condos?.map((c) => c.id) || [];
+        setCondoIds(ids);
 
-        if (condoIds.length > 0) {
+        if (ids.length > 0) {
           const { count } = await supabase
             .from("occurrences")
             .select("*", { count: "exact", head: true })
-            .in("condominium_id", condoIds)
+            .in("condominium_id", ids)
             .eq("status", "em_defesa");
 
           setPendingDefenses(count || 0);
@@ -110,6 +112,37 @@ function SidebarNavigation() {
 
     fetchPendingDefenses();
   }, [user, role]);
+
+  // Subscribe to realtime updates on occurrences table
+  useEffect(() => {
+    if (!user || role !== "sindico" || condoIds.length === 0) return;
+
+    const channel = supabase
+      .channel("occurrences-status-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "occurrences",
+        },
+        async (payload) => {
+          // Re-fetch count when any occurrence changes
+          const { count } = await supabase
+            .from("occurrences")
+            .select("*", { count: "exact", head: true })
+            .in("condominium_id", condoIds)
+            .eq("status", "em_defesa");
+
+          setPendingDefenses(count || 0);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, role, condoIds]);
 
   const handleSignOut = async () => {
     await signOut();
