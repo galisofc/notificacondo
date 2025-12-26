@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -26,8 +27,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CreditCard, TrendingUp, AlertCircle } from "lucide-react";
+import { CreditCard, AlertCircle, Eye } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 interface SubscriptionWithCondominium {
@@ -54,6 +56,7 @@ interface SubscriptionWithCondominium {
 }
 
 export function SubscriptionsMonitor() {
+  const navigate = useNavigate();
   const [planFilter, setPlanFilter] = useState<string>("all");
 
   const { data: subscriptions, isLoading } = useQuery({
@@ -215,11 +218,12 @@ export function SubscriptionsMonitor() {
                     <TableHead>Notificações</TableHead>
                     <TableHead>Advertências</TableHead>
                     <TableHead>Multas</TableHead>
+                    <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {subscriptions?.map((sub) => (
-                    <TableRow key={sub.id}>
+                    <TableRow key={sub.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/superadmin/subscriptions/${sub.id}`)}>
                       <TableCell>
                         <p className="font-medium">{sub.condominium?.name || "—"}</p>
                       </TableCell>
@@ -281,6 +285,18 @@ export function SubscriptionsMonitor() {
                             className="h-1.5"
                           />
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/superadmin/subscriptions/${sub.id}`);
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
