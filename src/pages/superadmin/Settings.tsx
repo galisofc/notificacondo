@@ -56,6 +56,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { MercadoPagoSettings } from "@/components/superadmin/MercadoPagoSettings";
+import { MercadoPagoWebhookLogs } from "@/components/superadmin/MercadoPagoWebhookLogs";
 
 interface Plan {
   id: string;
@@ -841,6 +842,7 @@ export default function SuperAdminSettings() {
           {/* Mercado Pago Tab */}
           <TabsContent value="mercadopago" className="space-y-6">
             <MercadoPagoSettings />
+            <MercadoPagoWebhookLogs />
           </TabsContent>
 
           {/* Notifications Tab */}

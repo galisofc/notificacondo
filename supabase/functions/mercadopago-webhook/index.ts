@@ -276,12 +276,20 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+  let logId: string | null = null;
+  let signatureValid: boolean | null = null;
+
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const mercadoPagoAccessToken = Deno.env.get("MERCADOPAGO_ACCESS_TOKEN");
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Get request metadata
+    const ipAddress = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
+    const userAgent = req.headers.get("user-agent") || "unknown";
 
     // Clone request to read body multiple times
     const bodyText = await req.text();
@@ -291,6 +299,18 @@ Deno.serve(async (req) => {
       notification = JSON.parse(bodyText);
     } catch (parseError) {
       console.error("Failed to parse webhook body:", bodyText);
+      
+      // Log failed parse attempt
+      await supabase.from("mercadopago_webhook_logs").insert({
+        event_type: "parse_error",
+        payload: { raw_body: bodyText.substring(0, 1000) },
+        processing_status: "error",
+        error_message: "Invalid JSON body",
+        ip_address: ipAddress,
+        user_agent: userAgent,
+        processing_duration_ms: Date.now() - startTime,
+      });
+      
       return new Response(
         JSON.stringify({ error: "Invalid JSON body" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -299,8 +319,30 @@ Deno.serve(async (req) => {
 
     console.log("MercadoPago webhook received:", notification);
 
-    const { type, data } = notification;
+    const { type, data, action } = notification;
     const dataId = data?.id;
+
+    // Create initial log entry
+    const { data: logEntry, error: logError } = await supabase
+      .from("mercadopago_webhook_logs")
+      .insert({
+        event_type: type || "unknown",
+        event_action: action,
+        data_id: dataId ? String(dataId) : null,
+        payload: notification,
+        processing_status: "processing",
+        ip_address: ipAddress,
+        user_agent: userAgent,
+      })
+      .select("id")
+      .single();
+    
+    if (logEntry) {
+      logId = logEntry.id;
+    }
+    if (logError) {
+      console.error("Failed to create webhook log:", logError);
+    }
 
     // Fetch MercadoPago config to get webhook secret
     const { data: mpConfig, error: mpConfigError } = await supabase
@@ -319,8 +361,24 @@ Deno.serve(async (req) => {
         mpConfig.webhook_secret
       );
 
+      signatureValid = validationResult.valid;
+
       if (!validationResult.valid) {
         console.error("Webhook signature validation failed:", validationResult.error);
+        
+        // Update log with validation failure
+        if (logId) {
+          await supabase
+            .from("mercadopago_webhook_logs")
+            .update({
+              signature_valid: false,
+              processing_status: "rejected",
+              error_message: `Signature validation failed: ${validationResult.error}`,
+              processing_duration_ms: Date.now() - startTime,
+            })
+            .eq("id", logId);
+        }
+        
         return new Response(
           JSON.stringify({ error: "Invalid signature", details: validationResult.error }),
           { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -328,6 +386,7 @@ Deno.serve(async (req) => {
       }
       
       console.log("Webhook signature validated successfully");
+      signatureValid = true;
     } else if (mpConfig?.webhook_secret && !dataId) {
       console.log("Webhook secret configured but no data.id in payload, skipping validation");
     } else {
@@ -472,6 +531,19 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Update log with success
+    if (logId) {
+      await supabase
+        .from("mercadopago_webhook_logs")
+        .update({
+          signature_valid: signatureValid,
+          processing_status: "completed",
+          processing_result: { type, action, processed: true },
+          processing_duration_ms: Date.now() - startTime,
+        })
+        .eq("id", logId);
+    }
+
     return new Response(
       JSON.stringify({ received: true }),
       {
@@ -481,6 +553,27 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error("Error in mercadopago-webhook:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    
+    // Try to update log with error (if we have supabase client)
+    try {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      
+      if (logId) {
+        await supabase
+          .from("mercadopago_webhook_logs")
+          .update({
+            processing_status: "error",
+            error_message: errorMessage,
+            processing_duration_ms: Date.now() - startTime,
+          })
+          .eq("id", logId);
+      }
+    } catch (logUpdateError) {
+      console.error("Failed to update webhook log with error:", logUpdateError);
+    }
+    
     // Always return 200 to acknowledge receipt
     return new Response(
       JSON.stringify({ received: true, error: errorMessage }),
