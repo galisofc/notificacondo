@@ -225,6 +225,29 @@ const ResidentDashboard = () => {
       </Helmet>
 
       <div className="space-y-8 animate-fade-up">
+        {/* Pending Defense Alert */}
+        {stats.pendingDefenses > 0 && (
+          <div 
+            className="p-4 rounded-xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 cursor-pointer hover:border-amber-500/50 transition-all animate-pulse-slow"
+            onClick={() => navigate("/resident/occurrences")}
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                <Shield className="w-6 h-6 text-amber-500" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-foreground flex items-center gap-2">
+                  Você tem {stats.pendingDefenses} {stats.pendingDefenses === 1 ? 'ocorrência pendente' : 'ocorrências pendentes'} de defesa
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Clique para visualizar e enviar sua defesa
+                </p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-amber-500" />
+            </div>
+          </div>
+        )}
+
         {/* Welcome Section */}
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground">
