@@ -20,6 +20,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import {
   Loader2,
   Building2,
   Crown,
@@ -30,6 +38,7 @@ import {
   Calculator,
   AlertTriangle,
   CreditCard,
+  Search,
 } from "lucide-react";
 
 interface Plan {
@@ -79,6 +88,8 @@ const SindicoSubscriptions = () => {
   });
   const [selectedPlan, setSelectedPlan] = useState<string>("");
   const [isChangingPlan, setIsChangingPlan] = useState(false);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [planFilter, setPlanFilter] = useState<string>("all");
 
   // Fetch plans
   const { data: plans } = useQuery({
@@ -397,7 +408,41 @@ const SindicoSubscriptions = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {subscriptions && subscriptions.length > 0 ? (
+            {/* Filters */}
+            <div className="flex flex-col md:flex-row gap-4 mb-6">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar condomínio..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Select value={planFilter} onValueChange={setPlanFilter}>
+                <SelectTrigger className="w-full md:w-[180px]">
+                  <SelectValue placeholder="Filtrar por plano" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Planos</SelectItem>
+                  {plans?.map((plan) => (
+                    <SelectItem key={plan.slug} value={plan.slug}>
+                      {plan.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {(() => {
+              const filteredSubscriptions = subscriptions?.filter((sub) => {
+                const matchesSearch = searchQuery === "" || 
+                  sub.condominium.name.toLowerCase().includes(searchQuery.toLowerCase());
+                const matchesPlan = planFilter === "all" || sub.plan === planFilter;
+                return matchesSearch && matchesPlan;
+              });
+
+              return filteredSubscriptions && filteredSubscriptions.length > 0 ? (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {subscriptions.map((sub) => {
                   const currentPlan = plans?.find((p) => p.slug === sub.plan);
@@ -508,12 +553,19 @@ const SindicoSubscriptions = () => {
             ) : (
               <div className="text-center py-12">
                 <Building2 className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-                <p className="text-muted-foreground">Nenhuma assinatura encontrada</p>
+                <p className="text-muted-foreground">
+                  {searchQuery || planFilter !== "all" 
+                    ? "Nenhuma assinatura encontrada com os filtros aplicados" 
+                    : "Nenhuma assinatura encontrada"}
+                </p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Cadastre um condomínio para começar
+                  {searchQuery || planFilter !== "all" 
+                    ? "Tente ajustar os filtros de busca" 
+                    : "Cadastre um condomínio para começar"}
                 </p>
               </div>
-            )}
+            );
+            })()}
           </CardContent>
         </Card>
 
