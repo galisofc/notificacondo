@@ -320,14 +320,40 @@ export function MercadoPagoSettings() {
         <CardHeader>
           <CardTitle className="text-base">URL do Webhook</CardTitle>
           <CardDescription>
-            Configure esta URL no painel do Mercado Pago
+            Configure esta URL no painel do Mercado Pago para receber notificações de pagamentos
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="p-4 rounded-lg bg-muted/30 border border-border/50 font-mono text-sm">
-            {window.location.origin}/functions/v1/mercadopago-webhook
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>URL para configurar no Mercado Pago:</Label>
+            <div className="flex gap-2">
+              <div className="flex-1 p-3 rounded-lg bg-muted/30 border border-border/50 font-mono text-sm break-all">
+                https://iyeljkdrypcxvljebqtn.supabase.co/functions/v1/mercadopago-webhook
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  navigator.clipboard.writeText("https://iyeljkdrypcxvljebqtn.supabase.co/functions/v1/mercadopago-webhook");
+                  toast({
+                    title: "URL copiada",
+                    description: "A URL do webhook foi copiada para a área de transferência.",
+                  });
+                }}
+              >
+                Copiar
+              </Button>
+            </div>
           </div>
-          <p className="text-xs text-muted-foreground mt-2">
+          
+          <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+            <p className="text-sm text-amber-600 dark:text-amber-400">
+              <strong>Importante:</strong> No painel do Mercado Pago, selecione os eventos: <code className="bg-muted px-1 rounded">payment</code> e <code className="bg-muted px-1 rounded">subscription_preapproval</code>
+            </p>
+          </div>
+          
+          <p className="text-xs text-muted-foreground">
             Configure esta URL em:{" "}
             <a
               href="https://www.mercadopago.com.br/developers/panel/notifications/webhooks"
