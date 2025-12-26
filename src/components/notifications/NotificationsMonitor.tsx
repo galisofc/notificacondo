@@ -169,7 +169,7 @@ export function NotificationsMonitor() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("notifications_sent")
-        .select("zpro_status, delivered_at, read_at");
+        .select("sent_at, zpro_status, delivered_at, read_at");
 
       if (error) throw error;
 
@@ -185,31 +185,36 @@ export function NotificationsMonitor() {
       };
 
       rows.forEach((n) => {
-        // "Entregue" deve incluir também as mensagens já "Lidas" (pois para ler, precisa ter sido entregue)
+        // "Enviados" = tudo que saiu (sent/read/delivered). "Pendente" = sem status e sem timestamps.
         const isRead = Boolean(n.read_at);
         const isDelivered = Boolean(n.delivered_at) || isRead;
+        const isFailed = n.zpro_status === "failed";
+        const isExplicitSent = n.zpro_status === "sent";
 
         if (isRead) {
           counts.read++;
-          counts.delivered++; // read ⊂ delivered
+          counts.delivered++;
+          counts.sent++;
           return;
         }
 
         if (isDelivered) {
           counts.delivered++;
-          return;
-        }
-
-        if (n.zpro_status === "failed") {
-          counts.failed++;
-          return;
-        }
-
-        if (n.zpro_status === "sent") {
           counts.sent++;
           return;
         }
 
+        if (isFailed) {
+          counts.failed++;
+          return;
+        }
+
+        if (isExplicitSent) {
+          counts.sent++;
+          return;
+        }
+
+        // If it has a sent_at but no other indicators, treat as pending (provider hasn't confirmed yet)
         counts.pending++;
       });
 
