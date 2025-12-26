@@ -70,6 +70,17 @@ serve(async (req) => {
       );
     }
 
+    // Fetch app URL from whatsapp_config
+    const { data: whatsappConfig } = await supabase
+      .from("whatsapp_config")
+      .select("app_url")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    
+    const appBaseUrl = (whatsappConfig as any)?.app_url || req.headers.get("origin") || "https://notificacondo.com.br";
+
     const resident = notification.residents as any;
     const apt = resident.apartments;
 
@@ -137,12 +148,16 @@ serve(async (req) => {
         }, { onConflict: "user_id" });
     }
 
-    // Generate a magic link for the user
+    // Generate a magic link for the user - redirect directly to the occurrence details
+    const redirectPath = `/resident/occurrences/${notification.occurrence_id}`;
+    
+    console.log(`Generating magic link with redirect to: ${appBaseUrl}${redirectPath}`);
+    
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: "magiclink",
       email: resident.email || `resident_${resident.id}@temp.condomaster.app`,
       options: {
-        redirectTo: `${req.headers.get("origin")}/resident`,
+        redirectTo: `${appBaseUrl}${redirectPath}`,
       },
     });
 
