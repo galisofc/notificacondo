@@ -9,10 +9,6 @@ const corsHeaders = {
 // Multi-provider WhatsApp configuration
 type WhatsAppProvider = "zpro" | "zapi" | "evolution" | "wppconnect";
 
-interface ProviderConfig {
-  sendMessage: (phone: string, message: string, config: ProviderSettings) => Promise<{ success: boolean; messageId?: string; error?: string }>;
-}
-
 interface ProviderSettings {
   apiUrl: string;
   apiKey: string;
@@ -28,16 +24,22 @@ interface WhatsAppConfigRow {
   is_active: boolean;
 }
 
+interface SendResult {
+  success: boolean;
+  messageId?: string;
+  error?: string;
+}
+
 // Z-PRO Provider - Uses full URL and Bearer Token
-const zproProvider: ProviderConfig = {
-  async sendMessage(phone: string, message: string, config: ProviderSettings) {
-    // Z-PRO uses the full URL directly, with Bearer token authentication
-    const sendUrl = config.apiUrl.endsWith("/send-text") 
-      ? config.apiUrl 
-      : `${config.apiUrl}/send-text`;
-    
-    console.log("Z-PRO sending to:", sendUrl);
-    
+async function sendZproMessage(phone: string, message: string, config: ProviderSettings): Promise<SendResult> {
+  // Z-PRO API endpoint structure
+  const baseUrl = config.apiUrl.replace(/\/$/, ""); // Remove trailing slash
+  const sendUrl = `${baseUrl}/send-text`;
+  
+  console.log("Z-PRO sending to:", sendUrl);
+  console.log("Phone:", phone.replace(/\D/g, ""));
+  
+  try {
     const response = await fetch(sendUrl, {
       method: "POST",
       headers: { 
@@ -50,24 +52,55 @@ const zproProvider: ProviderConfig = {
       }),
     });
     
-    const data = await response.json();
-    console.log("Z-PRO response:", data);
+    const responseText = await response.text();
+    console.log("Z-PRO response status:", response.status);
+    console.log("Z-PRO response body:", responseText.substring(0, 500));
     
-    if (response.ok && (data.id || data.messageId || data.zapiMessageId)) {
-      return { success: true, messageId: data.id || data.messageId || data.zapiMessageId };
+    // Check if response is HTML (error page)
+    if (responseText.startsWith("<!DOCTYPE") || responseText.startsWith("<html")) {
+      console.error("Z-PRO returned HTML instead of JSON - endpoint might be incorrect");
+      return { 
+        success: false, 
+        error: "API retornou página HTML. Verifique se a URL está correta." 
+      };
     }
     
-    if (response.ok && data.status === "success") {
-      return { success: true, messageId: data.id || "sent" };
+    // Try to parse as JSON
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      console.error("Failed to parse response as JSON:", e);
+      return { 
+        success: false, 
+        error: `Resposta inválida da API: ${responseText.substring(0, 100)}` 
+      };
     }
     
-    return { success: false, error: data.message || data.error || "Erro ao enviar mensagem" };
-  },
-};
+    console.log("Z-PRO parsed response:", data);
+    
+    // Check for success indicators
+    if (response.ok) {
+      if (data.id || data.messageId || data.zapiMessageId || data.message_id) {
+        return { success: true, messageId: data.id || data.messageId || data.zapiMessageId || data.message_id };
+      }
+      if (data.status === "success" || data.success === true) {
+        return { success: true, messageId: data.id || "sent" };
+      }
+      // Even if no ID, if status is OK consider it success
+      return { success: true, messageId: "sent" };
+    }
+    
+    return { success: false, error: data.message || data.error || `Erro ${response.status}` };
+  } catch (error: any) {
+    console.error("Z-PRO fetch error:", error);
+    return { success: false, error: `Erro de conexão: ${error.message}` };
+  }
+}
 
 // Z-API Provider
-const zapiProvider: ProviderConfig = {
-  async sendMessage(phone: string, message: string, config: ProviderSettings) {
+async function sendZapiMessage(phone: string, message: string, config: ProviderSettings): Promise<SendResult> {
+  try {
     const response = await fetch(`${config.apiUrl}/instances/${config.instanceId}/token/${config.apiKey}/send-text`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -84,12 +117,14 @@ const zapiProvider: ProviderConfig = {
       return { success: true, messageId: data.zapiMessageId };
     }
     return { success: false, error: data.message || "Erro ao enviar mensagem" };
-  },
-};
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
 
 // Evolution API Provider
-const evolutionProvider: ProviderConfig = {
-  async sendMessage(phone: string, message: string, config: ProviderSettings) {
+async function sendEvolutionMessage(phone: string, message: string, config: ProviderSettings): Promise<SendResult> {
+  try {
     const response = await fetch(`${config.apiUrl}/message/sendText/${config.instanceId}`, {
       method: "POST",
       headers: {
@@ -109,12 +144,14 @@ const evolutionProvider: ProviderConfig = {
       return { success: true, messageId: data.key.id };
     }
     return { success: false, error: data.message || "Erro ao enviar mensagem" };
-  },
-};
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
 
 // WPPConnect Provider
-const wppconnectProvider: ProviderConfig = {
-  async sendMessage(phone: string, message: string, config: ProviderSettings) {
+async function sendWppconnectMessage(phone: string, message: string, config: ProviderSettings): Promise<SendResult> {
+  try {
     const response = await fetch(`${config.apiUrl}/api/${config.instanceId}/send-message`, {
       method: "POST",
       headers: {
@@ -135,15 +172,10 @@ const wppconnectProvider: ProviderConfig = {
       return { success: true, messageId: data.id };
     }
     return { success: false, error: data.message || "Erro ao enviar mensagem" };
-  },
-};
-
-const providers: Record<WhatsAppProvider, ProviderConfig> = {
-  zpro: zproProvider,
-  zapi: zapiProvider,
-  evolution: evolutionProvider,
-  wppconnect: wppconnectProvider,
-};
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
 
 interface SendTestRequest {
   phone: string;
@@ -199,6 +231,7 @@ serve(async (req) => {
     const whatsappProvider = (typedConfig.provider || "zpro") as WhatsAppProvider;
 
     console.log(`Sending test message via ${whatsappProvider} to ${phone}`);
+    console.log(`API URL: ${typedConfig.api_url}`);
 
     const testMessage = message || `🔔 *Teste de Notificação*
 
@@ -208,12 +241,30 @@ Se você recebeu esta mensagem, a integração com WhatsApp está funcionando co
 
 _Enviado em: ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}_`;
 
-    const provider = providers[whatsappProvider];
-    const result = await provider.sendMessage(phone, testMessage, {
+    const providerSettings: ProviderSettings = {
       apiUrl: typedConfig.api_url,
       apiKey: typedConfig.api_key,
       instanceId: typedConfig.instance_id,
-    });
+    };
+
+    let result: SendResult;
+
+    switch (whatsappProvider) {
+      case "zpro":
+        result = await sendZproMessage(phone, testMessage, providerSettings);
+        break;
+      case "zapi":
+        result = await sendZapiMessage(phone, testMessage, providerSettings);
+        break;
+      case "evolution":
+        result = await sendEvolutionMessage(phone, testMessage, providerSettings);
+        break;
+      case "wppconnect":
+        result = await sendWppconnectMessage(phone, testMessage, providerSettings);
+        break;
+      default:
+        result = { success: false, error: `Provedor desconhecido: ${whatsappProvider}` };
+    }
 
     if (result.success) {
       console.log("Test message sent successfully:", result.messageId);
@@ -232,14 +283,14 @@ _Enviado em: ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo
           success: false,
           error: result.error || "Falha ao enviar mensagem de teste",
         }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
   } catch (error: any) {
     console.error("Unexpected error:", error);
     return new Response(
-      JSON.stringify({ success: false, error: "Erro interno do servidor" }),
+      JSON.stringify({ success: false, error: `Erro interno: ${error.message}` }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
