@@ -90,6 +90,7 @@ const SindicoSubscriptions = () => {
   const [isChangingPlan, setIsChangingPlan] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [planFilter, setPlanFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   // Fetch plans
   const { data: plans } = useQuery({
@@ -432,6 +433,16 @@ const SindicoSubscriptions = () => {
                   ))}
                 </SelectContent>
               </Select>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full md:w-[150px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="active">Ativos</SelectItem>
+                  <SelectItem value="inactive">Inativos</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {(() => {
@@ -439,12 +450,15 @@ const SindicoSubscriptions = () => {
                 const matchesSearch = searchQuery === "" || 
                   sub.condominium.name.toLowerCase().includes(searchQuery.toLowerCase());
                 const matchesPlan = planFilter === "all" || sub.plan === planFilter;
-                return matchesSearch && matchesPlan;
+                const matchesStatus = statusFilter === "all" || 
+                  (statusFilter === "active" && sub.active) || 
+                  (statusFilter === "inactive" && !sub.active);
+                return matchesSearch && matchesPlan && matchesStatus;
               });
 
               return filteredSubscriptions && filteredSubscriptions.length > 0 ? (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {subscriptions.map((sub) => {
+                {filteredSubscriptions.map((sub) => {
                   const currentPlan = plans?.find((p) => p.slug === sub.plan);
                   const notificationsPercent = sub.notifications_limit > 0 
                     ? Math.round((sub.notifications_used / sub.notifications_limit) * 100) 
@@ -554,12 +568,12 @@ const SindicoSubscriptions = () => {
               <div className="text-center py-12">
                 <Building2 className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
                 <p className="text-muted-foreground">
-                  {searchQuery || planFilter !== "all" 
+                  {searchQuery || planFilter !== "all" || statusFilter !== "all"
                     ? "Nenhuma assinatura encontrada com os filtros aplicados" 
                     : "Nenhuma assinatura encontrada"}
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {searchQuery || planFilter !== "all" 
+                  {searchQuery || planFilter !== "all" || statusFilter !== "all"
                     ? "Tente ajustar os filtros de busca" 
                     : "Cadastre um condomínio para começar"}
                 </p>
