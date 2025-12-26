@@ -70,7 +70,8 @@ const sindicoNavItems: NavItem[] = [
 
 const residentNavItems: NavItem[] = [
   { title: "Dashboard", url: "/resident", icon: LayoutDashboard },
-  { title: "Minhas Ocorrências", url: "/resident/occurrences", icon: FileText },
+  // A lista de ocorrências do morador fica em /resident
+  { title: "Minhas Ocorrências", url: "/resident", icon: FileText },
   { title: "Meu Perfil", url: "/resident/profile", icon: User },
 ];
 
