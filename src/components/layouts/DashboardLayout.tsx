@@ -78,7 +78,7 @@ function SidebarNavigation() {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
-  const { role, residentInfo, loading } = useUserRole();
+  const { role, residentInfo, profileInfo, loading } = useUserRole();
   const { toast } = useToast();
   const [pendingDefenses, setPendingDefenses] = useState(0);
   const [condoIds, setCondoIds] = useState<string[]>([]);
@@ -261,6 +261,9 @@ function SidebarNavigation() {
   const getUserName = () => {
     if (residentInfo?.full_name) {
       return residentInfo.full_name;
+    }
+    if (profileInfo?.full_name) {
+      return profileInfo.full_name;
     }
     return user?.email || "Usuário";
   };
