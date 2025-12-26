@@ -149,7 +149,7 @@ const DefenseAnalysis = () => {
             file_type
           )
         `)
-        .eq("occurrences.status", "analisando")
+        .eq("occurrences.status", "em_defesa")
         .order("submitted_at", { ascending: false });
 
       if (error) throw error;
