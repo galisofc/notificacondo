@@ -101,7 +101,7 @@ const App = () => (
                 }
               />
               <Route
-                path="/settings"
+                path="/sindico/settings"
                 element={
                   <ProtectedRoute requiredRole="sindico">
                     <SindicoSettings />
@@ -109,7 +109,7 @@ const App = () => (
                 }
               />
               <Route
-                path="/settings/profile"
+                path="/sindico/profile"
                 element={
                   <ProtectedRoute requiredRole="sindico">
                     <SindicoProfile />

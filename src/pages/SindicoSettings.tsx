@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import {
-  ArrowLeft,
-  Settings,
   CreditCard,
   Bell,
   AlertTriangle,
@@ -19,7 +18,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import DashboardLayout from "@/components/layouts/DashboardLayout";
 
 interface Subscription {
   id: string;
@@ -133,12 +132,11 @@ const SindicoSettings = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <DashboardHeader />
+      <DashboardLayout>
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
@@ -147,23 +145,18 @@ const SindicoSettings = () => {
   const PlanIcon = planInfo.icon;
 
   return (
-    <div className="min-h-screen bg-background">
-      <DashboardHeader />
-
-      <main className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h1 className="font-display text-3xl font-bold text-foreground">
-              Configurações
-            </h1>
-            <p className="text-muted-foreground">
-              Gerencie seu plano e limites de uso
-            </p>
-          </div>
+    <DashboardLayout>
+      <Helmet>
+        <title>Configurações | CondoManager</title>
+      </Helmet>
+      <div className="space-y-6 animate-fade-up">
+        <div>
+          <h1 className="font-display text-3xl font-bold text-foreground">
+            Configurações
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Gerencie seu plano e limites de uso
+          </p>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
@@ -361,15 +354,15 @@ const SindicoSettings = () => {
             <div className="mt-6 pt-6 border-t border-border/50">
               <Button 
                 variant="outline" 
-                onClick={() => navigate("/settings/profile")}
+                onClick={() => navigate("/sindico/profile")}
               >
                 Editar Perfil
               </Button>
             </div>
           </CardContent>
         </Card>
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 };
 
