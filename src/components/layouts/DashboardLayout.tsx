@@ -200,7 +200,7 @@ function SidebarNavigation() {
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
     { title: "Condomínios", url: "/condominiums", icon: Building2 },
     { title: "Ocorrências", url: "/occurrences", icon: FileText },
-    { title: "Análise de Defesas", url: "/defense-analysis", icon: Scale, badge: pendingDefenses },
+    { title: "Análise de Defesas", url: "/defenses", icon: Scale, badge: pendingDefenses },
     { title: "Notificações", url: "/notifications", icon: Bell },
     { title: "Relatórios", url: "/reports", icon: BarChart3 },
     { title: "Configurações", url: "/sindico/settings", icon: Settings },
