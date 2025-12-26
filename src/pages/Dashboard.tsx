@@ -13,6 +13,7 @@ import {
   ChevronRight,
   ArrowUpRight,
   AlertTriangle,
+  Shield,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -23,6 +24,7 @@ interface DashboardStats {
   residents: number;
   occurrences: number;
   pendingFines: number;
+  pendingDefenses: number;
 }
 
 const Dashboard = () => {
@@ -33,6 +35,7 @@ const Dashboard = () => {
     residents: 0,
     occurrences: 0,
     pendingFines: 0,
+    pendingDefenses: 0,
   });
   const [profile, setProfile] = useState<{ full_name: string } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -65,6 +68,7 @@ const Dashboard = () => {
         let residentsCount = 0;
         let occurrencesCount = 0;
         let finesCount = 0;
+        let defensesCount = 0;
 
         if (condoIds.length > 0) {
           const { data: blocks } = await supabase
@@ -99,6 +103,15 @@ const Dashboard = () => {
 
           occurrencesCount = occCount || 0;
 
+          // Count pending defenses (occurrences with status "em_defesa")
+          const { count: defCount } = await supabase
+            .from("occurrences")
+            .select("*", { count: "exact", head: true })
+            .in("condominium_id", condoIds)
+            .eq("status", "em_defesa");
+
+          defensesCount = defCount || 0;
+
           const { data: occurrencesData } = await supabase
             .from("occurrences")
             .select("id")
@@ -123,6 +136,7 @@ const Dashboard = () => {
           residents: residentsCount,
           occurrences: occurrencesCount,
           pendingFines: finesCount,
+          pendingDefenses: defensesCount,
         });
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
@@ -157,6 +171,13 @@ const Dashboard = () => {
       action: () => navigate("/occurrences"),
     },
     {
+      title: "Defesas Pendentes",
+      value: stats.pendingDefenses,
+      icon: Shield,
+      gradient: "from-purple-500 to-violet-600",
+      action: () => navigate("/defense-analysis"),
+    },
+    {
       title: "Multas Pendentes",
       value: stats.pendingFines,
       icon: DollarSign,
@@ -177,6 +198,12 @@ const Dashboard = () => {
       label: "Nova Ocorrência",
       description: "Registrar uma nova ocorrência",
       action: () => navigate("/occurrences"),
+    },
+    {
+      icon: Shield,
+      label: "Analisar Defesas",
+      description: `${stats.pendingDefenses} defesa${stats.pendingDefenses !== 1 ? "s" : ""} pendente${stats.pendingDefenses !== 1 ? "s" : ""}`,
+      action: () => navigate("/defense-analysis"),
     },
   ];
 
