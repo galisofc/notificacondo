@@ -21,6 +21,7 @@ import Notifications from "./pages/Notifications";
 import SindicoSettings from "./pages/SindicoSettings";
 import SindicoProfile from "./pages/SindicoProfile";
 import ResidentAccess from "./pages/ResidentAccess";
+import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -133,6 +134,14 @@ const App = () => (
                 }
               />
               <Route path="/acesso/:token" element={<ResidentAccess />} />
+              <Route
+                path="/superadmin"
+                element={
+                  <ProtectedRoute>
+                    <SuperAdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>
