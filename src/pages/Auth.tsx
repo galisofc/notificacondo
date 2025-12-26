@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,12 +35,90 @@ const Auth = () => {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
 
-  const from = location.state?.from?.pathname || "/dashboard";
+  // Redirect authenticated users based on their role
+  useEffect(() => {
+    const checkRoleAndRedirect = async () => {
+      if (user) {
+        try {
+          // Check user role
+          const { data: roleData } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+          const role = roleData?.role || "morador";
+
+          // Check if user is a resident
+          if (role === "morador") {
+            const { data: residentData } = await supabase
+              .from("residents")
+              .select("id")
+              .eq("user_id", user.id)
+              .maybeSingle();
+
+            // If user is a resident, redirect to resident dashboard
+            if (residentData) {
+              navigate("/resident", { replace: true });
+              return;
+            }
+          }
+
+          // Síndico or super_admin goes to main dashboard
+          if (role === "sindico" || role === "super_admin") {
+            navigate("/dashboard", { replace: true });
+            return;
+          }
+
+          // Default fallback
+          navigate("/dashboard", { replace: true });
+        } catch (error) {
+          console.error("Error checking role:", error);
+          navigate("/dashboard", { replace: true });
+        }
+      }
+    };
+
+    checkRoleAndRedirect();
+  }, [user, navigate]);
+
+  const redirectBasedOnRole = async (userId: string) => {
+    try {
+      // Check user role
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      const role = roleData?.role || "morador";
+
+      // Check if user is a resident
+      if (role === "morador") {
+        const { data: residentData } = await supabase
+          .from("residents")
+          .select("id")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        // If user is a resident, redirect to resident dashboard
+        if (residentData) {
+          return "/resident";
+        }
+      }
+
+      // Síndico or super_admin goes to main dashboard
+      return "/dashboard";
+    } catch (error) {
+      console.error("Error checking role:", error);
+      return "/dashboard";
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -91,11 +170,16 @@ const Auth = () => {
           return;
         }
 
-        toast({
-          title: "Bem-vindo!",
-          description: "Login realizado com sucesso.",
-        });
-        navigate(from, { replace: true });
+        // Get current user to determine redirect
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (currentUser) {
+          const redirectPath = await redirectBasedOnRole(currentUser.id);
+          toast({
+            title: "Bem-vindo!",
+            description: "Login realizado com sucesso.",
+          });
+          navigate(redirectPath, { replace: true });
+        }
       } else {
         const result = signupSchema.safeParse(formData);
 
@@ -131,11 +215,12 @@ const Auth = () => {
           return;
         }
 
+        // New users (síndicos) go to main dashboard
         toast({
           title: "Conta criada!",
           description: "Bem-vindo ao NotificaCondo.",
         });
-        navigate(from, { replace: true });
+        navigate("/dashboard", { replace: true });
       }
     } catch (err) {
       toast({
