@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
+import { format, subDays, startOfDay, eachDayOfInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Card,
@@ -37,7 +37,25 @@ import {
   Clock,
   Search,
   Radio,
+  TrendingUp,
 } from "lucide-react";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  Legend,
+} from "recharts";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
 
 type NotificationStatus = "all" | "sent" | "delivered" | "read" | "failed" | "pending";
 
@@ -67,11 +85,19 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.R
   pending: { label: "Pendente", color: "bg-amber-500/10 text-amber-500 border-amber-500/20", icon: <Clock className="h-3 w-3" /> },
 };
 
+const chartConfig = {
+  total: { label: "Total", color: "hsl(var(--primary))" },
+  delivered: { label: "Entregues", color: "hsl(142, 76%, 36%)" },
+  read: { label: "Lidos", color: "hsl(262, 83%, 58%)" },
+  failed: { label: "Falhas", color: "hsl(var(--destructive))" },
+};
+
 export function NotificationsMonitor() {
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<NotificationStatus>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [isLive, setIsLive] = useState(true);
+  const [chartPeriod, setChartPeriod] = useState<"7" | "14" | "30">("7");
 
   // Realtime subscription
   useEffect(() => {
@@ -156,6 +182,54 @@ export function NotificationsMonitor() {
       });
 
       return counts;
+    },
+  });
+
+  // Chart data query
+  const { data: chartData } = useQuery({
+    queryKey: ["notifications-chart", chartPeriod],
+    queryFn: async () => {
+      const days = parseInt(chartPeriod);
+      const startDate = startOfDay(subDays(new Date(), days - 1));
+      
+      const { data, error } = await supabase
+        .from("notifications_sent")
+        .select("sent_at, zpro_status, delivered_at, read_at")
+        .gte("sent_at", startDate.toISOString())
+        .order("sent_at", { ascending: true });
+
+      if (error) throw error;
+
+      // Generate all days in the range
+      const allDays = eachDayOfInterval({
+        start: startDate,
+        end: new Date(),
+      });
+
+      // Group by day
+      const dayMap = new Map<string, { total: number; delivered: number; read: number; failed: number }>();
+      
+      allDays.forEach((day) => {
+        const key = format(day, "yyyy-MM-dd");
+        dayMap.set(key, { total: 0, delivered: 0, read: 0, failed: 0 });
+      });
+
+      data.forEach((n) => {
+        const key = format(new Date(n.sent_at), "yyyy-MM-dd");
+        const dayData = dayMap.get(key);
+        if (dayData) {
+          dayData.total++;
+          if (n.read_at) dayData.read++;
+          else if (n.delivered_at) dayData.delivered++;
+          else if (n.zpro_status === "failed") dayData.failed++;
+        }
+      });
+
+      return Array.from(dayMap.entries()).map(([date, counts]) => ({
+        date,
+        displayDate: format(new Date(date), "dd/MM", { locale: ptBR }),
+        ...counts,
+      }));
     },
   });
 
@@ -250,6 +324,90 @@ export function NotificationsMonitor() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Chart Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <TrendingUp className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle>Evolução de Notificações</CardTitle>
+                <CardDescription>
+                  Acompanhe o volume de notificações ao longo do tempo
+                </CardDescription>
+              </div>
+            </div>
+            <Select value={chartPeriod} onValueChange={(v) => setChartPeriod(v as "7" | "14" | "30")}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">Últimos 7 dias</SelectItem>
+                <SelectItem value="14">Últimos 14 dias</SelectItem>
+                <SelectItem value="30">Últimos 30 dias</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {chartData && chartData.length > 0 ? (
+            <ChartContainer config={chartConfig} className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis 
+                    dataKey="displayDate" 
+                    tick={{ fontSize: 12 }}
+                    tickLine={false}
+                    axisLine={false}
+                    className="fill-muted-foreground"
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 12 }}
+                    tickLine={false}
+                    axisLine={false}
+                    className="fill-muted-foreground"
+                    allowDecimals={false}
+                  />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Legend />
+                  <Bar 
+                    dataKey="total" 
+                    name="Total" 
+                    fill="hsl(var(--primary))" 
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar 
+                    dataKey="delivered" 
+                    name="Entregues" 
+                    fill="hsl(142, 76%, 36%)" 
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar 
+                    dataKey="read" 
+                    name="Lidos" 
+                    fill="hsl(262, 83%, 58%)" 
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar 
+                    dataKey="failed" 
+                    name="Falhas" 
+                    fill="hsl(var(--destructive))" 
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          ) : (
+            <div className="h-[300px] flex items-center justify-center">
+              <p className="text-muted-foreground">Nenhum dado disponível para o período</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Filters and Table */}
       <Card>
