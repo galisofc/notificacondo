@@ -140,14 +140,30 @@ serve(async (req) => {
         .eq("id", resident.id);
     }
 
-    // Always ensure user role exists for morador (even for existing users)
+    // Always ensure user role is "morador" (even for existing users)
+    // First try to update, then insert if not exists
     if (userId) {
+      console.log(`Setting user role to morador for user: ${userId}`);
+      
+      // Delete any existing role first (to override sindico role from trigger)
       await supabase
         .from("user_roles")
-        .upsert({
+        .delete()
+        .eq("user_id", userId);
+      
+      // Insert morador role
+      const { error: roleError } = await supabase
+        .from("user_roles")
+        .insert({
           user_id: userId,
           role: "morador",
-        }, { onConflict: "user_id" });
+        });
+      
+      if (roleError) {
+        console.error("Error setting user role:", roleError);
+      } else {
+        console.log("User role set to morador successfully");
+      }
     }
 
     // Generate a magic link for the user - redirect directly to the occurrence details
