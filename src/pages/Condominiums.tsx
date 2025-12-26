@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -13,12 +14,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  Shield,
   Building2,
   Plus,
   Edit,
   Trash2,
-  ArrowLeft,
   Loader2,
   MapPin,
   FileText,
@@ -26,7 +25,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { isValidCNPJ } from "@/lib/utils";
 
 interface Condominium {
@@ -240,22 +239,18 @@ const Condominiums = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <DashboardHeader />
-
-      <main className="container mx-auto px-4 py-8">
-        <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h1 className="font-display text-3xl font-bold text-foreground">
-              Condomínios
-            </h1>
-            <p className="text-muted-foreground">
-              Gerencie seus condomínios cadastrados
-            </p>
-          </div>
+    <DashboardLayout>
+      <Helmet>
+        <title>Condomínios | CondoManager</title>
+      </Helmet>
+      <div className="space-y-6 animate-fade-up">
+        <div>
+          <h1 className="font-display text-3xl font-bold text-foreground">
+            Condomínios
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Gerencie seus condomínios cadastrados
+          </p>
         </div>
 
         {/* Add Button */}
@@ -465,8 +460,8 @@ const Condominiums = () => {
             ))}
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 };
 

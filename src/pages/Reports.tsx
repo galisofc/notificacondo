@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  ArrowLeft,
   Loader2,
   BarChart3,
   TrendingUp,
@@ -32,7 +32,7 @@ import {
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useToast } from "@/hooks/use-toast";
-import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { format, startOfMonth, endOfMonth, subMonths, parseISO, isWithinInterval, eachMonthOfInterval, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -430,32 +430,27 @@ const Reports = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <DashboardHeader />
+      <DashboardLayout>
         <div className="flex items-center justify-center py-24">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <DashboardHeader />
-
-      <main className="container mx-auto px-4 py-8">
+    <DashboardLayout>
+      <Helmet>
+        <title>Relatórios | CondoManager</title>
+      </Helmet>
+      <div className="space-y-6 animate-fade-up">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <div>
-              <h1 className="font-display text-3xl font-bold text-foreground">Relatórios</h1>
-              <p className="text-muted-foreground">
-                Estatísticas de ocorrências, multas e inadimplência
-              </p>
-            </div>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="font-display text-3xl font-bold text-foreground">Relatórios</h1>
+            <p className="text-muted-foreground mt-1">
+              Estatísticas de ocorrências, multas e inadimplência
+            </p>
           </div>
           <Button onClick={exportToPDF} className="gap-2">
             <Download className="w-4 h-4" />
@@ -806,8 +801,8 @@ const Reports = () => {
             </div>
           </CardContent>
         </Card>
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 };
 

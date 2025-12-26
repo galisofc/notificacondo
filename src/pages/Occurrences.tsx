@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -22,7 +23,6 @@ import {
 import {
   AlertTriangle,
   Plus,
-  ArrowLeft,
   Loader2,
   Upload,
   X,
@@ -36,7 +36,7 @@ import {
   Send,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import DashboardLayout from "@/components/layouts/DashboardLayout";
 
 interface Condominium {
   id: string;
@@ -387,22 +387,18 @@ const Occurrences = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <DashboardHeader />
-
-      <main className="container mx-auto px-4 py-8">
-        <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h1 className="font-display text-3xl font-bold text-foreground">
-              Ocorrências
-            </h1>
-            <p className="text-muted-foreground">
-              Registre e gerencie ocorrências do condomínio
-            </p>
-          </div>
+    <DashboardLayout>
+      <Helmet>
+        <title>Ocorrências | CondoManager</title>
+      </Helmet>
+      <div className="space-y-6 animate-fade-up">
+        <div>
+          <h1 className="font-display text-3xl font-bold text-foreground">
+            Ocorrências
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Registre e gerencie ocorrências do condomínio
+          </p>
         </div>
 
         {/* Filters and Add Button */}
@@ -890,8 +886,8 @@ const Occurrences = () => {
             </form>
           </DialogContent>
         </Dialog>
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 };
 
