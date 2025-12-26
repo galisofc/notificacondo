@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
@@ -110,6 +110,38 @@ const SindicoInvoices = () => {
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus>("all");
   const [condominiumFilter, setCondominiumFilter] = useState<string>("all");
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // Subscribe to realtime updates on invoices table
+  useEffect(() => {
+    const channel = supabase
+      .channel("invoices-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "invoices",
+        },
+        (payload) => {
+          console.log("Invoice updated via realtime:", payload);
+          // Invalidate queries to refresh the list
+          queryClient.invalidateQueries({ queryKey: ["sindico-invoices"] });
+          
+          // Show toast if payment was confirmed
+          if (payload.new?.status === "paid" && payload.old?.status !== "paid") {
+            toast({
+              title: "Pagamento confirmado!",
+              description: "Uma fatura foi paga com sucesso.",
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient, toast]);
 
   // Fetch user profile to get email
   const { data: userProfile } = useQuery({
