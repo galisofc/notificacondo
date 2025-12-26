@@ -67,7 +67,8 @@ export function MercadoPagoTransparentCheckout({
         .from("mercadopago_config")
         .select("public_key, is_sandbox, is_active")
         .eq("is_active", true)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
       if (error) {
         console.error("Error fetching MercadoPago config:", error);
@@ -201,10 +202,18 @@ export function MercadoPagoTransparentCheckout({
   }, []);
 
   const handleOpenDialog = () => {
-    if (!mpConfig?.public_key) {
+    if (!mpConfig) {
       toast({
         title: "Mercado Pago não configurado",
-        description: "A chave pública do Mercado Pago não está configurada.",
+        description: "O Mercado Pago ainda não foi configurado pelo administrador. Entre em contato com o suporte.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!mpConfig.public_key) {
+      toast({
+        title: "Chave pública não configurada",
+        description: "A chave pública do Mercado Pago não está configurada. Entre em contato com o suporte.",
         variant: "destructive",
       });
       return;
@@ -223,7 +232,7 @@ export function MercadoPagoTransparentCheckout({
         variant={variant}
         size={size}
         onClick={handleOpenDialog}
-        disabled={isLoadingConfig || !mpConfig?.is_active}
+        disabled={isLoadingConfig}
       >
         <CreditCard className="h-4 w-4 mr-1" />
         {buttonText}
