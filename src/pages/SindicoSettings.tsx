@@ -4,8 +4,17 @@ import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   CreditCard,
   Bell,
@@ -16,6 +25,8 @@ import {
   Building2,
   CheckCircle2,
   Loader2,
+  ArrowRight,
+  Sparkles,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -44,27 +55,43 @@ interface Profile {
   phone: string | null;
 }
 
-const PLAN_DETAILS = {
+type PlanType = "start" | "essencial" | "profissional" | "enterprise";
+
+const PLAN_DETAILS: Record<PlanType, {
+  name: string;
+  description: string;
+  color: string;
+  icon: typeof Zap;
+  features: string[];
+  price: number;
+  limits: { notifications: number; warnings: number; fines: number };
+}> = {
   start: {
     name: "Start",
     description: "Ideal para começar",
     color: "from-slate-500 to-slate-600",
     icon: Zap,
     features: ["10 notificações/mês", "10 advertências/mês", "Sem multas"],
+    price: 0,
+    limits: { notifications: 10, warnings: 10, fines: 0 },
   },
   essencial: {
     name: "Essencial",
     description: "Para condomínios pequenos",
     color: "from-blue-500 to-blue-600",
     icon: Building2,
-    features: ["50 notificações/mês", "50 advertências/mês", "10 multas/mês"],
+    features: ["50 notificações/mês", "50 advertências/mês", "25 multas/mês"],
+    price: 49.90,
+    limits: { notifications: 50, warnings: 50, fines: 25 },
   },
   profissional: {
     name: "Profissional",
     description: "Para condomínios médios",
     color: "from-purple-500 to-purple-600",
     icon: Crown,
-    features: ["200 notificações/mês", "200 advertências/mês", "50 multas/mês", "Relatórios avançados"],
+    features: ["200 notificações/mês", "200 advertências/mês", "100 multas/mês", "Relatórios avançados"],
+    price: 99.90,
+    limits: { notifications: 200, warnings: 200, fines: 100 },
   },
   enterprise: {
     name: "Enterprise",
@@ -72,8 +99,12 @@ const PLAN_DETAILS = {
     color: "from-amber-500 to-amber-600",
     icon: Crown,
     features: ["Ilimitado", "Suporte prioritário", "API personalizada"],
+    price: 199.90,
+    limits: { notifications: 999999, warnings: 999999, fines: 999999 },
   },
 };
+
+const PLAN_ORDER: PlanType[] = ["start", "essencial", "profissional", "enterprise"];
 
 const SindicoSettings = () => {
   const { user } = useAuth();
@@ -84,6 +115,9 @@ const SindicoSettings = () => {
   const [condominiums, setCondominiums] = useState<CondominiumWithSubscription[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [selectedCondo, setSelectedCondo] = useState<CondominiumWithSubscription | null>(null);
+  const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<PlanType | null>(null);
+  const [isUpgrading, setIsUpgrading] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -150,6 +184,69 @@ const SindicoSettings = () => {
     return "bg-primary";
   };
 
+  const handleUpgrade = async () => {
+    if (!selectedCondo?.subscription?.id || !selectedPlan) return;
+
+    setIsUpgrading(true);
+    try {
+      const limits = PLAN_DETAILS[selectedPlan].limits;
+
+      const { error } = await supabase
+        .from("subscriptions")
+        .update({
+          plan: selectedPlan,
+          notifications_limit: limits.notifications,
+          warnings_limit: limits.warnings,
+          fines_limit: limits.fines,
+        })
+        .eq("id", selectedCondo.subscription.id);
+
+      if (error) throw error;
+
+      // Update local state
+      const updatedCondos = condominiums.map((c) => {
+        if (c.id === selectedCondo.id && c.subscription) {
+          return {
+            ...c,
+            subscription: {
+              ...c.subscription,
+              plan: selectedPlan,
+              notifications_limit: limits.notifications,
+              warnings_limit: limits.warnings,
+              fines_limit: limits.fines,
+            },
+          };
+        }
+        return c;
+      });
+
+      setCondominiums(updatedCondos);
+      setSelectedCondo(updatedCondos.find((c) => c.id === selectedCondo.id) || null);
+
+      toast({
+        title: "Plano atualizado!",
+        description: `Seu plano foi alterado para ${PLAN_DETAILS[selectedPlan].name}.`,
+      });
+
+      setIsUpgradeDialogOpen(false);
+      setSelectedPlan(null);
+    } catch (error) {
+      console.error("Error upgrading plan:", error);
+      toast({
+        title: "Erro ao atualizar plano",
+        description: "Tente novamente mais tarde.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpgrading(false);
+    }
+  };
+
+  const subscription = selectedCondo?.subscription;
+  const currentPlan = subscription?.plan || "start";
+  const currentPlanIndex = PLAN_ORDER.indexOf(currentPlan);
+  const availableUpgrades = PLAN_ORDER.filter((_, index) => index > currentPlanIndex);
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -160,8 +257,6 @@ const SindicoSettings = () => {
     );
   }
 
-  const subscription = selectedCondo?.subscription;
-  const currentPlan = subscription?.plan || "start";
   const planInfo = PLAN_DETAILS[currentPlan];
   const PlanIcon = planInfo.icon;
 
@@ -263,18 +358,23 @@ const SindicoSettings = () => {
                   <Crown className="w-6 h-6 text-primary" />
                 </div>
                 <h3 className="font-semibold text-foreground mb-2">
-                  Precisa de mais?
+                  {availableUpgrades.length > 0 ? "Precisa de mais?" : "Plano Máximo"}
                 </h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Faça upgrade do seu plano para ter mais recursos e limites maiores.
+                  {availableUpgrades.length > 0 
+                    ? "Faça upgrade do seu plano para ter mais recursos e limites maiores."
+                    : "Você já possui o plano mais completo disponível."}
                 </p>
-                <Button 
-                  variant="hero" 
-                  className="w-full"
-                  onClick={() => toast({ title: "Em breve", description: "Integração de pagamento em desenvolvimento." })}
-                >
-                  Ver Planos
-                </Button>
+                {availableUpgrades.length > 0 && (
+                  <Button 
+                    variant="hero" 
+                    className="w-full"
+                    onClick={() => setIsUpgradeDialogOpen(true)}
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Ver Planos
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -406,6 +506,95 @@ const SindicoSettings = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Upgrade Dialog */}
+        <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-primary" />
+                Fazer Upgrade de Plano
+              </DialogTitle>
+              <DialogDescription>
+                Escolha um novo plano para {selectedCondo?.name}. O upgrade será aplicado imediatamente.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-4 py-4">
+              {availableUpgrades.map((planKey) => {
+                const plan = PLAN_DETAILS[planKey];
+                const PlanIcon = plan.icon;
+                const isSelected = selectedPlan === planKey;
+
+                return (
+                  <Card
+                    key={planKey}
+                    className={`cursor-pointer transition-all ${
+                      isSelected 
+                        ? "border-primary ring-2 ring-primary/20" 
+                        : "hover:border-primary/50"
+                    }`}
+                    onClick={() => setSelectedPlan(planKey)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-4">
+                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${plan.color} flex items-center justify-center shrink-0`}>
+                          <PlanIcon className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <h4 className="font-semibold text-foreground">{plan.name}</h4>
+                            <div className="flex items-center gap-2">
+                              {isSelected && (
+                                <Badge className="bg-primary text-primary-foreground">
+                                  Selecionado
+                                </Badge>
+                              )}
+                              <span className="font-bold text-foreground">
+                                {plan.price > 0 ? `R$ ${plan.price.toFixed(2)}/mês` : "Grátis"}
+                              </span>
+                            </div>
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-2">{plan.description}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {plan.features.map((feature, i) => (
+                              <span key={i} className="text-xs text-muted-foreground flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3 text-primary" />
+                                {feature}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsUpgradeDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleUpgrade} 
+                disabled={!selectedPlan || isUpgrading}
+              >
+                {isUpgrading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Atualizando...
+                  </>
+                ) : (
+                  <>
+                    Fazer Upgrade
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
