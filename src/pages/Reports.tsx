@@ -27,7 +27,10 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
+  Download,
 } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { useToast } from "@/hooks/use-toast";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { format, startOfMonth, endOfMonth, subMonths, parseISO, isWithinInterval } from "date-fns";
@@ -237,6 +240,157 @@ const Reports = () => {
     }).format(value);
   };
 
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let yPos = 20;
+
+    // Header
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
+    doc.text("Relatório de Ocorrências e Multas", pageWidth / 2, yPos, { align: "center" });
+    
+    yPos += 10;
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    const selectedCondoName = selectedCondominium === "all" 
+      ? "Todos os Condomínios" 
+      : condominiums.find(c => c.id === selectedCondominium)?.name || "";
+    doc.text(`Condomínio: ${selectedCondoName}`, pageWidth / 2, yPos, { align: "center" });
+    
+    yPos += 6;
+    doc.text(`Período: ${format(parseISO(dateFrom), "dd/MM/yyyy", { locale: ptBR })} a ${format(parseISO(dateTo), "dd/MM/yyyy", { locale: ptBR })}`, pageWidth / 2, yPos, { align: "center" });
+    
+    yPos += 6;
+    doc.setFontSize(8);
+    doc.setTextColor(100);
+    doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, pageWidth / 2, yPos, { align: "center" });
+    doc.setTextColor(0);
+
+    // Summary Section
+    yPos += 15;
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("Resumo Geral", 14, yPos);
+
+    yPos += 8;
+    autoTable(doc, {
+      startY: yPos,
+      head: [["Indicador", "Valor"]],
+      body: [
+        ["Total de Ocorrências", stats.totalOccurrences.toString()],
+        ["Total em Multas", formatCurrency(stats.totalFinesAmount)],
+        ["Taxa de Pagamento", `${stats.paymentRate.toFixed(1)}%`],
+        ["Taxa de Inadimplência", `${stats.delinquencyRate.toFixed(1)}%`],
+      ],
+      theme: "striped",
+      headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: "bold" },
+      styles: { fontSize: 10, cellPadding: 4 },
+      columnStyles: { 0: { fontStyle: "bold" } },
+    });
+
+    yPos = (doc as any).lastAutoTable.finalY + 15;
+
+    // Occurrences by Type
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("Ocorrências por Tipo", 14, yPos);
+
+    yPos += 8;
+    autoTable(doc, {
+      startY: yPos,
+      head: [["Tipo", "Quantidade"]],
+      body: [
+        ["Advertências", stats.byType.advertencia.toString()],
+        ["Notificações", stats.byType.notificacao.toString()],
+        ["Multas", stats.byType.multa.toString()],
+      ],
+      theme: "striped",
+      headStyles: { fillColor: [245, 158, 11], textColor: 255, fontStyle: "bold" },
+      styles: { fontSize: 10, cellPadding: 4 },
+    });
+
+    yPos = (doc as any).lastAutoTable.finalY + 15;
+
+    // Occurrences by Status
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("Ocorrências por Status", 14, yPos);
+
+    yPos += 8;
+    const statusRows = [
+      ["Registrada", stats.byStatus.registrada.toString()],
+      ["Notificado", stats.byStatus.notificado.toString()],
+      ["Em Defesa", stats.byStatus.em_defesa.toString()],
+      ["Analisando", stats.byStatus.analisando.toString()],
+      ["Arquivada", stats.byStatus.arquivada.toString()],
+      ["Advertido", stats.byStatus.advertido.toString()],
+      ["Multado", stats.byStatus.multado.toString()],
+    ].filter(([_, count]) => parseInt(count) > 0);
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [["Status", "Quantidade"]],
+      body: statusRows,
+      theme: "striped",
+      headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: "bold" },
+      styles: { fontSize: 10, cellPadding: 4 },
+    });
+
+    yPos = (doc as any).lastAutoTable.finalY + 15;
+
+    // Check if we need a new page
+    if (yPos > 220) {
+      doc.addPage();
+      yPos = 20;
+    }
+
+    // Fines Details
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("Detalhamento de Multas", 14, yPos);
+
+    yPos += 8;
+    autoTable(doc, {
+      startY: yPos,
+      head: [["Status", "Quantidade", "Valor Total"]],
+      body: [
+        ["Pagas", stats.paidCount.toString(), formatCurrency(stats.paidAmount)],
+        ["Em Aberto", stats.pendingCount.toString(), formatCurrency(stats.pendingAmount)],
+        ["Vencidas", stats.overdueCount.toString(), formatCurrency(stats.overdueAmount)],
+        ["TOTAL", stats.totalFines.toString(), formatCurrency(stats.totalFinesAmount)],
+      ],
+      theme: "striped",
+      headStyles: { fillColor: [34, 197, 94], textColor: 255, fontStyle: "bold" },
+      styles: { fontSize: 10, cellPadding: 4 },
+      bodyStyles: { textColor: 50 },
+      didParseCell: (data) => {
+        if (data.row.index === 3) {
+          data.cell.styles.fontStyle = "bold";
+          data.cell.styles.fillColor = [240, 240, 240];
+        }
+      },
+    });
+
+    // Footer
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(100);
+      doc.text(
+        `Página ${i} de ${totalPages}`,
+        pageWidth / 2,
+        doc.internal.pageSize.getHeight() - 10,
+        { align: "center" }
+      );
+    }
+
+    // Save the PDF
+    const fileName = `relatorio_${format(new Date(), "yyyy-MM-dd_HH-mm")}.pdf`;
+    doc.save(fileName);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -254,16 +408,22 @@ const Reports = () => {
 
       <main className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h1 className="font-display text-3xl font-bold text-foreground">Relatórios</h1>
-            <p className="text-muted-foreground">
-              Estatísticas de ocorrências, multas e inadimplência
-            </p>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <div>
+              <h1 className="font-display text-3xl font-bold text-foreground">Relatórios</h1>
+              <p className="text-muted-foreground">
+                Estatísticas de ocorrências, multas e inadimplência
+              </p>
+            </div>
           </div>
+          <Button onClick={exportToPDF} className="gap-2">
+            <Download className="w-4 h-4" />
+            Exportar PDF
+          </Button>
         </div>
 
         {/* Filters */}
