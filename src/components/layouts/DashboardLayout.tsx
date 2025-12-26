@@ -38,6 +38,7 @@ import {
   User,
   ChevronLeft,
   Scale,
+  Receipt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -203,6 +204,7 @@ function SidebarNavigation() {
     { title: "Análise de Defesas", url: "/defenses", icon: Scale, badge: pendingDefenses },
     { title: "Notificações", url: "/notifications", icon: Bell },
     { title: "Relatórios", url: "/reports", icon: BarChart3 },
+    { title: "Faturas", url: "/sindico/invoices", icon: Receipt },
     { title: "Configurações", url: "/sindico/settings", icon: Settings },
   ];
 
