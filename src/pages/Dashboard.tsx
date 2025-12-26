@@ -180,7 +180,7 @@ const Dashboard = () => {
       icon: AlertTriangle,
       label: "Nova Ocorrência",
       description: "Registrar uma nova ocorrência",
-      action: () => toast({ title: "Em breve", description: "Funcionalidade em desenvolvimento" }),
+      action: () => navigate("/occurrences"),
     },
     {
       icon: Bell,
