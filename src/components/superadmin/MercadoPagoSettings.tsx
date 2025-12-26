@@ -20,6 +20,8 @@ import {
   Save,
   DollarSign,
   ExternalLink,
+  Zap,
+  XCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -46,6 +48,8 @@ export function MercadoPagoSettings() {
     is_active: false,
     notification_url: "",
   });
+  const [webhookTestStatus, setWebhookTestStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
+  const [webhookTestMessage, setWebhookTestMessage] = useState("");
 
   // Fetch config
   const { data: config, isLoading } = useQuery({
@@ -365,6 +369,100 @@ export function MercadoPagoSettings() {
               <ExternalLink className="w-3 h-3" />
             </a>
           </p>
+          
+          {/* Webhook Test Section */}
+          <div className="pt-4 border-t border-border/50 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Testar Conexão</Label>
+                <p className="text-xs text-muted-foreground">
+                  Envia uma requisição de teste para verificar se o endpoint está acessível
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={webhookTestStatus === "testing"}
+                onClick={async () => {
+                  setWebhookTestStatus("testing");
+                  setWebhookTestMessage("");
+                  
+                  try {
+                    const startTime = Date.now();
+                    const response = await fetch(
+                      "https://iyeljkdrypcxvljebqtn.supabase.co/functions/v1/mercadopago-webhook",
+                      {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                          type: "test",
+                          data: { id: "test_" + Date.now() },
+                          action: "test.connection",
+                        }),
+                      }
+                    );
+                    
+                    const duration = Date.now() - startTime;
+                    const responseData = await response.json();
+                    
+                    if (response.ok && responseData.received) {
+                      setWebhookTestStatus("success");
+                      setWebhookTestMessage(`Conexão OK! Resposta em ${duration}ms`);
+                      toast({
+                        title: "Webhook funcionando",
+                        description: `O endpoint respondeu corretamente em ${duration}ms.`,
+                      });
+                    } else {
+                      setWebhookTestStatus("error");
+                      setWebhookTestMessage(`Erro: ${response.status} - ${JSON.stringify(responseData)}`);
+                      toast({
+                        title: "Erro no webhook",
+                        description: "O endpoint retornou um erro.",
+                        variant: "destructive",
+                      });
+                    }
+                  } catch (error: any) {
+                    setWebhookTestStatus("error");
+                    setWebhookTestMessage(`Falha na conexão: ${error.message}`);
+                    toast({
+                      title: "Falha na conexão",
+                      description: "Não foi possível alcançar o endpoint do webhook.",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              >
+                {webhookTestStatus === "testing" ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Testando...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-4 h-4 mr-2" />
+                    Testar Webhook
+                  </>
+                )}
+              </Button>
+            </div>
+            
+            {webhookTestStatus === "success" && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                <span className="text-sm text-emerald-600 dark:text-emerald-400">{webhookTestMessage}</span>
+              </div>
+            )}
+            
+            {webhookTestStatus === "error" && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                <XCircle className="w-4 h-4 text-destructive" />
+                <span className="text-sm text-destructive">{webhookTestMessage}</span>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
