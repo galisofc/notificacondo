@@ -64,7 +64,7 @@ const sindicoNavItems: NavItem[] = [
   { title: "Ocorrências", url: "/occurrences", icon: FileText },
   { title: "Notificações", url: "/notifications", icon: Bell },
   { title: "Relatórios", url: "/reports", icon: BarChart3 },
-  { title: "Configurações", url: "/settings", icon: Settings },
+  { title: "Configurações", url: "/sindico/settings", icon: Settings },
 ];
 
 const residentNavItems: NavItem[] = [
