@@ -22,6 +22,11 @@ import SindicoSettings from "./pages/SindicoSettings";
 import SindicoProfile from "./pages/SindicoProfile";
 import ResidentAccess from "./pages/ResidentAccess";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
+import Sindicos from "./pages/superadmin/Sindicos";
+import SuperAdminCondominiums from "./pages/superadmin/Condominiums";
+import Subscriptions from "./pages/superadmin/Subscriptions";
+import Logs from "./pages/superadmin/Logs";
+import WhatsApp from "./pages/superadmin/WhatsApp";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +42,8 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
+              
+              {/* Síndico Routes */}
               <Route
                 path="/dashboard"
                 element={
@@ -109,6 +116,8 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
+
+              {/* Resident Routes */}
               <Route
                 path="/resident"
                 element={
@@ -134,6 +143,8 @@ const App = () => (
                 }
               />
               <Route path="/acesso/:token" element={<ResidentAccess />} />
+
+              {/* Super Admin Routes */}
               <Route
                 path="/superadmin"
                 element={
@@ -142,6 +153,47 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/superadmin/sindicos"
+                element={
+                  <ProtectedRoute requiredRole="super_admin">
+                    <Sindicos />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/superadmin/condominiums"
+                element={
+                  <ProtectedRoute requiredRole="super_admin">
+                    <SuperAdminCondominiums />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/superadmin/subscriptions"
+                element={
+                  <ProtectedRoute requiredRole="super_admin">
+                    <Subscriptions />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/superadmin/logs"
+                element={
+                  <ProtectedRoute requiredRole="super_admin">
+                    <Logs />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/superadmin/whatsapp"
+                element={
+                  <ProtectedRoute requiredRole="super_admin">
+                    <WhatsApp />
+                  </ProtectedRoute>
+                }
+              />
+
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>

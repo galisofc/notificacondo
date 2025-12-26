@@ -1,0 +1,22 @@
+import { Helmet } from "react-helmet-async";
+import DashboardLayout from "@/components/layouts/DashboardLayout";
+import { SubscriptionsMonitor } from "@/components/superadmin/SubscriptionsMonitor";
+
+export default function Subscriptions() {
+  return (
+    <DashboardLayout>
+      <Helmet>
+        <title>Monitoramento de Assinaturas | Super Admin</title>
+      </Helmet>
+      <div className="space-y-6 animate-fade-up">
+        <div>
+          <h1 className="font-display text-3xl font-bold text-foreground">Assinaturas</h1>
+          <p className="text-muted-foreground mt-1">
+            Monitore as assinaturas e uso da plataforma
+          </p>
+        </div>
+        <SubscriptionsMonitor />
+      </div>
+    </DashboardLayout>
+  );
+}

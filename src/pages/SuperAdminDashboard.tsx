@@ -1,41 +1,20 @@
 import { Helmet } from "react-helmet-async";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Shield,
   Users,
   Building2,
   CreditCard,
-  FileText,
   MessageCircle,
-  LogOut,
   TrendingUp,
+  ArrowUpRight,
+  Activity,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
-import { SindicosManagement } from "@/components/superadmin/SindicosManagement";
-import { CondominiumsOverview } from "@/components/superadmin/CondominiumsOverview";
-import { SubscriptionsMonitor } from "@/components/superadmin/SubscriptionsMonitor";
-import { AuditLogs } from "@/components/superadmin/AuditLogs";
-import { WhatsAppConfig } from "@/components/superadmin/WhatsAppConfig";
+import DashboardLayout from "@/components/layouts/DashboardLayout";
 
 export default function SuperAdminDashboard() {
-  const { signOut } = useAuth();
-  const navigate = useNavigate();
-  const { toast } = useToast();
-
-  const handleSignOut = async () => {
-    await signOut();
-    toast({ title: "Até logo!", description: "Você saiu da sua conta." });
-    navigate("/");
-  };
-
-  // Stats queries
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["superadmin-stats"],
     queryFn: async () => {
@@ -46,8 +25,8 @@ export default function SuperAdminDashboard() {
         supabase.from("notifications_sent").select("id", { count: "exact" }),
       ]);
 
-      const activeSubscriptions = subscriptions.data?.filter(s => s.active) || [];
-      const paidPlans = activeSubscriptions.filter(s => s.plan !== "start");
+      const activeSubscriptions = subscriptions.data?.filter((s) => s.active) || [];
+      const paidPlans = activeSubscriptions.filter((s) => s.plan !== "start");
 
       return {
         totalSindicos: sindicos.count || 0,
@@ -59,179 +38,176 @@ export default function SuperAdminDashboard() {
     },
   });
 
+  const statCards = [
+    {
+      title: "Síndicos",
+      value: stats?.totalSindicos ?? 0,
+      icon: Users,
+      gradient: "from-blue-500 to-blue-600",
+      bgColor: "bg-blue-500/10",
+      textColor: "text-blue-500",
+      trend: "+12%",
+    },
+    {
+      title: "Condomínios",
+      value: stats?.totalCondominiums ?? 0,
+      icon: Building2,
+      gradient: "from-emerald-500 to-emerald-600",
+      bgColor: "bg-emerald-500/10",
+      textColor: "text-emerald-500",
+      trend: "+8%",
+    },
+    {
+      title: "Assinaturas Ativas",
+      value: stats?.activeSubscriptions ?? 0,
+      icon: CreditCard,
+      gradient: "from-violet-500 to-violet-600",
+      bgColor: "bg-violet-500/10",
+      textColor: "text-violet-500",
+      trend: "+5%",
+    },
+    {
+      title: "Planos Pagos",
+      value: stats?.paidSubscriptions ?? 0,
+      icon: TrendingUp,
+      gradient: "from-amber-500 to-orange-500",
+      bgColor: "bg-amber-500/10",
+      textColor: "text-amber-500",
+      trend: "+18%",
+    },
+    {
+      title: "Notificações",
+      value: stats?.totalNotifications ?? 0,
+      icon: MessageCircle,
+      gradient: "from-primary to-accent",
+      bgColor: "bg-primary/10",
+      textColor: "text-primary",
+      trend: "+24%",
+    },
+  ];
+
   return (
-    <>
+    <DashboardLayout>
       <Helmet>
         <title>Super Admin | NotificaCondo</title>
         <meta name="description" content="Painel administrativo da plataforma" />
       </Helmet>
 
-      <div className="min-h-screen bg-background">
-        {/* Header */}
-        <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-lg border-b border-border">
-          <div className="container mx-auto px-4">
-            <div className="flex items-center justify-between h-16">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center shadow-lg">
-                  <Shield className="w-5 h-5 text-white" />
+      <div className="space-y-8 animate-fade-up">
+        {/* Page Header */}
+        <div>
+          <h1 className="font-display text-3xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">
+            Visão geral da plataforma NotificaCondo
+          </p>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+          {statCards.map((stat, index) => (
+            <Card
+              key={index}
+              className="bg-gradient-card border-border/50 hover:border-primary/30 transition-all duration-300 group overflow-hidden"
+            >
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between mb-4">
+                  <div
+                    className={`w-11 h-11 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-lg`}
+                  >
+                    <stat.icon className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex items-center gap-1 text-xs font-medium text-emerald-500">
+                    <ArrowUpRight className="w-3 h-3" />
+                    {stat.trend}
+                  </div>
                 </div>
                 <div>
-                  <span className="font-display text-xl font-bold text-foreground">
-                    Super Admin
-                  </span>
-                  <p className="text-xs text-muted-foreground">Painel Administrativo</p>
+                  {statsLoading ? (
+                    <Skeleton className="h-9 w-20 mb-1" />
+                  ) : (
+                    <p className="font-display text-3xl font-bold text-foreground">
+                      {stat.value.toLocaleString("pt-BR")}
+                    </p>
+                  )}
+                  <p className="text-sm text-muted-foreground">{stat.title}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Activity Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="bg-gradient-card border-border/50">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Activity className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-display text-lg font-semibold text-foreground">
+                    Atividade Recente
+                  </h3>
+                  <p className="text-sm text-muted-foreground">Últimas ações na plataforma</p>
                 </div>
               </div>
-
-              <Button variant="ghost" size="sm" onClick={handleSignOut}>
-                <LogOut className="w-4 h-4 mr-2" />
-                Sair
-              </Button>
-            </div>
-          </div>
-        </header>
-
-        <main className="container mx-auto px-4 py-8">
-          {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-blue-500/10">
-                    <Users className="h-5 w-5 text-blue-500" />
+              <div className="space-y-4">
+                {[
+                  { action: "Novo síndico cadastrado", time: "Há 2 minutos" },
+                  { action: "Condomínio atualizado", time: "Há 15 minutos" },
+                  { action: "Assinatura renovada", time: "Há 1 hora" },
+                  { action: "Notificação enviada", time: "Há 2 horas" },
+                ].map((item, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between p-3 rounded-lg bg-background/50 border border-border/30"
+                  >
+                    <span className="text-sm text-foreground">{item.action}</span>
+                    <span className="text-xs text-muted-foreground">{item.time}</span>
                   </div>
-                  <div>
-                    {statsLoading ? (
-                      <Skeleton className="h-8 w-12" />
-                    ) : (
-                      <p className="text-2xl font-bold">{stats?.totalSindicos}</p>
-                    )}
-                    <p className="text-xs text-muted-foreground">Síndicos</p>
-                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-card border-border/50">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                  <CreditCard className="w-5 h-5 text-violet-500" />
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-emerald-500/10">
-                    <Building2 className="h-5 w-5 text-emerald-500" />
-                  </div>
-                  <div>
-                    {statsLoading ? (
-                      <Skeleton className="h-8 w-12" />
-                    ) : (
-                      <p className="text-2xl font-bold">{stats?.totalCondominiums}</p>
-                    )}
-                    <p className="text-xs text-muted-foreground">Condomínios</p>
-                  </div>
+                <div>
+                  <h3 className="font-display text-lg font-semibold text-foreground">
+                    Distribuição de Planos
+                  </h3>
+                  <p className="text-sm text-muted-foreground">Assinaturas por tipo</p>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-violet-500/10">
-                    <CreditCard className="h-5 w-5 text-violet-500" />
+              </div>
+              <div className="space-y-4">
+                {[
+                  { plan: "Start (Grátis)", percentage: 45, color: "bg-muted" },
+                  { plan: "Essencial", percentage: 30, color: "bg-blue-500" },
+                  { plan: "Profissional", percentage: 20, color: "bg-violet-500" },
+                  { plan: "Enterprise", percentage: 5, color: "bg-primary" },
+                ].map((item, i) => (
+                  <div key={i} className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-foreground">{item.plan}</span>
+                      <span className="text-muted-foreground">{item.percentage}%</span>
+                    </div>
+                    <div className="h-2 bg-muted/50 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full ${item.color} rounded-full transition-all duration-500`}
+                        style={{ width: `${item.percentage}%` }}
+                      />
+                    </div>
                   </div>
-                  <div>
-                    {statsLoading ? (
-                      <Skeleton className="h-8 w-12" />
-                    ) : (
-                      <p className="text-2xl font-bold">{stats?.activeSubscriptions}</p>
-                    )}
-                    <p className="text-xs text-muted-foreground">Assinaturas Ativas</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-amber-500/10">
-                    <TrendingUp className="h-5 w-5 text-amber-500" />
-                  </div>
-                  <div>
-                    {statsLoading ? (
-                      <Skeleton className="h-8 w-12" />
-                    ) : (
-                      <p className="text-2xl font-bold">{stats?.paidSubscriptions}</p>
-                    )}
-                    <p className="text-xs text-muted-foreground">Planos Pagos</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <MessageCircle className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    {statsLoading ? (
-                      <Skeleton className="h-8 w-12" />
-                    ) : (
-                      <p className="text-2xl font-bold">{stats?.totalNotifications}</p>
-                    )}
-                    <p className="text-xs text-muted-foreground">Notificações</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Tabs */}
-          <Tabs defaultValue="sindicos" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="sindicos" className="gap-2">
-                <Users className="h-4 w-4" />
-                <span className="hidden md:inline">Síndicos</span>
-              </TabsTrigger>
-              <TabsTrigger value="condominiums" className="gap-2">
-                <Building2 className="h-4 w-4" />
-                <span className="hidden md:inline">Condomínios</span>
-              </TabsTrigger>
-              <TabsTrigger value="subscriptions" className="gap-2">
-                <CreditCard className="h-4 w-4" />
-                <span className="hidden md:inline">Assinaturas</span>
-              </TabsTrigger>
-              <TabsTrigger value="logs" className="gap-2">
-                <FileText className="h-4 w-4" />
-                <span className="hidden md:inline">Logs</span>
-              </TabsTrigger>
-              <TabsTrigger value="whatsapp" className="gap-2">
-                <MessageCircle className="h-4 w-4" />
-                <span className="hidden md:inline">WhatsApp</span>
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="sindicos">
-              <SindicosManagement />
-            </TabsContent>
-
-            <TabsContent value="condominiums">
-              <CondominiumsOverview />
-            </TabsContent>
-
-            <TabsContent value="subscriptions">
-              <SubscriptionsMonitor />
-            </TabsContent>
-
-            <TabsContent value="logs">
-              <AuditLogs />
-            </TabsContent>
-
-            <TabsContent value="whatsapp">
-              <WhatsAppConfig />
-            </TabsContent>
-          </Tabs>
-        </main>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </>
+    </DashboardLayout>
   );
 }
