@@ -146,7 +146,15 @@ export function NotificationsMonitor() {
         .limit(100);
 
       if (statusFilter !== "all") {
-        query = query.eq("zpro_status", statusFilter);
+        // Some providers don't reliably set a "read" zpro_status,
+        // so we infer read/delivered from timestamps.
+        if (statusFilter === "read") {
+          query = query.not("read_at", "is", null);
+        } else if (statusFilter === "delivered") {
+          query = query.is("read_at", null).not("delivered_at", "is", null);
+        } else {
+          query = query.eq("zpro_status", statusFilter);
+        }
       }
 
       const { data, error } = await query;
@@ -165,8 +173,10 @@ export function NotificationsMonitor() {
 
       if (error) throw error;
 
+      const rows = data ?? [];
+
       const counts = {
-        total: data.length,
+        total: rows.length,
         sent: 0,
         delivered: 0,
         read: 0,
@@ -174,7 +184,7 @@ export function NotificationsMonitor() {
         pending: 0,
       };
 
-      data.forEach((n) => {
+      rows.forEach((n) => {
         // Count based on actual state, not just zpro_status
         if (n.read_at) {
           counts.read++;
