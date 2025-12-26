@@ -8,7 +8,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
-import { MercadoPagoPaymentButton } from "@/components/mercadopago/MercadoPagoPaymentButton";
+import { MercadoPagoTransparentCheckout } from "@/components/mercadopago/MercadoPagoTransparentCheckout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -420,11 +420,14 @@ const SindicoInvoices = () => {
                           <TableCell>
                             {invoice.status === "pending" || invoice.status === "overdue" ? (
                               userProfile?.email ? (
-                                <MercadoPagoPaymentButton
+                                <MercadoPagoTransparentCheckout
                                   invoiceId={invoice.id}
                                   payerEmail={userProfile.email}
                                   amount={invoice.amount}
                                   buttonText="Pagar"
+                                  onPaymentSuccess={() => {
+                                    queryClient.invalidateQueries({ queryKey: ["sindico-invoices"] });
+                                  }}
                                 />
                               ) : (
                                 <Button size="sm" variant="outline" disabled>
