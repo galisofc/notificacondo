@@ -3,20 +3,18 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { 
-  Shield, 
   Building2, 
   FileText, 
   AlertTriangle, 
   DollarSign, 
   Users,
   Plus,
-  LogOut,
   Bell,
-  Settings,
   ChevronRight
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import DashboardHeader from "@/components/dashboard/DashboardHeader";
 
 interface DashboardStats {
   condominiums: number;
@@ -26,7 +24,7 @@ interface DashboardStats {
 }
 
 const Dashboard = () => {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [stats, setStats] = useState<DashboardStats>({
@@ -140,48 +138,43 @@ const Dashboard = () => {
     fetchData();
   }, [user]);
 
-  const handleSignOut = async () => {
-    await signOut();
-    toast({
-      title: "Até logo!",
-      description: "Você saiu da sua conta.",
-    });
-    navigate("/");
-  };
-
   const statCards = [
     {
       icon: Building2,
       label: "Condomínios",
       value: stats.condominiums,
       color: "from-emerald-500 to-emerald-600",
+      action: () => navigate("/condominiums"),
     },
     {
       icon: Users,
       label: "Moradores",
       value: stats.residents,
       color: "from-blue-500 to-blue-600",
+      action: () => navigate("/condominiums"),
     },
     {
       icon: FileText,
       label: "Ocorrências",
       value: stats.occurrences,
       color: "from-amber-500 to-orange-500",
+      action: () => toast({ title: "Em breve", description: "Funcionalidade em desenvolvimento" }),
     },
     {
       icon: DollarSign,
       label: "Multas Pendentes",
       value: stats.pendingFines,
       color: "from-rose-500 to-red-500",
+      action: () => toast({ title: "Em breve", description: "Funcionalidade em desenvolvimento" }),
     },
   ];
 
   const quickActions = [
     {
       icon: Building2,
-      label: "Novo Condomínio",
-      description: "Cadastrar um novo condomínio",
-      action: () => toast({ title: "Em breve", description: "Funcionalidade em desenvolvimento" }),
+      label: "Gerenciar Condomínios",
+      description: "Cadastrar e editar condomínios",
+      action: () => navigate("/condominiums"),
     },
     {
       icon: AlertTriangle,
@@ -205,35 +198,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-lg border-b border-border">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow">
-                <Shield className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <span className="font-display text-xl font-bold text-foreground">
-                Notifica<span className="text-gradient">Condo</span>
-              </span>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon">
-                <Bell className="w-5 h-5" />
-              </Button>
-              <Button variant="ghost" size="icon">
-                <Settings className="w-5 h-5" />
-              </Button>
-              <div className="h-8 w-px bg-border" />
-              <Button variant="ghost" size="sm" onClick={handleSignOut}>
-                <LogOut className="w-4 h-4 mr-2" />
-                Sair
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <DashboardHeader />
 
       <main className="container mx-auto px-4 py-8">
         {/* Welcome Section */}
@@ -249,9 +214,10 @@ const Dashboard = () => {
         {/* Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {statCards.map((stat, index) => (
-            <div
+            <button
               key={index}
-              className="p-6 rounded-2xl bg-gradient-card border border-border/50 hover:border-primary/30 transition-all"
+              onClick={stat.action}
+              className="p-6 rounded-2xl bg-gradient-card border border-border/50 hover:border-primary/30 transition-all text-left"
             >
               <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center mb-4`}>
                 <stat.icon className="w-6 h-6 text-white" />
@@ -260,7 +226,7 @@ const Dashboard = () => {
                 {loading ? "..." : stat.value}
               </div>
               <div className="text-sm text-muted-foreground">{stat.label}</div>
-            </div>
+            </button>
           ))}
         </div>
 
@@ -302,7 +268,7 @@ const Dashboard = () => {
               Comece cadastrando seu primeiro condomínio para gerenciar ocorrências, 
               notificações e multas.
             </p>
-            <Button variant="hero" onClick={() => toast({ title: "Em breve", description: "Funcionalidade em desenvolvimento" })}>
+            <Button variant="hero" onClick={() => navigate("/condominiums")}>
               <Plus className="w-4 h-4 mr-2" />
               Cadastrar Condomínio
             </Button>
