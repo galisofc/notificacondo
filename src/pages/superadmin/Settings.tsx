@@ -55,6 +55,7 @@ import {
   Package,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { MercadoPagoSettings } from "@/components/superadmin/MercadoPagoSettings";
 
 interface Plan {
   id: string;
@@ -300,6 +301,10 @@ export default function SuperAdminSettings() {
             <TabsTrigger value="plans" className="gap-2">
               <CreditCard className="w-4 h-4" />
               Distribuição
+            </TabsTrigger>
+            <TabsTrigger value="mercadopago" className="gap-2">
+              <CreditCard className="w-4 h-4" />
+              Mercado Pago
             </TabsTrigger>
             <TabsTrigger value="notifications" className="gap-2">
               <Bell className="w-4 h-4" />
@@ -831,6 +836,11 @@ export default function SuperAdminSettings() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Mercado Pago Tab */}
+          <TabsContent value="mercadopago" className="space-y-6">
+            <MercadoPagoSettings />
           </TabsContent>
 
           {/* Notifications Tab */}
