@@ -19,6 +19,7 @@ import OccurrenceDetails from "./pages/OccurrenceDetails";
 import Reports from "./pages/Reports";
 import SindicoSettings from "./pages/SindicoSettings";
 import SindicoProfile from "./pages/SindicoProfile";
+import ResidentAccess from "./pages/ResidentAccess";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -122,6 +123,7 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
+              <Route path="/acesso/:token" element={<ResidentAccess />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>
