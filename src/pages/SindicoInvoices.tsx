@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -38,6 +39,7 @@ import {
   CreditCard,
   TrendingUp,
   FileText,
+  RefreshCw,
 } from "lucide-react";
 
 type InvoiceStatus = "all" | "pending" | "paid" | "overdue" | "cancelled";
@@ -95,8 +97,39 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.
 
 const SindicoInvoices = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus>("all");
   const [condominiumFilter, setCondominiumFilter] = useState<string>("all");
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleGenerateInvoices = async () => {
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-invoices", {
+        body: {},
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Faturas geradas!",
+        description: `${data.results.invoicesCreated} fatura(s) criada(s) com sucesso.`,
+      });
+
+      // Refresh invoices list
+      queryClient.invalidateQueries({ queryKey: ["sindico-invoices"] });
+    } catch (error: any) {
+      console.error("Error generating invoices:", error);
+      toast({
+        title: "Erro ao gerar faturas",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   // Fetch condominiums for filter
   const { data: condominiums } = useQuery({
@@ -196,11 +229,26 @@ const SindicoInvoices = () => {
         <SindicoBreadcrumbs items={[{ label: "Central de Faturas" }]} />
 
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Central de Faturas</h1>
-          <p className="text-muted-foreground">
-            Acompanhe as faturas e assinaturas de cada condomínio
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Central de Faturas</h1>
+            <p className="text-muted-foreground">
+              Acompanhe as faturas e assinaturas de cada condomínio
+            </p>
+          </div>
+          <Button onClick={handleGenerateInvoices} disabled={isGenerating}>
+            {isGenerating ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Gerando...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Gerar Faturas
+              </>
+            )}
+          </Button>
         </div>
 
         {/* Stats Cards */}
