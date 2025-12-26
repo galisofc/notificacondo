@@ -36,3 +36,23 @@ verify_jwt = false
 # Public config used by the web app to initialize Mercado Pago (only returns public_key + flags)
 [functions.get-mercadopago-public-config]
 verify_jwt = false
+
+# Webhook do Mercado Pago - deve ser público para receber notificações externas
+[functions.mercadopago-webhook]
+verify_jwt = false
+
+# Processamento de pagamento - requer autenticação do usuário
+[functions.mercadopago-process-payment]
+verify_jwt = false
+
+# Criação de pagamento - requer autenticação do usuário
+[functions.mercadopago-create-payment]
+verify_jwt = false
+
+# Criação de assinatura - requer autenticação do usuário
+[functions.mercadopago-create-subscription]
+verify_jwt = false
+
+# Cancelamento de assinatura - requer autenticação do usuário
+[functions.mercadopago-cancel-subscription]
+verify_jwt = false
