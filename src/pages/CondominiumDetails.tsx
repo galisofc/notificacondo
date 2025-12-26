@@ -216,6 +216,24 @@ const CondominiumDetails = () => {
     e.preventDefault();
     setSaving(true);
     try {
+      // Check for duplicate apartment number in the same block
+      const isDuplicate = apartments.some(
+        (apt) =>
+          apt.block_id === apartmentForm.block_id &&
+          apt.number.toLowerCase() === apartmentForm.number.toLowerCase() &&
+          apt.id !== editingApartment?.id
+      );
+
+      if (isDuplicate) {
+        toast({
+          title: "Erro",
+          description: "Já existe um apartamento com este número neste bloco.",
+          variant: "destructive",
+        });
+        setSaving(false);
+        return;
+      }
+
       if (editingApartment) {
         const { error } = await supabase
           .from("apartments")
