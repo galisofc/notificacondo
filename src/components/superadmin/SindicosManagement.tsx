@@ -38,8 +38,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, MoreHorizontal, Mail, Building2, Plus, Loader2 } from "lucide-react";
+import { Search, MoreHorizontal, Mail, Building2, Plus, Loader2, Eye, User, Phone, Calendar, CreditCard, CheckCircle, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
+import { Separator } from "@/components/ui/separator";
 
 interface SindicoWithProfile {
   id: string;
@@ -64,6 +66,8 @@ interface SindicoWithProfile {
 export function SindicosManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [selectedSindico, setSelectedSindico] = useState<SindicoWithProfile | null>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
@@ -72,6 +76,7 @@ export function SindicosManagement() {
   });
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: sindicos, isLoading } = useQuery({
     queryKey: ["superadmin-sindicos"],
@@ -178,6 +183,21 @@ export function SindicosManagement() {
       s.profile?.email?.toLowerCase().includes(query)
     );
   });
+
+  const getPlanBadge = (plan: string) => {
+    const planColors: Record<string, string> = {
+      start: "bg-gray-500/10 text-gray-600 border-gray-500/20",
+      essencial: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+      profissional: "bg-violet-500/10 text-violet-600 border-violet-500/20",
+      enterprise: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+    };
+    return planColors[plan] || planColors.start;
+  };
+
+  const handleViewSindico = (sindico: SindicoWithProfile) => {
+    setSelectedSindico(sindico);
+    setIsViewDialogOpen(true);
+  };
 
 
   const handleCreateSubmit = (e: React.FormEvent) => {
@@ -312,25 +332,34 @@ export function SindicosManagement() {
             <div className="block md:hidden space-y-3">
               {filteredSindicos?.map((sindico) => (
                 <div key={sindico.id} className="p-4 rounded-xl bg-secondary/50 border border-border">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <p className="font-medium text-foreground">{sindico.profile?.full_name || "—"}</p>
-                      <p className="text-xs text-muted-foreground">{sindico.profile?.email}</p>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <p className="font-medium text-foreground">{sindico.profile?.full_name || "—"}</p>
+                        <p className="text-xs text-muted-foreground">{sindico.profile?.email}</p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => handleViewSindico(sindico)}
+                        >
+                          <Eye className="h-4 w-4" />
                         </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Mail className="h-4 w-4 mr-2" />
-                          Enviar email
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              <Mail className="h-4 w-4 mr-2" />
+                              Enviar email
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
                   <div className="flex flex-wrap gap-2 mb-3">
                     {sindico.condominiums.length > 0 ? (
                       sindico.condominiums.slice(0, 2).map((c) => (
@@ -427,19 +456,28 @@ export function SindicosManagement() {
                           </p>
                         </TableCell>
                         <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
-                                <Mail className="h-4 w-4 mr-2" />
-                                Enviar email
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <div className="flex items-center gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => handleViewSindico(sindico)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem>
+                                  <Mail className="h-4 w-4 mr-2" />
+                                  Enviar email
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -449,6 +487,126 @@ export function SindicosManagement() {
             </div>
           </>
         )}
+
+        {/* View Sindico Dialog */}
+        <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <User className="h-5 w-5 text-primary" />
+                Detalhes do Síndico
+              </DialogTitle>
+              <DialogDescription>
+                Informações completas e condomínios gerenciados
+              </DialogDescription>
+            </DialogHeader>
+            
+            {selectedSindico && (
+              <div className="space-y-6">
+                {/* Sindico Info */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                      <User className="h-8 w-8 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold">{selectedSindico.profile?.full_name || "—"}</h3>
+                      <p className="text-muted-foreground">{selectedSindico.profile?.email}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4 p-4 rounded-lg bg-secondary/50">
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Telefone</p>
+                        <p className="font-medium">{selectedSindico.profile?.phone || "Não informado"}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Cadastrado em</p>
+                        <p className="font-medium">
+                          {format(new Date(selectedSindico.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Condominiums */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-primary" />
+                      Condomínios Gerenciados ({selectedSindico.condominiums_count})
+                    </h4>
+                  </div>
+                  
+                  {selectedSindico.condominiums.length === 0 ? (
+                    <div className="text-center py-6 rounded-lg bg-secondary/30">
+                      <Building2 className="h-10 w-10 mx-auto mb-2 text-muted-foreground opacity-50" />
+                      <p className="text-muted-foreground">Nenhum condomínio cadastrado</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {selectedSindico.condominiums.map((condo) => (
+                        <div 
+                          key={condo.id} 
+                          className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-secondary/50 transition-colors cursor-pointer"
+                          onClick={() => {
+                            setIsViewDialogOpen(false);
+                            navigate(`/superadmin/condominiums`);
+                          }}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                              <Building2 className="h-5 w-5 text-primary" />
+                            </div>
+                            <div>
+                              <p className="font-medium">{condo.name}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge 
+                                  variant="outline" 
+                                  className={getPlanBadge(condo.subscription?.plan || "start")}
+                                >
+                                  <CreditCard className="h-3 w-3 mr-1" />
+                                  {condo.subscription?.plan?.toUpperCase() || "START"}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {condo.subscription?.active ? (
+                              <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Ativo
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-red-500/10 text-red-600 border-red-500/20">
+                                <XCircle className="h-3 w-3 mr-1" />
+                                Inativo
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+                Fechar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
