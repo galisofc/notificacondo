@@ -53,6 +53,9 @@ import {
   Pencil,
   Trash2,
   Package,
+  Lock,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { MercadoPagoSettings } from "@/components/superadmin/MercadoPagoSettings";
@@ -88,6 +91,16 @@ export default function SuperAdminSettings() {
   const queryClient = useQueryClient();
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  
+  // Password change state
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  
   const [formData, setFormData] = useState({
     slug: "",
     name: "",
@@ -271,6 +284,66 @@ export default function SuperAdminSettings() {
   const handleDelete = (plan: Plan) => {
     if (confirm(`Tem certeza que deseja excluir o plano "${plan.name}"?`)) {
       deletePlanMutation.mutate(plan.id);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    // Validate inputs
+    if (!newPassword || !confirmPassword) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Preencha a nova senha e a confirmação.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast({
+        title: "Senha muito curta",
+        description: "A nova senha deve ter pelo menos 6 caracteres.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Senhas não conferem",
+        description: "A nova senha e a confirmação devem ser iguais.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsChangingPassword(true);
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Senha alterada com sucesso!",
+        description: "Sua nova senha já está ativa.",
+      });
+
+      // Clear form
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error: any) {
+      toast({
+        title: "Erro ao alterar senha",
+        description: error.message || "Não foi possível alterar a senha.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -902,6 +975,90 @@ export default function SuperAdminSettings() {
 
           {/* Security Tab */}
           <TabsContent value="security" className="space-y-6">
+            {/* Change Password Card */}
+            <Card className="bg-gradient-card border-border/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Lock className="w-5 h-5 text-primary" />
+                  Alterar Senha
+                </CardTitle>
+                <CardDescription>
+                  Altere sua senha de acesso à plataforma
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="new-password">Nova Senha</Label>
+                  <div className="relative">
+                    <Input
+                      id="new-password"
+                      type={showNewPassword ? "text" : "password"}
+                      placeholder="Digite a nova senha"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="pr-10"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                    >
+                      {showNewPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Mínimo de 6 caracteres
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Confirmar Nova Senha</Label>
+                  <div className="relative">
+                    <Input
+                      id="confirm-password"
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="Confirme a nova senha"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="pr-10"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={handleChangePassword}
+                  disabled={isChangingPassword || !newPassword || !confirmPassword}
+                  className="w-full sm:w-auto"
+                >
+                  {isChangingPassword ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Lock className="h-4 w-4 mr-2" />
+                  )}
+                  {isChangingPassword ? "Alterando..." : "Alterar Senha"}
+                </Button>
+              </CardContent>
+            </Card>
+
             <Card className="bg-gradient-card border-border/50">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
