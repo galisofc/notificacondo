@@ -219,23 +219,23 @@ export function SindicosManagement() {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
+    <Card className="bg-card border-border shadow-card">
+      <CardHeader className="p-4 md:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <CardTitle>Gestão de Síndicos</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-lg md:text-xl">Gestão de Síndicos</CardTitle>
+            <CardDescription className="text-sm">
               Gerencie os síndicos cadastrados na plataforma
             </CardDescription>
           </div>
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button className="w-full sm:w-auto">
                 <Plus className="h-4 w-4 mr-2" />
                 Novo Síndico
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
               <form onSubmit={handleCreateSubmit}>
                 <DialogHeader>
                   <DialogTitle>Criar Novo Síndico</DialogTitle>
@@ -306,16 +306,17 @@ export function SindicosManagement() {
                     </Select>
                   </div>
                 </div>
-                <DialogFooter>
+                <DialogFooter className="flex-col sm:flex-row gap-2">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => setIsCreateDialogOpen(false)}
                     disabled={createSindicoMutation.isPending}
+                    className="w-full sm:w-auto"
                   >
                     Cancelar
                   </Button>
-                  <Button type="submit" disabled={createSindicoMutation.isPending}>
+                  <Button type="submit" disabled={createSindicoMutation.isPending} className="w-full sm:w-auto">
                     {createSindicoMutation.isPending ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -331,9 +332,9 @@ export function SindicosManagement() {
           </Dialog>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="mb-6">
-          <div className="relative max-w-sm">
+      <CardContent className="p-4 md:p-6 pt-0 md:pt-0">
+        <div className="mb-4 md:mb-6">
+          <div className="relative w-full sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar por nome ou email..."
@@ -351,99 +352,149 @@ export function SindicosManagement() {
             ))}
           </div>
         ) : filteredSindicos?.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">Nenhum síndico encontrado</p>
+          <div className="text-center py-8 md:py-12">
+            <p className="text-sm md:text-base text-muted-foreground">Nenhum síndico encontrado</p>
           </div>
         ) : (
-          <div className="rounded-md border overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Síndico</TableHead>
-                  <TableHead>Plano</TableHead>
-                  <TableHead>Condomínios</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Cadastro</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredSindicos?.map((sindico) => (
-                  <TableRow key={sindico.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{sindico.profile?.full_name || "—"}</p>
-                        <p className="text-sm text-muted-foreground">{sindico.profile?.email}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {sindico.condominiums.length > 0 ? (
-                          sindico.condominiums.slice(0, 2).map((c) => (
-                            <Badge key={c.id} variant="outline" className={getPlanBadge(c.subscription?.plan)}>
-                              {c.subscription?.plan?.toUpperCase() || "START"}
-                            </Badge>
-                          ))
-                        ) : (
-                          <span className="text-muted-foreground text-sm">Sem condomínios</span>
-                        )}
-                        {sindico.condominiums.length > 2 && (
-                          <Badge variant="outline">+{sindico.condominiums.length - 2}</Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                        {sindico.condominiums_count}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {sindico.condominiums.length > 0 ? (
-                        sindico.condominiums.every((c) => c.subscription?.active) ? (
-                          <Badge
-                            variant="outline"
-                            className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-                          >
-                            Todos Ativos
-                          </Badge>
-                        ) : (
-                          <Badge
-                            variant="outline"
-                            className="bg-amber-500/10 text-amber-500 border-amber-500/20"
-                          >
-                            Parcial
-                          </Badge>
-                        )
-                      ) : (
-                        <span className="text-muted-foreground text-sm">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <p className="text-sm">
-                        {format(new Date(sindico.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                      </p>
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Mail className="h-4 w-4 mr-2" />
-                            Enviar email
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <>
+            {/* Mobile Cards */}
+            <div className="block md:hidden space-y-3">
+              {filteredSindicos?.map((sindico) => (
+                <div key={sindico.id} className="p-4 rounded-xl bg-secondary/50 border border-border">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <p className="font-medium text-foreground">{sindico.profile?.full_name || "—"}</p>
+                      <p className="text-xs text-muted-foreground">{sindico.profile?.email}</p>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem>
+                          <Mail className="h-4 w-4 mr-2" />
+                          Enviar email
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {sindico.condominiums.length > 0 ? (
+                      sindico.condominiums.slice(0, 2).map((c) => (
+                        <Badge key={c.id} variant="outline" className={getPlanBadge(c.subscription?.plan)}>
+                          {c.subscription?.plan?.toUpperCase() || "START"}
+                        </Badge>
+                      ))
+                    ) : (
+                      <span className="text-muted-foreground text-xs">Sem condomínios</span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Building2 className="h-3 w-3" />
+                      {sindico.condominiums_count} condomínio{sindico.condominiums_count !== 1 ? "s" : ""}
+                    </div>
+                    <span>{format(new Date(sindico.created_at), "dd/MM/yyyy", { locale: ptBR })}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table */}
+            <div className="hidden md:block rounded-md border overflow-hidden">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Síndico</TableHead>
+                      <TableHead>Plano</TableHead>
+                      <TableHead>Condomínios</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Cadastro</TableHead>
+                      <TableHead className="w-[50px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredSindicos?.map((sindico) => (
+                      <TableRow key={sindico.id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{sindico.profile?.full_name || "—"}</p>
+                            <p className="text-sm text-muted-foreground">{sindico.profile?.email}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {sindico.condominiums.length > 0 ? (
+                              sindico.condominiums.slice(0, 2).map((c) => (
+                                <Badge key={c.id} variant="outline" className={getPlanBadge(c.subscription?.plan)}>
+                                  {c.subscription?.plan?.toUpperCase() || "START"}
+                                </Badge>
+                              ))
+                            ) : (
+                              <span className="text-muted-foreground text-sm">Sem condomínios</span>
+                            )}
+                            {sindico.condominiums.length > 2 && (
+                              <Badge variant="outline">+{sindico.condominiums.length - 2}</Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-4 w-4 text-muted-foreground" />
+                            {sindico.condominiums_count}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {sindico.condominiums.length > 0 ? (
+                            sindico.condominiums.every((c) => c.subscription?.active) ? (
+                              <Badge
+                                variant="outline"
+                                className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                              >
+                                Todos Ativos
+                              </Badge>
+                            ) : (
+                              <Badge
+                                variant="outline"
+                                className="bg-amber-500/10 text-amber-500 border-amber-500/20"
+                              >
+                                Parcial
+                              </Badge>
+                            )
+                          ) : (
+                            <span className="text-muted-foreground text-sm">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <p className="text-sm">
+                            {format(new Date(sindico.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                          </p>
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>
+                                <Mail className="h-4 w-4 mr-2" />
+                                Enviar email
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </>
         )}
       </CardContent>
     </Card>

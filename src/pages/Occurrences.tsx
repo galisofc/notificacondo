@@ -391,21 +391,21 @@ const Occurrences = () => {
       <Helmet>
         <title>Ocorrências | CondoManager</title>
       </Helmet>
-      <div className="space-y-6 animate-fade-up">
+      <div className="space-y-4 md:space-y-6 animate-fade-up">
         <div>
-          <h1 className="font-display text-3xl font-bold text-foreground">
+          <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground">
             Ocorrências
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm md:text-base text-muted-foreground mt-1">
             Registre e gerencie ocorrências do condomínio
           </p>
         </div>
 
         {/* Filters and Add Button */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <div className="flex flex-1 flex-wrap gap-3">
+        <div className="flex flex-col gap-3 md:gap-4 mb-4 md:mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
             <Select value={condominiumFilter} onValueChange={setCondominiumFilter}>
-              <SelectTrigger className="w-[200px] bg-card border-border">
+              <SelectTrigger className="bg-card border-border text-sm">
                 <SelectValue placeholder="Condomínio" />
               </SelectTrigger>
               <SelectContent>
@@ -418,7 +418,7 @@ const Occurrences = () => {
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px] bg-card border-border">
+              <SelectTrigger className="bg-card border-border text-sm">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -433,7 +433,7 @@ const Occurrences = () => {
               </SelectContent>
             </Select>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-[180px] bg-card border-border">
+              <SelectTrigger className="bg-card border-border text-sm">
                 <SelectValue placeholder="Tipo" />
               </SelectTrigger>
               <SelectContent>
@@ -457,6 +457,7 @@ const Occurrences = () => {
               }
               setIsDialogOpen(true);
             }}
+            className="w-full sm:w-auto sm:self-end"
           >
             <Plus className="w-4 h-4 mr-2" />
             Nova Ocorrência
@@ -465,8 +466,8 @@ const Occurrences = () => {
 
         {/* Results Counter */}
         {!loading && (
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-muted-foreground">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-4">
+            <p className="text-xs md:text-sm text-muted-foreground">
               Exibindo <span className="font-medium text-foreground">{filteredOccurrences.length}</span> de{" "}
               <span className="font-medium text-foreground">{occurrences.length}</span> ocorrência{occurrences.length !== 1 ? "s" : ""}
             </p>
@@ -494,56 +495,53 @@ const Occurrences = () => {
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : filteredOccurrences.length === 0 ? (
-          <div className="text-center py-12 px-4 rounded-2xl bg-gradient-card border border-border/50">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle className="w-8 h-8 text-primary" />
+          <div className="text-center py-8 md:py-12 px-4 rounded-2xl bg-card border border-border shadow-card">
+            <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-7 h-7 md:w-8 md:h-8 text-primary" />
             </div>
-            <h3 className="font-display text-xl font-semibold text-foreground mb-2">
+            <h3 className="font-display text-lg md:text-xl font-semibold text-foreground mb-2">
               {statusFilter !== "all" || typeFilter !== "all" 
                 ? "Nenhuma ocorrência encontrada" 
                 : "Nenhuma ocorrência registrada"}
             </h3>
-            <p className="text-muted-foreground mb-6">
+            <p className="text-sm md:text-base text-muted-foreground mb-6">
               {statusFilter !== "all" || typeFilter !== "all" 
                 ? "Tente ajustar os filtros para ver mais resultados." 
                 : "Registre ocorrências para iniciar o fluxo de notificações."}
             </p>
             {statusFilter === "all" && typeFilter === "all" && (
-              <Button variant="hero" onClick={() => setIsDialogOpen(true)}>
+              <Button variant="hero" onClick={() => setIsDialogOpen(true)} className="w-full sm:w-auto">
                 <Plus className="w-4 h-4 mr-2" />
                 Registrar Ocorrência
               </Button>
             )}
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3 md:space-y-4">
             {filteredOccurrences.map((occurrence) => (
               <div
                 key={occurrence.id}
-                className="p-4 rounded-xl bg-gradient-card border border-border/50 hover:border-primary/30 transition-all"
+                className="p-3 md:p-4 rounded-xl bg-card border border-border shadow-card hover:shadow-elevated transition-all"
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
                       {getTypeBadge(occurrence.type)}
                       {getStatusBadge(occurrence.status)}
                     </div>
-                    <h3 className="font-semibold text-foreground mb-1">
+                    <h3 className="font-semibold text-sm md:text-base text-foreground mb-1 truncate">
                       {occurrence.title}
                     </h3>
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                    <p className="text-xs md:text-sm text-muted-foreground line-clamp-2 mb-2">
                       {occurrence.description}
                     </p>
-                    <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
-                      <span>{occurrence.condominiums?.name}</span>
+                    <div className="flex flex-wrap gap-2 md:gap-4 text-xs text-muted-foreground">
+                      <span className="truncate max-w-[120px]">{occurrence.condominiums?.name}</span>
                       {occurrence.blocks?.name && (
                         <span>{occurrence.blocks.name}</span>
                       )}
                       {occurrence.apartments?.number && (
                         <span>Apto {occurrence.apartments.number}</span>
-                      )}
-                      {occurrence.residents?.full_name && (
-                        <span>{occurrence.residents.full_name}</span>
                       )}
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
@@ -551,14 +549,14 @@ const Occurrences = () => {
                       </span>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => navigate(`/occurrences/${occurrence.id}`)}>
-                      <Eye className="w-4 h-4 mr-1" />
+                  <div className="flex gap-2 self-end sm:self-start">
+                    <Button variant="outline" size="sm" onClick={() => navigate(`/occurrences/${occurrence.id}`)} className="text-xs">
+                      <Eye className="w-3 h-3 md:w-4 md:h-4 mr-1" />
                       Ver
                     </Button>
                     {occurrence.status === "registrada" && occurrence.resident_id && (
-                      <Button variant="hero" size="sm">
-                        <Send className="w-4 h-4 mr-1" />
+                      <Button variant="hero" size="sm" className="text-xs">
+                        <Send className="w-3 h-3 md:w-4 md:h-4 mr-1" />
                         Notificar
                       </Button>
                     )}
