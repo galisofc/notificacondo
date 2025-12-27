@@ -103,33 +103,33 @@ export default function SuperAdminDashboard() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
           {statCards.map((stat, index) => (
             <Card
               key={index}
-              className="bg-gradient-card border-border/50 hover:border-primary/30 transition-all duration-300 group overflow-hidden"
+              className="bg-card border-border shadow-card hover:shadow-elevated transition-all duration-300 group overflow-hidden"
             >
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between mb-4">
+              <CardContent className="p-4 md:p-5">
+                <div className="flex items-start justify-between mb-3 md:mb-4">
                   <div
-                    className={`w-11 h-11 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-lg`}
+                    className={`w-9 h-9 md:w-11 md:h-11 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-lg`}
                   >
-                    <stat.icon className="w-5 h-5 text-white" />
+                    <stat.icon className="w-4 h-4 md:w-5 md:h-5 text-white" />
                   </div>
-                  <div className="flex items-center gap-1 text-xs font-medium text-emerald-500">
+                  <div className="flex items-center gap-1 text-xs font-medium text-accent">
                     <ArrowUpRight className="w-3 h-3" />
                     {stat.trend}
                   </div>
                 </div>
                 <div>
                   {statsLoading ? (
-                    <Skeleton className="h-9 w-20 mb-1" />
+                    <Skeleton className="h-7 md:h-9 w-16 md:w-20 mb-1" />
                   ) : (
-                    <p className="font-display text-3xl font-bold text-foreground">
+                    <p className="font-display text-xl md:text-3xl font-bold text-foreground">
                       {stat.value.toLocaleString("pt-BR")}
                     </p>
                   )}
-                  <p className="text-sm text-muted-foreground">{stat.title}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">{stat.title}</p>
                 </div>
               </CardContent>
             </Card>
@@ -137,21 +137,21 @@ export default function SuperAdminDashboard() {
         </div>
 
         {/* Activity Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="bg-gradient-card border-border/50">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Activity className="w-5 h-5 text-primary" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+          <Card className="bg-card border-border shadow-card">
+            <CardContent className="p-4 md:p-6">
+              <div className="flex items-center gap-3 mb-4 md:mb-6">
+                <div className="w-9 h-9 md:w-10 md:h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Activity className="w-4 h-4 md:w-5 md:h-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-display text-lg font-semibold text-foreground">
+                  <h3 className="font-display text-base md:text-lg font-semibold text-foreground">
                     Atividade Recente
                   </h3>
-                  <p className="text-sm text-muted-foreground">Últimas ações na plataforma</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Últimas ações na plataforma</p>
                 </div>
               </div>
-              <div className="space-y-4">
+              <div className="space-y-2 md:space-y-4">
                 {[
                   { action: "Novo síndico cadastrado", time: "Há 2 minutos" },
                   { action: "Condomínio atualizado", time: "Há 15 minutos" },
@@ -160,9 +160,9 @@ export default function SuperAdminDashboard() {
                 ].map((item, i) => (
                   <div
                     key={i}
-                    className="flex items-center justify-between p-3 rounded-lg bg-background/50 border border-border/30"
+                    className="flex items-center justify-between p-2 md:p-3 rounded-lg bg-secondary/50 border border-border"
                   >
-                    <span className="text-sm text-foreground">{item.action}</span>
+                    <span className="text-xs md:text-sm text-foreground">{item.action}</span>
                     <span className="text-xs text-muted-foreground">{item.time}</span>
                   </div>
                 ))}

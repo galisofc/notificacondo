@@ -201,19 +201,19 @@ const ResidentDashboard = () => {
       title: "Ocorrências",
       value: stats.totalOccurrences,
       icon: FileText,
-      gradient: "from-blue-500 to-blue-600",
+      gradient: "from-primary to-blue-600",
     },
     {
       title: "Defesas Pendentes",
       value: stats.pendingDefenses,
       icon: Shield,
-      gradient: "from-purple-500 to-purple-600",
+      gradient: "from-violet-500 to-purple-600",
     },
     {
       title: "Multas Pendentes",
       value: stats.pendingFines,
       icon: DollarSign,
-      gradient: "from-red-500 to-red-600",
+      gradient: "from-rose-500 to-red-500",
     },
   ];
 
@@ -224,22 +224,22 @@ const ResidentDashboard = () => {
         <meta name="description" content="Painel do morador" />
       </Helmet>
 
-      <div className="space-y-8 animate-fade-up">
+      <div className="space-y-6 md:space-y-8 animate-fade-up">
         {/* Pending Defense Alert */}
         {stats.pendingDefenses > 0 && (
           <div 
-            className="p-4 rounded-xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 cursor-pointer hover:border-amber-500/50 transition-all animate-pulse-slow"
+            className="p-3 md:p-4 rounded-xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 cursor-pointer hover:border-amber-500/50 transition-all animate-pulse-slow"
             onClick={() => navigate("/resident/occurrences")}
           >
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                <Shield className="w-6 h-6 text-amber-500" />
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                <Shield className="w-5 h-5 md:w-6 md:h-6 text-amber-500" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-foreground flex items-center gap-2">
+                <h3 className="font-semibold text-sm md:text-base text-foreground flex items-center gap-2">
                   Você tem {stats.pendingDefenses} {stats.pendingDefenses === 1 ? 'ocorrência pendente' : 'ocorrências pendentes'} de defesa
                 </h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs md:text-sm text-muted-foreground">
                   Clique para visualizar e enviar sua defesa
                 </p>
               </div>
@@ -250,37 +250,37 @@ const ResidentDashboard = () => {
 
         {/* Welcome Section */}
         <div>
-          <h1 className="font-display text-3xl font-bold text-foreground">
+          <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground">
             Olá, {residentInfo.full_name.split(" ")[0]}! 👋
           </h1>
-          <p className="text-muted-foreground mt-1">Bem-vindo ao seu painel de morador.</p>
+          <p className="text-sm md:text-base text-muted-foreground mt-1">Bem-vindo ao seu painel de morador.</p>
         </div>
 
         {/* Apartment Info Card */}
-        <Card className="bg-gradient-card border-border/50">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Home className="w-5 h-5 text-primary" />
+        <Card className="bg-card border-border shadow-card">
+          <CardHeader className="pb-3 md:pb-4">
+            <CardTitle className="text-base md:text-lg flex items-center gap-2">
+              <Home className="w-4 h-4 md:w-5 md:h-5 text-primary" />
               Meu Apartamento
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
               <div>
-                <p className="text-sm text-muted-foreground">Condomínio</p>
-                <p className="font-semibold text-foreground">{residentInfo.condominium_name}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Condomínio</p>
+                <p className="font-semibold text-sm md:text-base text-foreground">{residentInfo.condominium_name}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Bloco</p>
-                <p className="font-semibold text-foreground">{residentInfo.block_name}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Bloco</p>
+                <p className="font-semibold text-sm md:text-base text-foreground">{residentInfo.block_name}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Apartamento</p>
-                <p className="font-semibold text-foreground">{residentInfo.apartment_number}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Apartamento</p>
+                <p className="font-semibold text-sm md:text-base text-foreground">{residentInfo.apartment_number}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Tipo</p>
-                <p className="font-semibold text-foreground">
+                <p className="text-xs md:text-sm text-muted-foreground">Tipo</p>
+                <p className="font-semibold text-sm md:text-base text-foreground">
                   {residentInfo.is_owner ? "Proprietário" : "Inquilino"}
                   {residentInfo.is_responsible && " (Responsável)"}
                 </p>
@@ -290,29 +290,29 @@ const ResidentDashboard = () => {
         </Card>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-3 md:gap-4">
           {statCards.map((stat, index) => (
             <Card
               key={index}
-              className="bg-gradient-card border-border/50 hover:border-primary/30 transition-all duration-300"
+              className="bg-card border-border shadow-card hover:shadow-elevated transition-all duration-300"
             >
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between mb-4">
+              <CardContent className="p-3 md:p-5">
+                <div className="flex items-start justify-between mb-3 md:mb-4">
                   <div
-                    className={`w-11 h-11 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-lg`}
+                    className={`w-9 h-9 md:w-11 md:h-11 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-lg`}
                   >
-                    <stat.icon className="w-5 h-5 text-white" />
+                    <stat.icon className="w-4 h-4 md:w-5 md:h-5 text-white" />
                   </div>
                 </div>
                 <div>
                   {loading ? (
-                    <Skeleton className="h-9 w-16 mb-1" />
+                    <Skeleton className="h-7 md:h-9 w-12 md:w-16 mb-1" />
                   ) : (
-                    <p className="font-display text-3xl font-bold text-foreground">
+                    <p className="font-display text-xl md:text-3xl font-bold text-foreground">
                       {stat.value}
                     </p>
                   )}
-                  <p className="text-sm text-muted-foreground">{stat.title}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">{stat.title}</p>
                 </div>
               </CardContent>
             </Card>
@@ -320,16 +320,16 @@ const ResidentDashboard = () => {
         </div>
 
         {/* Recent Occurrences */}
-        <Card className="bg-gradient-card border-border/50">
+        <Card className="bg-card border-border shadow-card">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-primary" />
+            <CardTitle className="text-base md:text-lg flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-primary" />
               Ocorrências Recentes
             </CardTitle>
             {recentOccurrences.length > 0 && (
               <button
                 onClick={() => navigate("/resident/occurrences")}
-                className="text-sm text-primary hover:underline flex items-center gap-1"
+                className="text-xs md:text-sm text-primary hover:underline flex items-center gap-1"
               >
                 Ver todas
                 <ChevronRight className="w-4 h-4" />
@@ -338,29 +338,29 @@ const ResidentDashboard = () => {
           </CardHeader>
           <CardContent>
             {recentOccurrences.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center mx-auto mb-3">
-                  <FileText className="w-6 h-6 text-green-500" />
+              <div className="text-center py-6 md:py-8">
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-accent/10 flex items-center justify-center mx-auto mb-3">
+                  <FileText className="w-5 h-5 md:w-6 md:h-6 text-accent" />
                 </div>
-                <p className="text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   Você não possui nenhuma ocorrência registrada.
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2 md:space-y-3">
                 {recentOccurrences.map((occurrence) => (
                   <div
                     key={occurrence.id}
-                    className="p-4 rounded-xl bg-background/50 border border-border/30 hover:border-primary/30 transition-all cursor-pointer"
+                    className="p-3 md:p-4 rounded-xl bg-secondary/50 border border-border hover:border-primary/30 transition-all cursor-pointer"
                     onClick={() => navigate(`/resident/occurrences/${occurrence.id}`)}
                   >
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start justify-between gap-3 md:gap-4">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
                           {getTypeBadge(occurrence.type)}
                           {getStatusBadge(occurrence.status)}
                         </div>
-                        <h4 className="font-medium text-foreground mb-1">{occurrence.title}</h4>
+                        <h4 className="font-medium text-sm md:text-base text-foreground mb-1">{occurrence.title}</h4>
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
                           {new Date(occurrence.occurred_at).toLocaleDateString("pt-BR")}
@@ -377,26 +377,26 @@ const ResidentDashboard = () => {
 
         {/* Pending Fines */}
         {pendingFines.length > 0 && (
-          <Card className="bg-gradient-card border-border/50">
+          <Card className="bg-card border-border shadow-card">
             <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-red-500" />
+              <CardTitle className="text-base md:text-lg flex items-center gap-2">
+                <DollarSign className="w-4 h-4 md:w-5 md:h-5 text-red-500" />
                 Multas Pendentes
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
+              <div className="space-y-2 md:space-y-3">
                 {pendingFines.map((fine) => (
                   <div
                     key={fine.id}
-                    className="p-4 rounded-xl bg-red-500/5 border border-red-500/20"
+                    className="p-3 md:p-4 rounded-xl bg-red-500/5 border border-red-500/20"
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-semibold text-foreground">
+                        <p className="font-semibold text-sm md:text-base text-foreground">
                           {formatCurrency(fine.amount)}
                         </p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs md:text-sm text-muted-foreground">
                           Vencimento: {new Date(fine.due_date).toLocaleDateString("pt-BR")}
                         </p>
                       </div>
