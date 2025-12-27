@@ -88,6 +88,7 @@ export function SindicosManagement() {
   const [editProfileData, setEditProfileData] = useState({
     full_name: "",
     phone: "",
+    cpf: "",
   });
   const [formData, setFormData] = useState({
     full_name: "",
@@ -198,12 +199,28 @@ export function SindicosManagement() {
   });
 
   const updateProfileMutation = useMutation({
-    mutationFn: async ({ userId, data }: { userId: string; data: { full_name: string; phone: string } }) => {
+    mutationFn: async ({ userId, data }: { userId: string; data: { full_name: string; phone: string; cpf: string } }) => {
+      const cleanCpf = data.cpf.replace(/\D/g, "");
+      
+      // Check if CPF is being changed and if it already exists
+      if (cleanCpf) {
+        const { data: existingProfile } = await supabase
+          .from("profiles")
+          .select("id, user_id")
+          .eq("cpf", cleanCpf)
+          .maybeSingle();
+        
+        if (existingProfile && existingProfile.user_id !== userId) {
+          throw new Error("CPF já cadastrado para outro usuário.");
+        }
+      }
+      
       const { error } = await supabase
         .from("profiles")
         .update({
           full_name: data.full_name,
           phone: data.phone || null,
+          cpf: cleanCpf || null,
         })
         .eq("user_id", userId);
 
@@ -224,6 +241,7 @@ export function SindicosManagement() {
             ...selectedSindico.profile!,
             full_name: editProfileData.full_name,
             phone: editProfileData.phone,
+            cpf: editProfileData.cpf.replace(/\D/g, ""),
           },
         });
       }
@@ -298,6 +316,7 @@ export function SindicosManagement() {
       setEditProfileData({
         full_name: selectedSindico.profile.full_name || "",
         phone: selectedSindico.profile.phone || "",
+        cpf: selectedSindico.profile.cpf || "",
       });
       setIsEditingProfile(true);
     }
@@ -688,6 +707,17 @@ export function SindicosManagement() {
                           <p className="text-xs text-muted-foreground">
                             O email não pode ser alterado
                           </p>
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="edit_cpf">CPF</Label>
+                          <MaskedInput
+                            id="edit_cpf"
+                            mask="cpf"
+                            value={editProfileData.cpf}
+                            onChange={(value) =>
+                              setEditProfileData({ ...editProfileData, cpf: value })
+                            }
+                          />
                         </div>
                         <div className="grid gap-2">
                           <Label htmlFor="edit_phone">Telefone</Label>
