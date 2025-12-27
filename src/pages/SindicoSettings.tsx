@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatPhone } from "@/components/ui/masked-input";
 import { useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
@@ -540,7 +541,7 @@ const SindicoSettings = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Telefone</p>
-                <p className="font-medium text-foreground">{profile?.phone || "-"}</p>
+                <p className="font-medium text-foreground">{profile?.phone ? formatPhone(profile.phone) : "-"}</p>
               </div>
             </div>
             <div className="mt-6 pt-6 border-t border-border/50">

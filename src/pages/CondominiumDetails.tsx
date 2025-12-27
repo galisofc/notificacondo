@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MaskedInput } from "@/components/ui/masked-input";
+import { MaskedInput, formatPhone, formatCPF } from "@/components/ui/masked-input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -793,7 +793,7 @@ const CondominiumDetails = () => {
                     {resident.phone && (
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Phone className="w-3 h-3" />
-                        <span>{resident.phone}</span>
+                        <span>{formatPhone(resident.phone)}</span>
                       </div>
                     )}
                     <div className="flex gap-2 mt-2">

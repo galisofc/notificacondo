@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatPhone } from "@/components/ui/masked-input";
 import { useParams, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -540,7 +541,7 @@ export default function SubscriptionDetails() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Telefone</p>
-                <p className="font-medium">{owner?.phone || "—"}</p>
+                <p className="font-medium">{owner?.phone ? formatPhone(owner.phone) : "—"}</p>
               </div>
             </CardContent>
           </Card>
