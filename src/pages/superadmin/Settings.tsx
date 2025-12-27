@@ -901,21 +901,176 @@ export default function SuperAdminSettings() {
             <Card className="bg-gradient-card border-border/50">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Bell className="w-5 h-5 text-primary" />
-                  Templates de Mensagem
+                  <MessageCircle className="w-5 h-5 text-primary" />
+                  Templates de Mensagem WhatsApp
                 </CardTitle>
                 <CardDescription>
-                  Personalize os templates de mensagens enviadas
+                  Templates utilizados para disparo de mensagens via WhatsApp
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <CardContent className="space-y-6">
+                {/* Template 1: Notificação de Ocorrência */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20">
+                      Notificação de Ocorrência
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">send-whatsapp-notification</span>
+                  </div>
+                  <div className="p-4 rounded-lg bg-muted/30 border border-border/50 font-mono text-sm whitespace-pre-wrap">
+{`🏢 *{condominio}*
+
+Olá, *{nome}*!
+
+Você recebeu uma *{tipo}*:
+📋 *{titulo}*
+
+Acesse o link abaixo para ver os detalhes e apresentar sua defesa:
+👉 {link}
+
+Este link é pessoal e intransferível.`}
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    <Badge variant="outline">{`{nome}`}</Badge>
+                    <Badge variant="outline">{`{tipo}`}</Badge>
+                    <Badge variant="outline">{`{titulo}`}</Badge>
+                    <Badge variant="outline">{`{condominio}`}</Badge>
+                    <Badge variant="outline">{`{link}`}</Badge>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Template 2: Decisão - Arquivada */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-green-500/10 text-green-500 border-green-500/20">
+                      Decisão: Arquivada
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">notify-resident-decision</span>
+                  </div>
+                  <div className="p-4 rounded-lg bg-muted/30 border border-border/50 font-mono text-sm whitespace-pre-wrap">
+{`✅ *DECISÃO: ARQUIVADA*
+
+🏢 *{condominio}*
+
+Olá, *{nome}*!
+
+Sua defesa referente à ocorrência "{titulo}" foi analisada.
+
+📋 *Decisão:* ARQUIVADA
+
+Sua defesa foi aceita e a ocorrência foi arquivada. Nenhuma penalidade será aplicada.
+
+💬 *Justificativa:*
+{justificativa}
+
+Acesse o sistema para mais detalhes:
+👉 {link}`}
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Template 3: Decisão - Advertência */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20">
+                      Decisão: Advertência
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">notify-resident-decision</span>
+                  </div>
+                  <div className="p-4 rounded-lg bg-muted/30 border border-border/50 font-mono text-sm whitespace-pre-wrap">
+{`⚠️ *DECISÃO: ADVERTÊNCIA APLICADA*
+
+🏢 *{condominio}*
+
+Olá, *{nome}*!
+
+Sua defesa referente à ocorrência "{titulo}" foi analisada.
+
+📋 *Decisão:* ADVERTÊNCIA APLICADA
+
+Após análise da sua defesa, foi decidido aplicar uma advertência formal.
+
+💬 *Justificativa:*
+{justificativa}
+
+Acesse o sistema para mais detalhes:
+👉 {link}`}
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Template 4: Decisão - Multa */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-red-500/10 text-red-500 border-red-500/20">
+                      Decisão: Multa
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">notify-resident-decision</span>
+                  </div>
+                  <div className="p-4 rounded-lg bg-muted/30 border border-border/50 font-mono text-sm whitespace-pre-wrap">
+{`🚨 *DECISÃO: MULTA APLICADA*
+
+🏢 *{condominio}*
+
+Olá, *{nome}*!
+
+Sua defesa referente à ocorrência "{titulo}" foi analisada.
+
+📋 *Decisão:* MULTA APLICADA
+
+Após análise da sua defesa, foi decidido aplicar uma multa. Verifique os detalhes no sistema.
+
+💬 *Justificativa:*
+{justificativa}
+
+Acesse o sistema para mais detalhes:
+👉 {link}`}
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Template 5: Nova Defesa para Síndico */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-violet-500/10 text-violet-500 border-violet-500/20">
+                      Aviso ao Síndico: Nova Defesa
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">notify-sindico-defense</span>
+                  </div>
+                  <div className="p-4 rounded-lg bg-muted/30 border border-border/50 font-mono text-sm whitespace-pre-wrap">
+{`📋 *Nova Defesa Recebida*
+
+🏢 *{condominio}*
+
+O morador *{nome_morador}* enviou uma defesa para a ocorrência:
+
+📝 *{titulo}*
+Tipo: {tipo}
+
+Acesse o sistema para analisar:
+👉 {link}`}
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    <Badge variant="outline">{`{nome_morador}`}</Badge>
+                    <Badge variant="outline">{`{tipo}`}</Badge>
+                    <Badge variant="outline">{`{titulo}`}</Badge>
+                    <Badge variant="outline">{`{condominio}`}</Badge>
+                    <Badge variant="outline">{`{link}`}</Badge>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20 mt-4">
                   <div className="flex items-start gap-3">
-                    <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5" />
+                    <Zap className="w-5 h-5 text-blue-500 mt-0.5" />
                     <div>
-                      <p className="font-medium text-amber-500">Em desenvolvimento</p>
+                      <p className="font-medium text-blue-500">Templates fixos</p>
                       <p className="text-sm text-muted-foreground">
-                        A personalização de templates estará disponível em breve.
+                        Os templates acima são utilizados automaticamente pelo sistema. A personalização será disponibilizada em uma atualização futura.
                       </p>
                     </div>
                   </div>
