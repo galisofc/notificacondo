@@ -227,13 +227,35 @@ export default function SubscriptionDetails() {
   const transferCondominiumMutation = useMutation({
     mutationFn: async (newOwnerId: string) => {
       if (!data?.condominium?.id) throw new Error("Condomínio não encontrado");
+      
+      const currentOwnerId = data.condominium.owner_id;
 
-      const { error } = await supabase
+      // Get current user ID for the transferred_by field
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      // Update condominium owner
+      const { error: updateError } = await supabase
         .from("condominiums")
         .update({ owner_id: newOwnerId })
         .eq("id", data.condominium.id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      // Record the transfer in history
+      const { error: transferError } = await supabase
+        .from("condominium_transfers")
+        .insert({
+          condominium_id: data.condominium.id,
+          from_owner_id: currentOwnerId,
+          to_owner_id: newOwnerId,
+          transferred_by: user.id,
+        });
+
+      if (transferError) {
+        console.error("Error recording transfer:", transferError);
+        // Don't throw - the transfer was successful, just logging failed
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subscription-details", id] });
