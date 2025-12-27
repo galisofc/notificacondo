@@ -343,21 +343,21 @@ const Condominiums = () => {
       <Helmet>
         <title>Condomínios | CondoManager</title>
       </Helmet>
-      <div className="space-y-6 animate-fade-up">
+      <div className="space-y-4 md:space-y-6 animate-fade-up">
         <div>
-          <h1 className="font-display text-3xl font-bold text-foreground">
+          <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground">
             Condomínios
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm md:text-base text-muted-foreground mt-1">
             Gerencie seus condomínios cadastrados
           </p>
         </div>
 
         {/* Add Button */}
-        <div className="flex justify-end mb-6">
+        <div className="flex justify-end mb-4 md:mb-6">
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="hero" onClick={openNewDialog}>
+              <Button variant="hero" onClick={openNewDialog} className="w-full sm:w-auto">
                 <Plus className="w-4 h-4 mr-2" />
                 Novo Condomínio
               </Button>
@@ -505,35 +505,35 @@ const Condominiums = () => {
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : condominiums.length === 0 ? (
-          <div className="text-center py-12 px-4 rounded-2xl bg-gradient-card border border-border/50">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-              <Building2 className="w-8 h-8 text-primary" />
+          <div className="text-center py-8 md:py-12 px-4 rounded-2xl bg-card border border-border shadow-card">
+            <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <Building2 className="w-7 h-7 md:w-8 md:h-8 text-primary" />
             </div>
-            <h3 className="font-display text-xl font-semibold text-foreground mb-2">
+            <h3 className="font-display text-lg md:text-xl font-semibold text-foreground mb-2">
               Nenhum condomínio cadastrado
             </h3>
-            <p className="text-muted-foreground mb-6">
+            <p className="text-sm md:text-base text-muted-foreground mb-6">
               Cadastre seu primeiro condomínio para começar.
             </p>
-            <Button variant="hero" onClick={openNewDialog}>
+            <Button variant="hero" onClick={openNewDialog} className="w-full sm:w-auto">
               <Plus className="w-4 h-4 mr-2" />
               Cadastrar Condomínio
             </Button>
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
             {condominiums.map((condo) => (
               <div
                 key={condo.id}
-                className="p-6 rounded-2xl bg-gradient-card border border-border/50 hover:border-primary/30 transition-all"
+                className="p-4 md:p-6 rounded-2xl bg-card border border-border shadow-card hover:shadow-elevated transition-all"
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <Building2 className="w-6 h-6 text-primary" />
+                <div className="flex items-start justify-between mb-3 md:mb-4">
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <Building2 className="w-5 h-5 md:w-6 md:h-6 text-primary" />
                     </div>
                     {condo.subscription?.plan && (
-                      <Badge className={`${getPlanColor(condo.subscription.plan)} text-white`}>
+                      <Badge className={`${getPlanColor(condo.subscription.plan)} text-white text-xs`}>
                         {getPlanName(condo.subscription.plan)}
                       </Badge>
                     )}
@@ -543,6 +543,7 @@ const Condominiums = () => {
                       variant="ghost"
                       size="icon"
                       onClick={() => handleEdit(condo)}
+                      className="h-8 w-8"
                     >
                       <Edit className="w-4 h-4" />
                     </Button>
@@ -550,25 +551,26 @@ const Condominiums = () => {
                       variant="ghost"
                       size="icon"
                       onClick={() => handleDelete(condo.id)}
+                      className="h-8 w-8"
                     >
                       <Trash2 className="w-4 h-4 text-destructive" />
                     </Button>
                   </div>
                 </div>
 
-                <h3 className="font-display text-lg font-semibold text-foreground mb-2">
+                <h3 className="font-display text-base md:text-lg font-semibold text-foreground mb-2">
                   {condo.name}
                 </h3>
                 
                 {condo.address && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                  <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground mb-1">
                     <MapPin className="w-3 h-3" />
-                    <span>{condo.address}</span>
+                    <span className="truncate">{condo.address}</span>
                   </div>
                 )}
                 
                 {condo.city && (
-                  <p className="text-sm text-muted-foreground mb-3">
+                  <p className="text-xs md:text-sm text-muted-foreground mb-3">
                     {condo.city}{condo.state ? `, ${condo.state}` : ""}
                   </p>
                 )}
@@ -580,11 +582,11 @@ const Condominiums = () => {
                   </div>
                 )}
 
-                <div className="mt-4 pt-4 border-t border-border/50">
+                <div className="mt-4 pt-4 border-t border-border">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full"
+                    className="w-full text-xs md:text-sm"
                     onClick={() => navigate(`/condominiums/${condo.id}`)}
                   >
                     Gerenciar Blocos e Unidades
