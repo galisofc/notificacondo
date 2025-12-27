@@ -10,8 +10,9 @@ interface CreateSindicoRequest {
   email: string;
   password: string;
   full_name: string;
+  cpf: string;
   phone?: string;
-  plan: "start" | "essencial" | "profissional" | "enterprise";
+  plan?: "start" | "essencial" | "profissional" | "enterprise";
 }
 
 serve(async (req) => {
@@ -57,10 +58,10 @@ serve(async (req) => {
     }
 
     const body: CreateSindicoRequest = await req.json();
-    const { email, password, full_name, phone, plan } = body;
+    const { email, password, full_name, cpf, phone } = body;
 
-    if (!email || !password || !full_name || !plan) {
-      throw new Error("Campos obrigatórios: email, password, full_name, plan");
+    if (!email || !password || !full_name || !cpf) {
+      throw new Error("Campos obrigatórios: email, password, full_name, cpf");
     }
 
     // Create the user in auth.users
@@ -84,6 +85,7 @@ serve(async (req) => {
       .from("profiles")
       .update({
         full_name,
+        cpf: cpf.replace(/\D/g, ""), // Store only digits
         phone: phone || null,
       })
       .eq("user_id", userId);
