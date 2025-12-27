@@ -27,6 +27,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,7 +48,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, MoreHorizontal, Mail, Building2, Plus, Loader2, Eye, User, Phone, Calendar, CreditCard, CheckCircle, XCircle, Pencil, Save, X } from "lucide-react";
+import { Search, MoreHorizontal, Mail, Building2, Plus, Loader2, Eye, User, Phone, Calendar, CreditCard, CheckCircle, XCircle, Pencil, Save, X, Trash2, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
@@ -70,6 +80,8 @@ export function SindicosManagement() {
   const [selectedSindico, setSelectedSindico] = useState<SindicoWithProfile | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [sindicoToDelete, setSindicoToDelete] = useState<SindicoWithProfile | null>(null);
   const [editProfileData, setEditProfileData] = useState({
     full_name: "",
     phone: "",
@@ -221,6 +233,37 @@ export function SindicosManagement() {
     },
   });
 
+  const deleteSindicoMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { data: result, error } = await supabase.functions.invoke("delete-sindico", {
+        body: { user_id: userId },
+      });
+
+      if (error) throw error;
+      if (!result?.success) throw new Error(result?.error || "Erro ao excluir síndico");
+
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["superadmin-sindicos"] });
+      queryClient.invalidateQueries({ queryKey: ["superadmin-stats"] });
+      setIsDeleteDialogOpen(false);
+      setIsViewDialogOpen(false);
+      setSindicoToDelete(null);
+      toast({
+        title: "Síndico excluído",
+        description: "O síndico foi removido do sistema com sucesso.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao excluir",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const filteredSindicos = sindicos?.filter((s) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
@@ -265,6 +308,16 @@ export function SindicosManagement() {
     }
   };
 
+  const handleDeleteClick = (sindico: SindicoWithProfile) => {
+    setSindicoToDelete(sindico);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (sindicoToDelete) {
+      deleteSindicoMutation.mutate(sindicoToDelete.user_id);
+    }
+  };
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -746,13 +799,68 @@ export function SindicosManagement() {
               </div>
             )}
             
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              {selectedSindico && selectedSindico.condominiums_count === 0 && (
+                <Button 
+                  variant="destructive" 
+                  onClick={() => handleDeleteClick(selectedSindico)}
+                  className="w-full sm:w-auto"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Excluir Síndico
+                </Button>
+              )}
+              <Button variant="outline" onClick={() => setIsViewDialogOpen(false)} className="w-full sm:w-auto">
                 Fechar
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+                Confirmar Exclusão
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja excluir o síndico{" "}
+                <span className="font-semibold">{sindicoToDelete?.profile?.full_name}</span>?
+                <br /><br />
+                Esta ação é irreversível e removerá permanentemente:
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li>A conta do síndico</li>
+                  <li>Todas as informações do perfil</li>
+                  <li>Acesso ao sistema</li>
+                </ul>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleteSindicoMutation.isPending}>
+                Cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleConfirmDelete}
+                disabled={deleteSindicoMutation.isPending}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deleteSindicoMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Excluindo...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Excluir
+                  </>
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );
