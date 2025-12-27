@@ -314,10 +314,10 @@ function SidebarNavigation() {
                       isActive={isActive}
                       tooltip={collapsed ? item.title : undefined}
                       className={cn(
-                        "w-full h-11 transition-all duration-200 rounded-full",
+                        "w-full h-11 rounded-full transition-all duration-300 ease-out",
                         isActive
-                          ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
-                          : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                          ? "bg-primary text-primary-foreground shadow-md shadow-primary/25 scale-[1.02]"
+                          : "text-muted-foreground hover:text-foreground hover:bg-secondary hover:scale-[1.01]"
                       )}
                     >
                       <NavLink
