@@ -30,6 +30,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { formatCPF } from "@/components/ui/masked-input";
 import { cn } from "@/lib/utils";
 import {
@@ -432,12 +438,21 @@ export default function Transfers() {
                         </TableCell>
                         <TableCell>
                           {transfer.notes ? (
-                            <div className="flex items-start gap-2 max-w-[200px]">
-                              <MessageSquare className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                              <p className="text-sm text-muted-foreground line-clamp-2">
-                                {transfer.notes}
-                              </p>
-                            </div>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-start gap-2 max-w-[200px] cursor-help">
+                                    <MessageSquare className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                                    <p className="text-sm text-muted-foreground line-clamp-2">
+                                      {transfer.notes}
+                                    </p>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="left" className="max-w-[300px]">
+                                  <p className="text-sm whitespace-pre-wrap">{transfer.notes}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           ) : (
                             <span className="text-muted-foreground text-sm">—</span>
                           )}
