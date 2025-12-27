@@ -59,6 +59,7 @@ const superAdminNavItems: NavItem[] = [
   { title: "Condomínios", url: "/superadmin/condominiums", icon: Building2 },
   { title: "Assinaturas", url: "/superadmin/subscriptions", icon: CreditCard },
   { title: "Faturas", url: "/superadmin/invoices", icon: Receipt },
+  { title: "Transferências", url: "/superadmin/transfers", icon: Scale },
   { title: "Logs", url: "/superadmin/logs", icon: FileText },
   { title: "WhatsApp", url: "/superadmin/whatsapp", icon: MessageCircle },
   { title: "Configurações", url: "/superadmin/settings", icon: Settings },
