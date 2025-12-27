@@ -56,6 +56,7 @@ interface SindicoWithProfile {
     id: string;
     name: string;
     subscription: {
+      id: string;
       plan: string;
       active: boolean;
     } | null;
@@ -107,7 +108,7 @@ export function SindicosManagement() {
             (condos || []).map(async (condo) => {
               const { data: subscription } = await supabase
                 .from("subscriptions")
-                .select("plan, active")
+                .select("id, plan, active")
                 .eq("condominium_id", condo.id)
                 .single();
               return { ...condo, subscription };
@@ -559,7 +560,9 @@ export function SindicosManagement() {
                           className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-secondary/50 transition-colors cursor-pointer"
                           onClick={() => {
                             setIsViewDialogOpen(false);
-                            navigate(`/condominiums/${condo.id}`);
+                            if (condo.subscription?.id) {
+                              navigate(`/superadmin/subscriptions/${condo.subscription.id}`);
+                            }
                           }}
                         >
                           <div className="flex items-center gap-3">
