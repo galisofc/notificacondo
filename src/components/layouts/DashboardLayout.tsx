@@ -19,9 +19,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { NavLink } from "@/components/NavLink";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   Building2,
@@ -39,6 +37,7 @@ import {
   User,
   Scale,
   Receipt,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -54,7 +53,7 @@ interface NavItem {
 }
 
 const superAdminNavItems: NavItem[] = [
-  { title: "Dashboard", url: "/superadmin", icon: LayoutDashboard },
+  { title: "Início", url: "/superadmin", icon: Home },
   { title: "Síndicos", url: "/superadmin/sindicos", icon: Users },
   { title: "Condomínios", url: "/superadmin/condominiums", icon: Building2 },
   { title: "Assinaturas", url: "/superadmin/subscriptions", icon: CreditCard },
@@ -64,10 +63,8 @@ const superAdminNavItems: NavItem[] = [
   { title: "Configurações", url: "/superadmin/settings", icon: Settings },
 ];
 
-// sindicoNavItems moved to getSindicoNavItems() function for dynamic badge
-
 const residentNavItems: NavItem[] = [
-  { title: "Dashboard", url: "/resident", icon: LayoutDashboard },
+  { title: "Início", url: "/resident", icon: Home },
   { title: "Minhas Ocorrências", url: "/resident/occurrences", icon: FileText },
   { title: "Meu Perfil", url: "/resident/profile", icon: User },
 ];
@@ -85,7 +82,6 @@ function SidebarNavigation() {
   const prevPendingDefensesRef = useRef<number>(0);
   const audioContextRef = useRef<AudioContext | null>(null);
 
-  // Play notification sound using Web Audio API
   const playNotificationSound = useCallback(() => {
     try {
       if (!audioContextRef.current) {
@@ -99,10 +95,9 @@ function SidebarNavigation() {
       oscillator.connect(gainNode);
       gainNode.connect(ctx.destination);
       
-      // Pleasant notification tone
-      oscillator.frequency.setValueAtTime(880, ctx.currentTime); // A5
-      oscillator.frequency.setValueAtTime(1100, ctx.currentTime + 0.1); // C#6
-      oscillator.frequency.setValueAtTime(1320, ctx.currentTime + 0.2); // E6
+      oscillator.frequency.setValueAtTime(880, ctx.currentTime);
+      oscillator.frequency.setValueAtTime(1100, ctx.currentTime + 0.1);
+      oscillator.frequency.setValueAtTime(1320, ctx.currentTime + 0.2);
       
       oscillator.type = "sine";
       
@@ -116,13 +111,11 @@ function SidebarNavigation() {
     }
   }, []);
 
-  // Fetch pending defenses count for sindico
   useEffect(() => {
     const fetchPendingDefenses = async () => {
       if (!user || role !== "sindico") return;
 
       try {
-        // Get user's condominiums
         const { data: condos } = await supabase
           .from("condominiums")
           .select("id")
@@ -148,7 +141,6 @@ function SidebarNavigation() {
     fetchPendingDefenses();
   }, [user, role]);
 
-  // Subscribe to realtime updates on occurrences table
   useEffect(() => {
     if (!user || role !== "sindico" || condoIds.length === 0) return;
 
@@ -162,7 +154,6 @@ function SidebarNavigation() {
           table: "occurrences",
         },
         async (payload) => {
-          // Re-fetch count when any occurrence changes
           const { count } = await supabase
             .from("occurrences")
             .select("*", { count: "exact", head: true })
@@ -171,7 +162,6 @@ function SidebarNavigation() {
 
           const newCount = count || 0;
           
-          // Play notification sound if count increased
           if (newCount > prevPendingDefensesRef.current) {
             playNotificationSound();
           }
@@ -187,7 +177,6 @@ function SidebarNavigation() {
     };
   }, [user, role, condoIds, playNotificationSound]);
 
-  // Keep ref in sync with initial fetch
   useEffect(() => {
     prevPendingDefensesRef.current = pendingDefenses;
   }, [pendingDefenses]);
@@ -199,7 +188,7 @@ function SidebarNavigation() {
   };
 
   const getSindicoNavItems = (): NavItem[] => [
-    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    { title: "Início", url: "/dashboard", icon: Home },
     { title: "Condomínios", url: "/condominiums", icon: Building2 },
     { title: "Ocorrências", url: "/occurrences", icon: FileText },
     { title: "Análise de Defesas", url: "/defenses", icon: Scale, badge: pendingDefenses },
@@ -221,24 +210,21 @@ function SidebarNavigation() {
     switch (role) {
       case "super_admin":
         return {
-          title: "Super Admin",
-          subtitle: "Administração",
+          title: "ADMIN",
+          subtitle: "Super Admin",
           icon: Shield,
-          gradient: "from-red-500 to-orange-500",
         };
       case "sindico":
         return {
-          title: "NotificaCondo",
+          title: "NOTIFICA",
           subtitle: "Gestão Condominial",
           icon: Building2,
-          gradient: "from-primary to-accent",
         };
       default:
         return {
-          title: "NotificaCondo",
+          title: "NOTIFICA",
           subtitle: "Área do Morador",
           icon: Home,
-          gradient: "from-blue-500 to-cyan-500",
         };
     }
   };
@@ -255,44 +241,58 @@ function SidebarNavigation() {
         .join("")
         .toUpperCase();
     }
+    if (profileInfo?.full_name) {
+      return profileInfo.full_name
+        .split(" ")
+        .map((n) => n[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase();
+    }
     return user?.email?.slice(0, 2).toUpperCase() || "U";
   };
 
   const getUserName = () => {
     if (residentInfo?.full_name) {
-      return residentInfo.full_name;
+      return residentInfo.full_name.split(" ")[0].toUpperCase();
     }
     if (profileInfo?.full_name) {
-      return profileInfo.full_name;
+      return profileInfo.full_name.split(" ")[0].toUpperCase();
     }
-    return user?.email || "Usuário";
+    return user?.email?.split("@")[0]?.toUpperCase() || "USUÁRIO";
+  };
+
+  const getRoleLabel = () => {
+    switch (role) {
+      case "super_admin":
+        return "Administrador";
+      case "sindico":
+        return "Síndico";
+      default:
+        return "Morador";
+    }
   };
 
   return (
     <Sidebar
       className={cn(
-        "border-r border-sidebar-border bg-sidebar transition-all duration-300",
+        "border-r-0 transition-all duration-300",
         collapsed ? "w-[70px]" : "w-[260px]"
       )}
       collapsible="icon"
     >
-      <SidebarHeader className="p-4">
+      {/* Header with Logo */}
+      <SidebarHeader className="p-4 pb-6">
         <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
-          <div
-            className={cn(
-              "rounded-xl bg-gradient-to-br flex items-center justify-center shadow-lg shrink-0",
-              config.gradient,
-              collapsed ? "w-9 h-9" : "w-10 h-10"
-            )}
-          >
-            <Icon className={cn("text-white", collapsed ? "w-4 h-4" : "w-5 h-5")} />
+          <div className="rounded-xl bg-sidebar-primary/20 p-2.5 shrink-0">
+            <Icon className="w-6 h-6 text-sidebar-primary" />
           </div>
           {!collapsed && (
             <div className="overflow-hidden">
-              <span className="font-display text-lg font-bold text-sidebar-foreground block truncate">
+              <span className="font-display text-xl font-bold text-sidebar-foreground block tracking-tight">
                 {config.title}
               </span>
-              <span className="text-xs text-muted-foreground block truncate">
+              <span className="text-xs text-sidebar-primary font-semibold uppercase tracking-wider">
                 {config.subtitle}
               </span>
             </div>
@@ -300,45 +300,49 @@ function SidebarNavigation() {
         </div>
       </SidebarHeader>
 
-      <Separator className="mx-4 w-auto bg-sidebar-border" />
-
-      <SidebarContent className="px-2 py-4">
+      {/* Navigation */}
+      <SidebarContent className="px-3">
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="space-y-1">
               {navItems.map((item) => {
                 const isActive = location.pathname === item.url;
                 return (
-                  <SidebarMenuItem key={item.title} className="relative">
+                  <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
                       tooltip={collapsed ? item.title : undefined}
                       className={cn(
-                        "w-full transition-all duration-200",
+                        "w-full h-11 transition-all duration-200 rounded-lg",
                         isActive
-                          ? "bg-primary/10 text-primary hover:bg-primary/15"
-                          : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                          ? "bg-sidebar-accent text-sidebar-foreground"
+                          : "text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
                       )}
                     >
                       <NavLink
                         to={item.url}
                         end={item.url === "/superadmin" || item.url === "/dashboard" || item.url === "/resident"}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg w-full"
+                        className="flex items-center gap-3 px-3 py-2.5 w-full"
                         activeClassName=""
                       >
-                        <item.icon className={cn("shrink-0", collapsed ? "w-5 h-5" : "w-5 h-5")} />
+                        <item.icon className="w-5 h-5 shrink-0" />
                         {!collapsed && (
-                          <span className="font-medium flex-1">{item.title}</span>
-                        )}
-                        {item.badge !== undefined && item.badge > 0 && (
-                          <span
-                            className={cn(
-                              "flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-bold",
-                              collapsed ? "w-5 h-5 absolute -top-1 -right-1" : "min-w-5 h-5 px-1.5"
+                          <>
+                            <span className="font-medium flex-1 text-sm">{item.title}</span>
+                            {item.badge !== undefined && item.badge > 0 && (
+                              <span className="flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-xs font-bold">
+                                {item.badge > 99 ? "99+" : item.badge}
+                              </span>
                             )}
-                          >
-                            {item.badge > 99 ? "99+" : item.badge}
+                            {isActive && (
+                              <ChevronRight className="w-4 h-4 text-sidebar-primary" />
+                            )}
+                          </>
+                        )}
+                        {collapsed && item.badge !== undefined && item.badge > 0 && (
+                          <span className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold">
+                            {item.badge > 9 ? "9+" : item.badge}
                           </span>
                         )}
                       </NavLink>
@@ -351,45 +355,54 @@ function SidebarNavigation() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4 mt-auto">
-        <Separator className="mb-4 bg-sidebar-border" />
+      {/* Footer with User Info */}
+      <SidebarFooter className="p-3 mt-auto">
         <div
           className={cn(
-            "flex items-center gap-3 p-2 rounded-lg bg-sidebar-accent/50",
+            "flex items-center gap-3 p-3 rounded-xl bg-sidebar-accent/30",
             collapsed && "justify-center p-2"
           )}
         >
-          <Avatar className="h-9 w-9 shrink-0">
-            <AvatarFallback className="bg-primary/20 text-primary text-sm font-medium">
+          <Avatar className="h-10 w-10 shrink-0 border-2 border-sidebar-accent">
+            <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-sm font-bold">
               {getUserInitials()}
             </AvatarFallback>
           </Avatar>
           {!collapsed && (
-            <div className="flex-1 overflow-hidden">
-              <p className="text-sm font-medium text-sidebar-foreground truncate">
+            <div className="flex-1 overflow-hidden min-w-0">
+              <p className="text-sm font-bold text-sidebar-foreground truncate">
                 {getUserName()}
               </p>
-              <p className="text-xs text-muted-foreground truncate">
-                {role === "super_admin"
-                  ? "Administrador"
-                  : role === "sindico"
-                  ? "Síndico"
-                  : "Morador"}
+              <p className="text-xs text-sidebar-muted truncate">
+                {getRoleLabel()}
               </p>
             </div>
           )}
-        </div>
-        <Button
-          variant="ghost"
-          onClick={handleSignOut}
-          className={cn(
-            "w-full mt-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10",
-            collapsed && "px-2"
+          {!collapsed && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => navigate("/notifications")}
+                className="p-2 rounded-lg text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
+              >
+                <Bell className="w-4 h-4" />
+              </button>
+              <button
+                onClick={handleSignOut}
+                className="p-2 rounded-lg text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
           )}
-        >
-          <LogOut className={cn("w-4 h-4", !collapsed && "mr-2")} />
-          {!collapsed && "Sair"}
-        </Button>
+        </div>
+        {collapsed && (
+          <button
+            onClick={handleSignOut}
+            className="w-full mt-2 p-2 rounded-lg text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors flex justify-center"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        )}
       </SidebarFooter>
     </Sidebar>
   );
