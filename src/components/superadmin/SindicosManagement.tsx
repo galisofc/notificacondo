@@ -27,13 +27,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,15 +61,6 @@ interface SindicoWithProfile {
   condominiums_count: number;
 }
 
-type PlanType = "start" | "essencial" | "profissional" | "enterprise";
-
-const planInfo: Record<PlanType, { name: string; description: string }> = {
-  start: { name: "Start", description: "10 notificações/mês" },
-  essencial: { name: "Essencial", description: "50 notificações/mês" },
-  profissional: { name: "Profissional", description: "200 notificações/mês" },
-  enterprise: { name: "Enterprise", description: "Ilimitado" },
-};
-
 export function SindicosManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -85,7 +69,6 @@ export function SindicosManagement() {
     email: "",
     password: "",
     phone: "",
-    plan: "start" as PlanType,
   });
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -154,7 +137,7 @@ export function SindicosManagement() {
       queryClient.invalidateQueries({ queryKey: ["superadmin-sindicos"] });
       queryClient.invalidateQueries({ queryKey: ["superadmin-stats"] });
       setIsCreateDialogOpen(false);
-      setFormData({ full_name: "", email: "", password: "", phone: "", plan: "start" });
+      setFormData({ full_name: "", email: "", password: "", phone: "" });
       toast({
         title: "Síndico criado!",
         description: "O novo síndico foi cadastrado com sucesso.",
@@ -196,15 +179,6 @@ export function SindicosManagement() {
     );
   });
 
-  const getPlanBadge = (plan: string | undefined) => {
-    const planColors: Record<string, string> = {
-      start: "bg-gray-500/10 text-gray-500 border-gray-500/20",
-      essencial: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-      profissional: "bg-violet-500/10 text-violet-500 border-violet-500/20",
-      enterprise: "bg-amber-500/10 text-amber-500 border-amber-500/20",
-    };
-    return planColors[plan || "start"] || planColors.start;
-  };
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -240,7 +214,7 @@ export function SindicosManagement() {
                 <DialogHeader>
                   <DialogTitle>Criar Novo Síndico</DialogTitle>
                   <DialogDescription>
-                    Cadastre um novo síndico e escolha o plano de assinatura.
+                    Cadastre um novo síndico na plataforma. O plano será definido ao criar um condomínio.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
@@ -281,29 +255,6 @@ export function SindicosManagement() {
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="plan">Plano de Assinatura *</Label>
-                    <Select
-                      value={formData.plan}
-                      onValueChange={(value: PlanType) => setFormData({ ...formData, plan: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione um plano" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(Object.entries(planInfo) as [PlanType, { name: string; description: string }][]).map(
-                          ([key, info]) => (
-                            <SelectItem key={key} value={key}>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{info.name}</span>
-                                <span className="text-xs text-muted-foreground">{info.description}</span>
-                              </div>
-                            </SelectItem>
-                          )
-                        )}
-                      </SelectContent>
-                    </Select>
                   </div>
                 </div>
                 <DialogFooter className="flex-col sm:flex-row gap-2">
@@ -383,12 +334,16 @@ export function SindicosManagement() {
                   <div className="flex flex-wrap gap-2 mb-3">
                     {sindico.condominiums.length > 0 ? (
                       sindico.condominiums.slice(0, 2).map((c) => (
-                        <Badge key={c.id} variant="outline" className={getPlanBadge(c.subscription?.plan)}>
-                          {c.subscription?.plan?.toUpperCase() || "START"}
+                        <Badge key={c.id} variant="outline" className="bg-secondary text-foreground border-border">
+                          <Building2 className="h-3 w-3 mr-1" />
+                          {c.name.length > 15 ? c.name.substring(0, 15) + "..." : c.name}
                         </Badge>
                       ))
                     ) : (
                       <span className="text-muted-foreground text-xs">Sem condomínios</span>
+                    )}
+                    {sindico.condominiums.length > 2 && (
+                      <Badge variant="outline">+{sindico.condominiums.length - 2}</Badge>
                     )}
                   </div>
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -409,9 +364,9 @@ export function SindicosManagement() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Síndico</TableHead>
-                      <TableHead>Plano</TableHead>
                       <TableHead>Condomínios</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead>Qtd.</TableHead>
+                      <TableHead>Status Assinaturas</TableHead>
                       <TableHead>Cadastro</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
@@ -429,8 +384,9 @@ export function SindicosManagement() {
                           <div className="flex flex-wrap gap-1">
                             {sindico.condominiums.length > 0 ? (
                               sindico.condominiums.slice(0, 2).map((c) => (
-                                <Badge key={c.id} variant="outline" className={getPlanBadge(c.subscription?.plan)}>
-                                  {c.subscription?.plan?.toUpperCase() || "START"}
+                                <Badge key={c.id} variant="outline" className="bg-secondary text-foreground border-border">
+                                  <Building2 className="h-3 w-3 mr-1" />
+                                  {c.name.length > 20 ? c.name.substring(0, 20) + "..." : c.name}
                                 </Badge>
                               ))
                             ) : (
@@ -442,10 +398,7 @@ export function SindicosManagement() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Building2 className="h-4 w-4 text-muted-foreground" />
-                            {sindico.condominiums_count}
-                          </div>
+                          <span className="font-medium">{sindico.condominiums_count}</span>
                         </TableCell>
                         <TableCell>
                           {sindico.condominiums.length > 0 ? (
