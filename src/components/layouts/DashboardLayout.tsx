@@ -22,6 +22,7 @@ import { NavLink } from "@/components/NavLink";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   Building2,
   LayoutDashboard,
@@ -36,7 +37,6 @@ import {
   BarChart3,
   Home,
   User,
-  ChevronLeft,
   Scale,
   Receipt,
 } from "lucide-react";
@@ -401,10 +401,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       <div className="min-h-screen flex w-full bg-background">
         <SidebarNavigation />
         <main className="flex-1 flex flex-col min-h-screen overflow-hidden">
-          <header className="sticky top-0 z-40 h-14 border-b border-border/50 bg-background/80 backdrop-blur-lg flex items-center px-4 gap-4">
+          <header className="sticky top-0 z-40 h-14 border-b border-border bg-card/80 backdrop-blur-lg flex items-center justify-between px-4">
             <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
+            <ThemeToggle />
           </header>
-          <div className="flex-1 overflow-auto p-6">{children}</div>
+          <div className="flex-1 overflow-auto p-4 md:p-6">{children}</div>
         </main>
       </div>
     </SidebarProvider>

@@ -153,14 +153,14 @@ const Dashboard = () => {
       title: "Condomínios",
       value: stats.condominiums,
       icon: Building2,
-      gradient: "from-emerald-500 to-emerald-600",
+      gradient: "from-primary to-blue-600",
       action: () => navigate("/condominiums"),
     },
     {
       title: "Moradores",
       value: stats.residents,
       icon: Users,
-      gradient: "from-blue-500 to-blue-600",
+      gradient: "from-accent to-emerald-600",
       action: () => navigate("/condominiums"),
     },
     {
@@ -174,7 +174,7 @@ const Dashboard = () => {
       title: "Defesas Pendentes",
       value: stats.pendingDefenses,
       icon: Shield,
-      gradient: "from-purple-500 to-violet-600",
+      gradient: "from-violet-500 to-purple-600",
       action: () => navigate("/defenses"),
     },
     {
@@ -226,31 +226,31 @@ const Dashboard = () => {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
           {statCards.map((stat, index) => (
             <Card
               key={index}
-              className="bg-gradient-card border-border/50 hover:border-primary/30 transition-all duration-300 cursor-pointer group"
+              className="bg-card border-border shadow-card hover:shadow-elevated transition-all duration-300 cursor-pointer group"
               onClick={stat.action}
             >
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between mb-4">
+              <CardContent className="p-4 md:p-5">
+                <div className="flex items-start justify-between mb-3 md:mb-4">
                   <div
-                    className={`w-11 h-11 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-lg`}
+                    className={`w-10 h-10 md:w-11 md:h-11 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-lg`}
                   >
-                    <stat.icon className="w-5 h-5 text-white" />
+                    <stat.icon className="w-4 h-4 md:w-5 md:h-5 text-white" />
                   </div>
                   <ArrowUpRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                 </div>
                 <div>
                   {loading ? (
-                    <Skeleton className="h-9 w-16 mb-1" />
+                    <Skeleton className="h-8 md:h-9 w-16 mb-1" />
                   ) : (
-                    <p className="font-display text-3xl font-bold text-foreground">
+                    <p className="font-display text-2xl md:text-3xl font-bold text-foreground">
                       {stat.value}
                     </p>
                   )}
-                  <p className="text-sm text-muted-foreground">{stat.title}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">{stat.title}</p>
                 </div>
               </CardContent>
             </Card>
@@ -259,15 +259,15 @@ const Dashboard = () => {
 
         {/* Quick Actions */}
         <div>
-          <h2 className="font-display text-xl font-semibold text-foreground mb-4">
+          <h2 className="font-display text-lg md:text-xl font-semibold text-foreground mb-3 md:mb-4">
             Ações Rápidas
           </h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
             {quickActions.map((action, index) => (
               <button
                 key={index}
                 onClick={action.action}
-                className="p-4 rounded-xl bg-gradient-card border border-border/50 hover:border-primary/30 transition-all text-left group"
+                className="p-4 rounded-xl bg-card border border-border shadow-card hover:shadow-elevated transition-all text-left group"
               >
                 <div className="flex items-start justify-between">
                   <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
@@ -284,15 +284,15 @@ const Dashboard = () => {
 
         {/* Empty State */}
         {stats.condominiums === 0 && !loading && (
-          <Card className="bg-gradient-card border-border/50">
-            <CardContent className="text-center py-12">
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                <Building2 className="w-8 h-8 text-primary" />
+          <Card className="bg-card border-border shadow-card">
+            <CardContent className="text-center py-8 md:py-12">
+              <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                <Building2 className="w-7 h-7 md:w-8 md:h-8 text-primary" />
               </div>
-              <h3 className="font-display text-xl font-semibold text-foreground mb-2">
+              <h3 className="font-display text-lg md:text-xl font-semibold text-foreground mb-2">
                 Nenhum condomínio cadastrado
               </h3>
-              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+              <p className="text-sm md:text-base text-muted-foreground mb-6 max-w-md mx-auto">
                 Comece cadastrando seu primeiro condomínio para gerenciar ocorrências,
                 notificações e multas.
               </p>
