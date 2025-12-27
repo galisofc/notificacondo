@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { formatPhone } from "@/components/ui/masked-input";
+import { formatPhone, formatCPF, MaskedInput } from "@/components/ui/masked-input";
 import { useParams, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -21,6 +21,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -47,6 +55,8 @@ import {
   Clock,
   CheckCircle,
   XCircle,
+  ArrowRightLeft,
+  Search,
 } from "lucide-react";
 import {
   Table,
@@ -56,6 +66,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { isValidCPF } from "@/lib/utils";
 
 type PlanType = "start" | "essencial" | "profissional" | "enterprise";
 
@@ -80,6 +91,15 @@ export default function SubscriptionDetails() {
   const queryClient = useQueryClient();
 
   const [isEditing, setIsEditing] = useState(false);
+  const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
+  const [transferCpf, setTransferCpf] = useState("");
+  const [foundSindico, setFoundSindico] = useState<{
+    user_id: string;
+    full_name: string;
+    email: string;
+    cpf: string;
+  } | null>(null);
+  const [isSearchingSindico, setIsSearchingSindico] = useState(false);
   const [editedData, setEditedData] = useState<{
     plan: PlanType;
     active: boolean;
@@ -203,6 +223,139 @@ export default function SubscriptionDetails() {
       });
     },
   });
+
+  const transferCondominiumMutation = useMutation({
+    mutationFn: async (newOwnerId: string) => {
+      if (!data?.condominium?.id) throw new Error("Condomínio não encontrado");
+
+      const { error } = await supabase
+        .from("condominiums")
+        .update({ owner_id: newOwnerId })
+        .eq("id", data.condominium.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscription-details", id] });
+      queryClient.invalidateQueries({ queryKey: ["superadmin-subscriptions"] });
+      queryClient.invalidateQueries({ queryKey: ["superadmin-sindicos"] });
+      setIsTransferDialogOpen(false);
+      setTransferCpf("");
+      setFoundSindico(null);
+      toast({
+        title: "Condomínio transferido",
+        description: "O condomínio foi transferido para o novo síndico com sucesso.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao transferir",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSearchSindico = async () => {
+    const cleanCpf = transferCpf.replace(/\D/g, "");
+    
+    if (!cleanCpf || cleanCpf.length !== 11) {
+      toast({
+        title: "CPF inválido",
+        description: "Digite um CPF válido com 11 dígitos.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!isValidCPF(cleanCpf)) {
+      toast({
+        title: "CPF inválido",
+        description: "O CPF informado não é válido.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSearchingSindico(true);
+    setFoundSindico(null);
+
+    try {
+      // Find profile by CPF
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, email, cpf")
+        .eq("cpf", cleanCpf)
+        .maybeSingle();
+
+      if (profileError) throw profileError;
+
+      if (!profile) {
+        toast({
+          title: "Síndico não encontrado",
+          description: "Nenhum síndico cadastrado com este CPF.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check if user is a sindico
+      const { data: roleData, error: roleError } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", profile.user_id)
+        .eq("role", "sindico")
+        .maybeSingle();
+
+      if (roleError) throw roleError;
+
+      if (!roleData) {
+        toast({
+          title: "Usuário não é síndico",
+          description: "O CPF informado pertence a um usuário que não é síndico.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check if it's the same owner
+      if (profile.user_id === data?.condominium?.owner_id) {
+        toast({
+          title: "Mesmo proprietário",
+          description: "Este síndico já é o responsável pelo condomínio.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setFoundSindico({
+        user_id: profile.user_id,
+        full_name: profile.full_name,
+        email: profile.email,
+        cpf: profile.cpf || cleanCpf,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro na busca",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSearchingSindico(false);
+    }
+  };
+
+  const handleConfirmTransfer = () => {
+    if (foundSindico) {
+      transferCondominiumMutation.mutate(foundSindico.user_id);
+    }
+  };
+
+  const handleOpenTransferDialog = () => {
+    setTransferCpf("");
+    setFoundSindico(null);
+    setIsTransferDialogOpen(true);
+  };
 
   const handleStartEditing = () => {
     if (data?.subscription) {
@@ -525,10 +678,20 @@ export default function SubscriptionDetails() {
           {/* Owner Card */}
           <Card className="bg-gradient-card border-border/50">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <User className="w-4 h-4 text-primary" />
-                Síndico Responsável
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <User className="w-4 h-4 text-primary" />
+                  Síndico Responsável
+                </CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleOpenTransferDialog}
+                >
+                  <ArrowRightLeft className="w-4 h-4 mr-2" />
+                  Transferir
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -545,6 +708,98 @@ export default function SubscriptionDetails() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Transfer Dialog */}
+          <Dialog open={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <ArrowRightLeft className="w-5 h-5 text-primary" />
+                  Transferir Condomínio
+                </DialogTitle>
+                <DialogDescription>
+                  Transfira a propriedade do condomínio para outro síndico informando o CPF.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="transfer-cpf">CPF do Novo Síndico</Label>
+                  <div className="flex gap-2">
+                    <MaskedInput
+                      id="transfer-cpf"
+                      mask="cpf"
+                      value={transferCpf}
+                      onChange={setTransferCpf}
+                      placeholder="000.000.000-00"
+                      className="flex-1"
+                    />
+                    <Button
+                      onClick={handleSearchSindico}
+                      disabled={isSearchingSindico || !transferCpf}
+                      variant="secondary"
+                    >
+                      {isSearchingSindico ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Search className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                {foundSindico && (
+                  <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-2">
+                    <p className="text-sm font-medium text-primary">Síndico encontrado:</p>
+                    <div className="space-y-1">
+                      <p className="text-sm">
+                        <span className="text-muted-foreground">Nome:</span>{" "}
+                        <span className="font-medium">{foundSindico.full_name}</span>
+                      </p>
+                      <p className="text-sm">
+                        <span className="text-muted-foreground">Email:</span>{" "}
+                        <span className="font-medium">{foundSindico.email}</span>
+                      </p>
+                      <p className="text-sm">
+                        <span className="text-muted-foreground">CPF:</span>{" "}
+                        <span className="font-medium font-mono">{formatCPF(foundSindico.cpf)}</span>
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {foundSindico && (
+                  <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                    <p className="text-sm text-amber-600 flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                      Esta ação irá transferir a propriedade do condomínio{" "}
+                      <strong>{condominium.name}</strong> para o síndico selecionado.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsTransferDialogOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleConfirmTransfer}
+                  disabled={!foundSindico || transferCondominiumMutation.isPending}
+                >
+                  {transferCondominiumMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <ArrowRightLeft className="w-4 h-4 mr-2" />
+                  )}
+                  Confirmar Transferência
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
 
         {/* Usage Stats */}
