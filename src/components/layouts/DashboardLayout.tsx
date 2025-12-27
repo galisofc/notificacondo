@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/sidebar";
 import { NavLink } from "@/components/NavLink";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   Building2,
@@ -385,45 +386,73 @@ function SidebarNavigation() {
           )}
           {!collapsed && (
             <div className="flex items-center gap-1">
-              <button
-                onClick={() => navigate("/notifications")}
-                className="relative p-2 rounded-lg text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
-              >
-                <Bell className="w-4 h-4" />
-                {pendingDefenses > 0 && (
-                  <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold animate-pulse">
-                    {pendingDefenses > 9 ? "9+" : pendingDefenses}
-                  </span>
-                )}
-              </button>
-              <button
-                onClick={handleSignOut}
-                className="p-2 rounded-lg text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => navigate("/notifications")}
+                    className="relative p-2 rounded-lg text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
+                  >
+                    <Bell className="w-4 h-4" />
+                    {pendingDefenses > 0 && (
+                      <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold animate-pulse">
+                        {pendingDefenses > 9 ? "9+" : pendingDefenses}
+                      </span>
+                    )}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>{pendingDefenses > 0 ? `${pendingDefenses} defesa(s) pendente(s)` : "Nenhuma notificação pendente"}</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={handleSignOut}
+                    className="p-2 rounded-lg text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Sair da conta</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
           )}
         </div>
         {collapsed && (
           <div className="flex flex-col items-center gap-2 mt-2">
-            <button
-              onClick={() => navigate("/notifications")}
-              className="relative p-2 rounded-lg text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
-            >
-              <Bell className="w-4 h-4" />
-              {pendingDefenses > 0 && (
-                <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold animate-pulse">
-                  {pendingDefenses > 9 ? "9+" : pendingDefenses}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={handleSignOut}
-              className="p-2 rounded-lg text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => navigate("/notifications")}
+                  className="relative p-2 rounded-lg text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
+                >
+                  <Bell className="w-4 h-4" />
+                  {pendingDefenses > 0 && (
+                    <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold animate-pulse">
+                      {pendingDefenses > 9 ? "9+" : pendingDefenses}
+                    </span>
+                  )}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>{pendingDefenses > 0 ? `${pendingDefenses} defesa(s) pendente(s)` : "Notificações"}</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={handleSignOut}
+                  className="p-2 rounded-lg text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>Sair</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
         )}
       </SidebarFooter>
