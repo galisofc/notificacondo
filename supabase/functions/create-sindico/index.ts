@@ -64,6 +64,20 @@ serve(async (req) => {
       throw new Error("Campos obrigatórios: email, password, full_name, cpf");
     }
 
+    // Clean CPF (remove non-digits)
+    const cleanCpf = cpf.replace(/\D/g, "");
+
+    // Check if CPF already exists
+    const { data: existingProfile } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("cpf", cleanCpf)
+      .maybeSingle();
+
+    if (existingProfile) {
+      throw new Error("CPF já cadastrado no sistema. Verifique os dados informados.");
+    }
+
     // Create the user in auth.users
     const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
       email,
@@ -85,7 +99,7 @@ serve(async (req) => {
       .from("profiles")
       .update({
         full_name,
-        cpf: cpf.replace(/\D/g, ""), // Store only digits
+        cpf: cleanCpf,
         phone: phone || null,
       })
       .eq("user_id", userId);
