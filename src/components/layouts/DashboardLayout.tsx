@@ -323,7 +323,10 @@ function SidebarNavigation() {
                       <NavLink
                         to={item.url}
                         end={item.url === "/superadmin" || item.url === "/dashboard" || item.url === "/resident"}
-                        className="flex items-center gap-3 px-3 py-2.5 w-full"
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2.5 w-full",
+                          collapsed && "justify-center px-0"
+                        )}
                         activeClassName=""
                       >
                         <item.icon className="w-5 h-5 shrink-0" />
