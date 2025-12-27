@@ -387,9 +387,14 @@ function SidebarNavigation() {
             <div className="flex items-center gap-1">
               <button
                 onClick={() => navigate("/notifications")}
-                className="p-2 rounded-lg text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
+                className="relative p-2 rounded-lg text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
               >
                 <Bell className="w-4 h-4" />
+                {pendingDefenses > 0 && (
+                  <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold animate-pulse">
+                    {pendingDefenses > 9 ? "9+" : pendingDefenses}
+                  </span>
+                )}
               </button>
               <button
                 onClick={handleSignOut}
@@ -401,12 +406,25 @@ function SidebarNavigation() {
           )}
         </div>
         {collapsed && (
-          <button
-            onClick={handleSignOut}
-            className="w-full mt-2 p-2 rounded-lg text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors flex justify-center"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
+          <div className="flex flex-col items-center gap-2 mt-2">
+            <button
+              onClick={() => navigate("/notifications")}
+              className="relative p-2 rounded-lg text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
+            >
+              <Bell className="w-4 h-4" />
+              {pendingDefenses > 0 && (
+                <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold animate-pulse">
+                  {pendingDefenses > 9 ? "9+" : pendingDefenses}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={handleSignOut}
+              className="p-2 rounded-lg text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
         )}
       </SidebarFooter>
     </Sidebar>
