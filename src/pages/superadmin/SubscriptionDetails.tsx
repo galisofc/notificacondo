@@ -232,6 +232,13 @@ export default function SubscriptionDetails() {
       
       const currentOwnerId = data.condominium.owner_id;
 
+      // Get current owner name for notification
+      const { data: currentOwnerProfile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("user_id", currentOwnerId)
+        .single();
+
       // Get current user ID for the transferred_by field
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
@@ -257,7 +264,23 @@ export default function SubscriptionDetails() {
 
       if (transferError) {
         console.error("Error recording transfer:", transferError);
-        // Don't throw - the transfer was successful, just logging failed
+      }
+
+      // Send WhatsApp notification to new owner
+      try {
+        await supabase.functions.invoke("notify-transfer", {
+          body: {
+            condominium_id: data.condominium.id,
+            condominium_name: data.condominium.name,
+            new_owner_id: newOwnerId,
+            old_owner_name: currentOwnerProfile?.full_name || "Síndico anterior",
+            notes: notes.trim() || undefined,
+          },
+        });
+        console.log("Transfer notification sent successfully");
+      } catch (notifyError) {
+        console.error("Error sending transfer notification:", notifyError);
+        // Don't throw - the transfer was successful, just notification failed
       }
     },
     onSuccess: () => {
