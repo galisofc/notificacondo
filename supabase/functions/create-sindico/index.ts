@@ -94,19 +94,42 @@ serve(async (req) => {
 
     const userId = newUser.user.id;
 
+    console.log("User created with ID:", userId);
+    console.log("CPF to save:", cleanCpf);
+
+    // Wait a bit for the trigger to create the profile
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     // Update profile (trigger already created it, so we update with additional info)
-    const { error: profileError } = await supabaseAdmin
+    const { data: updatedProfile, error: profileError } = await supabaseAdmin
       .from("profiles")
       .update({
         full_name,
         cpf: cleanCpf,
         phone: phone || null,
       })
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      .select()
+      .single();
 
     if (profileError) {
       console.error("Profile update error:", profileError);
-      // Don't rollback, profile was created by trigger with basic info
+      // Try upsert as fallback
+      const { error: upsertError } = await supabaseAdmin
+        .from("profiles")
+        .upsert({
+          user_id: userId,
+          email,
+          full_name,
+          cpf: cleanCpf,
+          phone: phone || null,
+        }, { onConflict: 'user_id' });
+      
+      if (upsertError) {
+        console.error("Profile upsert error:", upsertError);
+      }
+    } else {
+      console.log("Profile updated successfully:", updatedProfile);
     }
 
     // Note: Subscription will be created when the sindico creates a condominium (via trigger)
