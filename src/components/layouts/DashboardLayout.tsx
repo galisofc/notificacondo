@@ -324,12 +324,14 @@ function SidebarNavigation() {
                         to={item.url}
                         end={item.url === "/superadmin" || item.url === "/dashboard" || item.url === "/resident"}
                         className={cn(
-                          "flex items-center gap-3 px-3 py-2.5 w-full",
-                          collapsed && "justify-center px-0"
+                          "flex w-full items-center py-2.5",
+                          collapsed
+                            ? "justify-center px-0 gap-0"
+                            : "gap-3 px-3"
                         )}
                         activeClassName=""
                       >
-                        <item.icon className="w-5 h-5 shrink-0" />
+                        <item.icon className={cn("w-5 h-5 shrink-0", collapsed && "mx-auto")} />
                         {!collapsed && (
                           <>
                             <span className="font-medium flex-1 text-sm">{item.title}</span>
