@@ -266,20 +266,21 @@ export default function SubscriptionDetails() {
         console.error("Error recording transfer:", transferError);
       }
 
-      // Send WhatsApp notification to new owner
+      // Send WhatsApp notification to new and old owners
       try {
         await supabase.functions.invoke("notify-transfer", {
           body: {
             condominium_id: data.condominium.id,
             condominium_name: data.condominium.name,
             new_owner_id: newOwnerId,
+            old_owner_id: currentOwnerId,
             old_owner_name: currentOwnerProfile?.full_name || "Síndico anterior",
             notes: notes.trim() || undefined,
           },
         });
-        console.log("Transfer notification sent successfully");
+        console.log("Transfer notifications sent successfully");
       } catch (notifyError) {
-        console.error("Error sending transfer notification:", notifyError);
+        console.error("Error sending transfer notifications:", notifyError);
         // Don't throw - the transfer was successful, just notification failed
       }
     },

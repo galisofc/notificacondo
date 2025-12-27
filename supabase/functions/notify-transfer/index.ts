@@ -158,7 +158,9 @@ interface NotifyTransferRequest {
   condominium_id: string;
   condominium_name: string;
   new_owner_id: string;
+  old_owner_id: string;
   old_owner_name: string;
+  new_owner_name?: string;
   notes?: string;
 }
 
@@ -176,12 +178,14 @@ serve(async (req) => {
     const { 
       condominium_id, 
       condominium_name, 
-      new_owner_id, 
+      new_owner_id,
+      old_owner_id,
       old_owner_name,
+      new_owner_name,
       notes 
     }: NotifyTransferRequest = await req.json();
 
-    console.log("Notify transfer request:", { condominium_id, new_owner_id, old_owner_name });
+    console.log("Notify transfer request:", { condominium_id, new_owner_id, old_owner_id });
 
     if (!condominium_id || !new_owner_id) {
       return new Response(
@@ -212,34 +216,17 @@ serve(async (req) => {
     const appBaseUrl = typedConfig.app_url || "https://notificacondo.com.br";
 
     // Get new owner profile
-    const { data: newOwner, error: ownerError } = await supabase
+    const { data: newOwner, error: newOwnerError } = await supabase
       .from("profiles")
       .select("full_name, phone, email")
       .eq("user_id", new_owner_id)
       .single();
 
-    if (ownerError || !newOwner) {
-      console.error("New owner not found:", ownerError);
-      return new Response(
-        JSON.stringify({ error: "Novo síndico não encontrado" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (!newOwner.phone) {
-      console.log("New owner has no phone, skipping notification");
-      return new Response(
-        JSON.stringify({ message: "Síndico não possui telefone cadastrado", skipped: true }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Fetch template
-    const { data: template } = await supabase
-      .from("whatsapp_templates")
-      .select("content")
-      .eq("slug", "condominium_transfer")
-      .eq("is_active", true)
+    // Get old owner profile
+    const { data: oldOwner, error: oldOwnerError } = await supabase
+      .from("profiles")
+      .select("full_name, phone, email")
+      .eq("user_id", old_owner_id)
       .single();
 
     const now = new Date();
@@ -254,15 +241,43 @@ serve(async (req) => {
     const observacoesText = notes ? `\n• Observações: ${notes}` : "";
     const loginLink = `${appBaseUrl}/auth`;
 
-    // Build message
-    const defaultMessage = `🔄 *TRANSFERÊNCIA DE CONDOMÍNIO*
+    const results: { newOwner?: { success: boolean; messageId?: string }; oldOwner?: { success: boolean; messageId?: string } } = {};
+
+    // Fetch templates
+    const { data: newOwnerTemplate } = await supabase
+      .from("whatsapp_templates")
+      .select("content")
+      .eq("slug", "condominium_transfer")
+      .eq("is_active", true)
+      .single();
+
+    const { data: oldOwnerTemplate } = await supabase
+      .from("whatsapp_templates")
+      .select("content")
+      .eq("slug", "condominium_transfer_old_owner")
+      .eq("is_active", true)
+      .single();
+
+    const provider = providers[whatsappProvider];
+
+    // Send notification to NEW owner
+    if (newOwner && newOwner.phone) {
+      const newOwnerMessage = newOwnerTemplate?.content
+        ? newOwnerTemplate.content
+            .replace("{nome_novo_sindico}", newOwner.full_name)
+            .replace("{condominio}", condominium_name)
+            .replace("{nome_antigo_sindico}", old_owner_name || oldOwner?.full_name || "Síndico anterior")
+            .replace("{data_transferencia}", dataTransferencia)
+            .replace("{observacoes}", observacoesText)
+            .replace("{link}", loginLink)
+        : `🔄 *TRANSFERÊNCIA DE CONDOMÍNIO*
 
 Olá, *${newOwner.full_name}*!
 
 O condomínio *${condominium_name}* foi transferido para sua gestão.
 
 📋 *Detalhes da transferência:*
-• Síndico anterior: ${old_owner_name}
+• Síndico anterior: ${old_owner_name || oldOwner?.full_name || "Síndico anterior"}
 • Data: ${dataTransferencia}${observacoesText}
 
 Acesse o sistema para gerenciar seu novo condomínio:
@@ -270,39 +285,61 @@ Acesse o sistema para gerenciar seu novo condomínio:
 
 Bem-vindo(a) à gestão do condomínio!`;
 
-    const message = template?.content
-      ? template.content
-          .replace("{nome_novo_sindico}", newOwner.full_name)
-          .replace("{condominio}", condominium_name)
-          .replace("{nome_antigo_sindico}", old_owner_name)
-          .replace("{data_transferencia}", dataTransferencia)
-          .replace("{observacoes}", observacoesText)
-          .replace("{link}", loginLink)
-      : defaultMessage;
-
-    // Send WhatsApp message
-    console.log(`Sending transfer notification to: ${newOwner.phone}`);
-    const provider = providers[whatsappProvider];
-    const result = await provider.sendMessage(newOwner.phone, message, {
-      apiUrl: typedConfig.api_url,
-      apiKey: typedConfig.api_key,
-      instanceId: typedConfig.instance_id,
-    });
-
-    if (!result.success) {
-      console.error("WhatsApp send failed:", result.error);
-      return new Response(
-        JSON.stringify({ error: "Falha ao enviar WhatsApp", details: result.error }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      console.log(`Sending transfer notification to new owner: ${newOwner.phone}`);
+      const newOwnerResult = await provider.sendMessage(newOwner.phone, newOwnerMessage, {
+        apiUrl: typedConfig.api_url,
+        apiKey: typedConfig.api_key,
+        instanceId: typedConfig.instance_id,
+      });
+      results.newOwner = newOwnerResult;
+      console.log("New owner notification result:", newOwnerResult);
+    } else {
+      console.log("New owner has no phone, skipping notification");
     }
 
-    console.log("Transfer notification sent successfully:", result.messageId);
+    // Send notification to OLD owner
+    if (oldOwner && oldOwner.phone) {
+      const finalNewOwnerName = new_owner_name || newOwner?.full_name || "Novo síndico";
+      
+      const oldOwnerMessage = oldOwnerTemplate?.content
+        ? oldOwnerTemplate.content
+            .replace("{nome_antigo_sindico}", oldOwner.full_name)
+            .replace("{condominio}", condominium_name)
+            .replace("{nome_novo_sindico}", finalNewOwnerName)
+            .replace("{data_transferencia}", dataTransferencia)
+            .replace("{observacoes}", observacoesText)
+        : `🔄 *TRANSFERÊNCIA DE CONDOMÍNIO*
+
+Olá, *${oldOwner.full_name}*!
+
+O condomínio *${condominium_name}* foi transferido da sua gestão.
+
+📋 *Detalhes da transferência:*
+• Novo síndico: ${finalNewOwnerName}
+• Data: ${dataTransferencia}${observacoesText}
+
+Agradecemos pelo seu trabalho na gestão do condomínio!
+
+Em caso de dúvidas, entre em contato com o suporte.`;
+
+      console.log(`Sending transfer notification to old owner: ${oldOwner.phone}`);
+      const oldOwnerResult = await provider.sendMessage(oldOwner.phone, oldOwnerMessage, {
+        apiUrl: typedConfig.api_url,
+        apiKey: typedConfig.api_key,
+        instanceId: typedConfig.instance_id,
+      });
+      results.oldOwner = oldOwnerResult;
+      console.log("Old owner notification result:", oldOwnerResult);
+    } else {
+      console.log("Old owner has no phone, skipping notification");
+    }
+
+    console.log("Transfer notifications completed:", results);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message_id: result.messageId,
+        results,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
