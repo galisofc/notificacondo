@@ -476,6 +476,9 @@ export function SindicosManagement() {
                       <div>
                         <p className="font-medium text-foreground">{sindico.profile?.full_name || "—"}</p>
                         <p className="text-xs text-muted-foreground">{sindico.profile?.email}</p>
+                        {sindico.profile?.cpf && (
+                          <p className="text-xs text-muted-foreground font-mono">CPF: {formatCPF(sindico.profile.cpf)}</p>
+                        )}
                       </div>
                       <div className="flex items-center gap-1">
                         <Button 
@@ -533,6 +536,7 @@ export function SindicosManagement() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Síndico</TableHead>
+                      <TableHead>CPF</TableHead>
                       <TableHead>Condomínios</TableHead>
                       <TableHead>Qtd.</TableHead>
                       <TableHead>Status Assinaturas</TableHead>
@@ -548,6 +552,11 @@ export function SindicosManagement() {
                             <p className="font-medium">{sindico.profile?.full_name || "—"}</p>
                             <p className="text-sm text-muted-foreground">{sindico.profile?.email}</p>
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          <p className="text-sm font-mono">
+                            {sindico.profile?.cpf ? formatCPF(sindico.profile.cpf) : "—"}
+                          </p>
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
