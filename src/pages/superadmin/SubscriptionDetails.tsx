@@ -42,7 +42,19 @@ import {
   Loader2,
   CheckCircle2,
   RefreshCw,
+  FileText,
+  Clock,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 type PlanType = "start" | "essencial" | "profissional" | "enterprise";
 
@@ -105,10 +117,19 @@ export default function SubscriptionDetails() {
         .eq("user_id", condominium.owner_id)
         .single();
 
+      // Fetch invoices for this condominium
+      const { data: invoices } = await supabase
+        .from("invoices")
+        .select("*")
+        .eq("condominium_id", condominium.id)
+        .order("due_date", { ascending: false })
+        .limit(10);
+
       return {
         subscription,
         condominium,
         owner: ownerProfile,
+        invoices: invoices || [],
       };
     },
     enabled: !!id,
@@ -254,8 +275,42 @@ export default function SubscriptionDetails() {
     );
   }
 
-  const { subscription, condominium, owner } = data;
+  const { subscription, condominium, owner, invoices } = data;
   const planInfo = PLAN_INFO[subscription.plan as PlanType];
+
+  const getInvoiceStatusBadge = (status: string, dueDate: string) => {
+    const isOverdue = new Date(dueDate) < new Date() && status === "pending";
+    
+    if (status === "paid") {
+      return (
+        <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+          <CheckCircle className="w-3 h-3 mr-1" />
+          Pago
+        </Badge>
+      );
+    }
+    if (isOverdue) {
+      return (
+        <Badge className="bg-red-500/10 text-red-600 border-red-500/20">
+          <XCircle className="w-3 h-3 mr-1" />
+          Vencido
+        </Badge>
+      );
+    }
+    return (
+      <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20">
+        <Clock className="w-3 h-3 mr-1" />
+        Pendente
+      </Badge>
+    );
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
+  };
 
   return (
     <DashboardLayout>
@@ -573,6 +628,78 @@ export default function SubscriptionDetails() {
                 </p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Invoices */}
+        <Card className="bg-gradient-card border-border/50">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-primary" />
+                  Faturas do Condomínio
+                </CardTitle>
+                <CardDescription>
+                  Histórico das últimas faturas geradas
+                </CardDescription>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => navigate("/superadmin/invoices")}
+              >
+                Ver Todas
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {invoices.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>Nenhuma fatura encontrada</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Período</TableHead>
+                      <TableHead>Vencimento</TableHead>
+                      <TableHead>Valor</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Pagamento</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {invoices.map((invoice: any) => (
+                      <TableRow key={invoice.id}>
+                        <TableCell className="font-medium">
+                          {format(new Date(invoice.period_start), "dd/MM/yy", { locale: ptBR })}
+                          {" - "}
+                          {format(new Date(invoice.period_end), "dd/MM/yy", { locale: ptBR })}
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(invoice.due_date), "dd/MM/yyyy", { locale: ptBR })}
+                        </TableCell>
+                        <TableCell className="font-semibold">
+                          {formatCurrency(invoice.amount)}
+                        </TableCell>
+                        <TableCell>
+                          {getInvoiceStatusBadge(invoice.status, invoice.due_date)}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {invoice.paid_at 
+                            ? format(new Date(invoice.paid_at), "dd/MM/yyyy", { locale: ptBR })
+                            : "—"
+                          }
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </CardContent>
         </Card>
 
