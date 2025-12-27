@@ -33,6 +33,7 @@ import Subscriptions from "./pages/superadmin/Subscriptions";
 import SubscriptionDetails from "./pages/superadmin/SubscriptionDetails";
 import SuperAdminInvoices from "./pages/superadmin/Invoices";
 import Logs from "./pages/superadmin/Logs";
+import Transfers from "./pages/superadmin/Transfers";
 import WhatsApp from "./pages/superadmin/WhatsApp";
 import SuperAdminSettings from "./pages/superadmin/Settings";
 import NotFound from "./pages/NotFound";
@@ -232,6 +233,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole="super_admin">
                     <SuperAdminInvoices />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/superadmin/transfers"
+                element={
+                  <ProtectedRoute requiredRole="super_admin">
+                    <Transfers />
                   </ProtectedRoute>
                 }
               />
