@@ -40,7 +40,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MaskedInput, formatPhone } from "@/components/ui/masked-input";
+import { MaskedInput, formatPhone, formatCPF } from "@/components/ui/masked-input";
+import { isValidCPF } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -49,7 +50,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, MoreHorizontal, Mail, Building2, Plus, Loader2, Eye, User, Phone, Calendar, CreditCard, CheckCircle, XCircle, Pencil, Save, X, Trash2, AlertTriangle } from "lucide-react";
+import { Search, MoreHorizontal, Mail, Building2, Plus, Loader2, Eye, User, Phone, Calendar, CreditCard, CheckCircle, XCircle, Pencil, Save, X, Trash2, AlertTriangle, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
@@ -62,6 +63,7 @@ interface SindicoWithProfile {
     full_name: string;
     email: string;
     phone: string | null;
+    cpf: string | null;
   } | null;
   condominiums: {
     id: string;
@@ -92,6 +94,7 @@ export function SindicosManagement() {
     email: "",
     password: "",
     phone: "",
+    cpf: "",
   });
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -112,7 +115,7 @@ export function SindicosManagement() {
           // Get profile
           const { data: profile } = await supabase
             .from("profiles")
-            .select("full_name, email, phone")
+            .select("full_name, email, phone, cpf")
             .eq("user_id", role.user_id)
             .single();
 
@@ -161,7 +164,7 @@ export function SindicosManagement() {
       queryClient.invalidateQueries({ queryKey: ["superadmin-sindicos"] });
       queryClient.invalidateQueries({ queryKey: ["superadmin-stats"] });
       setIsCreateDialogOpen(false);
-      setFormData({ full_name: "", email: "", password: "", phone: "" });
+      setFormData({ full_name: "", email: "", password: "", phone: "", cpf: "" });
       toast({
         title: "Síndico criado!",
         description: "O novo síndico foi cadastrado com sucesso.",
@@ -322,9 +325,17 @@ export function SindicosManagement() {
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.full_name || !formData.email || !formData.password) {
+    if (!formData.full_name || !formData.email || !formData.password || !formData.cpf) {
       toast({
         title: "Preencha todos os campos obrigatórios",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!isValidCPF(formData.cpf)) {
+      toast({
+        title: "CPF inválido",
+        description: "Verifique o número do CPF informado.",
         variant: "destructive",
       });
       return;
@@ -385,6 +396,15 @@ export function SindicosManagement() {
                       placeholder="Mínimo 6 caracteres"
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="cpf">CPF *</Label>
+                    <MaskedInput
+                      id="cpf"
+                      mask="cpf"
+                      value={formData.cpf}
+                      onChange={(value) => setFormData({ ...formData, cpf: value })}
                     />
                   </div>
                   <div className="grid gap-2">
@@ -712,6 +732,13 @@ export function SindicosManagement() {
                       </div>
                       
                       <div className="grid grid-cols-2 gap-4 p-4 rounded-lg bg-secondary/50">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">CPF</p>
+                            <p className="font-medium">{selectedSindico.profile?.cpf ? formatCPF(selectedSindico.profile.cpf) : "Não informado"}</p>
+                          </div>
+                        </div>
                         <div className="flex items-center gap-2">
                           <Phone className="h-4 w-4 text-muted-foreground" />
                           <div>
