@@ -43,46 +43,36 @@ export default function SuperAdminDashboard() {
       title: "Síndicos",
       value: stats?.totalSindicos ?? 0,
       icon: Users,
-      gradient: "from-blue-500 to-blue-600",
-      bgColor: "bg-blue-500/10",
-      textColor: "text-blue-500",
-      trend: "+12%",
+      gradient: "from-blue-500 via-blue-600 to-blue-700",
+      borderColor: "border-l-blue-500",
     },
     {
       title: "Condomínios",
       value: stats?.totalCondominiums ?? 0,
       icon: Building2,
-      gradient: "from-emerald-500 to-emerald-600",
-      bgColor: "bg-emerald-500/10",
-      textColor: "text-emerald-500",
-      trend: "+8%",
+      gradient: "from-cyan-500 via-cyan-600 to-teal-600",
+      borderColor: "border-l-cyan-500",
     },
     {
       title: "Assinaturas Ativas",
       value: stats?.activeSubscriptions ?? 0,
       icon: CreditCard,
-      gradient: "from-violet-500 to-violet-600",
-      bgColor: "bg-violet-500/10",
-      textColor: "text-violet-500",
-      trend: "+5%",
+      gradient: "from-indigo-500 via-indigo-600 to-violet-600",
+      borderColor: "border-l-indigo-500",
     },
     {
       title: "Planos Pagos",
       value: stats?.paidSubscriptions ?? 0,
       icon: TrendingUp,
-      gradient: "from-amber-500 to-orange-500",
-      bgColor: "bg-amber-500/10",
-      textColor: "text-amber-500",
-      trend: "+18%",
+      gradient: "from-sky-500 via-blue-500 to-indigo-500",
+      borderColor: "border-l-sky-500",
     },
     {
       title: "Notificações",
       value: stats?.totalNotifications ?? 0,
       icon: MessageCircle,
-      gradient: "from-primary to-accent",
-      bgColor: "bg-primary/10",
-      textColor: "text-primary",
-      trend: "+24%",
+      gradient: "from-slate-500 via-slate-600 to-gray-700",
+      borderColor: "border-l-slate-500",
     },
   ];
 
@@ -96,40 +86,38 @@ export default function SuperAdminDashboard() {
       <div className="space-y-8 animate-fade-up">
         {/* Page Header */}
         <div>
-          <h1 className="font-display text-3xl font-bold text-foreground">Dashboard</h1>
+          <h1 className="font-display text-3xl font-bold text-foreground">
+            Olá, Administrador! 👋
+          </h1>
           <p className="text-muted-foreground mt-1">
-            Visão geral da plataforma NotificaCondo
+            Gerencie síndicos, condomínios e assinaturas
           </p>
         </div>
 
-        {/* Stats Grid */}
+        {/* Stats Grid - Cards com Gradiente */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
           {statCards.map((stat, index) => (
             <Card
               key={index}
-              className="bg-card border-border shadow-card hover:shadow-elevated transition-all duration-300 group overflow-hidden"
+              className={`relative overflow-hidden bg-gradient-to-br ${stat.gradient} border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] group`}
             >
               <CardContent className="p-4 md:p-5">
-                <div className="flex items-start justify-between mb-3 md:mb-4">
-                  <div
-                    className={`w-9 h-9 md:w-11 md:h-11 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-lg`}
-                  >
-                    <stat.icon className="w-4 h-4 md:w-5 md:h-5 text-white" />
+                <div className="flex flex-col h-full">
+                  <p className="text-white/80 text-xs md:text-sm font-medium mb-2">
+                    {stat.title}
+                  </p>
+                  <div className="flex items-end justify-between">
+                    {statsLoading ? (
+                      <Skeleton className="h-8 md:h-10 w-12 md:w-16 bg-white/20" />
+                    ) : (
+                      <p className="font-display text-2xl md:text-4xl font-bold text-white">
+                        {stat.value.toLocaleString("pt-BR")}
+                      </p>
+                    )}
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                      <stat.icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 text-xs font-medium text-accent">
-                    <ArrowUpRight className="w-3 h-3" />
-                    {stat.trend}
-                  </div>
-                </div>
-                <div>
-                  {statsLoading ? (
-                    <Skeleton className="h-7 md:h-9 w-16 md:w-20 mb-1" />
-                  ) : (
-                    <p className="font-display text-xl md:text-3xl font-bold text-foreground">
-                      {stat.value.toLocaleString("pt-BR")}
-                    </p>
-                  )}
-                  <p className="text-xs md:text-sm text-muted-foreground">{stat.title}</p>
                 </div>
               </CardContent>
             </Card>
