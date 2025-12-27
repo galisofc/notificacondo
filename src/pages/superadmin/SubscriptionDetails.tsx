@@ -275,7 +275,7 @@ export default function SubscriptionDetails() {
     );
   }
 
-  const { subscription, condominium, owner, invoices } = data;
+  const { subscription, condominium, owner, invoices = [] } = data;
   const planInfo = PLAN_INFO[subscription.plan as PlanType];
 
   const getInvoiceStatusBadge = (status: string, dueDate: string) => {
