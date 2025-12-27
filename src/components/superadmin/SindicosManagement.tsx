@@ -40,7 +40,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MaskedInput } from "@/components/ui/masked-input";
+import { MaskedInput, formatPhone } from "@/components/ui/masked-input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -716,7 +716,7 @@ export function SindicosManagement() {
                           <Phone className="h-4 w-4 text-muted-foreground" />
                           <div>
                             <p className="text-xs text-muted-foreground">Telefone</p>
-                            <p className="font-medium">{selectedSindico.profile?.phone || "Não informado"}</p>
+                            <p className="font-medium">{selectedSindico.profile?.phone ? formatPhone(selectedSindico.profile.phone) : "Não informado"}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
