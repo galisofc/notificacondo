@@ -559,7 +559,7 @@ export function SindicosManagement() {
                           className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-secondary/50 transition-colors cursor-pointer"
                           onClick={() => {
                             setIsViewDialogOpen(false);
-                            navigate(`/superadmin/condominiums`);
+                            navigate(`/condominiums/${condo.id}`);
                           }}
                         >
                           <div className="flex items-center gap-3">
