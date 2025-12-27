@@ -132,6 +132,47 @@ export type Database = {
           },
         ]
       }
+      condominium_transfers: {
+        Row: {
+          condominium_id: string
+          created_at: string
+          from_owner_id: string
+          id: string
+          notes: string | null
+          to_owner_id: string
+          transferred_at: string
+          transferred_by: string
+        }
+        Insert: {
+          condominium_id: string
+          created_at?: string
+          from_owner_id: string
+          id?: string
+          notes?: string | null
+          to_owner_id: string
+          transferred_at?: string
+          transferred_by: string
+        }
+        Update: {
+          condominium_id?: string
+          created_at?: string
+          from_owner_id?: string
+          id?: string
+          notes?: string | null
+          to_owner_id?: string
+          transferred_at?: string
+          transferred_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "condominium_transfers_condominium_id_fkey"
+            columns: ["condominium_id"]
+            isOneToOne: false
+            referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       condominiums: {
         Row: {
           address: string | null
