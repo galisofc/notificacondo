@@ -1,5 +1,6 @@
 import { Helmet } from "react-helmet-async";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,12 +10,17 @@ import {
   CreditCard,
   MessageCircle,
   TrendingUp,
-  ArrowUpRight,
   Activity,
+  Plus,
+  Settings,
+  FileText,
+  Zap,
 } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 
 export default function SuperAdminDashboard() {
+  const navigate = useNavigate();
+  
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["superadmin-stats"],
     queryFn: async () => {
@@ -76,6 +82,37 @@ export default function SuperAdminDashboard() {
     },
   ];
 
+  const quickActions = [
+    {
+      title: "Novo Síndico",
+      description: "Cadastrar um novo síndico na plataforma",
+      icon: Users,
+      url: "/superadmin/sindicos",
+      color: "bg-blue-500/10 text-blue-600",
+    },
+    {
+      title: "Novo Condomínio",
+      description: "Adicionar um condomínio ao sistema",
+      icon: Building2,
+      url: "/superadmin/condominiums",
+      color: "bg-cyan-500/10 text-cyan-600",
+    },
+    {
+      title: "Gerenciar Assinaturas",
+      description: "Visualizar e gerenciar planos ativos",
+      icon: CreditCard,
+      url: "/superadmin/subscriptions",
+      color: "bg-indigo-500/10 text-indigo-600",
+    },
+    {
+      title: "Configurações",
+      description: "Ajustar configurações do sistema",
+      icon: Settings,
+      url: "/superadmin/settings",
+      color: "bg-slate-500/10 text-slate-600",
+    },
+  ];
+
   return (
     <DashboardLayout>
       <Helmet>
@@ -122,6 +159,35 @@ export default function SuperAdminDashboard() {
               </CardContent>
             </Card>
           ))}
+        </div>
+
+        {/* Quick Actions */}
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <Zap className="w-5 h-5 text-primary" />
+            <h2 className="font-display text-lg font-semibold text-foreground">Ações Rápidas</h2>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+            {quickActions.map((action, index) => (
+              <Card
+                key={index}
+                onClick={() => navigate(action.url)}
+                className="bg-card border-border shadow-card hover:shadow-elevated transition-all duration-300 hover:scale-[1.02] cursor-pointer group"
+              >
+                <CardContent className="p-4 md:p-5">
+                  <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl ${action.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300`}>
+                    <action.icon className="w-5 h-5 md:w-6 md:h-6" />
+                  </div>
+                  <h3 className="font-semibold text-sm md:text-base text-foreground mb-1">
+                    {action.title}
+                  </h3>
+                  <p className="text-xs text-muted-foreground line-clamp-2">
+                    {action.description}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
 
         {/* Activity Section */}
