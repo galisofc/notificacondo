@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
+import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import {
@@ -21,9 +21,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { formatCPF } from "@/components/ui/masked-input";
+import { cn } from "@/lib/utils";
 import {
   ArrowRightLeft,
   Building2,
@@ -31,6 +39,8 @@ import {
   Calendar,
   Search,
   ArrowRight,
+  CalendarIcon,
+  X,
 } from "lucide-react";
 
 interface TransferWithDetails {
@@ -62,6 +72,8 @@ interface TransferWithDetails {
 
 export default function Transfers() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
   const { data: transfers, isLoading } = useQuery({
     queryKey: ["superadmin-transfers"],
@@ -119,6 +131,24 @@ export default function Transfers() {
   });
 
   const filteredTransfers = transfers?.filter((t) => {
+    // Date filter
+    if (startDate || endDate) {
+      const transferDate = new Date(t.transferred_at);
+      if (startDate && endDate) {
+        if (!isWithinInterval(transferDate, { 
+          start: startOfDay(startDate), 
+          end: endOfDay(endDate) 
+        })) {
+          return false;
+        }
+      } else if (startDate && transferDate < startOfDay(startDate)) {
+        return false;
+      } else if (endDate && transferDate > endOfDay(endDate)) {
+        return false;
+      }
+    }
+
+    // Search filter
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     const queryDigits = searchQuery.replace(/\D/g, "");
@@ -132,6 +162,11 @@ export default function Transfers() {
       (t.to_owner?.cpf && t.to_owner.cpf.includes(queryDigits))
     );
   });
+
+  const clearDateFilters = () => {
+    setStartDate(undefined);
+    setEndDate(undefined);
+  };
 
   return (
     <DashboardLayout>
@@ -212,14 +247,78 @@ export default function Transfers() {
                   Histórico completo de transferências de condomínios entre síndicos
                 </CardDescription>
               </div>
-              <div className="relative w-full md:w-80">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar por nome, email, CPF ou condomínio..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
+              <div className="flex flex-col gap-3 w-full md:flex-row md:items-center md:w-auto">
+                {/* Date Range Filter */}
+                <div className="flex items-center gap-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-[140px] justify-start text-left font-normal",
+                          !startDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {startDate ? format(startDate, "dd/MM/yyyy") : "Data início"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={startDate}
+                        onSelect={setStartDate}
+                        initialFocus
+                        className="pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <span className="text-muted-foreground">até</span>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-[140px] justify-start text-left font-normal",
+                          !endDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {endDate ? format(endDate, "dd/MM/yyyy") : "Data fim"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={endDate}
+                        onSelect={setEndDate}
+                        initialFocus
+                        className="pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  {(startDate || endDate) && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={clearDateFilters}
+                      className="h-9 w-9"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+
+                {/* Search Input */}
+                <div className="relative w-full md:w-80">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por nome, email, CPF..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
               </div>
             </div>
           </CardHeader>
