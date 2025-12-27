@@ -38,7 +38,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, MoreHorizontal, Mail, Building2, Plus, Loader2, Eye, User, Phone, Calendar, CreditCard, CheckCircle, XCircle } from "lucide-react";
+import { Search, MoreHorizontal, Mail, Building2, Plus, Loader2, Eye, User, Phone, Calendar, CreditCard, CheckCircle, XCircle, Pencil, Save, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
@@ -69,6 +69,11 @@ export function SindicosManagement() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedSindico, setSelectedSindico] = useState<SindicoWithProfile | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editProfileData, setEditProfileData] = useState({
+    full_name: "",
+    phone: "",
+  });
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
@@ -176,6 +181,46 @@ export function SindicosManagement() {
     },
   });
 
+  const updateProfileMutation = useMutation({
+    mutationFn: async ({ userId, data }: { userId: string; data: { full_name: string; phone: string } }) => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          full_name: data.full_name,
+          phone: data.phone || null,
+        })
+        .eq("user_id", userId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["superadmin-sindicos"] });
+      setIsEditingProfile(false);
+      toast({
+        title: "Perfil atualizado",
+        description: "As informações do síndico foram atualizadas com sucesso.",
+      });
+      // Update selected sindico locally
+      if (selectedSindico) {
+        setSelectedSindico({
+          ...selectedSindico,
+          profile: {
+            ...selectedSindico.profile!,
+            full_name: editProfileData.full_name,
+            phone: editProfileData.phone,
+          },
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao atualizar",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const filteredSindicos = sindicos?.filter((s) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
@@ -198,6 +243,26 @@ export function SindicosManagement() {
   const handleViewSindico = (sindico: SindicoWithProfile) => {
     setSelectedSindico(sindico);
     setIsViewDialogOpen(true);
+    setIsEditingProfile(false);
+  };
+
+  const handleStartEditProfile = () => {
+    if (selectedSindico?.profile) {
+      setEditProfileData({
+        full_name: selectedSindico.profile.full_name || "",
+        phone: selectedSindico.profile.phone || "",
+      });
+      setIsEditingProfile(true);
+    }
+  };
+
+  const handleSaveProfile = () => {
+    if (selectedSindico && editProfileData.full_name) {
+      updateProfileMutation.mutate({
+        userId: selectedSindico.user_id,
+        data: editProfileData,
+      });
+    }
   };
 
 
@@ -506,34 +571,112 @@ export function SindicosManagement() {
               <div className="space-y-6">
                 {/* Sindico Info */}
                 <div className="space-y-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                      <User className="h-8 w-8 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold">{selectedSindico.profile?.full_name || "—"}</h3>
-                      <p className="text-muted-foreground">{selectedSindico.profile?.email}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4 p-4 rounded-lg bg-secondary/50">
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Telefone</p>
-                        <p className="font-medium">{selectedSindico.profile?.phone || "Não informado"}</p>
+                  {isEditingProfile ? (
+                    // Edit Mode
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium">Editar Informações</h4>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setIsEditingProfile(false)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="grid gap-4">
+                        <div className="grid gap-2">
+                          <Label htmlFor="edit_full_name">Nome Completo</Label>
+                          <Input
+                            id="edit_full_name"
+                            value={editProfileData.full_name}
+                            onChange={(e) =>
+                              setEditProfileData({ ...editProfileData, full_name: e.target.value })
+                            }
+                          />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label>Email</Label>
+                          <Input
+                            value={selectedSindico.profile?.email || ""}
+                            disabled
+                            className="bg-muted"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            O email não pode ser alterado
+                          </p>
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="edit_phone">Telefone</Label>
+                          <Input
+                            id="edit_phone"
+                            value={editProfileData.phone}
+                            onChange={(e) =>
+                              setEditProfileData({ ...editProfileData, phone: e.target.value })
+                            }
+                            placeholder="(11) 99999-9999"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        <Button
+                          variant="outline"
+                          onClick={() => setIsEditingProfile(false)}
+                        >
+                          Cancelar
+                        </Button>
+                        <Button
+                          onClick={handleSaveProfile}
+                          disabled={updateProfileMutation.isPending || !editProfileData.full_name}
+                        >
+                          {updateProfileMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Save className="h-4 w-4 mr-2" />
+                          )}
+                          Salvar
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Cadastrado em</p>
-                        <p className="font-medium">
-                          {format(new Date(selectedSindico.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                        </p>
+                  ) : (
+                    // View Mode
+                    <>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                            <User className="h-8 w-8 text-primary" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-semibold">{selectedSindico.profile?.full_name || "—"}</h3>
+                            <p className="text-muted-foreground">{selectedSindico.profile?.email}</p>
+                          </div>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={handleStartEditProfile}>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Editar
+                        </Button>
                       </div>
-                    </div>
-                  </div>
+                      
+                      <div className="grid grid-cols-2 gap-4 p-4 rounded-lg bg-secondary/50">
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">Telefone</p>
+                            <p className="font-medium">{selectedSindico.profile?.phone || "Não informado"}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">Cadastrado em</p>
+                            <p className="font-medium">
+                              {format(new Date(selectedSindico.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <Separator />
