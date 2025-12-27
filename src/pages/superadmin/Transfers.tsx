@@ -41,6 +41,7 @@ import {
   ArrowRight,
   CalendarIcon,
   X,
+  MessageSquare,
 } from "lucide-react";
 
 interface TransferWithDetails {
@@ -350,6 +351,7 @@ export default function Transfers() {
                       <TableHead className="text-center w-12"></TableHead>
                       <TableHead>Para</TableHead>
                       <TableHead>Realizado por</TableHead>
+                      <TableHead>Observações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -427,6 +429,18 @@ export default function Transfers() {
                           <Badge variant="outline" className="font-normal">
                             {transfer.transferred_by_user?.full_name || "Sistema"}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {transfer.notes ? (
+                            <div className="flex items-start gap-2 max-w-[200px]">
+                              <MessageSquare className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                              <p className="text-sm text-muted-foreground line-clamp-2">
+                                {transfer.notes}
+                              </p>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">—</span>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}

@@ -37,6 +37,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
@@ -100,6 +101,7 @@ export default function SubscriptionDetails() {
     cpf: string;
   } | null>(null);
   const [isSearchingSindico, setIsSearchingSindico] = useState(false);
+  const [transferNotes, setTransferNotes] = useState("");
   const [editedData, setEditedData] = useState<{
     plan: PlanType;
     active: boolean;
@@ -225,7 +227,7 @@ export default function SubscriptionDetails() {
   });
 
   const transferCondominiumMutation = useMutation({
-    mutationFn: async (newOwnerId: string) => {
+    mutationFn: async ({ newOwnerId, notes }: { newOwnerId: string; notes: string }) => {
       if (!data?.condominium?.id) throw new Error("Condomínio não encontrado");
       
       const currentOwnerId = data.condominium.owner_id;
@@ -242,7 +244,7 @@ export default function SubscriptionDetails() {
 
       if (updateError) throw updateError;
 
-      // Record the transfer in history
+      // Record the transfer in history with notes
       const { error: transferError } = await supabase
         .from("condominium_transfers")
         .insert({
@@ -250,6 +252,7 @@ export default function SubscriptionDetails() {
           from_owner_id: currentOwnerId,
           to_owner_id: newOwnerId,
           transferred_by: user.id,
+          notes: notes.trim() || null,
         });
 
       if (transferError) {
@@ -264,6 +267,7 @@ export default function SubscriptionDetails() {
       setIsTransferDialogOpen(false);
       setTransferCpf("");
       setFoundSindico(null);
+      setTransferNotes("");
       toast({
         title: "Condomínio transferido",
         description: "O condomínio foi transferido para o novo síndico com sucesso.",
@@ -369,13 +373,17 @@ export default function SubscriptionDetails() {
 
   const handleConfirmTransfer = () => {
     if (foundSindico) {
-      transferCondominiumMutation.mutate(foundSindico.user_id);
+      transferCondominiumMutation.mutate({ 
+        newOwnerId: foundSindico.user_id, 
+        notes: transferNotes 
+      });
     }
   };
 
   const handleOpenTransferDialog = () => {
     setTransferCpf("");
     setFoundSindico(null);
+    setTransferNotes("");
     setIsTransferDialogOpen(true);
   };
 
@@ -787,6 +795,19 @@ export default function SubscriptionDetails() {
                         <span className="font-medium font-mono">{formatCPF(foundSindico.cpf)}</span>
                       </p>
                     </div>
+                  </div>
+                )}
+
+                {foundSindico && (
+                  <div className="space-y-2">
+                    <Label htmlFor="transfer-notes">Observações (opcional)</Label>
+                    <Textarea
+                      id="transfer-notes"
+                      value={transferNotes}
+                      onChange={(e) => setTransferNotes(e.target.value)}
+                      placeholder="Motivo da transferência, notas adicionais..."
+                      rows={3}
+                    />
                   </div>
                 )}
 
