@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { formatPhone } from "@/components/ui/masked-input";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, subDays, startOfDay, eachDayOfInterval } from "date-fns";
@@ -590,7 +591,7 @@ export function NotificationsMonitor() {
                           <div>
                             <p className="font-medium">{notification.resident?.full_name || "—"}</p>
                             <p className="text-sm text-muted-foreground">
-                              {notification.resident?.phone || "Sem telefone"}
+                              {notification.resident?.phone ? formatPhone(notification.resident.phone) : "Sem telefone"}
                             </p>
                           </div>
                         </TableCell>
