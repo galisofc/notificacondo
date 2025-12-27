@@ -60,3 +60,7 @@ verify_jwt = false
 # Teste de conexão com Mercado Pago
 [functions.mercadopago-test-connection]
 verify_jwt = false
+
+# Notificação de transferência de condomínio
+[functions.notify-transfer]
+verify_jwt = false
