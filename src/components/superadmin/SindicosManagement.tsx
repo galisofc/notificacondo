@@ -289,9 +289,11 @@ export function SindicosManagement() {
   const filteredSindicos = sindicos?.filter((s) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
+    const queryDigits = searchQuery.replace(/\D/g, ""); // Remove non-digits for CPF search
     return (
       s.profile?.full_name?.toLowerCase().includes(query) ||
-      s.profile?.email?.toLowerCase().includes(query)
+      s.profile?.email?.toLowerCase().includes(query) ||
+      (s.profile?.cpf && s.profile.cpf.includes(queryDigits))
     );
   });
 
