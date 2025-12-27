@@ -40,6 +40,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MaskedInput } from "@/components/ui/masked-input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -388,11 +389,11 @@ export function SindicosManagement() {
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="phone">Telefone</Label>
-                    <Input
+                    <MaskedInput
                       id="phone"
-                      placeholder="(11) 99999-9999"
+                      mask="phone"
                       value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      onChange={(value) => setFormData({ ...formData, phone: value })}
                     />
                   </div>
                 </div>
@@ -661,13 +662,13 @@ export function SindicosManagement() {
                         </div>
                         <div className="grid gap-2">
                           <Label htmlFor="edit_phone">Telefone</Label>
-                          <Input
+                          <MaskedInput
                             id="edit_phone"
+                            mask="phone"
                             value={editProfileData.phone}
-                            onChange={(e) =>
-                              setEditProfileData({ ...editProfileData, phone: e.target.value })
+                            onChange={(value) =>
+                              setEditProfileData({ ...editProfileData, phone: value })
                             }
-                            placeholder="(11) 99999-9999"
                           />
                         </div>
                       </div>

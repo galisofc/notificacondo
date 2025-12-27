@@ -94,4 +94,4 @@ const MaskedInput = React.forwardRef<HTMLInputElement, MaskedInputProps>(
 
 MaskedInput.displayName = "MaskedInput";
 
-export { MaskedInput };
+export { MaskedInput, formatPhone, formatCPF, formatCNPJ, formatCEP };
