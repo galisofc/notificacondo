@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import {
   Users,
   Building2,
@@ -63,6 +65,75 @@ export default function SuperAdminDashboard() {
       };
     },
   });
+
+  // Query para atividade recente
+  const { data: recentActivity, isLoading: activityLoading } = useQuery({
+    queryKey: ["superadmin-recent-activity"],
+    queryFn: async () => {
+      const { data: logs, error } = await supabase
+        .from("audit_logs")
+        .select("id, table_name, action, new_data, created_at, user_id")
+        .order("created_at", { ascending: false })
+        .limit(6);
+
+      if (error) throw error;
+
+      // Buscar nomes dos usuários
+      const userIds = [...new Set(logs?.map((log) => log.user_id).filter(Boolean))];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, full_name")
+        .in("user_id", userIds);
+
+      const profileMap = new Map(profiles?.map((p) => [p.user_id, p.full_name]) || []);
+
+      return logs?.map((log) => ({
+        id: log.id,
+        action: formatAuditAction(log.table_name, log.action, log.new_data),
+        time: formatDistanceToNow(new Date(log.created_at), { addSuffix: true, locale: ptBR }),
+        user: profileMap.get(log.user_id) || "Sistema",
+      })) || [];
+    },
+  });
+
+  // Função para formatar ações de auditoria
+  const formatAuditAction = (tableName: string, action: string, newData: any): string => {
+    const tableNames: Record<string, string> = {
+      user_roles: "Usuário",
+      condominiums: "Condomínio",
+      subscriptions: "Assinatura",
+      profiles: "Perfil",
+      occurrences: "Ocorrência",
+      notifications_sent: "Notificação",
+      invoices: "Fatura",
+      residents: "Morador",
+      blocks: "Bloco",
+      apartments: "Apartamento",
+    };
+
+    const actionNames: Record<string, string> = {
+      INSERT: "criado",
+      UPDATE: "atualizado",
+      DELETE: "removido",
+      ADD_EXTRA_DAYS: "dias extras adicionados",
+    };
+
+    // Ações especiais baseadas em new_data
+    if (newData?.action === "create_sindico") {
+      return `Síndico criado: ${newData.created_user_name || "N/A"}`;
+    }
+    if (newData?.action === "delete_sindico") {
+      return `Síndico removido: ${newData.deleted_user_name || "N/A"}`;
+    }
+    if (newData?.action === "add_extra_days") {
+      return `+${newData.days_added} dias: ${newData.condominium_name || "Assinatura"}`;
+    }
+
+    const table = tableNames[tableName] || tableName;
+    const actionText = actionNames[action] || action.toLowerCase();
+
+    return `${table} ${actionText}`;
+  };
 
   const statCards = [
     {
@@ -225,21 +296,31 @@ export default function SuperAdminDashboard() {
                   <p className="text-xs md:text-sm text-muted-foreground">Últimas ações na plataforma</p>
                 </div>
               </div>
-              <div className="space-y-2 md:space-y-4">
-                {[
-                  { action: "Novo síndico cadastrado", time: "Há 2 minutos" },
-                  { action: "Condomínio atualizado", time: "Há 15 minutos" },
-                  { action: "Assinatura renovada", time: "Há 1 hora" },
-                  { action: "Notificação enviada", time: "Há 2 horas" },
-                ].map((item, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between p-2 md:p-3 rounded-lg bg-secondary/50 border border-border"
-                  >
-                    <span className="text-xs md:text-sm text-foreground">{item.action}</span>
-                    <span className="text-xs text-muted-foreground">{item.time}</span>
+              <div className="space-y-2 md:space-y-3">
+                {activityLoading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3, 4].map((i) => (
+                      <Skeleton key={i} className="h-12 w-full" />
+                    ))}
                   </div>
-                ))}
+                ) : recentActivity && recentActivity.length > 0 ? (
+                  recentActivity.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between p-2 md:p-3 rounded-lg bg-secondary/50 border border-border"
+                    >
+                      <div className="flex flex-col">
+                        <span className="text-xs md:text-sm text-foreground">{item.action}</span>
+                        <span className="text-xs text-muted-foreground">{item.user}</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">{item.time}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-muted-foreground text-sm">
+                    Nenhuma atividade recente
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
