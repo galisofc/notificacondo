@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, differenceInDays, startOfMonth, endOfMonth } from "date-fns";
@@ -101,9 +101,21 @@ export function InvoicesManagement() {
   const [paymentMethod, setPaymentMethod] = useState("");
   const [paymentReference, setPaymentReference] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortColumn, setSortColumn] = useState<SortColumn>("invoice_number");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [sortColumn, setSortColumn] = useState<SortColumn>(() => {
+    const saved = localStorage.getItem("invoices-sort-column");
+    return (saved as SortColumn) || "invoice_number";
+  });
+  const [sortDirection, setSortDirection] = useState<SortDirection>(() => {
+    const saved = localStorage.getItem("invoices-sort-direction");
+    return (saved as SortDirection) || "desc";
+  });
   const itemsPerPage = 10;
+
+  // Persistir preferências de ordenação
+  useEffect(() => {
+    localStorage.setItem("invoices-sort-column", sortColumn);
+    localStorage.setItem("invoices-sort-direction", sortDirection);
+  }, [sortColumn, sortDirection]);
 
   const { data: invoices, isLoading } = useQuery({
     queryKey: ["superadmin-invoices", statusFilter],
