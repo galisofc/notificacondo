@@ -23,6 +23,7 @@ interface ProfileInfo {
   full_name: string;
   email: string;
   phone: string | null;
+  avatar_url: string | null;
 }
 
 interface UseUserRoleReturn {
@@ -70,7 +71,7 @@ export const useUserRole = (): UseUserRoleReturn => {
         if (userRole === "sindico" || userRole === "super_admin") {
           const { data: profileData, error: profileError } = await supabase
             .from("profiles")
-            .select("id, full_name, email, phone")
+            .select("id, full_name, email, phone, avatar_url")
             .eq("user_id", user.id)
             .maybeSingle();
 
@@ -84,6 +85,7 @@ export const useUserRole = (): UseUserRoleReturn => {
               full_name: profileData.full_name,
               email: profileData.email,
               phone: profileData.phone,
+              avatar_url: profileData.avatar_url,
             });
           }
         }
