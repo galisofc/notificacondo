@@ -390,14 +390,21 @@ export function SindicosManagement() {
 
   const filteredSindicos = sindicos?.filter((s) => {
     if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
+    const query = searchQuery.toLowerCase().trim();
     const queryDigits = searchQuery.replace(/\D/g, ""); // Remove non-digits for CPF/phone search
-    return (
+    
+    // Search by name or email (text search)
+    const matchesText = 
       s.profile?.full_name?.toLowerCase().includes(query) ||
-      s.profile?.email?.toLowerCase().includes(query) ||
-      (s.profile?.cpf && s.profile.cpf.includes(queryDigits)) ||
-      (s.profile?.phone && s.profile.phone.includes(queryDigits))
-    );
+      s.profile?.email?.toLowerCase().includes(query);
+    
+    // Search by CPF - compare digits only
+    const matchesCpf = queryDigits.length > 0 && s.profile?.cpf && s.profile.cpf.includes(queryDigits);
+    
+    // Search by phone - compare digits only
+    const matchesPhone = queryDigits.length > 0 && s.profile?.phone && s.profile.phone.replace(/\D/g, "").includes(queryDigits);
+    
+    return matchesText || matchesCpf || matchesPhone;
   });
 
   const getPlanBadge = (plan: string) => {
