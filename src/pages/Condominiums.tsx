@@ -74,14 +74,18 @@ const Condominiums = () => {
   const [formData, setFormData] = useState({
     name: "",
     cnpj: "",
+    phone: "",
+    zip_code: "",
     address: "",
+    address_number: "",
+    neighborhood: "",
     city: "",
     state: "",
-    zip_code: "",
     plan_slug: "start",
   });
   const [saving, setSaving] = useState(false);
   const [fetchingCNPJ, setFetchingCNPJ] = useState(false);
+  const [fetchingCEP, setFetchingCEP] = useState(false);
 
   const fetchPlans = async () => {
     try {
@@ -157,15 +161,18 @@ const Condominiums = () => {
       setFormData((prev) => ({
         ...prev,
         name: data.razao_social || data.nome_fantasia || prev.name,
-        address: data.logradouro ? `${data.logradouro}, ${data.numero}${data.complemento ? ` - ${data.complemento}` : ""}` : prev.address,
+        phone: data.ddd_telefone_1 ? data.ddd_telefone_1.replace(/\D/g, "") : prev.phone,
+        zip_code: data.cep ? data.cep.replace(/\D/g, "") : prev.zip_code,
+        address: data.logradouro || prev.address,
+        address_number: data.numero || prev.address_number,
+        neighborhood: data.bairro || prev.neighborhood,
         city: data.municipio || prev.city,
         state: data.uf || prev.state,
-        zip_code: data.cep ? data.cep.replace(/\D/g, "").replace(/(\d{5})(\d{3})/, "$1-$2") : prev.zip_code,
       }));
 
       toast({
         title: "Dados encontrados",
-        description: "Os dados do CNPJ foram preenchidos automaticamente.",
+        description: `Dados de "${data.razao_social || data.nome_fantasia}" preenchidos automaticamente.`,
       });
     } catch (error) {
       console.error("Error fetching CNPJ:", error);
@@ -176,6 +183,47 @@ const Condominiums = () => {
       });
     } finally {
       setFetchingCNPJ(false);
+    }
+  };
+
+  const fetchCEPData = async (cep: string) => {
+    const cleanCEP = cep.replace(/\D/g, "");
+    if (cleanCEP.length !== 8) return;
+
+    setFetchingCEP(true);
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cleanCEP}/json/`);
+      const data = await response.json();
+
+      if (data.erro) {
+        toast({
+          title: "CEP não encontrado",
+          description: "Verifique o CEP informado.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        address: data.logradouro || prev.address,
+        neighborhood: data.bairro || prev.neighborhood,
+        city: data.localidade || prev.city,
+        state: data.uf || prev.state,
+      }));
+
+      toast({
+        title: "Endereço encontrado",
+        description: "Os dados foram preenchidos automaticamente.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao buscar CEP",
+        description: "Tente novamente mais tarde.",
+        variant: "destructive",
+      });
+    } finally {
+      setFetchingCEP(false);
     }
   };
 
@@ -199,11 +247,14 @@ const Condominiums = () => {
           .from("condominiums")
           .update({
             name: formData.name,
-            cnpj: formData.cnpj || null,
+            cnpj: formData.cnpj.replace(/\D/g, "") || null,
+            phone: formData.phone.replace(/\D/g, "") || null,
+            zip_code: formData.zip_code.replace(/\D/g, "") || null,
             address: formData.address || null,
+            address_number: formData.address_number || null,
+            neighborhood: formData.neighborhood || null,
             city: formData.city || null,
             state: formData.state || null,
-            zip_code: formData.zip_code || null,
           })
           .eq("id", editingCondo.id);
 
@@ -233,11 +284,14 @@ const Condominiums = () => {
           .insert({
             owner_id: user.id,
             name: formData.name,
-            cnpj: formData.cnpj || null,
+            cnpj: formData.cnpj.replace(/\D/g, "") || null,
+            phone: formData.phone.replace(/\D/g, "") || null,
+            zip_code: formData.zip_code.replace(/\D/g, "") || null,
             address: formData.address || null,
+            address_number: formData.address_number || null,
+            neighborhood: formData.neighborhood || null,
             city: formData.city || null,
             state: formData.state || null,
-            zip_code: formData.zip_code || null,
           })
           .select()
           .single();
@@ -270,7 +324,18 @@ const Condominiums = () => {
 
       setIsDialogOpen(false);
       setEditingCondo(null);
-      setFormData({ name: "", cnpj: "", address: "", city: "", state: "", zip_code: "", plan_slug: "start" });
+      setFormData({ 
+        name: "", 
+        cnpj: "", 
+        phone: "",
+        zip_code: "",
+        address: "", 
+        address_number: "",
+        neighborhood: "",
+        city: "", 
+        state: "", 
+        plan_slug: "start" 
+      });
       fetchCondominiums();
     } catch (error: any) {
       console.error("Error saving condominium:", error);
@@ -289,10 +354,13 @@ const Condominiums = () => {
     setFormData({
       name: condo.name,
       cnpj: condo.cnpj || "",
+      phone: (condo as any).phone || "",
+      zip_code: condo.zip_code || "",
       address: condo.address || "",
+      address_number: (condo as any).address_number || "",
+      neighborhood: (condo as any).neighborhood || "",
       city: condo.city || "",
       state: condo.state || "",
-      zip_code: condo.zip_code || "",
       plan_slug: condo.subscription?.plan || "start",
     });
     setIsDialogOpen(true);
@@ -324,7 +392,18 @@ const Condominiums = () => {
 
   const openNewDialog = () => {
     setEditingCondo(null);
-    setFormData({ name: "", cnpj: "", address: "", city: "", state: "", zip_code: "", plan_slug: "start" });
+    setFormData({ 
+      name: "", 
+      cnpj: "", 
+      phone: "",
+      zip_code: "",
+      address: "", 
+      address_number: "",
+      neighborhood: "",
+      city: "", 
+      state: "", 
+      plan_slug: "start" 
+    });
     setIsDialogOpen(true);
   };
 
@@ -368,36 +447,33 @@ const Condominiums = () => {
                   {editingCondo ? "Editar Condomínio" : "Novo Condomínio"}
                 </DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4 max-h-[60vh] overflow-y-auto py-2">
+                {/* CNPJ com busca automática */}
                 <div className="space-y-2">
-                  <Label htmlFor="cnpj">CNPJ</Label>
-                  <div className="flex gap-2">
+                  <Label htmlFor="cnpj">CNPJ (busca automática)</Label>
+                  <div className="relative">
                     <MaskedInput
                       id="cnpj"
                       mask="cnpj"
                       value={formData.cnpj}
-                      onChange={(value) => setFormData({ ...formData, cnpj: value })}
-                      className="bg-secondary/50 flex-1"
+                      onChange={(value) => {
+                        setFormData({ ...formData, cnpj: value });
+                        const cleanCnpj = value.replace(/\D/g, "");
+                        if (cleanCnpj.length === 14) {
+                          fetchCNPJData(value);
+                        }
+                      }}
+                      className="bg-secondary/50"
+                      placeholder="00.000.000/0000-00"
                     />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => fetchCNPJData(formData.cnpj)}
-                      disabled={fetchingCNPJ || formData.cnpj.replace(/\D/g, "").length !== 14}
-                      title="Buscar dados do CNPJ"
-                    >
-                      {fetchingCNPJ ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Search className="w-4 h-4" />
-                      )}
-                    </Button>
+                    {fetchingCNPJ && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                      </div>
+                    )}
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Digite o CNPJ e clique na lupa para preencher automaticamente
-                  </p>
                 </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="name">Nome do Condomínio *</Label>
                   <Input
@@ -406,17 +482,82 @@ const Condominiums = () => {
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     required
                     className="bg-secondary/50"
+                    placeholder="Nome do condomínio"
                   />
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="address">Endereço</Label>
-                  <Input
-                    id="address"
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  <Label htmlFor="phone">Telefone</Label>
+                  <MaskedInput
+                    id="phone"
+                    mask="phone"
+                    value={formData.phone}
+                    onChange={(value) => setFormData({ ...formData, phone: value })}
                     className="bg-secondary/50"
+                    placeholder="(00) 00000-0000"
                   />
                 </div>
+
+                {/* CEP com busca automática */}
+                <div className="space-y-2">
+                  <Label htmlFor="zip_code">CEP (busca automática)</Label>
+                  <div className="relative">
+                    <MaskedInput
+                      id="zip_code"
+                      mask="cep"
+                      value={formData.zip_code}
+                      onChange={(value) => {
+                        setFormData({ ...formData, zip_code: value });
+                        const cleanCep = value.replace(/\D/g, "");
+                        if (cleanCep.length === 8) {
+                          fetchCEPData(value);
+                        }
+                      }}
+                      className="bg-secondary/50"
+                      placeholder="00000-000"
+                    />
+                    {fetchingCEP && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Logradouro</Label>
+                    <Input
+                      id="address"
+                      value={formData.address}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      className="bg-secondary/50"
+                      placeholder="Rua, Avenida, etc."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="address_number">Número</Label>
+                    <Input
+                      id="address_number"
+                      value={formData.address_number}
+                      onChange={(e) => setFormData({ ...formData, address_number: e.target.value })}
+                      className="bg-secondary/50"
+                      placeholder="Nº"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="neighborhood">Bairro</Label>
+                  <Input
+                    id="neighborhood"
+                    value={formData.neighborhood}
+                    onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })}
+                    className="bg-secondary/50"
+                    placeholder="Bairro"
+                  />
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="city">Cidade</Label>
@@ -425,29 +566,22 @@ const Condominiums = () => {
                       value={formData.city}
                       onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                       className="bg-secondary/50"
+                      placeholder="Cidade"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="state">Estado</Label>
+                    <Label htmlFor="state">UF</Label>
                     <Input
                       id="state"
                       value={formData.state}
-                      onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, state: e.target.value.toUpperCase().slice(0, 2) })}
                       className="bg-secondary/50"
+                      placeholder="UF"
                       maxLength={2}
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="zip_code">CEP</Label>
-                  <MaskedInput
-                    id="zip_code"
-                    mask="cep"
-                    value={formData.zip_code}
-                    onChange={(value) => setFormData({ ...formData, zip_code: value })}
-                    className="bg-secondary/50"
-                  />
-                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="plan">Plano *</Label>
                   <Select
@@ -475,7 +609,8 @@ const Condominiums = () => {
                     O plano define os limites de notificações, advertências e multas
                   </p>
                 </div>
-                <div className="flex justify-end gap-3 pt-4">
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-border">
                   <Button
                     type="button"
                     variant="outline"
