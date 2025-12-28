@@ -31,7 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import { CreditCard, AlertCircle, Eye, Search } from "lucide-react";
+import { CreditCard, AlertCircle, Eye, Search, Clock } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 interface SubscriptionWithCondominium {
@@ -39,6 +39,8 @@ interface SubscriptionWithCondominium {
   condominium_id: string;
   plan: string;
   active: boolean;
+  is_trial: boolean;
+  trial_ends_at: string | null;
   notifications_limit: number;
   notifications_used: number;
   warnings_limit: number;
@@ -129,7 +131,7 @@ export function SubscriptionsMonitor() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("subscriptions")
-        .select("plan, active");
+        .select("plan, active, is_trial");
 
       if (error) throw error;
 
@@ -138,6 +140,7 @@ export function SubscriptionsMonitor() {
         essencial: { total: 0, active: 0 },
         profissional: { total: 0, active: 0 },
         enterprise: { total: 0, active: 0 },
+        trial: { total: 0, active: 0 },
       };
 
       data.forEach((sub) => {
@@ -145,6 +148,10 @@ export function SubscriptionsMonitor() {
         if (stats[plan]) {
           stats[plan].total++;
           if (sub.active) stats[plan].active++;
+        }
+        if (sub.is_trial) {
+          stats.trial.total++;
+          if (sub.active) stats.trial.active++;
         }
       });
 
@@ -190,16 +197,19 @@ export function SubscriptionsMonitor() {
   return (
     <div className="space-y-6">
       {/* Plan Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {Object.entries(planStats || {}).map(([plan, stats]) => (
-          <Card key={plan}>
+          <Card key={plan} className={plan === "trial" ? "border-amber-500/30 bg-amber-500/5" : ""}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground capitalize">{plan}</p>
+                  <p className="text-sm font-medium text-muted-foreground capitalize flex items-center gap-1">
+                    {plan === "trial" && <Clock className="h-3.5 w-3.5 text-amber-500" />}
+                    {plan}
+                  </p>
                   <p className="text-2xl font-bold">{stats.total}</p>
                 </div>
-                <Badge variant="outline" className={getPlanBadge(plan)}>
+                <Badge variant="outline" className={plan === "trial" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" : getPlanBadge(plan)}>
                   {stats.active} ativos
                 </Badge>
               </div>
@@ -303,16 +313,32 @@ export function SubscriptionsMonitor() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={
-                            sub.active
-                              ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-                              : "bg-destructive/10 text-destructive border-destructive/20"
-                          }
-                        >
-                          {sub.active ? "Ativo" : "Inativo"}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant="outline"
+                            className={
+                              sub.active
+                                ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                                : "bg-destructive/10 text-destructive border-destructive/20"
+                            }
+                          >
+                            {sub.active ? "Ativo" : "Inativo"}
+                          </Badge>
+                          {sub.is_trial && (
+                            <Badge 
+                              variant="outline" 
+                              className="bg-amber-500/10 text-amber-600 border-amber-500/20 gap-1"
+                            >
+                              <Clock className="h-3 w-3" />
+                              Trial
+                              {sub.trial_ends_at && (
+                                <span className="text-xs">
+                                  ({format(new Date(sub.trial_ends_at), "dd/MM", { locale: ptBR })})
+                                </span>
+                              )}
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
