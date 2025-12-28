@@ -42,7 +42,8 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { FileText, Search, Plus, Edit, Trash2, Eye, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, ArrowRight } from "lucide-react";
+import { FileText, Search, Plus, Edit, Trash2, Eye, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, ArrowRight, User } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface AuditLog {
   id: string;
@@ -181,6 +182,31 @@ export function AuditLogs() {
     },
   });
 
+  // Buscar perfis dos usuários dos logs
+  const userIds = logs?.map(l => l.user_id).filter(Boolean) as string[] || [];
+  const uniqueUserIds = [...new Set(userIds)];
+
+  const { data: profiles } = useQuery({
+    queryKey: ["superadmin-audit-profiles", uniqueUserIds],
+    queryFn: async () => {
+      if (uniqueUserIds.length === 0) return {};
+      
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, email")
+        .in("user_id", uniqueUserIds);
+
+      if (error) throw error;
+      
+      const profileMap: Record<string, { full_name: string; email: string }> = {};
+      data?.forEach(p => {
+        profileMap[p.user_id] = { full_name: p.full_name, email: p.email };
+      });
+      return profileMap;
+    },
+    enabled: uniqueUserIds.length > 0,
+  });
+
   const { data: tables } = useQuery({
     queryKey: ["superadmin-audit-tables"],
     queryFn: async () => {
@@ -194,6 +220,17 @@ export function AuditLogs() {
       return uniqueTables.sort();
     },
   });
+
+  const getUserName = (userId: string | null) => {
+    if (!userId) return null;
+    return profiles?.[userId]?.full_name || null;
+  };
+
+  const getUserInitials = (userId: string | null) => {
+    const name = getUserName(userId);
+    if (!name) return "?";
+    return name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+  };
 
   const filteredLogs = logs?.filter((log) => {
     if (!searchQuery) return true;
@@ -326,6 +363,7 @@ export function AuditLogs() {
                     <TableRow>
                       <TableHead className="w-10"></TableHead>
                       <TableHead>Data/Hora</TableHead>
+                      <TableHead>Usuário</TableHead>
                       <TableHead>Tabela</TableHead>
                       <TableHead>Ação</TableHead>
                       <TableHead>ID do Registro</TableHead>
@@ -365,6 +403,27 @@ export function AuditLogs() {
                               </div>
                             </TableCell>
                             <TableCell>
+                              {log.user_id ? (
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="h-6 w-6">
+                                    <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                                      {getUserInitials(log.user_id)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="flex flex-col">
+                                    <span className="text-sm font-medium truncate max-w-[120px]">
+                                      {getUserName(log.user_id) || "Carregando..."}
+                                    </span>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                  <User className="h-4 w-4" />
+                                  <span className="text-sm">Sistema</span>
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell>
                               <code className="text-xs bg-muted px-2 py-1 rounded">
                                 {log.table_name}
                               </code>
@@ -398,7 +457,7 @@ export function AuditLogs() {
                           </TableRow>
                           <CollapsibleContent asChild>
                             <TableRow className="bg-muted/30 hover:bg-muted/30">
-                              <TableCell colSpan={7} className="p-4">
+                              <TableCell colSpan={8} className="p-4">
                                 {log.action.toLowerCase() === "update" ? (
                                   <DataDiffViewer oldData={log.old_data} newData={log.new_data} />
                                 ) : log.action.toLowerCase() === "delete" ? (
