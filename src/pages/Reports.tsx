@@ -733,39 +733,6 @@ const Reports = () => {
                   </ResponsiveContainer>
                 </div>
 
-                {/* Fines Amount Evolution */}
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-4">Valor de Multas por Mês</h4>
-                  <ResponsiveContainer width="100%" height={280}>
-                    <BarChart data={monthlyEvolutionData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis 
-                        dataKey="month" 
-                        stroke="hsl(var(--muted-foreground))" 
-                        fontSize={12}
-                      />
-                      <YAxis 
-                        stroke="hsl(var(--muted-foreground))" 
-                        fontSize={12}
-                        tickFormatter={(value) => `R$${value}`}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--card))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "8px",
-                        }}
-                        formatter={(value: number) => [formatCurrency(value), "Valor"]}
-                      />
-                      <Bar 
-                        dataKey="valorMultas" 
-                        name="Valor em Multas"
-                        fill="hsl(var(--primary))" 
-                        radius={[4, 4, 0, 0]} 
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
               </div>
             )}
           </CardContent>
