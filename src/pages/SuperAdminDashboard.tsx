@@ -73,11 +73,31 @@ const getActionIcon = (tableName: string, action: string, newData: any): LucideI
   return tableIcons[tableName] || Activity;
 };
 
-// Função para obter cor do ícone baseado na ação
-const getActionIconColor = (action: string, newData: any): string => {
+// Função para obter cor do ícone baseado na ação e tabela
+const getActionIconColor = (action: string, newData: any, tableName?: string): string => {
   if (newData?.action === "create_sindico") return "bg-emerald-500/10 text-emerald-500";
   if (newData?.action === "delete_sindico") return "bg-red-500/10 text-red-500";
   if (newData?.action === "add_extra_days") return "bg-blue-500/10 text-blue-500";
+
+  // Cores por tabela
+  const tableColors: Record<string, string> = {
+    plans: "bg-violet-500/10 text-violet-500",
+    fines: "bg-rose-500/10 text-rose-500",
+    defenses: "bg-teal-500/10 text-teal-500",
+    decisions: "bg-indigo-500/10 text-indigo-500",
+    whatsapp_config: "bg-green-500/10 text-green-500",
+    whatsapp_templates: "bg-green-500/10 text-green-500",
+    mercadopago_config: "bg-sky-500/10 text-sky-500",
+    audit_logs: "bg-slate-500/10 text-slate-500",
+    subscriptions: "bg-purple-500/10 text-purple-500",
+    condominiums: "bg-cyan-500/10 text-cyan-500",
+    residents: "bg-orange-500/10 text-orange-500",
+    invoices: "bg-lime-500/10 text-lime-500",
+  };
+
+  if (tableName && tableColors[tableName]) {
+    return tableColors[tableName];
+  }
 
   const actionColors: Record<string, string> = {
     INSERT: "bg-emerald-500/10 text-emerald-500",
@@ -233,7 +253,7 @@ export default function SuperAdminDashboard() {
         time: formatDistanceToNow(new Date(log.created_at), { addSuffix: true, locale: ptBR }),
         user: profileMap.get(log.user_id) || "Sistema",
         icon: getActionIcon(log.table_name, log.action, log.new_data),
-        iconColor: getActionIconColor(log.action, log.new_data),
+        iconColor: getActionIconColor(log.action, log.new_data, log.table_name),
       })) || [];
     },
   });
