@@ -266,6 +266,89 @@ const Occurrences = () => {
 
     setSaving(true);
     try {
+      // Check plan limits before creating occurrence
+      const { data: subscription, error: subError } = await supabase
+        .from("subscriptions")
+        .select("*, condominiums!inner(id)")
+        .eq("condominiums.id", formData.condominium_id)
+        .single();
+
+      if (subError || !subscription) {
+        toast({ title: "Erro", description: "Assinatura não encontrada para este condomínio.", variant: "destructive" });
+        setSaving(false);
+        return;
+      }
+
+      // Get current usage by counting occurrences with relevant statuses in period
+      const periodStart = subscription.current_period_start;
+      const periodEnd = subscription.current_period_end;
+
+      let occurrencesQuery = supabase
+        .from("occurrences")
+        .select("type, status")
+        .eq("condominium_id", formData.condominium_id)
+        .in("status", ["notificado", "arquivada", "advertido", "multado"]);
+
+      if (periodStart) {
+        occurrencesQuery = occurrencesQuery.gte("created_at", periodStart);
+      }
+      if (periodEnd) {
+        occurrencesQuery = occurrencesQuery.lte("created_at", periodEnd);
+      }
+
+      const { data: existingOccurrences } = await occurrencesQuery;
+
+      const realUsage = {
+        notifications: 0,
+        warnings: 0,
+        fines: 0,
+      };
+
+      if (existingOccurrences) {
+        existingOccurrences.forEach((occ) => {
+          if (occ.type === "notificacao") realUsage.notifications++;
+          else if (occ.type === "advertencia") realUsage.warnings++;
+          else if (occ.type === "multa") realUsage.fines++;
+        });
+      }
+
+      // Check limit based on occurrence type
+      const typeLabels: Record<string, string> = {
+        notificacao: "notificações",
+        advertencia: "advertências",
+        multa: "multas",
+      };
+
+      if (formData.type === "notificacao" && realUsage.notifications >= subscription.notifications_limit) {
+        toast({ 
+          title: "Limite atingido", 
+          description: `Você atingiu o limite de ${subscription.notifications_limit} ${typeLabels.notificacao} do seu plano. Faça upgrade para continuar.`, 
+          variant: "destructive" 
+        });
+        setSaving(false);
+        return;
+      }
+
+      if (formData.type === "advertencia" && realUsage.warnings >= subscription.warnings_limit) {
+        toast({ 
+          title: "Limite atingido", 
+          description: `Você atingiu o limite de ${subscription.warnings_limit} ${typeLabels.advertencia} do seu plano. Faça upgrade para continuar.`, 
+          variant: "destructive" 
+        });
+        setSaving(false);
+        return;
+      }
+
+      if (formData.type === "multa" && realUsage.fines >= subscription.fines_limit) {
+        toast({ 
+          title: "Limite atingido", 
+          description: `Você atingiu o limite de ${subscription.fines_limit} ${typeLabels.multa} do seu plano. Faça upgrade para continuar.`, 
+          variant: "destructive" 
+        });
+        setSaving(false);
+        return;
+      }
+
       // Create occurrence
       const { data: occurrenceData, error: occurrenceError } = await supabase
         .from("occurrences")
