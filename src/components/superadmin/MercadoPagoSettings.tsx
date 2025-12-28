@@ -27,6 +27,8 @@ import {
   Server,
   Webhook,
   Settings,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -77,6 +79,8 @@ export function MercadoPagoSettings() {
   const [webhookTestMessage, setWebhookTestMessage] = useState("");
   const [connectionTestResult, setConnectionTestResult] = useState<ConnectionTestResult | null>(null);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [showAccessToken, setShowAccessToken] = useState(false);
+  const [showWebhookSecret, setShowWebhookSecret] = useState(false);
 
   // Fetch config
   const { data: config, isLoading } = useQuery({
@@ -202,15 +206,32 @@ export function MercadoPagoSettings() {
               {/* Access Token */}
               <div className="space-y-2">
                 <Label htmlFor="access_token">Access Token *</Label>
-                <Input
-                  id="access_token"
-                  type="password"
-                  value={formData.access_token}
-                  onChange={(e) =>
-                    setFormData({ ...formData, access_token: e.target.value })
-                  }
-                  placeholder="APP_USR-xxxxxxxxxxxxxxxxxxxx"
-                />
+                <div className="relative">
+                  <Input
+                    id="access_token"
+                    type={showAccessToken ? "text" : "password"}
+                    value={formData.access_token}
+                    onChange={(e) =>
+                      setFormData({ ...formData, access_token: e.target.value })
+                    }
+                    placeholder="APP_USR-xxxxxxxxxxxxxxxxxxxx"
+                    className="pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                    onClick={() => setShowAccessToken(!showAccessToken)}
+                    tabIndex={-1}
+                  >
+                    {showAccessToken ? (
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </Button>
+                </div>
                 <p className="text-xs text-muted-foreground">
                   Token de acesso do Mercado Pago. Obtenha em{" "}
                   <a
