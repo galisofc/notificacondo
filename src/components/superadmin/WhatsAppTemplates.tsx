@@ -61,6 +61,7 @@ const TEMPLATE_COLORS: Record<string, string> = {
   trial_welcome: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
   condominium_transfer: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
   condominium_transfer_old_owner: "bg-slate-500/10 text-slate-500 border-slate-500/20",
+  payment_confirmed: "bg-green-500/10 text-green-500 border-green-500/20",
 };
 
 const DEFAULT_TEMPLATES: Record<string, string> = {
@@ -221,6 +222,19 @@ O condomínio *{condominio}* foi transferido da sua gestão.
 Agradecemos pelo seu trabalho na gestão do condomínio!
 
 Em caso de dúvidas, entre em contato com o suporte.`,
+  payment_confirmed: `💰 *Pagamento Confirmado!*
+
+🏢 *{condominio}*
+
+Olá, *{nome}*!
+
+Um pagamento foi confirmado:
+📋 Fatura: {descricao_fatura}
+💳 Método: *{metodo_pagamento}*
+💵 Valor: *{valor}*
+📅 Data: {data_pagamento}
+
+✅ A fatura foi marcada como paga automaticamente.`,
 };
 
 export function WhatsAppTemplates() {
