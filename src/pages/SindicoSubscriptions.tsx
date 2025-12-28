@@ -708,15 +708,6 @@ const SindicoSubscriptions = () => {
                           Alterar Plano
                         </Button>
                         
-                        {userProfile?.email && (
-                          <MercadoPagoCheckout
-                            condominiumId={sub.condominium.id}
-                            planSlug={sub.plan}
-                            payerEmail={userProfile.email}
-                            buttonText="Pagar com MP"
-                            variant="outline"
-                          />
-                        )}
                       </div>
                     </div>
                   );
