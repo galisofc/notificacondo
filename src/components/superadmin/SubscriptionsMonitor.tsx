@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
+import { format, differenceInDays, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatCNPJ } from "@/components/ui/masked-input";
 import {
@@ -31,7 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import { CreditCard, AlertCircle, Eye, Search, Clock } from "lucide-react";
+import { CreditCard, AlertCircle, Eye, Search, Clock, AlertTriangle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 interface SubscriptionWithCondominium {
@@ -131,16 +131,16 @@ export function SubscriptionsMonitor() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("subscriptions")
-        .select("plan, active, is_trial");
+        .select("plan, active, is_trial, trial_ends_at");
 
       if (error) throw error;
 
       const stats = {
-        start: { total: 0, active: 0 },
-        essencial: { total: 0, active: 0 },
-        profissional: { total: 0, active: 0 },
-        enterprise: { total: 0, active: 0 },
-        trial: { total: 0, active: 0 },
+        start: { total: 0, active: 0, critical: 0 },
+        essencial: { total: 0, active: 0, critical: 0 },
+        profissional: { total: 0, active: 0, critical: 0 },
+        enterprise: { total: 0, active: 0, critical: 0 },
+        trial: { total: 0, active: 0, critical: 0 },
       };
 
       data.forEach((sub) => {
@@ -152,6 +152,14 @@ export function SubscriptionsMonitor() {
         if (sub.is_trial) {
           stats.trial.total++;
           if (sub.active) stats.trial.active++;
+          
+          // Check if trial is expiring in 2 days or less
+          if (sub.trial_ends_at) {
+            const daysRemaining = differenceInDays(new Date(sub.trial_ends_at), new Date());
+            if (daysRemaining <= 2) {
+              stats.trial.critical++;
+            }
+          }
         }
       });
 
@@ -172,6 +180,20 @@ export function SubscriptionsMonitor() {
   const getUsagePercentage = (used: number, limit: number) => {
     if (limit === 0) return 0;
     return Math.min((used / limit) * 100, 100);
+  };
+
+  const getTrialStatus = (trialEndsAt: string | null) => {
+    if (!trialEndsAt) return null;
+    const endDate = new Date(trialEndsAt);
+    const daysRemaining = differenceInDays(endDate, new Date());
+    
+    if (isPast(endDate)) {
+      return { status: "expired", daysRemaining: 0, label: "Expirado" };
+    }
+    if (daysRemaining <= 2) {
+      return { status: "critical", daysRemaining, label: `${daysRemaining}d restante${daysRemaining !== 1 ? 's' : ''}` };
+    }
+    return { status: "normal", daysRemaining, label: `${daysRemaining}d` };
   };
 
   // Filter subscriptions based on search term (CNPJ or email)
@@ -198,24 +220,56 @@ export function SubscriptionsMonitor() {
     <div className="space-y-6">
       {/* Plan Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        {Object.entries(planStats || {}).map(([plan, stats]) => (
-          <Card key={plan} className={plan === "trial" ? "border-amber-500/30 bg-amber-500/5" : ""}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground capitalize flex items-center gap-1">
-                    {plan === "trial" && <Clock className="h-3.5 w-3.5 text-amber-500" />}
-                    {plan}
-                  </p>
-                  <p className="text-2xl font-bold">{stats.total}</p>
+        {Object.entries(planStats || {}).map(([plan, stats]) => {
+          const hasCritical = plan === "trial" && stats.critical > 0;
+          return (
+            <Card 
+              key={plan} 
+              className={`${
+                hasCritical 
+                  ? "border-orange-500/50 bg-orange-500/5" 
+                  : plan === "trial" 
+                    ? "border-amber-500/30 bg-amber-500/5" 
+                    : ""
+              }`}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground capitalize flex items-center gap-1">
+                      {plan === "trial" && (
+                        hasCritical ? (
+                          <AlertTriangle className="h-3.5 w-3.5 text-orange-500 animate-pulse" />
+                        ) : (
+                          <Clock className="h-3.5 w-3.5 text-amber-500" />
+                        )
+                      )}
+                      {plan}
+                    </p>
+                    <p className="text-2xl font-bold">{stats.total}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <Badge 
+                      variant="outline" 
+                      className={plan === "trial" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" : getPlanBadge(plan)}
+                    >
+                      {stats.active} ativos
+                    </Badge>
+                    {hasCritical && (
+                      <Badge 
+                        variant="outline" 
+                        className="bg-orange-500/10 text-orange-600 border-orange-500/20 text-xs animate-pulse"
+                      >
+                        <AlertTriangle className="h-3 w-3 mr-1" />
+                        {stats.critical} expirando
+                      </Badge>
+                    )}
+                  </div>
                 </div>
-                <Badge variant="outline" className={plan === "trial" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" : getPlanBadge(plan)}>
-                  {stats.active} ativos
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Subscriptions Table */}
@@ -324,20 +378,35 @@ export function SubscriptionsMonitor() {
                           >
                             {sub.active ? "Ativo" : "Inativo"}
                           </Badge>
-                          {sub.is_trial && (
-                            <Badge 
-                              variant="outline" 
-                              className="bg-amber-500/10 text-amber-600 border-amber-500/20 gap-1"
-                            >
-                              <Clock className="h-3 w-3" />
-                              Trial
-                              {sub.trial_ends_at && (
-                                <span className="text-xs">
-                                  ({format(new Date(sub.trial_ends_at), "dd/MM", { locale: ptBR })})
-                                </span>
-                              )}
-                            </Badge>
-                          )}
+                          {sub.is_trial && (() => {
+                            const trialStatus = getTrialStatus(sub.trial_ends_at);
+                            const isCritical = trialStatus?.status === "critical";
+                            const isExpired = trialStatus?.status === "expired";
+                            return (
+                              <Badge 
+                                variant="outline" 
+                                className={`gap-1 ${
+                                  isExpired 
+                                    ? "bg-destructive/10 text-destructive border-destructive/20 animate-pulse" 
+                                    : isCritical 
+                                      ? "bg-orange-500/10 text-orange-600 border-orange-500/20 animate-pulse" 
+                                      : "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                                }`}
+                              >
+                                {isExpired || isCritical ? (
+                                  <AlertTriangle className="h-3 w-3" />
+                                ) : (
+                                  <Clock className="h-3 w-3" />
+                                )}
+                                Trial
+                                {trialStatus && (
+                                  <span className="text-xs font-medium">
+                                    ({trialStatus.label})
+                                  </span>
+                                )}
+                              </Badge>
+                            );
+                          })()}
                         </div>
                       </TableCell>
                       <TableCell>
