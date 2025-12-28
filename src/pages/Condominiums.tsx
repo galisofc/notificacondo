@@ -34,7 +34,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
-import { isValidCNPJ } from "@/lib/utils";
+import { isValidCNPJ, formatCNPJ } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
 interface Plan {
@@ -731,7 +731,7 @@ const Condominiums = () => {
                 {condo.cnpj && (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <FileText className="w-3 h-3" />
-                    <span>CNPJ: {condo.cnpj}</span>
+                    <span>CNPJ: {formatCNPJ(condo.cnpj)}</span>
                   </div>
                 )}
 
