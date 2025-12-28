@@ -39,6 +39,7 @@ import {
   Scale,
   Receipt,
   ChevronRight,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -61,6 +62,7 @@ const superAdminNavItems: NavItem[] = [
   { title: "Faturas", url: "/superadmin/invoices", icon: Receipt },
   { title: "Transferências", url: "/superadmin/transfers", icon: Scale },
   { title: "Logs", url: "/superadmin/logs", icon: FileText },
+  { title: "Cron Jobs", url: "/superadmin/cron-jobs", icon: Clock },
   { title: "WhatsApp", url: "/superadmin/whatsapp", icon: MessageCircle },
   { title: "Configurações", url: "/superadmin/settings", icon: Settings },
 ];

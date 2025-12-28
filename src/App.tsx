@@ -33,6 +33,7 @@ import Subscriptions from "./pages/superadmin/Subscriptions";
 import SubscriptionDetails from "./pages/superadmin/SubscriptionDetails";
 import SuperAdminInvoices from "./pages/superadmin/Invoices";
 import Logs from "./pages/superadmin/Logs";
+import CronJobs from "./pages/superadmin/CronJobs";
 import Transfers from "./pages/superadmin/Transfers";
 import WhatsApp from "./pages/superadmin/WhatsApp";
 import SuperAdminSettings from "./pages/superadmin/Settings";
@@ -253,6 +254,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole="super_admin">
                     <Logs />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/superadmin/cron-jobs"
+                element={
+                  <ProtectedRoute requiredRole="super_admin">
+                    <CronJobs />
                   </ProtectedRoute>
                 }
               />
