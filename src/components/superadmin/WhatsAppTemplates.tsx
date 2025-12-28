@@ -56,6 +56,9 @@ const TEMPLATE_COLORS: Record<string, string> = {
   decision_warning: "bg-amber-500/10 text-amber-500 border-amber-500/20",
   decision_fine: "bg-red-500/10 text-red-500 border-red-500/20",
   notify_sindico_defense: "bg-violet-500/10 text-violet-500 border-violet-500/20",
+  trial_ending: "bg-orange-500/10 text-orange-500 border-orange-500/20",
+  trial_expired: "bg-red-500/10 text-red-500 border-red-500/20",
+  trial_welcome: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
 };
 
 const DEFAULT_TEMPLATES: Record<string, string> = {
@@ -132,6 +135,61 @@ Tipo: {tipo}
 
 Acesse o sistema para analisar:
 👉 {link}`,
+  trial_ending: `⏰ *Seu Período de Teste está Acabando!*
+
+🏢 *{condominio}*
+
+Olá, *{nome}*!
+
+Seu período de teste gratuito do Condomínio Legal termina em *{dias_restantes}*.
+
+📅 *Data de expiração:* {data_expiracao}
+
+Para continuar utilizando todos os recursos da plataforma, assine um de nossos planos:
+👉 {link_planos}
+
+Não perca acesso a:
+✅ Notificações automatizadas
+✅ Gestão de ocorrências  
+✅ Controle de multas e advertências
+
+Qualquer dúvida, estamos à disposição!`,
+  trial_expired: `🔔 *Seu Período de Teste Expirou*
+
+🏢 *{condominio}*
+
+Olá, *{nome}*!
+
+Seu período de teste gratuito do Condomínio Legal *expirou em {data_expiracao}*.
+
+Para continuar utilizando a plataforma, assine um de nossos planos:
+👉 {link_planos}
+
+📦 *Planos disponíveis:*
+• Start - Ideal para pequenos condomínios
+• Essencial - Recursos completos
+• Profissional - Sem limites
+
+Esperamos você de volta! 💙`,
+  trial_welcome: `🎉 *Bem-vindo ao Condomínio Legal!*
+
+🏢 *{condominio}*
+
+Olá, *{nome}*!
+
+Seu período de teste de *7 dias* começou!
+
+📅 *Expira em:* {data_expiracao}
+
+Durante o trial você tem acesso a:
+✅ Até 10 notificações
+✅ Até 10 advertências  
+✅ Sistema completo de ocorrências
+
+Acesse agora e explore:
+👉 {link_dashboard}
+
+Qualquer dúvida, estamos aqui para ajudar!`,
 };
 
 export function WhatsAppTemplates() {
