@@ -4,7 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
+import { format, differenceInHours, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import {
@@ -105,6 +105,9 @@ export default function SubscriptionDetails() {
   const [isPeriodDialogOpen, setIsPeriodDialogOpen] = useState(false);
   const [isAddDaysDialogOpen, setIsAddDaysDialogOpen] = useState(false);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [isExtendTrialDialogOpen, setIsExtendTrialDialogOpen] = useState(false);
+  const [trialExtensionDays, setTrialExtensionDays] = useState<number>(7);
+  const [trialExtensionJustification, setTrialExtensionJustification] = useState("");
   const [extraDays, setExtraDays] = useState<number>(0);
   const [extraDaysJustification, setExtraDaysJustification] = useState("");
   const [periodStartDate, setPeriodStartDate] = useState("");
@@ -369,6 +372,68 @@ export default function SubscriptionDetails() {
     onError: (error: any) => {
       toast({
         title: "Erro ao adicionar dias",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const extendTrialMutation = useMutation({
+    mutationFn: async ({ days, justification }: { days: number; justification: string }) => {
+      if (!id || !data?.subscription) throw new Error("Dados não encontrados");
+
+      const currentTrialEnd = data.subscription.trial_ends_at 
+        ? new Date(data.subscription.trial_ends_at)
+        : new Date();
+      
+      const newTrialEnd = new Date(currentTrialEnd);
+      newTrialEnd.setDate(newTrialEnd.getDate() + days);
+
+      const { error } = await supabase
+        .from("subscriptions")
+        .update({
+          trial_ends_at: newTrialEnd.toISOString(),
+          is_trial: true,
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      // Registrar no audit log
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      await supabase
+        .from("audit_logs")
+        .insert({
+          table_name: "subscriptions",
+          action: "EXTEND_TRIAL",
+          record_id: id,
+          new_data: {
+            action: "extend_trial",
+            days_added: days,
+            previous_trial_end: currentTrialEnd.toISOString(),
+            new_trial_end: newTrialEnd.toISOString(),
+            condominium_id: data.subscription.condominium_id,
+            condominium_name: data.condominium?.name || "N/A",
+            justification: justification.trim() || "Sem justificativa informada",
+          },
+          user_id: user?.id || null,
+        });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscription-details", id] });
+      queryClient.invalidateQueries({ queryKey: ["superadmin-subscriptions"] });
+      setIsExtendTrialDialogOpen(false);
+      setTrialExtensionDays(7);
+      setTrialExtensionJustification("");
+      toast({
+        title: "Trial estendido",
+        description: `O período de trial foi estendido com sucesso.`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao estender trial",
         description: error.message || "Tente novamente.",
         variant: "destructive",
       });
@@ -887,6 +952,81 @@ export default function SubscriptionDetails() {
                     </div>
                   </div>
                 </div>
+              )}
+
+              {/* Trial Status Section */}
+              {subscription.is_trial && (
+                <>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {(() => {
+                        const trialEndsAt = subscription.trial_ends_at;
+                        if (!trialEndsAt) return null;
+                        
+                        const endDate = new Date(trialEndsAt);
+                        const isExpired = isPast(endDate);
+                        const hoursRemaining = differenceInHours(endDate, new Date());
+                        const daysRemaining = Math.ceil(hoursRemaining / 24);
+                        const isUrgent = hoursRemaining < 48 && hoursRemaining > 0;
+                        
+                        return (
+                          <>
+                            <div className={`p-2 rounded-lg ${
+                              isExpired 
+                                ? "bg-destructive/10" 
+                                : isUrgent 
+                                  ? "bg-orange-500/10" 
+                                  : "bg-amber-500/10"
+                            }`}>
+                              <Clock className={`w-5 h-5 ${
+                                isExpired 
+                                  ? "text-destructive" 
+                                  : isUrgent 
+                                    ? "text-orange-500 animate-pulse" 
+                                    : "text-amber-500"
+                              }`} />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">Período de Trial</span>
+                                <Badge 
+                                  variant="outline" 
+                                  className={`${
+                                    isExpired 
+                                      ? "bg-destructive/10 text-destructive border-destructive/20" 
+                                      : isUrgent 
+                                        ? "bg-orange-500/10 text-orange-600 border-orange-500/20 animate-pulse" 
+                                        : "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                                  }`}
+                                >
+                                  {isExpired 
+                                    ? "Expirado" 
+                                    : hoursRemaining < 24 
+                                      ? `${hoursRemaining}h restante${hoursRemaining !== 1 ? 's' : ''}`
+                                      : `${daysRemaining}d restante${daysRemaining !== 1 ? 's' : ''}`
+                                  }
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                {isExpired ? "Expirou em" : "Expira em"}: {format(endDate, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                              </p>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsExtendTrialDialogOpen(true)}
+                      className="border-amber-500/30 text-amber-600 hover:bg-amber-500/10"
+                    >
+                      <Clock className="w-4 h-4 mr-2" />
+                      Estender Trial
+                    </Button>
+                  </div>
+                </>
               )}
 
               {subscription.current_period_end && (
@@ -1462,6 +1602,97 @@ export default function SubscriptionDetails() {
                 <RefreshCw className="w-4 h-4 mr-2" />
               )}
               Reiniciar Contadores
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Extend Trial Dialog */}
+      <Dialog open={isExtendTrialDialogOpen} onOpenChange={setIsExtendTrialDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-amber-500" />
+              Estender Período de Trial
+            </DialogTitle>
+            <DialogDescription>
+              Adicione dias extras ao período de trial desta assinatura.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="trial-days">Quantidade de dias a adicionar</Label>
+              <Input
+                id="trial-days"
+                type="number"
+                min="1"
+                max="90"
+                value={trialExtensionDays || ""}
+                onChange={(e) => setTrialExtensionDays(parseInt(e.target.value) || 0)}
+                placeholder="Ex: 7, 14, 30..."
+              />
+            </div>
+            
+            {trialExtensionDays > 0 && data?.subscription?.trial_ends_at && (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                <p className="text-sm text-amber-700 dark:text-amber-400">
+                  <span className="font-medium">Nova data de expiração:</span>{" "}
+                  {format(
+                    new Date(new Date(data.subscription.trial_ends_at).getTime() + trialExtensionDays * 24 * 60 * 60 * 1000),
+                    "dd/MM/yyyy 'às' HH:mm",
+                    { locale: ptBR }
+                  )}
+                </p>
+              </div>
+            )}
+            
+            <div className="flex gap-2">
+              {[7, 14, 30].map((days) => (
+                <Button
+                  key={days}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTrialExtensionDays(days)}
+                  className={trialExtensionDays === days ? "border-amber-500 bg-amber-500/10" : ""}
+                >
+                  +{days} dias
+                </Button>
+              ))}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="trial-justification">Justificativa</Label>
+              <Textarea
+                id="trial-justification"
+                value={trialExtensionJustification}
+                onChange={(e) => setTrialExtensionJustification(e.target.value)}
+                placeholder="Informe o motivo para estender o trial (ex: cliente em avaliação, problema técnico, cortesia comercial...)"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsExtendTrialDialogOpen(false);
+                setTrialExtensionDays(7);
+                setTrialExtensionJustification("");
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => extendTrialMutation.mutate({ days: trialExtensionDays, justification: trialExtensionJustification })}
+              disabled={extendTrialMutation.isPending || trialExtensionDays < 1 || !trialExtensionJustification.trim()}
+              className="bg-amber-500 hover:bg-amber-600 text-white"
+            >
+              {extendTrialMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Clock className="w-4 h-4 mr-2" />
+              )}
+              Estender {trialExtensionDays} dia{trialExtensionDays !== 1 ? "s" : ""}
             </Button>
           </DialogFooter>
         </DialogContent>
