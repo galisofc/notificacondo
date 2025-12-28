@@ -23,6 +23,252 @@ const PLAN_PRICES: Record<string, number> = {
   enterprise: 199.90,
 };
 
+// Multi-provider WhatsApp configuration
+type WhatsAppProvider = "zpro" | "zapi" | "evolution" | "wppconnect";
+
+interface ProviderConfig {
+  sendMessage: (phone: string, message: string, config: ProviderSettings) => Promise<{ success: boolean; messageId?: string; error?: string }>;
+}
+
+interface ProviderSettings {
+  apiUrl: string;
+  apiKey: string;
+  instanceId: string;
+}
+
+interface WhatsAppConfigRow {
+  id: string;
+  provider: string;
+  api_url: string;
+  api_key: string;
+  instance_id: string;
+  is_active: boolean;
+  app_url?: string;
+}
+
+// Z-PRO Provider
+const zproProvider: ProviderConfig = {
+  async sendMessage(phone: string, message: string, config: ProviderSettings) {
+    const baseUrl = config.apiUrl.replace(/\/$/, "");
+    const phoneClean = phone.replace(/\D/g, "");
+    
+    const params = new URLSearchParams({
+      body: message,
+      number: phoneClean,
+      externalKey: config.apiKey,
+      bearertoken: config.apiKey,
+      isClosed: "false"
+    });
+    
+    const sendUrl = `${baseUrl}/params/?${params.toString()}`;
+    console.log("Z-PRO sending to:", sendUrl.substring(0, 150) + "...");
+    
+    try {
+      const response = await fetch(sendUrl, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+      
+      const responseText = await response.text();
+      console.log("Z-PRO response status:", response.status);
+      
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        return { success: false, error: `Resposta inválida: ${responseText.substring(0, 100)}` };
+      }
+      
+      if (response.ok) {
+        const extractedMessageId = data.id || data.messageId || data.key?.id || data.msgId || data.message_id;
+        if (extractedMessageId && extractedMessageId !== "sent") {
+          return { success: true, messageId: String(extractedMessageId) };
+        }
+        return { success: true, messageId: `zpro_${Date.now()}` };
+      }
+      
+      return { success: false, error: data.message || data.error || `Erro ${response.status}` };
+    } catch (error: any) {
+      return { success: false, error: `Erro de conexão: ${error.message}` };
+    }
+  },
+};
+
+// Z-API Provider
+const zapiProvider: ProviderConfig = {
+  async sendMessage(phone: string, message: string, config: ProviderSettings) {
+    const response = await fetch(`${config.apiUrl}/instances/${config.instanceId}/token/${config.apiKey}/send-text`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        phone: phone.replace(/\D/g, ""),
+        message: message,
+      }),
+    });
+    
+    const data = await response.json();
+    if (response.ok && data.zapiMessageId) {
+      return { success: true, messageId: data.zapiMessageId };
+    }
+    return { success: false, error: data.message || "Erro ao enviar mensagem" };
+  },
+};
+
+// Evolution API Provider
+const evolutionProvider: ProviderConfig = {
+  async sendMessage(phone: string, message: string, config: ProviderSettings) {
+    const response = await fetch(`${config.apiUrl}/message/sendText/${config.instanceId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": config.apiKey,
+      },
+      body: JSON.stringify({
+        number: phone.replace(/\D/g, ""),
+        text: message,
+      }),
+    });
+    
+    const data = await response.json();
+    if (response.ok && data.key?.id) {
+      return { success: true, messageId: data.key.id };
+    }
+    return { success: false, error: data.message || "Erro ao enviar mensagem" };
+  },
+};
+
+// WPPConnect Provider
+const wppconnectProvider: ProviderConfig = {
+  async sendMessage(phone: string, message: string, config: ProviderSettings) {
+    const response = await fetch(`${config.apiUrl}/api/${config.instanceId}/send-message`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({
+        phone: phone.replace(/\D/g, ""),
+        message: message,
+        isGroup: false,
+      }),
+    });
+    
+    const data = await response.json();
+    if (response.ok && data.status === "success") {
+      return { success: true, messageId: data.id };
+    }
+    return { success: false, error: data.message || "Erro ao enviar mensagem" };
+  },
+};
+
+const providers: Record<WhatsAppProvider, ProviderConfig> = {
+  zpro: zproProvider,
+  zapi: zapiProvider,
+  evolution: evolutionProvider,
+  wppconnect: wppconnectProvider,
+};
+
+// Function to send invoice notification to síndico
+async function sendInvoiceNotification(
+  supabase: any,
+  condominiumId: string,
+  invoiceNumber: string,
+  periodStart: string,
+  periodEnd: string,
+  amount: number,
+  dueDate: string,
+  appBaseUrl: string,
+  whatsappConfig: WhatsAppConfigRow
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Get condominium and owner details
+    const { data: condominium, error: condoError } = await supabase
+      .from("condominiums")
+      .select("id, name, owner_id")
+      .eq("id", condominiumId)
+      .single();
+
+    if (condoError || !condominium) {
+      console.error("Error fetching condominium:", condoError);
+      return { success: false, error: "Condomínio não encontrado" };
+    }
+
+    // Get owner profile
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("full_name, phone")
+      .eq("user_id", condominium.owner_id)
+      .single();
+
+    if (profileError || !profile) {
+      console.error("Error fetching profile:", profileError);
+      return { success: false, error: "Perfil do síndico não encontrado" };
+    }
+
+    if (!profile.phone) {
+      console.log(`Síndico ${profile.full_name} não possui telefone cadastrado. Pulando notificação.`);
+      return { success: false, error: "Síndico sem telefone cadastrado" };
+    }
+
+    // Get template
+    const { data: template, error: templateError } = await supabase
+      .from("whatsapp_templates")
+      .select("content")
+      .eq("slug", "invoice_generated")
+      .eq("is_active", true)
+      .single();
+
+    if (templateError || !template) {
+      console.error("Template invoice_generated not found:", templateError);
+      return { success: false, error: "Template de notificação não encontrado" };
+    }
+
+    // Format dates
+    const periodStartDate = new Date(periodStart);
+    const periodEndDate = new Date(periodEnd);
+    const dueDateObj = new Date(dueDate);
+    
+    const formatDate = (date: Date) => date.toLocaleDateString("pt-BR");
+    const formatCurrency = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+    // Build message
+    const message = template.content
+      .replace("{condominio}", condominium.name)
+      .replace("{nome}", profile.full_name)
+      .replace("{numero_fatura}", invoiceNumber || "N/A")
+      .replace("{periodo}", `${formatDate(periodStartDate)} a ${formatDate(periodEndDate)}`)
+      .replace("{valor}", formatCurrency(amount))
+      .replace("{data_vencimento}", formatDate(dueDateObj))
+      .replace("{link}", `${appBaseUrl}/sindico/invoices`);
+
+    // Send WhatsApp message
+    const provider = providers[whatsappConfig.provider as WhatsAppProvider];
+    if (!provider) {
+      console.error(`Provider ${whatsappConfig.provider} not found`);
+      return { success: false, error: `Provider ${whatsappConfig.provider} não suportado` };
+    }
+
+    console.log(`Sending invoice notification to ${profile.full_name} (${profile.phone})`);
+    
+    const result = await provider.sendMessage(profile.phone, message, {
+      apiUrl: whatsappConfig.api_url,
+      apiKey: whatsappConfig.api_key,
+      instanceId: whatsappConfig.instance_id,
+    });
+
+    if (result.success) {
+      console.log(`Invoice notification sent successfully to ${profile.full_name}`);
+    } else {
+      console.error(`Failed to send invoice notification: ${result.error}`);
+    }
+
+    return result;
+  } catch (error: any) {
+    console.error("Error sending invoice notification:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -36,6 +282,17 @@ Deno.serve(async (req) => {
 
   // Determine trigger type from request header or default to manual
   const triggerType = req.headers.get("x-trigger-type") || "manual";
+
+  // Fetch WhatsApp config for notifications
+  const { data: whatsappConfig } = await supabase
+    .from("whatsapp_config")
+    .select("*")
+    .eq("is_active", true)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const appBaseUrl = whatsappConfig?.app_url || "https://notificacondo.com.br";
 
   // Create execution log entry
   const { data: logEntry } = await supabase
@@ -106,6 +363,8 @@ Deno.serve(async (req) => {
     const results = {
       processed: 0,
       invoicesCreated: 0,
+      notificationsSent: 0,
+      notificationsFailed: 0,
       trialsEnded: 0,
       errors: [] as string[],
     };
@@ -164,7 +423,7 @@ Deno.serve(async (req) => {
           dueDate.setDate(dueDate.getDate() + 15);
 
           // Create the first invoice after trial
-          const { error: invoiceError } = await supabase.from("invoices").insert({
+          const { data: newInvoice, error: invoiceError } = await supabase.from("invoices").insert({
             subscription_id: subscription.id,
             condominium_id: subscription.condominium_id,
             amount: price,
@@ -173,7 +432,7 @@ Deno.serve(async (req) => {
             period_start: periodStart.toISOString().split("T")[0],
             period_end: periodEnd.toISOString().split("T")[0],
             description: `Assinatura ${subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1)} - Primeiro mês após período de teste - ${periodStart.toLocaleDateString("pt-BR")} a ${periodEnd.toLocaleDateString("pt-BR")}`,
-          });
+          }).select("invoice_number").single();
 
           if (invoiceError) {
             console.error(`Error creating first invoice for subscription ${subscription.id}:`, invoiceError);
@@ -184,6 +443,27 @@ Deno.serve(async (req) => {
           console.log(`Created first invoice after trial for subscription ${subscription.id}`);
           results.invoicesCreated++;
           results.trialsEnded++;
+
+          // Send WhatsApp notification to síndico
+          if (whatsappConfig) {
+            const notifResult = await sendInvoiceNotification(
+              supabase,
+              subscription.condominium_id,
+              newInvoice?.invoice_number || "",
+              periodStart.toISOString().split("T")[0],
+              periodEnd.toISOString().split("T")[0],
+              price,
+              dueDate.toISOString().split("T")[0],
+              appBaseUrl,
+              whatsappConfig as WhatsAppConfigRow
+            );
+            if (notifResult.success) {
+              results.notificationsSent++;
+            } else {
+              results.notificationsFailed++;
+              console.log(`WhatsApp notification failed for subscription ${subscription.id}: ${notifResult.error}`);
+            }
+          }
 
           // Update subscription - end trial and set new period
           const { error: updateError } = await supabase
@@ -268,7 +548,7 @@ Deno.serve(async (req) => {
         }
 
         // Create the renewal invoice
-        const { error: invoiceError } = await supabase.from("invoices").insert({
+        const { data: renewalInvoice, error: invoiceError } = await supabase.from("invoices").insert({
           subscription_id: subscription.id,
           condominium_id: subscription.condominium_id,
           amount: price,
@@ -277,7 +557,7 @@ Deno.serve(async (req) => {
           period_start: periodStart.toISOString().split("T")[0],
           period_end: periodEnd.toISOString().split("T")[0],
           description: `Assinatura ${subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1)} - ${periodStart.toLocaleDateString("pt-BR")} a ${periodEnd.toLocaleDateString("pt-BR")}`,
-        });
+        }).select("invoice_number").single();
 
         if (invoiceError) {
           console.error(`Error creating invoice for subscription ${subscription.id}:`, invoiceError);
@@ -287,6 +567,27 @@ Deno.serve(async (req) => {
 
         console.log(`Created renewal invoice for subscription ${subscription.id}`);
         results.invoicesCreated++;
+
+        // Send WhatsApp notification to síndico
+        if (whatsappConfig) {
+          const notifResult = await sendInvoiceNotification(
+            supabase,
+            subscription.condominium_id,
+            renewalInvoice?.invoice_number || "",
+            periodStart.toISOString().split("T")[0],
+            periodEnd.toISOString().split("T")[0],
+            price,
+            dueDate.toISOString().split("T")[0],
+            appBaseUrl,
+            whatsappConfig as WhatsAppConfigRow
+          );
+          if (notifResult.success) {
+            results.notificationsSent++;
+          } else {
+            results.notificationsFailed++;
+            console.log(`WhatsApp notification failed for subscription ${subscription.id}: ${notifResult.error}`);
+          }
+        }
 
         // Update subscription period dates and reset usage counters
         const { error: updateError } = await supabase
