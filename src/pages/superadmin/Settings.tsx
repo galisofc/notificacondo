@@ -1158,34 +1158,62 @@ export default function SuperAdminSettings() {
 
             <Card className="bg-gradient-card border-border/50">
               <CardHeader>
-                <CardTitle>Políticas de Acesso</CardTitle>
-                <CardDescription>
-                  Row Level Security (RLS) está ativo em todas as tabelas
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Políticas de Acesso (RLS)</CardTitle>
+                    <CardDescription>
+                      Row Level Security (RLS) está ativo em todas as tabelas
+                    </CardDescription>
+                  </div>
+                  <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20 gap-1">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    Protegido
+                  </Badge>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-3 md:grid-cols-2">
+                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                   {[
-                    "condominiums",
-                    "blocks",
-                    "apartments",
-                    "residents",
-                    "occurrences",
-                    "subscriptions",
-                    "profiles",
-                    "user_roles",
+                    { name: "condominiums", policies: 4 },
+                    { name: "blocks", policies: 2 },
+                    { name: "apartments", policies: 2 },
+                    { name: "residents", policies: 2 },
+                    { name: "occurrences", policies: 3 },
+                    { name: "subscriptions", policies: 3 },
+                    { name: "profiles", policies: 5 },
+                    { name: "user_roles", policies: 2 },
+                    { name: "decisions", policies: 2 },
+                    { name: "defenses", policies: 2 },
+                    { name: "defense_attachments", policies: 2 },
+                    { name: "fines", policies: 2 },
+                    { name: "invoices", policies: 4 },
+                    { name: "notifications_sent", policies: 2 },
+                    { name: "occurrence_evidences", policies: 2 },
+                    { name: "plans", policies: 2 },
+                    { name: "audit_logs", policies: 2 },
+                    { name: "condominium_transfers", policies: 2 },
+                    { name: "whatsapp_config", policies: 4 },
+                    { name: "whatsapp_templates", policies: 1 },
+                    { name: "mercadopago_config", policies: 4 },
+                    { name: "mercadopago_webhook_logs", policies: 1 },
                   ].map((table) => (
                     <div
-                      key={table}
+                      key={table.name}
                       className="flex items-center gap-2 p-3 rounded-lg bg-green-500/5 border border-green-500/20"
                     >
-                      <CheckCircle2 className="w-4 h-4 text-green-500" />
-                      <span className="font-mono text-sm">{table}</span>
-                      <Badge variant="outline" className="ml-auto text-xs bg-green-500/10 text-green-500 border-green-500/20">
-                        RLS Ativo
+                      <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+                      <span className="font-mono text-sm truncate">{table.name}</span>
+                      <Badge variant="outline" className="ml-auto text-xs bg-green-500/10 text-green-500 border-green-500/20 shrink-0">
+                        {table.policies} {table.policies === 1 ? "política" : "políticas"}
                       </Badge>
                     </div>
                   ))}
+                </div>
+                <div className="mt-4 p-3 rounded-lg bg-muted/30 border border-border/50">
+                  <p className="text-sm text-muted-foreground">
+                    <span className="font-medium text-foreground">22 tabelas protegidas</span> com Row Level Security (RLS) ativo. 
+                    Todas as políticas utilizam funções de segurança (SECURITY DEFINER) para evitar recursão infinita.
+                  </p>
                 </div>
               </CardContent>
             </Card>
