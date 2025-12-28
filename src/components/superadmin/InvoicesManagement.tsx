@@ -289,110 +289,186 @@ export function InvoicesManagement() {
   const generateInvoicePDF = (invoice: InvoiceWithDetails) => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
     
-    // Logo placeholder (building icon as SVG path)
-    doc.setFillColor(59, 130, 246); // Blue color
-    doc.roundedRect(20, 15, 30, 30, 3, 3, "F");
+    // Cores
+    const primaryBlue = [0, 136, 204]; // #0088CC
+    const darkBlue = [0, 102, 153]; // #006699
+    const lightGray = [245, 245, 245];
+    const textDark = [51, 51, 51];
+    const textGray = [100, 100, 100];
     
-    // Building icon simplified (white)
-    doc.setFillColor(255, 255, 255);
-    doc.rect(26, 22, 6, 16, "F"); // Left building
-    doc.rect(34, 26, 6, 12, "F"); // Middle building
-    doc.rect(42, 20, 4, 18, "F"); // Right building (taller)
+    // ===== HEADER BAR =====
+    doc.setFillColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
+    doc.rect(0, 0, pageWidth, 25, "F");
     
-    // Windows
-    doc.setFillColor(59, 130, 246);
-    doc.rect(27, 24, 2, 2, "F");
-    doc.rect(27, 28, 2, 2, "F");
-    doc.rect(31, 24, 2, 2, "F");
-    doc.rect(31, 28, 2, 2, "F");
-    doc.rect(35, 28, 2, 2, "F");
-    doc.rect(35, 32, 2, 2, "F");
-    doc.rect(43, 22, 1.5, 1.5, "F");
-    doc.rect(43, 26, 1.5, 1.5, "F");
-    doc.rect(43, 30, 1.5, 1.5, "F");
-    
-    // Company name next to logo
-    doc.setFontSize(16);
+    // Nome da empresa no header
+    doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(59, 130, 246);
-    doc.text("CondoGest", 55, 28);
+    doc.setTextColor(255, 255, 255);
+    doc.text("NOTIFICACONDO", pageWidth / 2, 15, { align: "center" });
+    
+    // ===== INFO ABAIXO DO HEADER =====
+    let yPos = 35;
+    
+    // Lado esquerdo - Endereço da empresa
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(100, 100, 100);
-    doc.text("Sistema de Gestao Condominial", 55, 35);
+    doc.setTextColor(textGray[0], textGray[1], textGray[2]);
+    doc.text("Sistema de Gestao de Ocorrencias", 20, yPos);
+    doc.text("Condominiais", 20, yPos + 5);
     
-    // Reset text color
-    doc.setTextColor(0, 0, 0);
+    // Lado direito - Contato
+    doc.text("notificacondo.com.br", pageWidth - 20, yPos, { align: "right" });
+    doc.text("contato@notificacondo.com.br", pageWidth - 20, yPos + 5, { align: "right" });
     
-    // Header - FATURA on the right
-    doc.setFontSize(20);
+    // ===== TITULO FATURA =====
+    yPos = 60;
+    doc.setFontSize(36);
     doc.setFont("helvetica", "bold");
-    doc.text("FATURA", pageWidth - 20, 25, { align: "right" });
+    doc.setTextColor(textDark[0], textDark[1], textDark[2]);
+    doc.text("Fatura.", 20, yPos);
     
-    // Invoice Number
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "normal");
-    doc.text(invoice.invoice_number || "—", pageWidth - 20, 35, { align: "right" });
-    
-    // Line separator
-    doc.setLineWidth(0.5);
-    doc.setDrawColor(200, 200, 200);
-    doc.line(20, 50, pageWidth - 20, 50);
-    
-    // Condominium Info
-    let yPos = 65;
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.text("Dados do Condominio", 20, yPos);
-    
-    yPos += 10;
-    doc.setFont("helvetica", "normal");
+    // Numero e data à direita
     doc.setFontSize(10);
-    doc.text("Nome: " + (invoice.condominium?.name || "—"), 20, yPos);
-    yPos += 7;
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(textGray[0], textGray[1], textGray[2]);
+    doc.text("Fatura  : " + (invoice.invoice_number || "—"), pageWidth - 20, yPos - 15, { align: "right" });
+    doc.text("Data    : " + formatDate(invoice.created_at), pageWidth - 20, yPos - 7, { align: "right" });
+    
+    // ===== EMITIDO PARA =====
+    yPos = 75;
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(textDark[0], textDark[1], textDark[2]);
+    doc.text("Emitido Para", 20, yPos);
+    
+    // Dados do cliente
+    yPos += 8;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(textGray[0], textGray[1], textGray[2]);
+    doc.text(invoice.condominium?.name || "—", 20, yPos);
+    yPos += 5;
     doc.text("CNPJ: " + formatCNPJ(invoice.condominium?.cnpj || null), 20, yPos);
-    yPos += 7;
+    yPos += 5;
     doc.text("Sindico: " + (invoice.owner_profile?.full_name || "—"), 20, yPos);
-    yPos += 7;
-    doc.text("Email: " + (invoice.owner_profile?.email || "—"), 20, yPos);
+    yPos += 5;
+    doc.text(invoice.owner_profile?.email || "—", 20, yPos);
     
-    // Invoice Details
-    yPos += 20;
+    // ===== VALOR GRANDE À DIREITA =====
+    doc.setFontSize(28);
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.text("Detalhes da Fatura", 20, yPos);
+    doc.setTextColor(textDark[0], textDark[1], textDark[2]);
+    doc.text(formatCurrency(Number(invoice.amount)), pageWidth - 20, 85, { align: "right" });
     
-    yPos += 10;
+    doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.text("Periodo: " + formatDate(invoice.period_start) + " a " + formatDate(invoice.period_end), 20, yPos);
-    yPos += 7;
-    doc.text("Vencimento: " + formatDate(invoice.due_date), 20, yPos);
-    yPos += 7;
-    const statusText = invoice.status === "paid" ? "Pago" : invoice.status === "pending" ? "Pendente" : invoice.status;
-    doc.text("Status: " + statusText, 20, yPos);
+    doc.setTextColor(textGray[0], textGray[1], textGray[2]);
+    doc.text("DATA DE VENCIMENTO: " + formatDate(invoice.due_date), pageWidth - 20, 93, { align: "right" });
+    
+    // ===== TABELA DE ITENS =====
+    yPos = 115;
+    
+    // Header da tabela
+    doc.setFillColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
+    doc.rect(20, yPos, pageWidth - 40, 10, "F");
+    
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text("Descricao", 25, yPos + 7);
+    doc.text("Qtd", 120, yPos + 7, { align: "center" });
+    doc.text("Preco", 150, yPos + 7, { align: "center" });
+    doc.text("Total", pageWidth - 25, yPos + 7, { align: "right" });
+    
+    // Linha do item
+    yPos += 15;
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(textDark[0], textDark[1], textDark[2]);
+    
+    const periodText = "Assinatura - Periodo: " + formatDate(invoice.period_start) + " a " + formatDate(invoice.period_end);
+    doc.text(periodText, 25, yPos);
+    doc.text("01", 120, yPos, { align: "center" });
+    doc.text(formatCurrency(Number(invoice.amount)), 150, yPos, { align: "center" });
+    doc.text(formatCurrency(Number(invoice.amount)), pageWidth - 25, yPos, { align: "right" });
+    
+    // Linha separadora
+    yPos += 5;
+    doc.setDrawColor(220, 220, 220);
+    doc.setLineWidth(0.3);
+    doc.line(20, yPos, pageWidth - 20, yPos);
+    
+    // ===== RESUMO =====
+    yPos += 15;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(textGray[0], textGray[1], textGray[2]);
+    
+    doc.text("Subtotal", 140, yPos);
+    doc.text(formatCurrency(Number(invoice.amount)), pageWidth - 25, yPos, { align: "right" });
+    
+    yPos += 8;
+    doc.text("Desconto", 140, yPos);
+    doc.text(invoice.description?.includes("Desconto") ? invoice.description.match(/R\$[\d.,]+/)?.[0] || "R$ 0,00" : "R$ 0,00", pageWidth - 25, yPos, { align: "right" });
+    
+    // Total com fundo azul
+    yPos += 12;
+    doc.setFillColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
+    doc.rect(130, yPos - 5, pageWidth - 150, 10, "F");
+    
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text("Total", 140, yPos + 2);
+    doc.text(formatCurrency(Number(invoice.amount)), pageWidth - 25, yPos + 2, { align: "right" });
+    
+    // ===== INFORMACOES DE PAGAMENTO =====
+    yPos += 30;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(textDark[0], textDark[1], textDark[2]);
+    doc.text("Informacao de pagamento", 20, yPos);
+    
+    yPos += 8;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(textGray[0], textGray[1], textGray[2]);
+    
+    const statusText = invoice.status === "paid" ? "Status: PAGO" : "Status: PENDENTE";
+    doc.text(statusText, 20, yPos);
     
     if (invoice.paid_at) {
-      yPos += 7;
+      yPos += 5;
       doc.text("Pago em: " + formatDate(invoice.paid_at), 20, yPos);
     }
     
     if (invoice.payment_method) {
-      yPos += 7;
+      yPos += 5;
       doc.text("Forma de pagamento: " + invoice.payment_method, 20, yPos);
     }
     
-    // Amount
-    yPos += 20;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    doc.text("Valor: " + formatCurrency(Number(invoice.amount)), 20, yPos);
+    if (invoice.payment_reference) {
+      yPos += 5;
+      doc.text("Referencia: " + invoice.payment_reference, 20, yPos);
+    }
     
-    // Footer
+    yPos += 10;
+    doc.text("Se voce tiver alguma duvida sobre esta fatura, favor entrar em contato.", 20, yPos);
+    
+    // ===== FOOTER =====
+    doc.setFillColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
+    doc.rect(0, pageHeight - 20, pageWidth, 20, "F");
+    
     doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
-    doc.text("Gerado em: " + format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR }), pageWidth / 2, 280, { align: "center" });
+    doc.setTextColor(255, 255, 255);
+    doc.text("contato@notificacondo.com.br", pageWidth / 2 - 30, pageHeight - 10, { align: "center" });
+    doc.text("notificacondo.com.br", pageWidth / 2 + 40, pageHeight - 10, { align: "center" });
+    
+    // Gerado em
+    doc.setFontSize(7);
+    doc.setTextColor(200, 200, 200);
+    doc.text("Gerado em: " + format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR }), pageWidth / 2, pageHeight - 4, { align: "center" });
     
     // Save
     doc.save((invoice.invoice_number || "fatura") + ".pdf");
