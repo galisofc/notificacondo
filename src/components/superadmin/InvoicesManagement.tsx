@@ -72,6 +72,7 @@ interface InvoiceWithDetails {
   condominium: {
     name: string;
     owner_id: string;
+    cnpj: string | null;
   } | null;
   owner_profile: {
     full_name: string;
@@ -109,7 +110,7 @@ export function InvoicesManagement() {
         (data || []).map(async (invoice) => {
           const { data: condo } = await supabase
             .from("condominiums")
-            .select("name, owner_id")
+            .select("name, owner_id, cnpj")
             .eq("id", invoice.condominium_id)
             .single();
 
@@ -275,11 +276,13 @@ export function InvoicesManagement() {
   };
 
   const filteredInvoices = invoices?.filter((invoice) => {
+    const query = searchQuery.toLowerCase();
     const matchesSearch =
       searchQuery === "" ||
-      invoice.condominium?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      invoice.owner_profile?.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      invoice.owner_profile?.email.toLowerCase().includes(searchQuery.toLowerCase());
+      invoice.condominium?.name.toLowerCase().includes(query) ||
+      invoice.condominium?.cnpj?.toLowerCase().includes(query) ||
+      invoice.owner_profile?.full_name.toLowerCase().includes(query) ||
+      invoice.owner_profile?.email.toLowerCase().includes(query);
 
     return matchesSearch;
   });
@@ -380,10 +383,10 @@ export function InvoicesManagement() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar condomínio ou síndico..."
+                  placeholder="Buscar por CNPJ, email ou condomínio..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 w-full sm:w-[250px]"
+                  className="pl-9 w-full sm:w-[280px]"
                 />
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
