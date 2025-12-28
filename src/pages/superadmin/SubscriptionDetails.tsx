@@ -67,6 +67,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { SubscriptionHistory } from "@/components/superadmin/SubscriptionHistory";
+import SuperAdminBreadcrumbs from "@/components/superadmin/SuperAdminBreadcrumbs";
 import {
   Table,
   TableBody,
@@ -715,6 +716,10 @@ export default function SubscriptionDetails() {
       </Helmet>
 
       <div className="space-y-6 animate-fade-up">
+        <SuperAdminBreadcrumbs items={[
+          { label: "Assinaturas", href: "/superadmin/subscriptions" },
+          { label: condominium?.name || "Detalhes" }
+        ]} />
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">

@@ -63,6 +63,7 @@ import { MercadoPagoSettings } from "@/components/superadmin/MercadoPagoSettings
 import { MercadoPagoWebhookLogs } from "@/components/superadmin/MercadoPagoWebhookLogs";
 import { RlsPoliciesCard } from "@/components/superadmin/RlsPoliciesCard";
 import { WhatsAppStatusCard } from "@/components/superadmin/WhatsAppStatusCard";
+import SuperAdminBreadcrumbs from "@/components/superadmin/SuperAdminBreadcrumbs";
 
 interface Plan {
   id: string;
@@ -355,6 +356,7 @@ export default function SuperAdminSettings() {
         <title>Configurações | Super Admin</title>
       </Helmet>
       <div className="space-y-6 animate-fade-up">
+        <SuperAdminBreadcrumbs items={[{ label: "Configurações" }]} />
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground">
             Configurações da Plataforma

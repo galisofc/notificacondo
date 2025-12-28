@@ -1,6 +1,7 @@
 import { Helmet } from "react-helmet-async";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { SubscriptionsMonitor } from "@/components/superadmin/SubscriptionsMonitor";
+import SuperAdminBreadcrumbs from "@/components/superadmin/SuperAdminBreadcrumbs";
 
 export default function Subscriptions() {
   return (
@@ -9,6 +10,7 @@ export default function Subscriptions() {
         <title>Monitoramento de Assinaturas | Super Admin</title>
       </Helmet>
       <div className="space-y-6 animate-fade-up">
+        <SuperAdminBreadcrumbs items={[{ label: "Assinaturas" }]} />
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground">Assinaturas</h1>
           <p className="text-muted-foreground mt-1">
