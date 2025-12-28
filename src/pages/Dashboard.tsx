@@ -14,10 +14,14 @@ import {
   ArrowUpRight,
   AlertTriangle,
   Shield,
+  Calendar,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Skeleton } from "@/components/ui/skeleton";
+import { subDays, subMonths, subYears, startOfDay } from "date-fns";
+
+type PeriodFilter = "7d" | "1m" | "1y";
 
 interface DashboardStats {
   condominiums: number;
@@ -30,6 +34,7 @@ interface DashboardStats {
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("1m");
   const [stats, setStats] = useState<DashboardStats>({
     condominiums: 0,
     residents: 0,
@@ -40,9 +45,31 @@ const Dashboard = () => {
   const [profile, setProfile] = useState<{ full_name: string } | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const getDateFilter = (period: PeriodFilter): Date => {
+    const now = new Date();
+    switch (period) {
+      case "7d":
+        return startOfDay(subDays(now, 7));
+      case "1m":
+        return startOfDay(subMonths(now, 1));
+      case "1y":
+        return startOfDay(subYears(now, 1));
+      default:
+        return startOfDay(subMonths(now, 1));
+    }
+  };
+
+  const periodOptions: { value: PeriodFilter; label: string }[] = [
+    { value: "7d", label: "7 dias" },
+    { value: "1m", label: "1 mês" },
+    { value: "1y", label: "1 ano" },
+  ];
+
   useEffect(() => {
     const fetchData = async () => {
       if (!user) return;
+
+      const dateFilter = getDateFilter(periodFilter);
 
       try {
         const { data: profileData } = await supabase
@@ -96,26 +123,30 @@ const Dashboard = () => {
             }
           }
 
+          // Count occurrences within the period
           const { count: occCount } = await supabase
             .from("occurrences")
             .select("*", { count: "exact", head: true })
-            .in("condominium_id", condoIds);
+            .in("condominium_id", condoIds)
+            .gte("created_at", dateFilter.toISOString());
 
           occurrencesCount = occCount || 0;
 
-          // Count pending defenses (occurrences with status "em_defesa")
+          // Count pending defenses within the period
           const { count: defCount } = await supabase
             .from("occurrences")
             .select("*", { count: "exact", head: true })
             .in("condominium_id", condoIds)
-            .eq("status", "em_defesa");
+            .eq("status", "em_defesa")
+            .gte("created_at", dateFilter.toISOString());
 
           defensesCount = defCount || 0;
 
           const { data: occurrencesData } = await supabase
             .from("occurrences")
             .select("id")
-            .in("condominium_id", condoIds);
+            .in("condominium_id", condoIds)
+            .gte("created_at", dateFilter.toISOString());
 
           if (occurrencesData && occurrencesData.length > 0) {
             const { count: fCount } = await supabase
@@ -146,7 +177,7 @@ const Dashboard = () => {
     };
 
     fetchData();
-  }, [user]);
+  }, [user, periodFilter]);
 
   const statCards = [
     {
@@ -225,36 +256,60 @@ const Dashboard = () => {
           </p>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
-          {statCards.map((stat, index) => (
-            <Card
-              key={index}
-              className="bg-card border-border shadow-card hover:shadow-elevated transition-all duration-300 cursor-pointer group"
-              onClick={stat.action}
-            >
-              <CardContent className="p-4 md:p-5">
-                <div className="flex items-start justify-between mb-3 md:mb-4">
-                  <div
-                    className={`w-10 h-10 md:w-11 md:h-11 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-lg`}
-                  >
-                    <stat.icon className="w-4 h-4 md:w-5 md:h-5 text-white" />
+        {/* Period Filter + Stats Grid */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-lg font-semibold text-foreground flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-primary" />
+              Estatísticas
+            </h2>
+            <div className="flex items-center gap-1 p-1 bg-muted rounded-lg">
+              {periodOptions.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setPeriodFilter(option.value)}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                    periodFilter === option.value
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
+            {statCards.map((stat, index) => (
+              <Card
+                key={index}
+                className="bg-card border-border shadow-card hover:shadow-elevated transition-all duration-300 cursor-pointer group"
+                onClick={stat.action}
+              >
+                <CardContent className="p-4 md:p-5">
+                  <div className="flex items-start justify-between mb-3 md:mb-4">
+                    <div
+                      className={`w-10 h-10 md:w-11 md:h-11 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-lg`}
+                    >
+                      <stat.icon className="w-4 h-4 md:w-5 md:h-5 text-white" />
+                    </div>
+                    <ArrowUpRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                   </div>
-                  <ArrowUpRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                </div>
-                <div>
-                  {loading ? (
-                    <Skeleton className="h-8 md:h-9 w-16 mb-1" />
-                  ) : (
-                    <p className="font-display text-2xl md:text-3xl font-bold text-foreground">
-                      {stat.value}
-                    </p>
-                  )}
-                  <p className="text-xs md:text-sm text-muted-foreground">{stat.title}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  <div>
+                    {loading ? (
+                      <Skeleton className="h-8 md:h-9 w-16 mb-1" />
+                    ) : (
+                      <p className="font-display text-2xl md:text-3xl font-bold text-foreground">
+                        {stat.value}
+                      </p>
+                    )}
+                    <p className="text-xs md:text-sm text-muted-foreground">{stat.title}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
 
         {/* Quick Actions */}
