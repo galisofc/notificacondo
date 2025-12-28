@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -74,7 +75,7 @@ export default function SuperAdminDashboard() {
         .from("audit_logs")
         .select("id, table_name, action, new_data, created_at, user_id")
         .order("created_at", { ascending: false })
-        .limit(6);
+        .limit(4);
 
       if (error) throw error;
 
@@ -322,6 +323,14 @@ export default function SuperAdminDashboard() {
                   </div>
                 )}
               </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full mt-4"
+                onClick={() => navigate("/superadmin/logs")}
+              >
+                Ver mais
+              </Button>
             </CardContent>
           </Card>
 
