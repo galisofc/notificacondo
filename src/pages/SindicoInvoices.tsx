@@ -504,8 +504,8 @@ const SindicoInvoices = () => {
                       return (
                         <TableRow key={invoice.id}>
                           <TableCell>
-                            <span className="font-mono text-sm text-muted-foreground">
-                              {invoice.invoice_number || invoice.id.slice(0, 8).toUpperCase()}
+                            <span className="font-mono text-sm font-medium text-primary">
+                              {invoice.invoice_number || "—"}
                             </span>
                           </TableCell>
                           <TableCell>
