@@ -301,9 +301,10 @@ export function CondominiumsManagement() {
   // Filter and paginate
   const filteredCondominiums = (data || []).filter(c => {
     const search = searchTerm.toLowerCase();
+    const searchDigits = searchTerm.replace(/\D/g, ""); // Remove non-digits for CNPJ search
     return (
       c.name.toLowerCase().includes(search) ||
-      c.cnpj?.includes(search) ||
+      (c.cnpj && c.cnpj.includes(searchDigits)) ||
       c.city?.toLowerCase().includes(search) ||
       c.owner?.full_name?.toLowerCase().includes(search)
     );
