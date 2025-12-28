@@ -62,6 +62,7 @@ import { useToast } from "@/hooks/use-toast";
 import { MercadoPagoSettings } from "@/components/superadmin/MercadoPagoSettings";
 import { MercadoPagoWebhookLogs } from "@/components/superadmin/MercadoPagoWebhookLogs";
 import { RlsPoliciesCard } from "@/components/superadmin/RlsPoliciesCard";
+import { WhatsAppStatusCard } from "@/components/superadmin/WhatsAppStatusCard";
 
 interface Plan {
   id: string;
@@ -157,24 +158,6 @@ export default function SuperAdminSettings() {
     },
     enabled: !!plans,
   });
-
-  // WhatsApp config status
-  const { data: whatsappConfig } = useQuery({
-    queryKey: ["whatsapp-config-status"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("whatsapp_config")
-        .select("is_active, provider, api_url")
-        .eq("is_active", true)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      
-      if (error) throw error;
-      return data;
-    },
-  });
-
   // Create plan mutation
   const createPlanMutation = useMutation({
     mutationFn: async (data: Omit<Plan, "id">) => {
@@ -939,89 +922,7 @@ export default function SuperAdminSettings() {
 
           {/* Notifications Tab */}
           <TabsContent value="notifications" className="space-y-6">
-            <Card className="bg-gradient-card border-border/50">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <CardTitle className="flex items-center gap-2">
-                      <MessageCircle className="w-5 h-5 text-green-500" />
-                      Configurações de WhatsApp
-                    </CardTitle>
-                  </div>
-                  {whatsappConfig?.is_active ? (
-                    <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20 gap-1">
-                      <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                      Conectado
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 gap-1">
-                      <div className="w-2 h-2 rounded-full bg-amber-500" />
-                      Não configurado
-                    </Badge>
-                  )}
-                </div>
-                <CardDescription>
-                  Gerencie as configurações de integração com WhatsApp
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      {whatsappConfig?.is_active ? (
-                        <div className="p-2 rounded-lg bg-green-500/10">
-                          <CheckCircle2 className="w-5 h-5 text-green-500" />
-                        </div>
-                      ) : (
-                        <div className="p-2 rounded-lg bg-amber-500/10">
-                          <AlertTriangle className="w-5 h-5 text-amber-500" />
-                        </div>
-                      )}
-                      <div>
-                        <p className="font-medium text-foreground">
-                          {whatsappConfig?.provider?.toUpperCase() || "Integração Z-API / Z-PRO"}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {whatsappConfig?.is_active 
-                            ? "Integração configurada e ativa" 
-                            : "Configure as credenciais de acesso à API de WhatsApp"}
-                        </p>
-                      </div>
-                    </div>
-                    <Button variant="outline" asChild>
-                      <Link to="/superadmin/whatsapp">
-                        {whatsappConfig?.is_active ? "Gerenciar" : "Configurar"}
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="auto-notify">Notificação Automática</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Enviar notificação automaticamente ao registrar ocorrência
-                      </p>
-                    </div>
-                    <Switch id="auto-notify" />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="read-confirm">Confirmação de Leitura</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Exigir confirmação de leitura do morador
-                      </p>
-                    </div>
-                    <Switch id="read-confirm" defaultChecked />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
+            <WhatsAppStatusCard />
           </TabsContent>
 
           {/* Security Tab */}
