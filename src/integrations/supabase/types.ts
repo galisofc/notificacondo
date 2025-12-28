@@ -372,6 +372,48 @@ export type Database = {
           },
         ]
       }
+      edge_function_logs: {
+        Row: {
+          created_at: string
+          duration_ms: number | null
+          ended_at: string | null
+          error_message: string | null
+          function_name: string
+          id: string
+          result: Json | null
+          started_at: string
+          status: string
+          trigger_type: string
+          triggered_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration_ms?: number | null
+          ended_at?: string | null
+          error_message?: string | null
+          function_name: string
+          id?: string
+          result?: Json | null
+          started_at?: string
+          status?: string
+          trigger_type?: string
+          triggered_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number | null
+          ended_at?: string | null
+          error_message?: string | null
+          function_name?: string
+          id?: string
+          result?: Json | null
+          started_at?: string
+          status?: string
+          trigger_type?: string
+          triggered_by?: string | null
+        }
+        Relationships: []
+      }
       fines: {
         Row: {
           acknowledged_at: string | null

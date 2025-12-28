@@ -154,11 +154,29 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const startTime = Date.now();
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+  // Determine trigger type from request header or default to manual
+  const triggerType = req.headers.get("x-trigger-type") || "manual";
+
+  // Create execution log entry
+  const { data: logEntry } = await supabase
+    .from("edge_function_logs")
+    .insert({
+      function_name: "notify-trial-ending",
+      trigger_type: triggerType,
+      status: "running",
+      started_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+
+  const logId = logEntry?.id;
+
+  try {
     console.log("Starting trial ending notification check...");
 
     // Check if this function is paused
@@ -170,6 +188,20 @@ Deno.serve(async (req) => {
 
     if (pauseControl?.paused) {
       console.log("Function notify-trial-ending is PAUSED. Skipping execution.");
+      
+      // Update log as skipped
+      if (logId) {
+        await supabase
+          .from("edge_function_logs")
+          .update({
+            status: "skipped",
+            ended_at: new Date().toISOString(),
+            duration_ms: Date.now() - startTime,
+            result: { reason: "Function is paused via admin panel" },
+          })
+          .eq("id", logId);
+      }
+
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -259,8 +291,23 @@ Deno.serve(async (req) => {
     console.log(`Total: ${allSubscriptions.length} trials to notify`);
 
     if (allSubscriptions.length === 0) {
+      const result = { success: true, message: "No trials ending in 1-2 days", notified: 0 };
+      
+      // Update log as success
+      if (logId) {
+        await supabase
+          .from("edge_function_logs")
+          .update({
+            status: "success",
+            ended_at: new Date().toISOString(),
+            duration_ms: Date.now() - startTime,
+            result,
+          })
+          .eq("id", logId);
+      }
+
       return new Response(
-        JSON.stringify({ success: true, message: "No trials ending in 1-2 days", notified: 0 }),
+        JSON.stringify(result),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -276,10 +323,7 @@ Deno.serve(async (req) => {
 
     if (configError || !whatsappConfig) {
       console.error("WhatsApp not configured:", configError);
-      return new Response(
-        JSON.stringify({ success: false, error: "WhatsApp não configurado" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      throw new Error("WhatsApp não configurado");
     }
 
     // Fetch the trial_ending template
@@ -400,17 +444,46 @@ Equipe NotificaCondo`;
 
     console.log("Trial notification results:", results);
 
+    const finalResult = {
+      success: true,
+      message: "Trial ending notifications processed",
+      results,
+    };
+
+    // Update log as success
+    if (logId) {
+      await supabase
+        .from("edge_function_logs")
+        .update({
+          status: "success",
+          ended_at: new Date().toISOString(),
+          duration_ms: Date.now() - startTime,
+          result: finalResult,
+        })
+        .eq("id", logId);
+    }
+
     return new Response(
-      JSON.stringify({
-        success: true,
-        message: "Trial ending notifications processed",
-        results,
-      }),
+      JSON.stringify(finalResult),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
   } catch (error: any) {
     console.error("Unexpected error:", error);
+
+    // Update log as error
+    if (logId) {
+      await supabase
+        .from("edge_function_logs")
+        .update({
+          status: "error",
+          ended_at: new Date().toISOString(),
+          duration_ms: Date.now() - startTime,
+          error_message: error.message,
+        })
+        .eq("id", logId);
+    }
+
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
