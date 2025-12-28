@@ -42,7 +42,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -451,31 +451,27 @@ const OccurrenceDetails = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <DashboardHeader />
+      <DashboardLayout>
         <div className="flex items-center justify-center py-24">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   if (!occurrence) {
     return (
-      <div className="min-h-screen bg-background">
-        <DashboardHeader />
+      <DashboardLayout>
         <div className="container mx-auto px-4 py-8">
           <p className="text-center text-muted-foreground">Ocorrência não encontrada.</p>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <DashboardHeader />
-
-      <main className="container mx-auto px-4 py-8">
+    <DashboardLayout>
+      <div className="space-y-6 animate-fade-up">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <Button variant="ghost" size="icon" onClick={() => navigate("/occurrences")}>
@@ -895,7 +891,7 @@ const OccurrenceDetails = () => {
             )}
           </div>
         </div>
-      </main>
+      </div>
 
       {/* Decision Dialog */}
       <Dialog open={isDecisionDialogOpen} onOpenChange={setIsDecisionDialogOpen}>
@@ -968,7 +964,7 @@ const OccurrenceDetails = () => {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardLayout>
   );
 };
 
