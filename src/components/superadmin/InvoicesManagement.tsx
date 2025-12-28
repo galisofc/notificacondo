@@ -468,6 +468,7 @@ export function InvoicesManagement() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>Nº Fatura</TableHead>
                       <TableHead>Condomínio</TableHead>
                       <TableHead>CNPJ</TableHead>
                       <TableHead>Síndico</TableHead>
@@ -481,6 +482,11 @@ export function InvoicesManagement() {
                   <TableBody>
                     {paginatedInvoices?.map((invoice) => (
                       <TableRow key={invoice.id}>
+                        <TableCell>
+                          <span className="font-mono text-sm font-medium text-primary">
+                            {(invoice as any).invoice_number || "—"}
+                          </span>
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Building2 className="h-4 w-4 text-muted-foreground" />

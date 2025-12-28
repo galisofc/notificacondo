@@ -419,6 +419,7 @@ export type Database = {
           description: string | null
           due_date: string
           id: string
+          invoice_number: string | null
           paid_at: string | null
           payment_method: string | null
           payment_reference: string | null
@@ -435,6 +436,7 @@ export type Database = {
           description?: string | null
           due_date: string
           id?: string
+          invoice_number?: string | null
           paid_at?: string | null
           payment_method?: string | null
           payment_reference?: string | null
@@ -451,6 +453,7 @@ export type Database = {
           description?: string | null
           due_date?: string
           id?: string
+          invoice_number?: string | null
           paid_at?: string | null
           payment_method?: string | null
           payment_reference?: string | null
