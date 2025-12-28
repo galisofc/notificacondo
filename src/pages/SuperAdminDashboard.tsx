@@ -18,6 +18,17 @@ import {
   Settings,
   FileText,
   Zap,
+  UserPlus,
+  UserMinus,
+  Calendar,
+  Bell,
+  Home,
+  DoorOpen,
+  Receipt,
+  Edit,
+  Trash2,
+  PlusCircle,
+  type LucideIcon,
 } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 
@@ -93,9 +104,51 @@ export default function SuperAdminDashboard() {
         action: formatAuditAction(log.table_name, log.action, log.new_data),
         time: formatDistanceToNow(new Date(log.created_at), { addSuffix: true, locale: ptBR }),
         user: profileMap.get(log.user_id) || "Sistema",
+        icon: getActionIcon(log.table_name, log.action, log.new_data),
+        iconColor: getActionIconColor(log.action, log.new_data),
       })) || [];
     },
   });
+
+  // Função para obter ícone baseado na ação
+  const getActionIcon = (tableName: string, action: string, newData: any): LucideIcon => {
+    // Ações especiais
+    if (newData?.action === "create_sindico") return UserPlus;
+    if (newData?.action === "delete_sindico") return UserMinus;
+    if (newData?.action === "add_extra_days") return Calendar;
+
+    // Por tabela
+    const tableIcons: Record<string, LucideIcon> = {
+      user_roles: Users,
+      condominiums: Building2,
+      subscriptions: CreditCard,
+      profiles: Users,
+      occurrences: FileText,
+      notifications_sent: Bell,
+      invoices: Receipt,
+      residents: Home,
+      blocks: Building2,
+      apartments: DoorOpen,
+    };
+
+    return tableIcons[tableName] || Activity;
+  };
+
+  // Função para obter cor do ícone baseado na ação
+  const getActionIconColor = (action: string, newData: any): string => {
+    if (newData?.action === "create_sindico") return "bg-emerald-500/10 text-emerald-500";
+    if (newData?.action === "delete_sindico") return "bg-red-500/10 text-red-500";
+    if (newData?.action === "add_extra_days") return "bg-blue-500/10 text-blue-500";
+
+    const actionColors: Record<string, string> = {
+      INSERT: "bg-emerald-500/10 text-emerald-500",
+      UPDATE: "bg-amber-500/10 text-amber-500",
+      DELETE: "bg-red-500/10 text-red-500",
+      ADD_EXTRA_DAYS: "bg-blue-500/10 text-blue-500",
+    };
+
+    return actionColors[action] || "bg-primary/10 text-primary";
+  };
 
   // Função para formatar ações de auditoria
   const formatAuditAction = (tableName: string, action: string, newData: any): string => {
@@ -305,18 +358,24 @@ export default function SuperAdminDashboard() {
                     ))}
                   </div>
                 ) : recentActivity && recentActivity.length > 0 ? (
-                  recentActivity.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between p-2 md:p-3 rounded-lg bg-secondary/50 border border-border"
-                    >
-                      <div className="flex flex-col">
-                        <span className="text-xs md:text-sm text-foreground">{item.action}</span>
-                        <span className="text-xs text-muted-foreground">{item.user}</span>
+                  recentActivity.map((item) => {
+                    const IconComponent = item.icon;
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex items-center gap-3 p-2 md:p-3 rounded-lg bg-secondary/50 border border-border"
+                      >
+                        <div className={`w-8 h-8 rounded-lg ${item.iconColor} flex items-center justify-center flex-shrink-0`}>
+                          <IconComponent className="w-4 h-4" />
+                        </div>
+                        <div className="flex flex-col flex-1 min-w-0">
+                          <span className="text-xs md:text-sm text-foreground truncate">{item.action}</span>
+                          <span className="text-xs text-muted-foreground">{item.user}</span>
+                        </div>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">{item.time}</span>
                       </div>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">{item.time}</span>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <div className="text-center py-4 text-muted-foreground text-sm">
                     Nenhuma atividade recente
