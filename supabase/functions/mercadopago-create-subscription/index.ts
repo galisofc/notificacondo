@@ -105,14 +105,14 @@ Deno.serve(async (req) => {
       console.log("Created MP plan:", mpPlanId);
     }
 
-    // Create subscription (preapproval)
+    // Create subscription (preapproval) - using direct auto_recurring without plan_id
+    // This generates an init_point for the user to complete payment
     if (!mercadoPagoAccessToken) {
       throw new Error("MercadoPago access token not configured");
     }
 
-    const subscriptionPayload = {
-      preapproval_plan_id: mpPlanId,
-      reason: `Assinatura ${plan.name} - Condomínio`,
+    const subscriptionPayload: Record<string, any> = {
+      reason: `Assinatura ${plan.name} - NotificaCondo`,
       external_reference: condominium_id,
       payer_email: payer_email,
       back_url: back_url || `${mpConfig.notification_url || ""}/sindico/subscriptions`,
@@ -122,7 +122,16 @@ Deno.serve(async (req) => {
         transaction_amount: plan.price,
         currency_id: "BRL",
       },
+      status: "pending",
     };
+
+    // Only add preapproval_plan_id if it exists and we want to use it
+    // For now, we'll create subscriptions without a plan_id to avoid card_token requirement
+    if (mpPlanId) {
+      console.log("Using existing MP plan ID:", mpPlanId);
+      // Note: When using preapproval_plan_id, the user must complete checkout at init_point
+      // The card_token_id is only required for direct card charging
+    }
 
     console.log("Creating subscription with payload:", subscriptionPayload);
 
