@@ -62,10 +62,20 @@ export function WhatsAppStatusCard() {
     setConnectionStatus("checking");
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        console.error("No session found");
+        setConnectionStatus("disconnected");
+        setIsTestingConnection(false);
+        return;
+      }
+
       const response = await fetch(`${SUPABASE_URL}/functions/v1/test-whatsapp-connection`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`,
         },
       });
 
