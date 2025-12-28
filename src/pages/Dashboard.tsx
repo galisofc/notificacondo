@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { subDays, subMonths, subYears, startOfDay } from "date-fns";
 
@@ -246,6 +247,7 @@ const Dashboard = () => {
       </Helmet>
 
       <div className="space-y-8 animate-fade-up">
+        <SindicoBreadcrumbs items={[{ label: "Dashboard" }]} />
         {/* Welcome Section */}
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground">
