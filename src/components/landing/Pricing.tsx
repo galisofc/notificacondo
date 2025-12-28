@@ -2,8 +2,10 @@ import { Button } from "@/components/ui/button";
 import { Check, Sparkles, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 const Pricing = () => {
+  const navigate = useNavigate();
   const { data: plans, isLoading } = useQuery({
     queryKey: ['landing-plans'],
     queryFn: async () => {
@@ -137,6 +139,13 @@ const Pricing = () => {
                 <Button 
                   variant={isPopular(plan.slug) ? "hero" : "outline"} 
                   className="w-full"
+                  onClick={() => {
+                    if (plan.price === 0) {
+                      window.open('mailto:contato@notificacondo.com.br?subject=Interesse no plano Enterprise', '_blank');
+                    } else {
+                      navigate(`/auth?plano=${plan.slug}`);
+                    }
+                  }}
                 >
                   {plan.price === 0 ? "Fale Conosco" : "Começar Agora"}
                 </Button>
