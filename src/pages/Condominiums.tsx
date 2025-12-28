@@ -30,6 +30,7 @@ import {
   FileText,
   Search,
   Crown,
+  Phone,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -52,6 +53,7 @@ interface Condominium {
   id: string;
   name: string;
   cnpj: string | null;
+  phone: string | null;
   address: string | null;
   city: string | null;
   state: string | null;
@@ -354,7 +356,7 @@ const Condominiums = () => {
     setFormData({
       name: condo.name,
       cnpj: condo.cnpj ? formatCNPJ(condo.cnpj) : "",
-      phone: (condo as any).phone ? formatPhone((condo as any).phone) : "",
+      phone: condo.phone ? formatPhone(condo.phone) : "",
       zip_code: condo.zip_code ? formatCEP(condo.zip_code) : "",
       address: condo.address || "",
       address_number: (condo as any).address_number || "",
@@ -732,6 +734,20 @@ const Condominiums = () => {
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <FileText className="w-3 h-3" />
                     <span>CNPJ: {formatCNPJ(condo.cnpj)}</span>
+                  </div>
+                )}
+
+                {condo.phone && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Phone className="w-3 h-3" />
+                    <span>{formatPhone(condo.phone)}</span>
+                  </div>
+                )}
+
+                {condo.zip_code && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <MapPin className="w-3 h-3" />
+                    <span>CEP: {formatCEP(condo.zip_code)}</span>
                   </div>
                 )}
 
