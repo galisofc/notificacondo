@@ -19,7 +19,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { NavLink } from "@/components/NavLink";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import {
@@ -371,8 +371,15 @@ function SidebarNavigation() {
           )}
         >
           <Avatar className="h-10 w-10 shrink-0 border-2 border-sidebar-accent">
+            {profileInfo?.avatar_url && (
+              <AvatarImage 
+                src={profileInfo.avatar_url} 
+                alt={getUserName()}
+                className="object-cover"
+              />
+            )}
             <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-sm font-bold">
-              {getUserInitials()}
+              <User className="w-5 h-5" />
             </AvatarFallback>
           </Avatar>
           {!collapsed && (
