@@ -34,7 +34,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
-import { isValidCNPJ, formatCNPJ } from "@/lib/utils";
+import { isValidCNPJ, formatCNPJ, formatPhone, formatCEP } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
 interface Plan {
@@ -353,9 +353,9 @@ const Condominiums = () => {
     setEditingCondo(condo);
     setFormData({
       name: condo.name,
-      cnpj: condo.cnpj || "",
-      phone: (condo as any).phone || "",
-      zip_code: condo.zip_code || "",
+      cnpj: condo.cnpj ? formatCNPJ(condo.cnpj) : "",
+      phone: (condo as any).phone ? formatPhone((condo as any).phone) : "",
+      zip_code: condo.zip_code ? formatCEP(condo.zip_code) : "",
       address: condo.address || "",
       address_number: (condo as any).address_number || "",
       neighborhood: (condo as any).neighborhood || "",
