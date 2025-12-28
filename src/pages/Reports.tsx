@@ -33,6 +33,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
 import { format, startOfMonth, endOfMonth, subMonths, parseISO, isWithinInterval, eachMonthOfInterval, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -446,6 +447,7 @@ const Reports = () => {
         <title>Relatórios | CondoManager</title>
       </Helmet>
       <div className="space-y-6 animate-fade-up">
+        <SindicoBreadcrumbs items={[{ label: "Relatórios" }]} />
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
