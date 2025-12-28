@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Mail, Lock, User, ArrowLeft, Loader2, Check, Building2, Phone, MapPin, FileText, ChevronRight, ChevronLeft } from "lucide-react";
+import { Shield, Mail, Lock, User, ArrowLeft, Loader2, Check, Building2, Phone, MapPin, ChevronRight, ChevronLeft, RefreshCw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { Database } from "@/integrations/supabase/types";
@@ -562,16 +562,26 @@ const Auth = () => {
                 </div>
               </div>
 
-              <div className="mt-3 pt-3 border-t border-border/50 flex items-center gap-4 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Check className="w-3 h-3 text-primary" /> Integração WhatsApp
-                </span>
-                <span className="flex items-center gap-1">
-                  <Check className="w-3 h-3 text-primary" /> Registro de ciência
-                </span>
-                <span className="flex items-center gap-1">
-                  <Check className="w-3 h-3 text-primary" /> Conformidade LGPD
-                </span>
+              <div className="mt-3 pt-3 border-t border-border/50 flex items-center justify-between">
+                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <Check className="w-3 h-3 text-primary" /> Integração WhatsApp
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Check className="w-3 h-3 text-primary" /> Registro de ciência
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Check className="w-3 h-3 text-primary" /> Conformidade LGPD
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate('/#planos')}
+                  className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors font-medium"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  Trocar plano
+                </button>
               </div>
             </div>
           )}
