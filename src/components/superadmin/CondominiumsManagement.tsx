@@ -163,7 +163,7 @@ export function CondominiumsManagement() {
     },
   });
 
-  const handleSearchCep = async (cep: string) => {
+  const handleSearchCep = async (cep: string, autoSearch = false) => {
     const cleanCep = cep.replace(/\D/g, "");
     if (cleanCep.length !== 8) return;
 
@@ -566,74 +566,30 @@ export function CondominiumsManagement() {
           </DialogHeader>
           <div className="space-y-4 max-h-[60vh] overflow-y-auto py-4">
             <div className="grid gap-4 sm:grid-cols-2">
+              {/* CEP - Primeiro campo com busca automática */}
               <div className="sm:col-span-2 space-y-2">
-                <Label htmlFor="name">Nome do Condomínio *</Label>
-                <Input
-                  id="name"
-                  value={editForm.name}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Nome do condomínio"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cnpj">CNPJ</Label>
-                <MaskedInput
-                  id="cnpj"
-                  mask="cnpj"
-                  value={editForm.cnpj}
-                  onChange={(value) => setEditForm(prev => ({ ...prev, cnpj: value }))}
-                  placeholder="00.000.000/0000-00"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="phone">Telefone</Label>
-                <MaskedInput
-                  id="phone"
-                  mask="phone"
-                  value={editForm.phone}
-                  onChange={(value) => setEditForm(prev => ({ ...prev, phone: value }))}
-                  placeholder="(00) 00000-0000"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="zip_code">CEP</Label>
-                <div className="flex gap-2">
+                <Label htmlFor="zip_code">CEP (busca automática)</Label>
+                <div className="relative">
                   <MaskedInput
                     id="zip_code"
                     mask="cep"
                     value={editForm.zip_code}
-                    onChange={(value) => setEditForm(prev => ({ ...prev, zip_code: value }))}
+                    onChange={(value) => {
+                      setEditForm(prev => ({ ...prev, zip_code: value }));
+                      // Busca automática quando completar 8 dígitos
+                      const cleanCep = value.replace(/\D/g, "");
+                      if (cleanCep.length === 8) {
+                        handleSearchCep(value, true);
+                      }
+                    }}
                     placeholder="00000-000"
-                    className="flex-1"
                   />
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="icon"
-                    onClick={() => handleSearchCep(editForm.zip_code)}
-                    disabled={isLoadingCep || editForm.zip_code.replace(/\D/g, "").length !== 8}
-                  >
-                    {isLoadingCep ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Search className="w-4 h-4" />
-                    )}
-                  </Button>
+                  {isLoadingCep && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="state">UF</Label>
-                <Input
-                  id="state"
-                  value={editForm.state}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, state: e.target.value.toUpperCase().slice(0, 2) }))}
-                  placeholder="UF"
-                  maxLength={2}
-                />
               </div>
 
               <div className="sm:col-span-2 space-y-2">
@@ -663,6 +619,49 @@ export function CondominiumsManagement() {
                   value={editForm.city}
                   onChange={(e) => setEditForm(prev => ({ ...prev, city: e.target.value }))}
                   placeholder="Cidade"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="state">UF</Label>
+                <Input
+                  id="state"
+                  value={editForm.state}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, state: e.target.value.toUpperCase().slice(0, 2) }))}
+                  placeholder="UF"
+                  maxLength={2}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cnpj">CNPJ</Label>
+                <MaskedInput
+                  id="cnpj"
+                  mask="cnpj"
+                  value={editForm.cnpj}
+                  onChange={(value) => setEditForm(prev => ({ ...prev, cnpj: value }))}
+                  placeholder="00.000.000/0000-00"
+                />
+              </div>
+
+              <div className="sm:col-span-2 space-y-2">
+                <Label htmlFor="name">Nome do Condomínio *</Label>
+                <Input
+                  id="name"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Nome do condomínio"
+                />
+              </div>
+
+              <div className="sm:col-span-2 space-y-2">
+                <Label htmlFor="phone">Telefone</Label>
+                <MaskedInput
+                  id="phone"
+                  mask="phone"
+                  value={editForm.phone}
+                  onChange={(value) => setEditForm(prev => ({ ...prev, phone: value }))}
+                  placeholder="(00) 00000-0000"
                 />
               </div>
             </div>
