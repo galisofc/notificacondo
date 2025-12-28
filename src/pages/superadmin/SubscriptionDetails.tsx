@@ -93,6 +93,9 @@ export default function SubscriptionDetails() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
+  const [isPeriodDialogOpen, setIsPeriodDialogOpen] = useState(false);
+  const [periodStartDate, setPeriodStartDate] = useState("");
+  const [periodEndDate, setPeriodEndDate] = useState("");
   const [transferCpf, setTransferCpf] = useState("");
   const [foundSindico, setFoundSindico] = useState<{
     user_id: string;
@@ -220,6 +223,37 @@ export default function SubscriptionDetails() {
     onError: (error: any) => {
       toast({
         title: "Erro ao reiniciar",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updatePeriodMutation = useMutation({
+    mutationFn: async ({ startDate, endDate }: { startDate: string; endDate: string }) => {
+      if (!id) throw new Error("ID não fornecido");
+
+      const { error } = await supabase
+        .from("subscriptions")
+        .update({
+          current_period_start: new Date(startDate).toISOString(),
+          current_period_end: new Date(endDate).toISOString(),
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscription-details", id] });
+      setIsPeriodDialogOpen(false);
+      toast({
+        title: "Período atualizado",
+        description: "O período da assinatura foi alterado com sucesso.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao atualizar período",
         description: error.message || "Tente novamente.",
         variant: "destructive",
       });
@@ -409,6 +443,46 @@ export default function SubscriptionDetails() {
     setFoundSindico(null);
     setTransferNotes("");
     setIsTransferDialogOpen(true);
+  };
+
+  const handleOpenPeriodDialog = () => {
+    if (data?.subscription) {
+      const startDate = data.subscription.current_period_start 
+        ? format(new Date(data.subscription.current_period_start), "yyyy-MM-dd")
+        : format(new Date(), "yyyy-MM-dd");
+      const endDate = data.subscription.current_period_end
+        ? format(new Date(data.subscription.current_period_end), "yyyy-MM-dd")
+        : format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), "yyyy-MM-dd");
+      
+      setPeriodStartDate(startDate);
+      setPeriodEndDate(endDate);
+      setIsPeriodDialogOpen(true);
+    }
+  };
+
+  const handleSavePeriod = () => {
+    if (!periodStartDate || !periodEndDate) {
+      toast({
+        title: "Datas inválidas",
+        description: "Preencha as datas de início e fim do período.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (new Date(periodEndDate) <= new Date(periodStartDate)) {
+      toast({
+        title: "Período inválido",
+        description: "A data de fim deve ser posterior à data de início.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    updatePeriodMutation.mutate({
+      startDate: periodStartDate,
+      endDate: periodEndDate,
+    });
   };
 
   const handleStartEditing = () => {
@@ -713,6 +787,14 @@ export default function SubscriptionDetails() {
                     <Button
                       variant="outline"
                       size="sm"
+                      onClick={handleOpenPeriodDialog}
+                    >
+                      <Calendar className="w-4 h-4 mr-2" />
+                      Alterar Período
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => resetUsageMutation.mutate()}
                       disabled={resetUsageMutation.isPending}
                     >
@@ -721,7 +803,7 @@ export default function SubscriptionDetails() {
                       ) : (
                         <RefreshCw className="w-4 h-4 mr-2" />
                       )}
-                      Reiniciar Período
+                      Reiniciar
                     </Button>
                   </div>
                 </>
@@ -1053,6 +1135,57 @@ export default function SubscriptionDetails() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Period Edit Dialog */}
+      <Dialog open={isPeriodDialogOpen} onOpenChange={setIsPeriodDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Alterar Período da Assinatura</DialogTitle>
+            <DialogDescription>
+              Defina as datas de início e fim do período de faturamento.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="period-start">Data de Início</Label>
+              <Input
+                id="period-start"
+                type="date"
+                value={periodStartDate}
+                onChange={(e) => setPeriodStartDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="period-end">Data de Fim</Label>
+              <Input
+                id="period-end"
+                type="date"
+                value={periodEndDate}
+                onChange={(e) => setPeriodEndDate(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsPeriodDialogOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSavePeriod}
+              disabled={updatePeriodMutation.isPending}
+            >
+              {updatePeriodMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
