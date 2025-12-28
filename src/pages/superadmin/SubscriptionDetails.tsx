@@ -281,6 +281,26 @@ export default function SubscriptionDetails() {
         .eq("id", id);
 
       if (error) throw error;
+
+      // Registrar no audit log
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      await supabase
+        .from("audit_logs")
+        .insert({
+          table_name: "subscriptions",
+          action: "ADD_EXTRA_DAYS",
+          record_id: id,
+          new_data: {
+            action: "add_extra_days",
+            days_added: days,
+            previous_end_date: currentEndDate.toISOString(),
+            new_end_date: newEndDate.toISOString(),
+            condominium_id: data.subscription.condominium_id,
+            condominium_name: data.condominium?.name || "N/A",
+          },
+          user_id: user?.id || null,
+        });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subscription-details", id] });
