@@ -57,6 +57,20 @@ interface SubscriptionWithCondominium {
   } | null;
 }
 
+// Formata CNPJ: XX.XXX.XXX/XXXX-XX
+const formatCnpj = (value: string): string => {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length === 0) return value; // Mantém texto se não houver dígitos
+  
+  // Se começou a digitar números, aplica máscara CNPJ
+  return digits
+    .slice(0, 14)
+    .replace(/^(\d{2})(\d)/, "$1.$2")
+    .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/\.(\d{3})(\d)/, ".$1/$2")
+    .replace(/(\d{4})(\d)/, "$1-$2");
+};
+
 export function SubscriptionsMonitor() {
   const navigate = useNavigate();
   const [planFilter, setPlanFilter] = useState<string>("all");
@@ -208,7 +222,15 @@ export function SubscriptionsMonitor() {
                 <Input
                   placeholder="Buscar por CNPJ, email ou nome..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Se o valor começa com número, aplica máscara de CNPJ
+                    if (/^\d/.test(value)) {
+                      setSearchTerm(formatCnpj(value));
+                    } else {
+                      setSearchTerm(value);
+                    }
+                  }}
                   className="pl-9 w-full sm:w-[280px]"
                 />
               </div>
