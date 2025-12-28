@@ -172,9 +172,24 @@ export function SindicosManagement() {
       });
     },
     onError: (error: any) => {
+      const errorMessage = error.message || "Tente novamente.";
+      const isCpfError = errorMessage.toLowerCase().includes("cpf");
+      const isEmailError = errorMessage.toLowerCase().includes("email") || errorMessage.toLowerCase().includes("already been registered");
+      
+      let title = "Erro ao criar síndico";
+      let description = errorMessage;
+      
+      if (isCpfError) {
+        title = "CPF já cadastrado";
+        description = "Este CPF já está associado a outro usuário no sistema. Verifique se o síndico já possui cadastro ou utilize um CPF diferente.";
+      } else if (isEmailError) {
+        title = "E-mail já cadastrado";
+        description = "Este e-mail já está associado a uma conta no sistema. Verifique se o usuário já possui cadastro.";
+      }
+      
       toast({
-        title: "Erro ao criar síndico",
-        description: error.message || "Tente novamente.",
+        title,
+        description,
         variant: "destructive",
       });
     },
