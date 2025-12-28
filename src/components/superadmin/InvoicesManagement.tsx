@@ -420,6 +420,7 @@ export function InvoicesManagement() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Condomínio</TableHead>
+                    <TableHead>CNPJ</TableHead>
                     <TableHead>Síndico</TableHead>
                     <TableHead>Período</TableHead>
                     <TableHead>Vencimento</TableHead>
@@ -438,6 +439,11 @@ export function InvoicesManagement() {
                             {invoice.condominium?.name || "—"}
                           </span>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground font-mono">
+                          {invoice.condominium?.cnpj || "—"}
+                        </span>
                       </TableCell>
                       <TableCell>
                         <div>
