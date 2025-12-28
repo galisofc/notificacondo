@@ -227,6 +227,33 @@ export type Database = {
         }
         Relationships: []
       }
+      cron_job_controls: {
+        Row: {
+          created_at: string
+          function_name: string
+          paused: boolean
+          paused_at: string | null
+          paused_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          function_name: string
+          paused?: boolean
+          paused_at?: string | null
+          paused_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          function_name?: string
+          paused?: boolean
+          paused_at?: string | null
+          paused_by?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       decisions: {
         Row: {
           created_at: string
@@ -1087,6 +1114,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_cron_job_pause_status: {
+        Args: never
+        Returns: {
+          function_name: string
+          paused: boolean
+          paused_at: string
+        }[]
+      }
       get_cron_job_runs: {
         Args: never
         Returns: {
@@ -1148,6 +1183,10 @@ export type Database = {
         Returns: boolean
       }
       toggle_cron_job: { Args: { p_jobid: number }; Returns: boolean }
+      toggle_cron_job_pause: {
+        Args: { p_function_name: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "super_admin" | "sindico" | "morador"
