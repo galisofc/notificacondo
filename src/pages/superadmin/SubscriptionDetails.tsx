@@ -94,6 +94,8 @@ export default function SubscriptionDetails() {
   const [isEditing, setIsEditing] = useState(false);
   const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
   const [isPeriodDialogOpen, setIsPeriodDialogOpen] = useState(false);
+  const [isAddDaysDialogOpen, setIsAddDaysDialogOpen] = useState(false);
+  const [extraDays, setExtraDays] = useState<number>(0);
   const [periodStartDate, setPeriodStartDate] = useState("");
   const [periodEndDate, setPeriodEndDate] = useState("");
   const [transferCpf, setTransferCpf] = useState("");
@@ -254,6 +256,44 @@ export default function SubscriptionDetails() {
     onError: (error: any) => {
       toast({
         title: "Erro ao atualizar período",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const addExtraDaysMutation = useMutation({
+    mutationFn: async (days: number) => {
+      if (!id || !data?.subscription) throw new Error("Dados não encontrados");
+
+      const currentEndDate = data.subscription.current_period_end 
+        ? new Date(data.subscription.current_period_end)
+        : new Date();
+      
+      const newEndDate = new Date(currentEndDate);
+      newEndDate.setDate(newEndDate.getDate() + days);
+
+      const { error } = await supabase
+        .from("subscriptions")
+        .update({
+          current_period_end: newEndDate.toISOString(),
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscription-details", id] });
+      setIsAddDaysDialogOpen(false);
+      setExtraDays(0);
+      toast({
+        title: "Dias adicionados",
+        description: `${extraDays} dia(s) foram adicionados à assinatura sem cobrança extra.`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao adicionar dias",
         description: error.message || "Tente novamente.",
         variant: "destructive",
       });
@@ -784,27 +824,37 @@ export default function SubscriptionDetails() {
                         {format(new Date(subscription.current_period_end), "dd/MM/yyyy", { locale: ptBR })}
                       </span>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleOpenPeriodDialog}
-                    >
-                      <Calendar className="w-4 h-4 mr-2" />
-                      Alterar Período
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => resetUsageMutation.mutate()}
-                      disabled={resetUsageMutation.isPending}
-                    >
-                      {resetUsageMutation.isPending ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                      )}
-                      Reiniciar
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsAddDaysDialogOpen(true)}
+                      >
+                        <Calendar className="w-4 h-4 mr-2" />
+                        + Dias
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleOpenPeriodDialog}
+                      >
+                        <Calendar className="w-4 h-4 mr-2" />
+                        Alterar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => resetUsageMutation.mutate()}
+                        disabled={resetUsageMutation.isPending}
+                      >
+                        {resetUsageMutation.isPending ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-4 h-4 mr-2" />
+                        )}
+                        Reiniciar
+                      </Button>
+                    </div>
                   </div>
                 </>
               )}
@@ -1182,6 +1232,79 @@ export default function SubscriptionDetails() {
                 <Save className="w-4 h-4 mr-2" />
               )}
               Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Extra Days Dialog */}
+      <Dialog open={isAddDaysDialogOpen} onOpenChange={setIsAddDaysDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Adicionar Dias Extras</DialogTitle>
+            <DialogDescription>
+              Adicione dias extras à assinatura sem cobrança adicional. O período será estendido automaticamente.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="extra-days">Quantidade de dias a adicionar</Label>
+              <Input
+                id="extra-days"
+                type="number"
+                min="1"
+                max="365"
+                value={extraDays || ""}
+                onChange={(e) => setExtraDays(parseInt(e.target.value) || 0)}
+                placeholder="Ex: 7, 15, 30..."
+              />
+            </div>
+            {extraDays > 0 && data?.subscription?.current_period_end && (
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium">Novo fim do período:</span>{" "}
+                  {format(
+                    new Date(new Date(data.subscription.current_period_end).getTime() + extraDays * 24 * 60 * 60 * 1000),
+                    "dd/MM/yyyy",
+                    { locale: ptBR }
+                  )}
+                </p>
+              </div>
+            )}
+            <div className="flex gap-2">
+              {[7, 15, 30].map((days) => (
+                <Button
+                  key={days}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setExtraDays(days)}
+                  className={extraDays === days ? "border-primary" : ""}
+                >
+                  +{days} dias
+                </Button>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsAddDaysDialogOpen(false);
+                setExtraDays(0);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => addExtraDaysMutation.mutate(extraDays)}
+              disabled={addExtraDaysMutation.isPending || extraDays < 1}
+            >
+              {addExtraDaysMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Calendar className="w-4 h-4 mr-2" />
+              )}
+              Adicionar {extraDays} dia{extraDays !== 1 ? "s" : ""}
             </Button>
           </DialogFooter>
         </DialogContent>
