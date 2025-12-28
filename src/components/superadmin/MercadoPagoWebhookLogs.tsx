@@ -35,9 +35,13 @@ import {
   AlertCircle,
   Clock,
   Eye,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+const ITEMS_PER_PAGE = 5;
 
 interface WebhookLog {
   id: string;
@@ -59,6 +63,7 @@ interface WebhookLog {
 export function MercadoPagoWebhookLogs() {
   const [selectedLog, setSelectedLog] = useState<WebhookLog | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const { data: logs, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["mercadopago-webhook-logs"],
@@ -134,6 +139,21 @@ export function MercadoPagoWebhookLogs() {
     setShowDetails(true);
   };
 
+  // Pagination calculations
+  const totalItems = logs?.length || 0;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedLogs = logs?.slice(startIndex, endIndex) || [];
+
+  const handlePreviousPage = () => {
+    setCurrentPage((prev) => Math.max(prev - 1, 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+  };
+
   return (
     <Card className="bg-gradient-card border-border/50">
       <CardHeader>
@@ -168,50 +188,81 @@ export function MercadoPagoWebhookLogs() {
             <p className="text-sm mt-1">As notificações do Mercado Pago aparecerão aqui</p>
           </div>
         ) : (
-          <div className="rounded-lg border border-border/50 overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/30">
-                  <TableHead>Data/Hora</TableHead>
-                  <TableHead>Evento</TableHead>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Tempo</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {logs.map((log) => (
-                  <TableRow key={log.id} className="hover:bg-muted/20">
-                    <TableCell className="font-mono text-xs">
-                      {format(new Date(log.received_at), "dd/MM HH:mm:ss", { locale: ptBR })}
-                    </TableCell>
-                    <TableCell>
-                      {getEventTypeBadge(log.event_type)}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
-                      {log.data_id ? log.data_id.substring(0, 12) + "..." : "-"}
-                    </TableCell>
-                    <TableCell>
-                      {getStatusBadge(log.processing_status)}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {log.processing_duration_ms ? `${log.processing_duration_ms}ms` : "-"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleViewDetails(log)}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                    </TableCell>
+          <>
+            <div className="rounded-lg border border-border/50 overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/30">
+                    <TableHead>Data/Hora</TableHead>
+                    <TableHead>Evento</TableHead>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Tempo</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {paginatedLogs.map((log) => (
+                    <TableRow key={log.id} className="hover:bg-muted/20">
+                      <TableCell className="font-mono text-xs">
+                        {format(new Date(log.received_at), "dd/MM HH:mm:ss", { locale: ptBR })}
+                      </TableCell>
+                      <TableCell>
+                        {getEventTypeBadge(log.event_type)}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        {log.data_id ? log.data_id.substring(0, 12) + "..." : "-"}
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(log.processing_status)}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {log.processing_duration_ms ? `${log.processing_duration_ms}ms` : "-"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewDetails(log)}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4">
+                <p className="text-sm text-muted-foreground">
+                  Mostrando {startIndex + 1}-{Math.min(endIndex, totalItems)} de {totalItems}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePreviousPage}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    {currentPage} / {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Details Dialog */}
