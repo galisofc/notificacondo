@@ -698,12 +698,15 @@ export function SindicosManagement() {
           <div className="relative w-full sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por nome, email, CPF ou telefone..."
+              placeholder="Buscar: nome, email, CPF (só números) ou telefone..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
             />
           </div>
+          <p className="text-xs text-muted-foreground mt-1 ml-1">
+            Para CPF/telefone, digite apenas os números (ex: 12345678900)
+          </p>
         </div>
 
         {isLoading ? (
