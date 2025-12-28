@@ -57,6 +57,9 @@ serve(async (req) => {
       throw new Error("Acesso negado. Apenas Super Admins podem criar síndicos.");
     }
 
+    // Definir o ID do usuário que está fazendo a ação para auditoria
+    console.log("Setting user context for audit:", requestingUser.id);
+
     const body: CreateSindicoRequest = await req.json();
     const { email, password, full_name, cpf, phone } = body;
 
@@ -132,8 +135,23 @@ serve(async (req) => {
       console.log("Profile updated successfully:", updatedProfile);
     }
 
-    // Note: Subscription will be created when the sindico creates a condominium (via trigger)
-    // No need to create subscription here anymore
+    // Registrar log de auditoria manualmente com o ID do super admin que criou
+    await supabaseAdmin
+      .from("audit_logs")
+      .insert({
+        table_name: "user_roles",
+        action: "INSERT",
+        record_id: userId,
+        new_data: { 
+          action: "create_sindico",
+          created_user_id: userId,
+          created_user_email: email,
+          created_user_name: full_name
+        },
+        user_id: requestingUser.id
+      });
+
+    console.log("Audit log created with user_id:", requestingUser.id);
 
     return new Response(
       JSON.stringify({
