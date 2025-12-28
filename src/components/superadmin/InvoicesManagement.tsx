@@ -1325,7 +1325,13 @@ export function InvoicesManagement() {
                   </div>
                   <div>
                     <Label className="text-muted-foreground text-xs">Método</Label>
-                    <p className="text-sm">{selectedInvoice.payment_method || "—"}</p>
+                    <p className="text-sm">
+                      {selectedInvoice.payment_method === "mercadopago_bank_transfer" 
+                        ? "PIX (Mercado Pago)" 
+                        : selectedInvoice.payment_method === "manual" 
+                          ? "Manual" 
+                          : selectedInvoice.payment_method || "—"}
+                    </p>
                   </div>
                   {selectedInvoice.payment_reference && (
                     <div className="col-span-2">
