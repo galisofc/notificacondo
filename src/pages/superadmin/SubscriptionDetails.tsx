@@ -96,6 +96,7 @@ export default function SubscriptionDetails() {
   const [isPeriodDialogOpen, setIsPeriodDialogOpen] = useState(false);
   const [isAddDaysDialogOpen, setIsAddDaysDialogOpen] = useState(false);
   const [extraDays, setExtraDays] = useState<number>(0);
+  const [extraDaysJustification, setExtraDaysJustification] = useState("");
   const [periodStartDate, setPeriodStartDate] = useState("");
   const [periodEndDate, setPeriodEndDate] = useState("");
   const [transferCpf, setTransferCpf] = useState("");
@@ -263,7 +264,7 @@ export default function SubscriptionDetails() {
   });
 
   const addExtraDaysMutation = useMutation({
-    mutationFn: async (days: number) => {
+    mutationFn: async ({ days, justification }: { days: number; justification: string }) => {
       if (!id || !data?.subscription) throw new Error("Dados não encontrados");
 
       const currentEndDate = data.subscription.current_period_end 
@@ -298,6 +299,7 @@ export default function SubscriptionDetails() {
             new_end_date: newEndDate.toISOString(),
             condominium_id: data.subscription.condominium_id,
             condominium_name: data.condominium?.name || "N/A",
+            justification: justification.trim() || "Sem justificativa informada",
           },
           user_id: user?.id || null,
         });
@@ -306,6 +308,7 @@ export default function SubscriptionDetails() {
       queryClient.invalidateQueries({ queryKey: ["subscription-details", id] });
       setIsAddDaysDialogOpen(false);
       setExtraDays(0);
+      setExtraDaysJustification("");
       toast({
         title: "Dias adicionados",
         description: `${extraDays} dia(s) foram adicionados à assinatura sem cobrança extra.`,
@@ -1304,6 +1307,16 @@ export default function SubscriptionDetails() {
                 </Button>
               ))}
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="extra-days-justification">Justificativa</Label>
+              <Textarea
+                id="extra-days-justification"
+                value={extraDaysJustification}
+                onChange={(e) => setExtraDaysJustification(e.target.value)}
+                placeholder="Informe o motivo para adicionar dias extras (ex: compensação por problema técnico, cortesia comercial...)"
+                rows={3}
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button
@@ -1311,12 +1324,13 @@ export default function SubscriptionDetails() {
               onClick={() => {
                 setIsAddDaysDialogOpen(false);
                 setExtraDays(0);
+                setExtraDaysJustification("");
               }}
             >
               Cancelar
             </Button>
             <Button
-              onClick={() => addExtraDaysMutation.mutate(extraDays)}
+              onClick={() => addExtraDaysMutation.mutate({ days: extraDays, justification: extraDaysJustification })}
               disabled={addExtraDaysMutation.isPending || extraDays < 1}
             >
               {addExtraDaysMutation.isPending ? (
