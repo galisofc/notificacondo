@@ -176,6 +176,7 @@ export type Database = {
       condominiums: {
         Row: {
           address: string | null
+          address_number: string | null
           city: string | null
           cnpj: string | null
           convention_url: string | null
@@ -192,6 +193,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          address_number?: string | null
           city?: string | null
           cnpj?: string | null
           convention_url?: string | null
@@ -208,6 +210,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          address_number?: string | null
           city?: string | null
           cnpj?: string | null
           convention_url?: string | null

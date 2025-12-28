@@ -89,6 +89,7 @@ export function CondominiumsManagement() {
     phone: "",
     zip_code: "",
     address: "",
+    address_number: "",
     neighborhood: "",
     city: "",
     state: "",
@@ -139,6 +140,7 @@ export function CondominiumsManagement() {
           phone: updateData.phone.replace(/\D/g, "") || null,
           zip_code: updateData.zip_code.replace(/\D/g, "") || null,
           address: updateData.address || null,
+          address_number: updateData.address_number || null,
           neighborhood: updateData.neighborhood || null,
           city: updateData.city || null,
           state: updateData.state || null,
@@ -199,7 +201,8 @@ export function CondominiumsManagement() {
         name: data.razao_social || data.nome_fantasia || prev.name,
         phone: data.ddd_telefone_1 ? data.ddd_telefone_1.replace(/\D/g, "") : prev.phone,
         zip_code: data.cep ? data.cep.replace(/\D/g, "") : prev.zip_code,
-        address: data.logradouro ? `${data.logradouro}${data.numero ? `, ${data.numero}` : ""}` : prev.address,
+        address: data.logradouro || prev.address,
+        address_number: data.numero || prev.address_number,
         neighborhood: data.bairro || prev.neighborhood,
         city: data.municipio || prev.city,
         state: data.uf || prev.state,
@@ -269,6 +272,7 @@ export function CondominiumsManagement() {
       phone: condominium.phone || "",
       zip_code: condominium.zip_code || "",
       address: condominium.address || "",
+      address_number: (condominium as any).address_number || "",
       neighborhood: condominium.neighborhood || "",
       city: condominium.city || "",
       state: condominium.state || "",
@@ -696,13 +700,23 @@ export function CondominiumsManagement() {
                 </div>
               </div>
 
-              <div className="sm:col-span-2 space-y-2">
-                <Label htmlFor="address">Endereço</Label>
+              <div className="space-y-2">
+                <Label htmlFor="address">Logradouro</Label>
                 <Input
                   id="address"
                   value={editForm.address}
                   onChange={(e) => setEditForm(prev => ({ ...prev, address: e.target.value }))}
-                  placeholder="Rua, número, complemento"
+                  placeholder="Rua, Avenida, etc."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="address_number">Número</Label>
+                <Input
+                  id="address_number"
+                  value={editForm.address_number}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, address_number: e.target.value }))}
+                  placeholder="Nº"
                 />
               </div>
 
