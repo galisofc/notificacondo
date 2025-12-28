@@ -156,11 +156,53 @@ export default function SubscriptionDetails() {
         .order("due_date", { ascending: false })
         .limit(10);
 
+      // Calculate real usage from occurrences with status 'notificado' or 'arquivada'
+      // within the current period
+      const periodStart = subscription.current_period_start;
+      const periodEnd = subscription.current_period_end;
+
+      // Fetch occurrences with relevant statuses
+      let occurrencesQuery = supabase
+        .from("occurrences")
+        .select("type, status")
+        .eq("condominium_id", condominium.id)
+        .in("status", ["notificado", "arquivada", "advertido", "multado"]);
+
+      // Filter by period if dates exist
+      if (periodStart) {
+        occurrencesQuery = occurrencesQuery.gte("created_at", periodStart);
+      }
+      if (periodEnd) {
+        occurrencesQuery = occurrencesQuery.lte("created_at", periodEnd);
+      }
+
+      const { data: occurrences } = await occurrencesQuery;
+
+      // Count by type
+      const realUsage = {
+        notifications: 0,
+        warnings: 0,
+        fines: 0,
+      };
+
+      if (occurrences) {
+        occurrences.forEach((occ) => {
+          if (occ.type === "notificacao") {
+            realUsage.notifications++;
+          } else if (occ.type === "advertencia") {
+            realUsage.warnings++;
+          } else if (occ.type === "multa") {
+            realUsage.fines++;
+          }
+        });
+      }
+
       return {
         subscription,
         condominium,
         owner: ownerProfile,
         invoices: invoices || [],
+        realUsage,
       };
     },
     enabled: !!id,
@@ -622,7 +664,7 @@ export default function SubscriptionDetails() {
     );
   }
 
-  const { subscription, condominium, owner, invoices = [] } = data;
+  const { subscription, condominium, owner, invoices = [], realUsage = { notifications: 0, warnings: 0, fines: 0 } } = data;
   const planInfo = PLAN_INFO[subscription.plan as PlanType];
 
   const getInvoiceStatusBadge = (status: string, dueDate: string) => {
@@ -1041,18 +1083,18 @@ export default function SubscriptionDetails() {
                   </div>
                   <span
                     className={`text-sm font-medium ${getUsageColor(
-                      getUsagePercentage(subscription.notifications_used, subscription.notifications_limit)
+                      getUsagePercentage(realUsage.notifications, subscription.notifications_limit)
                     )}`}
                   >
-                    {subscription.notifications_used} / {subscription.notifications_limit}
+                    {realUsage.notifications} / {subscription.notifications_limit}
                   </span>
                 </div>
                 <Progress
-                  value={getUsagePercentage(subscription.notifications_used, subscription.notifications_limit)}
+                  value={getUsagePercentage(realUsage.notifications, subscription.notifications_limit)}
                   className="h-2"
                 />
                 <p className="text-xs text-muted-foreground">
-                  {subscription.notifications_limit - subscription.notifications_used} restantes
+                  {Math.max(0, subscription.notifications_limit - realUsage.notifications)} restantes
                 </p>
               </div>
 
@@ -1065,18 +1107,18 @@ export default function SubscriptionDetails() {
                   </div>
                   <span
                     className={`text-sm font-medium ${getUsageColor(
-                      getUsagePercentage(subscription.warnings_used, subscription.warnings_limit)
+                      getUsagePercentage(realUsage.warnings, subscription.warnings_limit)
                     )}`}
                   >
-                    {subscription.warnings_used} / {subscription.warnings_limit}
+                    {realUsage.warnings} / {subscription.warnings_limit}
                   </span>
                 </div>
                 <Progress
-                  value={getUsagePercentage(subscription.warnings_used, subscription.warnings_limit)}
+                  value={getUsagePercentage(realUsage.warnings, subscription.warnings_limit)}
                   className="h-2"
                 />
                 <p className="text-xs text-muted-foreground">
-                  {subscription.warnings_limit - subscription.warnings_used} restantes
+                  {Math.max(0, subscription.warnings_limit - realUsage.warnings)} restantes
                 </p>
               </div>
 
@@ -1089,18 +1131,18 @@ export default function SubscriptionDetails() {
                   </div>
                   <span
                     className={`text-sm font-medium ${getUsageColor(
-                      getUsagePercentage(subscription.fines_used, subscription.fines_limit)
+                      getUsagePercentage(realUsage.fines, subscription.fines_limit)
                     )}`}
                   >
-                    {subscription.fines_used} / {subscription.fines_limit}
+                    {realUsage.fines} / {subscription.fines_limit}
                   </span>
                 </div>
                 <Progress
-                  value={getUsagePercentage(subscription.fines_used, subscription.fines_limit)}
+                  value={getUsagePercentage(realUsage.fines, subscription.fines_limit)}
                   className="h-2"
                 />
                 <p className="text-xs text-muted-foreground">
-                  {subscription.fines_limit - subscription.fines_used} restantes
+                  {Math.max(0, subscription.fines_limit - realUsage.fines)} restantes
                 </p>
               </div>
             </div>
