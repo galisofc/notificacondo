@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Mail, Lock, User, ArrowLeft, Loader2, Check } from "lucide-react";
+import { Shield, Mail, Lock, User, ArrowLeft, Loader2, Check, Building2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
+import { Database } from "@/integrations/supabase/types";
 
 const loginSchema = z.object({
   email: z.string().email("Email inválido"),
@@ -17,6 +18,7 @@ const loginSchema = z.object({
 
 const signupSchema = z.object({
   fullName: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
+  condominiumName: z.string().min(2, "Nome do condomínio deve ter pelo menos 2 caracteres"),
   email: z.string().email("Email inválido"),
   password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
   confirmPassword: z.string(),
@@ -30,6 +32,7 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
+    condominiumName: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -243,10 +246,52 @@ const Auth = () => {
           return;
         }
 
+        // Get newly created user
+        const { data: { user: newUser } } = await supabase.auth.getUser();
+        
+        if (newUser) {
+          // Create the condominium for the new user
+          const { data: condominium, error: condoError } = await supabase
+            .from('condominiums')
+            .insert({
+              name: formData.condominiumName,
+              owner_id: newUser.id,
+            })
+            .select()
+            .single();
+          
+          if (condoError) {
+            console.error('Error creating condominium:', condoError);
+            toast({
+              title: "Aviso",
+              description: "Conta criada, mas houve um erro ao criar o condomínio. Você pode criá-lo no painel.",
+              variant: "destructive",
+            });
+          } else if (condominium && selectedPlan) {
+            // Update the subscription with the selected plan limits
+            const planType = selectedPlan.slug as Database['public']['Enums']['plan_type'];
+            const { error: subError } = await supabase
+              .from('subscriptions')
+              .update({
+                plan: planType,
+                notifications_limit: selectedPlan.notifications_limit,
+                warnings_limit: selectedPlan.warnings_limit,
+                fines_limit: selectedPlan.fines_limit,
+              })
+              .eq('condominium_id', condominium.id);
+            
+            if (subError) {
+              console.error('Error updating subscription:', subError);
+            }
+          }
+        }
+
         // New users (síndicos) go to main dashboard
         toast({
           title: "Conta criada!",
-          description: "Bem-vindo ao NotificaCondo.",
+          description: selectedPlan 
+            ? `Bem-vindo ao NotificaCondo! Plano ${selectedPlan.name} ativado.`
+            : "Bem-vindo ao NotificaCondo.",
         });
         navigate("/dashboard", { replace: true });
       }
@@ -386,24 +431,45 @@ const Auth = () => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
-              <div className="space-y-2">
-                <Label htmlFor="fullName" className="text-foreground">Nome completo</Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="fullName"
-                    name="fullName"
-                    type="text"
-                    placeholder="Seu nome completo"
-                    value={formData.fullName}
-                    onChange={handleChange}
-                    className="pl-10 bg-secondary/50 border-border"
-                  />
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="fullName" className="text-foreground">Nome completo</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      id="fullName"
+                      name="fullName"
+                      type="text"
+                      placeholder="Seu nome completo"
+                      value={formData.fullName}
+                      onChange={handleChange}
+                      className="pl-10 bg-secondary/50 border-border"
+                    />
+                  </div>
+                  {errors.fullName && (
+                    <p className="text-sm text-destructive">{errors.fullName}</p>
+                  )}
                 </div>
-                {errors.fullName && (
-                  <p className="text-sm text-destructive">{errors.fullName}</p>
-                )}
-              </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="condominiumName" className="text-foreground">Nome do condomínio</Label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      id="condominiumName"
+                      name="condominiumName"
+                      type="text"
+                      placeholder="Ex: Residencial das Flores"
+                      value={formData.condominiumName}
+                      onChange={handleChange}
+                      className="pl-10 bg-secondary/50 border-border"
+                    />
+                  </div>
+                  {errors.condominiumName && (
+                    <p className="text-sm text-destructive">{errors.condominiumName}</p>
+                  )}
+                </div>
+              </>
             )}
 
             <div className="space-y-2">
@@ -490,7 +556,7 @@ const Auth = () => {
                 onClick={() => {
                   setIsLogin(!isLogin);
                   setErrors({});
-                  setFormData({ fullName: "", email: "", password: "", confirmPassword: "" });
+                  setFormData({ fullName: "", condominiumName: "", email: "", password: "", confirmPassword: "" });
                 }}
                 className="text-primary hover:underline font-medium"
               >
