@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -472,6 +473,13 @@ const OccurrenceDetails = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-up">
+        <SindicoBreadcrumbs 
+          items={[
+            { label: "Ocorrências", href: "/occurrences" },
+            { label: occurrence.title }
+          ]} 
+        />
+
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <Button variant="ghost" size="icon" onClick={() => navigate("/occurrences")}>
