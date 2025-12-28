@@ -143,6 +143,24 @@ const SindicoSubscriptions = () => {
     },
   });
 
+  // Fetch app settings for sindico discount
+  const { data: appSettings } = useQuery({
+    queryKey: ["app-settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("app_settings")
+        .select("*");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Get sindico early trial discount from settings
+  const sindicoEarlyTrialDiscount = (() => {
+    const setting = appSettings?.find(s => s.key === "sindico_early_trial_discount");
+    return setting ? Number(setting.value) : 15;
+  })();
+
   // Fetch subscriptions with condominiums
   const { data: subscriptions, isLoading } = useQuery({
     queryKey: ["sindico-subscriptions", user?.id],
@@ -384,9 +402,6 @@ const SindicoSubscriptions = () => {
 
   const proratedInfo = calculateProratedAmount();
 
-  // Fixed 15% discount for síndico ending trial early
-  const SINDICO_EARLY_END_DISCOUNT = 15;
-
   // Mutation to end trial early
   const endTrialMutation = useMutation({
     mutationFn: async (subscription: Subscription) => {
@@ -406,8 +421,8 @@ const SindicoSubscriptions = () => {
 
       const planPrice = planData?.price || 0;
       
-      // Apply fixed 15% discount for síndico ending trial early
-      const discountAmount = (planPrice * SINDICO_EARLY_END_DISCOUNT) / 100;
+      // Apply discount from app settings for síndico ending trial early
+      const discountAmount = (planPrice * sindicoEarlyTrialDiscount) / 100;
       const finalAmount = Math.max(0, planPrice - discountAmount);
 
       // Update subscription to end trial
@@ -435,7 +450,7 @@ const SindicoSubscriptions = () => {
             due_date: dueDate.toISOString().split("T")[0],
             period_start: now.toISOString().split("T")[0],
             period_end: periodEnd.toISOString().split("T")[0],
-            description: `Primeira mensalidade - Plano ${planData?.name || subscription.plan} (Desconto: ${SINDICO_EARLY_END_DISCOUNT}%)`,
+            description: `Primeira mensalidade - Plano ${planData?.name || subscription.plan} (Desconto: ${sindicoEarlyTrialDiscount}%)`,
           });
 
         if (invoiceError) throw invoiceError;
@@ -447,7 +462,7 @@ const SindicoSubscriptions = () => {
       setEndTrialDialog({ open: false, subscription: null });
       toast({
         title: "Trial encerrado",
-        description: `O trial foi encerrado com ${SINDICO_EARLY_END_DISCOUNT}% de desconto na primeira fatura.`,
+        description: `O trial foi encerrado com ${sindicoEarlyTrialDiscount}% de desconto na primeira fatura.`,
       });
     },
     onError: (error: any) => {
@@ -984,7 +999,7 @@ const SindicoSubscriptions = () => {
               <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
                 <p className="text-sm text-green-700 dark:text-green-400 font-medium mb-2">Benefício exclusivo:</p>
                 <p className="text-sm text-green-700 dark:text-green-400">
-                  Ao encerrar o trial antecipadamente, você receberá <strong>15% de desconto</strong> na primeira fatura!
+                  Ao encerrar o trial antecipadamente, você receberá <strong>{sindicoEarlyTrialDiscount}% de desconto</strong> na primeira fatura!
                 </p>
               </div>
               
@@ -992,7 +1007,7 @@ const SindicoSubscriptions = () => {
                 <p className="text-sm text-amber-700 dark:text-amber-400 font-medium mb-2">O que acontecerá:</p>
                 <ul className="text-sm text-amber-700 dark:text-amber-400 space-y-1 list-disc list-inside">
                   <li>O trial será encerrado imediatamente</li>
-                  <li>Uma fatura será gerada com 15% de desconto</li>
+                  <li>Uma fatura será gerada com {sindicoEarlyTrialDiscount}% de desconto</li>
                   <li>Vencimento em 3 dias úteis</li>
                   <li>O período regular de 30 dias será iniciado</li>
                 </ul>
@@ -1001,7 +1016,7 @@ const SindicoSubscriptions = () => {
               {endTrialDialog.subscription && (() => {
                 const plan = plans?.find(p => p.slug === endTrialDialog.subscription?.plan);
                 const planPrice = plan?.price || 0;
-                const discountAmount = (planPrice * 15) / 100;
+                const discountAmount = (planPrice * sindicoEarlyTrialDiscount) / 100;
                 const finalAmount = Math.max(0, planPrice - discountAmount);
                 
                 return (
@@ -1015,7 +1030,7 @@ const SindicoSubscriptions = () => {
                       <span className="font-medium">R$ {planPrice.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
-                      <span>Desconto (15%):</span>
+                      <span>Desconto ({sindicoEarlyTrialDiscount}%):</span>
                       <span className="font-medium">-R$ {discountAmount.toFixed(2)}</span>
                     </div>
                     <div className="border-t border-border my-2" />

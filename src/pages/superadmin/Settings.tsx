@@ -105,6 +105,9 @@ export default function SuperAdminSettings() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   
+  // App settings state
+  const [sindicoDiscount, setSindicoDiscount] = useState<number>(15);
+  
   const [formData, setFormData] = useState({
     slug: "",
     name: "",
@@ -116,6 +119,46 @@ export default function SuperAdminSettings() {
     color: "bg-gray-500",
     display_order: 0,
     is_active: true,
+  });
+
+  // Fetch app settings
+  const { data: appSettings, isLoading: settingsLoading } = useQuery({
+    queryKey: ["app-settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("app_settings")
+        .select("*");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Update sindico discount when settings load
+  useState(() => {
+    if (appSettings) {
+      const discountSetting = appSettings.find(s => s.key === "sindico_early_trial_discount");
+      if (discountSetting) {
+        setSindicoDiscount(Number(discountSetting.value) || 15);
+      }
+    }
+  });
+
+  // Update app setting mutation
+  const updateSettingMutation = useMutation({
+    mutationFn: async ({ key, value }: { key: string; value: string }) => {
+      const { error } = await supabase
+        .from("app_settings")
+        .update({ value: value })
+        .eq("key", key);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["app-settings"] });
+      toast({ title: "Configuração atualizada com sucesso!" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Erro ao atualizar configuração", description: error.message, variant: "destructive" });
+    },
   });
 
   // Fetch plans
@@ -367,10 +410,14 @@ export default function SuperAdminSettings() {
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="bg-muted/50">
+          <TabsList className="bg-muted/50 flex-wrap">
             <TabsTrigger value="overview" className="gap-2">
               <Database className="w-4 h-4" />
               Visão Geral
+            </TabsTrigger>
+            <TabsTrigger value="general" className="gap-2">
+              <Settings className="w-4 h-4" />
+              Geral
             </TabsTrigger>
             <TabsTrigger value="manage-plans" className="gap-2">
               <Package className="w-4 h-4" />
@@ -540,7 +587,74 @@ export default function SuperAdminSettings() {
             </Card>
           </TabsContent>
 
-          {/* Manage Plans Tab */}
+          {/* General Settings Tab */}
+          <TabsContent value="general" className="space-y-6">
+            <Card className="bg-gradient-card border-border/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-primary" />
+                  Configurações de Assinatura
+                </CardTitle>
+                <CardDescription>
+                  Configure parâmetros relacionados a assinaturas e trials
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg border border-border/50">
+                    <div className="flex-1">
+                      <Label htmlFor="sindico-discount" className="text-base font-medium">
+                        Desconto para encerramento antecipado de trial
+                      </Label>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Percentual de desconto aplicado quando o síndico encerra o trial antes do prazo
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="sindico-discount"
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={(() => {
+                            const setting = appSettings?.find(s => s.key === "sindico_early_trial_discount");
+                            return setting ? Number(setting.value) : 15;
+                          })()}
+                          onChange={(e) => setSindicoDiscount(Number(e.target.value))}
+                          className="w-20 text-center"
+                        />
+                        <span className="text-muted-foreground">%</span>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => updateSettingMutation.mutate({ 
+                          key: "sindico_early_trial_discount", 
+                          value: String(sindicoDiscount) 
+                        })}
+                        disabled={updateSettingMutation.isPending}
+                      >
+                        {updateSettingMutation.isPending ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Save className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="p-4 rounded-lg bg-muted/30">
+                    <p className="text-sm text-muted-foreground">
+                      <strong>Nota:</strong> Este desconto é aplicado automaticamente na primeira fatura quando o síndico 
+                      decide encerrar o período de trial antes da data de expiração. O super admin pode escolher 
+                      um desconto diferente ao encerrar o trial manualmente.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="manage-plans" className="space-y-6">
             <Card className="bg-gradient-card border-border/50">
               <CardHeader className="flex flex-row items-center justify-between">
