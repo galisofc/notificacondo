@@ -58,7 +58,14 @@ import {
   XCircle,
   ArrowRightLeft,
   Search,
+  Info,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { SubscriptionHistory } from "@/components/superadmin/SubscriptionHistory";
 import {
   Table,
@@ -1073,79 +1080,105 @@ export default function SubscriptionDetails() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-6 md:grid-cols-3">
-              {/* Notifications */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Bell className="w-5 h-5 text-blue-500" />
-                    <span className="font-medium">Notificações</span>
+            <TooltipProvider>
+              <div className="grid gap-6 md:grid-cols-3">
+                {/* Notifications */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Bell className="w-5 h-5 text-blue-500" />
+                      <span className="font-medium">Notificações</span>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-4 w-4 text-muted-foreground/50 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-[250px]">
+                          <p>Conta ocorrências do tipo "Notificação" com status: notificado, arquivada, advertido ou multado</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <span
+                      className={`text-sm font-medium ${getUsageColor(
+                        getUsagePercentage(realUsage.notifications, subscription.notifications_limit)
+                      )}`}
+                    >
+                      {realUsage.notifications} / {subscription.notifications_limit}
+                    </span>
                   </div>
-                  <span
-                    className={`text-sm font-medium ${getUsageColor(
-                      getUsagePercentage(realUsage.notifications, subscription.notifications_limit)
-                    )}`}
-                  >
-                    {realUsage.notifications} / {subscription.notifications_limit}
-                  </span>
+                  <Progress
+                    value={getUsagePercentage(realUsage.notifications, subscription.notifications_limit)}
+                    className="h-2"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {Math.max(0, subscription.notifications_limit - realUsage.notifications)} restantes
+                  </p>
                 </div>
-                <Progress
-                  value={getUsagePercentage(realUsage.notifications, subscription.notifications_limit)}
-                  className="h-2"
-                />
-                <p className="text-xs text-muted-foreground">
-                  {Math.max(0, subscription.notifications_limit - realUsage.notifications)} restantes
-                </p>
-              </div>
 
-              {/* Warnings */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="w-5 h-5 text-amber-500" />
-                    <span className="font-medium">Advertências</span>
+                {/* Warnings */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-5 h-5 text-amber-500" />
+                      <span className="font-medium">Advertências</span>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-4 w-4 text-muted-foreground/50 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-[250px]">
+                          <p>Conta ocorrências do tipo "Advertência" com status: notificado, arquivada, advertido ou multado</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <span
+                      className={`text-sm font-medium ${getUsageColor(
+                        getUsagePercentage(realUsage.warnings, subscription.warnings_limit)
+                      )}`}
+                    >
+                      {realUsage.warnings} / {subscription.warnings_limit}
+                    </span>
                   </div>
-                  <span
-                    className={`text-sm font-medium ${getUsageColor(
-                      getUsagePercentage(realUsage.warnings, subscription.warnings_limit)
-                    )}`}
-                  >
-                    {realUsage.warnings} / {subscription.warnings_limit}
-                  </span>
+                  <Progress
+                    value={getUsagePercentage(realUsage.warnings, subscription.warnings_limit)}
+                    className="h-2"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {Math.max(0, subscription.warnings_limit - realUsage.warnings)} restantes
+                  </p>
                 </div>
-                <Progress
-                  value={getUsagePercentage(realUsage.warnings, subscription.warnings_limit)}
-                  className="h-2"
-                />
-                <p className="text-xs text-muted-foreground">
-                  {Math.max(0, subscription.warnings_limit - realUsage.warnings)} restantes
-                </p>
-              </div>
 
-              {/* Fines */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="w-5 h-5 text-red-500" />
-                    <span className="font-medium">Multas</span>
+                {/* Fines */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="w-5 h-5 text-red-500" />
+                      <span className="font-medium">Multas</span>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-4 w-4 text-muted-foreground/50 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-[250px]">
+                          <p>Conta ocorrências do tipo "Multa" com status: notificado, arquivada, advertido ou multado</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <span
+                      className={`text-sm font-medium ${getUsageColor(
+                        getUsagePercentage(realUsage.fines, subscription.fines_limit)
+                      )}`}
+                    >
+                      {realUsage.fines} / {subscription.fines_limit}
+                    </span>
                   </div>
-                  <span
-                    className={`text-sm font-medium ${getUsageColor(
-                      getUsagePercentage(realUsage.fines, subscription.fines_limit)
-                    )}`}
-                  >
-                    {realUsage.fines} / {subscription.fines_limit}
-                  </span>
+                  <Progress
+                    value={getUsagePercentage(realUsage.fines, subscription.fines_limit)}
+                    className="h-2"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {Math.max(0, subscription.fines_limit - realUsage.fines)} restantes
+                  </p>
                 </div>
-                <Progress
-                  value={getUsagePercentage(realUsage.fines, subscription.fines_limit)}
-                  className="h-2"
-                />
-                <p className="text-xs text-muted-foreground">
-                  {Math.max(0, subscription.fines_limit - realUsage.fines)} restantes
-                </p>
               </div>
-            </div>
+            </TooltipProvider>
           </CardContent>
         </Card>
 

@@ -43,7 +43,14 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
+  Info,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface Plan {
   id: string;
@@ -610,59 +617,85 @@ const SindicoSubscriptions = () => {
                         </div>
                       )}
 
-                      <div className="space-y-2 mb-4">
-                        <div className="flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-1">
-                            <Bell className="h-3 w-3 text-muted-foreground" />
-                            <span>Notificações</span>
+                      <TooltipProvider>
+                        <div className="space-y-2 mb-4">
+                          <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-1">
+                              <Bell className="h-3 w-3 text-muted-foreground" />
+                              <span>Notificações</span>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <Info className="h-3 w-3 text-muted-foreground/50 cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-[200px] text-xs">
+                                  <p>Conta ocorrências do tipo "Notificação" com status: notificado, arquivada, advertido ou multado</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                            <span className={notificationsPercent >= 80 ? "text-destructive" : "text-muted-foreground"}>
+                              {sub.realUsage.notifications}/{sub.notifications_limit}
+                            </span>
                           </div>
-                          <span className={notificationsPercent >= 80 ? "text-destructive" : "text-muted-foreground"}>
-                            {sub.realUsage.notifications}/{sub.notifications_limit}
-                          </span>
-                        </div>
-                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full rounded-full ${notificationsPercent >= 80 ? "bg-destructive" : "bg-primary"}`}
-                            style={{ width: `${Math.min(notificationsPercent, 100)}%` }}
-                          />
-                        </div>
-
-                        <div className="flex items-center justify-between text-xs mt-2">
-                          <div className="flex items-center gap-1">
-                            <AlertOctagon className="h-3 w-3 text-muted-foreground" />
-                            <span>Advertências</span>
+                          <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full ${notificationsPercent >= 80 ? "bg-destructive" : "bg-primary"}`}
+                              style={{ width: `${Math.min(notificationsPercent, 100)}%` }}
+                            />
                           </div>
-                          <span className={warningsPercent >= 80 ? "text-destructive" : "text-muted-foreground"}>
-                            {sub.realUsage.warnings}/{sub.warnings_limit}
-                          </span>
-                        </div>
-                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full rounded-full ${warningsPercent >= 80 ? "bg-destructive" : "bg-amber-500"}`}
-                            style={{ width: `${Math.min(warningsPercent, 100)}%` }}
-                          />
-                        </div>
 
-                        {sub.fines_limit > 0 && (
-                          <>
-                            <div className="flex items-center justify-between text-xs mt-2">
-                              <div className="flex items-center gap-1">
-                                <Gavel className="h-3 w-3 text-muted-foreground" />
-                                <span>Multas</span>
+                          <div className="flex items-center justify-between text-xs mt-2">
+                            <div className="flex items-center gap-1">
+                              <AlertOctagon className="h-3 w-3 text-muted-foreground" />
+                              <span>Advertências</span>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <Info className="h-3 w-3 text-muted-foreground/50 cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-[200px] text-xs">
+                                  <p>Conta ocorrências do tipo "Advertência" com status: notificado, arquivada, advertido ou multado</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                            <span className={warningsPercent >= 80 ? "text-destructive" : "text-muted-foreground"}>
+                              {sub.realUsage.warnings}/{sub.warnings_limit}
+                            </span>
+                          </div>
+                          <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full ${warningsPercent >= 80 ? "bg-destructive" : "bg-amber-500"}`}
+                              style={{ width: `${Math.min(warningsPercent, 100)}%` }}
+                            />
+                          </div>
+
+                          {sub.fines_limit > 0 && (
+                            <>
+                              <div className="flex items-center justify-between text-xs mt-2">
+                                <div className="flex items-center gap-1">
+                                  <Gavel className="h-3 w-3 text-muted-foreground" />
+                                  <span>Multas</span>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Info className="h-3 w-3 text-muted-foreground/50 cursor-help" />
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-[200px] text-xs">
+                                      <p>Conta ocorrências do tipo "Multa" com status: notificado, arquivada, advertido ou multado</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </div>
+                                <span className={finesPercent >= 80 ? "text-destructive" : "text-muted-foreground"}>
+                                  {sub.realUsage.fines}/{sub.fines_limit}
+                                </span>
                               </div>
-                              <span className={finesPercent >= 80 ? "text-destructive" : "text-muted-foreground"}>
-                                {sub.realUsage.fines}/{sub.fines_limit}
-                              </span>
-                            </div>
-                            <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                              <div 
-                                className={`h-full rounded-full ${finesPercent >= 80 ? "bg-destructive" : "bg-emerald-500"}`}
-                                style={{ width: `${Math.min(finesPercent, 100)}%` }}
-                              />
-                            </div>
-                          </>
-                        )}
-                      </div>
+                              <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                                <div 
+                                  className={`h-full rounded-full ${finesPercent >= 80 ? "bg-destructive" : "bg-emerald-500"}`}
+                                  style={{ width: `${Math.min(finesPercent, 100)}%` }}
+                                />
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </TooltipProvider>
 
                       <div className="flex flex-col gap-2">
                         <Button 
