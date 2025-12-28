@@ -76,3 +76,7 @@ verify_jwt = false
 # Verificação de políticas RLS
 [functions.check-rls-policies]
 verify_jwt = false
+
+# Criação de pagamento PIX via Mercado Pago
+[functions.mercadopago-create-pix]
+verify_jwt = false

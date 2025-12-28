@@ -59,6 +59,8 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  QrCode,
+  Loader2,
 } from "lucide-react";
 
 interface InvoiceWithDetails {
@@ -109,6 +111,7 @@ export function InvoicesManagement() {
     const saved = localStorage.getItem("invoices-sort-direction");
     return (saved as SortDirection) || "desc";
   });
+  const [generatingPix, setGeneratingPix] = useState<string | null>(null);
   const itemsPerPage = 10;
 
   // Persistir preferências de ordenação
@@ -499,6 +502,189 @@ export function InvoicesManagement() {
     });
   };
 
+  // Gerar PDF com QR Code PIX
+  const generateInvoicePDFWithPix = async (invoice: InvoiceWithDetails) => {
+    if (invoice.status === "paid") {
+      toast({
+        title: "Fatura já paga",
+        description: "Esta fatura já foi paga, não é possível gerar PIX.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setGeneratingPix(invoice.id);
+
+    try {
+      // Gerar PIX via Mercado Pago
+      const { data: pixData, error: pixError } = await supabase.functions.invoke(
+        "mercadopago-create-pix",
+        {
+          body: {
+            invoice_id: invoice.id,
+            payer_email: invoice.owner_profile?.email || "cliente@email.com",
+            payer_first_name: invoice.owner_profile?.full_name?.split(" ")[0] || "Cliente",
+            payer_last_name: invoice.owner_profile?.full_name?.split(" ").slice(1).join(" ") || "NotificaCondo",
+          },
+        }
+      );
+
+      if (pixError || !pixData?.success) {
+        throw new Error(pixData?.error || "Erro ao gerar PIX");
+      }
+
+      // Gerar PDF com QR Code
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      
+      // Cores
+      const primaryBlue = [0, 136, 204];
+      const textDark = [51, 51, 51];
+      const textGray = [100, 100, 100];
+      
+      // ===== HEADER BAR =====
+      doc.setFillColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
+      doc.rect(0, 0, pageWidth, 25, "F");
+      
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.text("NOTIFICACONDO", pageWidth / 2, 15, { align: "center" });
+      
+      // ===== INFO ABAIXO DO HEADER =====
+      let yPos = 35;
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(textGray[0], textGray[1], textGray[2]);
+      doc.text("Sistema de Gestao de Ocorrencias Condominiais", 20, yPos);
+      doc.text("notificacondo.com.br", pageWidth - 20, yPos, { align: "right" });
+      
+      // ===== TITULO FATURA =====
+      yPos = 55;
+      doc.setFontSize(28);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(textDark[0], textDark[1], textDark[2]);
+      doc.text("Fatura.", 20, yPos);
+      
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(textGray[0], textGray[1], textGray[2]);
+      doc.text("Fatura  : " + (invoice.invoice_number || "—"), pageWidth - 20, yPos - 10, { align: "right" });
+      doc.text("Data    : " + formatDate(invoice.created_at), pageWidth - 20, yPos - 2, { align: "right" });
+      
+      // ===== EMITIDO PARA =====
+      yPos = 70;
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(textDark[0], textDark[1], textDark[2]);
+      doc.text("Emitido Para", 20, yPos);
+      
+      yPos += 7;
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(textGray[0], textGray[1], textGray[2]);
+      doc.text(invoice.condominium?.name || "—", 20, yPos);
+      doc.text("CNPJ: " + formatCNPJ(invoice.condominium?.cnpj || null), 20, yPos + 5);
+      doc.text(invoice.owner_profile?.full_name || "—", 20, yPos + 10);
+      
+      // ===== VALOR =====
+      doc.setFontSize(24);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(textDark[0], textDark[1], textDark[2]);
+      doc.text(formatCurrency(Number(invoice.amount)), pageWidth - 20, 75, { align: "right" });
+      
+      doc.setFontSize(9);
+      doc.setTextColor(textGray[0], textGray[1], textGray[2]);
+      doc.text("VENCIMENTO: " + formatDate(invoice.due_date), pageWidth - 20, 83, { align: "right" });
+      
+      // ===== DESCRICAO =====
+      yPos = 105;
+      doc.setFillColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
+      doc.rect(20, yPos, pageWidth - 40, 8, "F");
+      
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.text("Descricao", 25, yPos + 6);
+      doc.text("Valor", pageWidth - 25, yPos + 6, { align: "right" });
+      
+      yPos += 13;
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(textDark[0], textDark[1], textDark[2]);
+      doc.text("Assinatura - Periodo: " + formatDate(invoice.period_start) + " a " + formatDate(invoice.period_end), 25, yPos);
+      doc.text(formatCurrency(Number(invoice.amount)), pageWidth - 25, yPos, { align: "right" });
+      
+      // ===== PIX SECTION =====
+      yPos = 135;
+      doc.setFillColor(240, 248, 255);
+      doc.roundedRect(20, yPos, pageWidth - 40, 100, 3, 3, "F");
+      
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
+      doc.text("Pagamento via PIX", pageWidth / 2, yPos + 12, { align: "center" });
+      
+      // QR Code
+      if (pixData.qr_code_base64) {
+        const qrCodeImg = "data:image/png;base64," + pixData.qr_code_base64;
+        doc.addImage(qrCodeImg, "PNG", pageWidth / 2 - 25, yPos + 18, 50, 50);
+      }
+      
+      // Código Copia e Cola
+      yPos += 75;
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(textGray[0], textGray[1], textGray[2]);
+      doc.text("Codigo Copia e Cola:", pageWidth / 2, yPos, { align: "center" });
+      
+      // Quebrar o código em linhas menores
+      const pixCode = pixData.qr_code || "";
+      const maxCharsPerLine = 60;
+      const lines = [];
+      for (let i = 0; i < pixCode.length; i += maxCharsPerLine) {
+        lines.push(pixCode.substring(i, i + maxCharsPerLine));
+      }
+      
+      doc.setFontSize(6);
+      lines.slice(0, 3).forEach((line, index) => {
+        doc.text(line, pageWidth / 2, yPos + 5 + (index * 4), { align: "center" });
+      });
+      if (lines.length > 3) {
+        doc.text("...", pageWidth / 2, yPos + 17, { align: "center" });
+      }
+      
+      // ===== FOOTER =====
+      doc.setFillColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
+      doc.rect(0, pageHeight - 20, pageWidth, 20, "F");
+      
+      doc.setFontSize(8);
+      doc.setTextColor(255, 255, 255);
+      doc.text("contato@notificacondo.com.br | notificacondo.com.br", pageWidth / 2, pageHeight - 10, { align: "center" });
+      
+      doc.setFontSize(7);
+      doc.setTextColor(200, 200, 200);
+      doc.text("Gerado em: " + format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR }), pageWidth / 2, pageHeight - 4, { align: "center" });
+      
+      // Save
+      doc.save((invoice.invoice_number || "fatura") + "-pix.pdf");
+      
+      toast({
+        title: "PDF com PIX gerado",
+        description: "Fatura com QR Code PIX exportada com sucesso.",
+      });
+    } catch (error: any) {
+      console.error("Error generating PIX:", error);
+      toast({
+        title: "Erro ao gerar PIX",
+        description: error.message || "Não foi possível gerar o código PIX.",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingPix(null);
+    }
+  };
+
   const getStatusBadge = (status: string, dueDate: string) => {
     const today = new Date();
     const due = new Date(dueDate);
@@ -842,6 +1028,22 @@ export function InvoicesManagement() {
                             >
                               <Download className="h-4 w-4" />
                             </Button>
+                            {invoice.status === "pending" && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => generateInvoicePDFWithPix(invoice)}
+                                title="Baixar PDF com PIX"
+                                disabled={generatingPix === invoice.id}
+                                className="text-primary hover:text-primary hover:bg-primary/10"
+                              >
+                                {generatingPix === invoice.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <QrCode className="h-4 w-4" />
+                                )}
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="icon"
