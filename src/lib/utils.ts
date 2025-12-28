@@ -127,3 +127,25 @@ export function formatCEP(cep: string): string {
   if (cleanCEP.length !== 8) return cep;
   return cleanCEP.replace(/^(\d{5})(\d{3})$/, "$1-$2");
 }
+
+/**
+ * Adds business days to a date (skips weekends)
+ * @param date - Starting date
+ * @param days - Number of business days to add
+ * @returns Date after adding business days
+ */
+export function addBusinessDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  let addedDays = 0;
+  
+  while (addedDays < days) {
+    result.setDate(result.getDate() + 1);
+    const dayOfWeek = result.getDay();
+    // Skip Saturday (6) and Sunday (0)
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      addedDays++;
+    }
+  }
+  
+  return result;
+}

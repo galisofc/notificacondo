@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { format, differenceInDays, addDays } from "date-fns";
+import { format, differenceInDays, differenceInHours, addDays, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { addBusinessDays } from "@/lib/utils";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
 import { MercadoPagoCheckout } from "@/components/mercadopago/MercadoPagoCheckout";
@@ -44,6 +45,7 @@ import {
   XCircle,
   Clock,
   Info,
+  XOctagon,
 } from "lucide-react";
 import {
   Tooltip,
@@ -68,6 +70,8 @@ interface Subscription {
   id: string;
   plan: string;
   active: boolean;
+  is_trial: boolean;
+  trial_ends_at: string | null;
   notifications_limit: number;
   warnings_limit: number;
   fines_limit: number;
@@ -104,6 +108,10 @@ const SindicoSubscriptions = () => {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [planFilter, setPlanFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [endTrialDialog, setEndTrialDialog] = useState<{ open: boolean; subscription: Subscription | null }>({
+    open: false,
+    subscription: null,
+  });
 
   // Fetch user profile to get email
   const { data: userProfile } = useQuery({
@@ -146,6 +154,8 @@ const SindicoSubscriptions = () => {
           id,
           plan,
           active,
+          is_trial,
+          trial_ends_at,
           notifications_limit,
           warnings_limit,
           fines_limit,
@@ -374,6 +384,74 @@ const SindicoSubscriptions = () => {
 
   const proratedInfo = calculateProratedAmount();
 
+  // Mutation to end trial early
+  const endTrialMutation = useMutation({
+    mutationFn: async (subscription: Subscription) => {
+      const now = new Date();
+      const periodEnd = new Date(now);
+      periodEnd.setDate(periodEnd.getDate() + 30);
+      
+      // Calculate due date: 3 business days from now
+      const dueDate = addBusinessDays(now, 3);
+
+      // Get plan price
+      const { data: planData } = await supabase
+        .from("plans")
+        .select("price, name")
+        .eq("slug", subscription.plan)
+        .single();
+
+      const planPrice = planData?.price || 0;
+
+      // Update subscription to end trial
+      const { error: subError } = await supabase
+        .from("subscriptions")
+        .update({
+          is_trial: false,
+          trial_ends_at: null,
+          current_period_start: now.toISOString(),
+          current_period_end: periodEnd.toISOString(),
+        })
+        .eq("id", subscription.id);
+
+      if (subError) throw subError;
+
+      // Generate invoice with 3 business days due date (only if plan has price > 0)
+      if (planPrice > 0) {
+        const { error: invoiceError } = await supabase
+          .from("invoices")
+          .insert({
+            subscription_id: subscription.id,
+            condominium_id: subscription.condominium.id,
+            amount: planPrice,
+            status: "pending",
+            due_date: dueDate.toISOString().split("T")[0],
+            period_start: now.toISOString().split("T")[0],
+            period_end: periodEnd.toISOString().split("T")[0],
+            description: `Primeira mensalidade - Plano ${planData?.name || subscription.plan}`,
+          });
+
+        if (invoiceError) throw invoiceError;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sindico-subscriptions"] });
+      queryClient.invalidateQueries({ queryKey: ["sindico-invoices"] });
+      setEndTrialDialog({ open: false, subscription: null });
+      toast({
+        title: "Trial encerrado",
+        description: "O trial foi encerrado e a fatura foi gerada com vencimento em 3 dias úteis.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao encerrar trial",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -587,7 +665,38 @@ const SindicoSubscriptions = () => {
                         </p>
                       )}
 
-                      {sub.current_period_end && (
+                      {/* Trial Badge */}
+                      {sub.is_trial && sub.trial_ends_at && (
+                        <div className="flex items-center gap-2 mb-3">
+                          <Badge 
+                            variant="outline" 
+                            className="bg-amber-500/10 text-amber-600 border-amber-500/20"
+                          >
+                            <Clock className="h-3 w-3 mr-1" />
+                            Trial - {(() => {
+                              const hoursRemaining = differenceInHours(new Date(sub.trial_ends_at), new Date());
+                              const daysRemaining = Math.ceil(hoursRemaining / 24);
+                              return hoursRemaining < 24 
+                                ? `${hoursRemaining}h restantes`
+                                : `${daysRemaining}d restantes`;
+                            })()}
+                          </Badge>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEndTrialDialog({ open: true, subscription: sub });
+                            }}
+                            className="h-6 text-xs border-destructive/30 text-destructive hover:bg-destructive/10"
+                          >
+                            <XOctagon className="w-3 h-3 mr-1" />
+                            Encerrar Trial
+                          </Button>
+                        </div>
+                      )}
+
+                      {sub.current_period_end && !sub.is_trial && (
                         <div className="flex items-center gap-2 mb-3">
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Clock className="h-3 w-3" />
@@ -845,6 +954,52 @@ const SindicoSubscriptions = () => {
                 ) : (
                   "Confirmar Alteração"
                 )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* End Trial Dialog */}
+        <Dialog open={endTrialDialog.open} onOpenChange={(open) => setEndTrialDialog({ open, subscription: open ? endTrialDialog.subscription : null })}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <XOctagon className="w-5 h-5 text-destructive" />
+                Encerrar Período de Trial
+              </DialogTitle>
+              <DialogDescription>
+                Deseja encerrar o trial e iniciar a cobrança regular?
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <p className="text-sm text-amber-700 dark:text-amber-400 font-medium mb-2">O que acontecerá:</p>
+                <ul className="text-sm text-amber-700 dark:text-amber-400 space-y-1 list-disc list-inside">
+                  <li>O trial será encerrado imediatamente</li>
+                  <li>Uma fatura será gerada com vencimento em 3 dias úteis</li>
+                  <li>O período regular de 30 dias será iniciado</li>
+                </ul>
+              </div>
+              {endTrialDialog.subscription && (
+                <div className="p-3 bg-muted rounded-lg">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Vencimento da fatura:</span>
+                    <span className="font-medium">{format(addBusinessDays(new Date(), 3), "dd/MM/yyyy", { locale: ptBR })}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEndTrialDialog({ open: false, subscription: null })}>
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => endTrialDialog.subscription && endTrialMutation.mutate(endTrialDialog.subscription)}
+                disabled={endTrialMutation.isPending}
+              >
+                {endTrialMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <XOctagon className="w-4 h-4 mr-2" />}
+                Confirmar
               </Button>
             </DialogFooter>
           </DialogContent>

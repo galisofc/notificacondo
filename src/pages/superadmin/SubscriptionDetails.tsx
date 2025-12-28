@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, differenceInHours, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import {
   Card,
@@ -76,7 +77,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { isValidCPF } from "@/lib/utils";
+import { isValidCPF, addBusinessDays } from "@/lib/utils";
+import { XOctagon } from "lucide-react";
 
 type PlanType = "start" | "essencial" | "profissional" | "enterprise";
 
@@ -107,6 +109,7 @@ export default function SubscriptionDetails() {
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [isExtendTrialDialogOpen, setIsExtendTrialDialogOpen] = useState(false);
   const [isActivateTrialDialogOpen, setIsActivateTrialDialogOpen] = useState(false);
+  const [isEndTrialDialogOpen, setIsEndTrialDialogOpen] = useState(false);
   const [trialExtensionDays, setTrialExtensionDays] = useState<number>(7);
   const [trialActivationDays, setTrialActivationDays] = useState<number>(14);
   const [trialExtensionJustification, setTrialExtensionJustification] = useState("");
@@ -494,6 +497,99 @@ export default function SubscriptionDetails() {
     onError: (error: any) => {
       toast({
         title: "Erro ao ativar trial",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const endTrialMutation = useMutation({
+    mutationFn: async () => {
+      if (!id || !data?.subscription || !data?.condominium) throw new Error("Dados não encontrados");
+
+      const now = new Date();
+      const periodEnd = new Date(now);
+      periodEnd.setDate(periodEnd.getDate() + 30);
+      
+      // Calculate due date: 3 business days from now
+      const dueDate = addBusinessDays(now, 3);
+
+      // Get plan price
+      const { data: planData } = await supabase
+        .from("plans")
+        .select("price, name")
+        .eq("slug", data.subscription.plan)
+        .single();
+
+      const planPrice = planData?.price || 0;
+
+      // Update subscription to end trial
+      const { error: subError } = await supabase
+        .from("subscriptions")
+        .update({
+          is_trial: false,
+          trial_ends_at: null,
+          current_period_start: now.toISOString(),
+          current_period_end: periodEnd.toISOString(),
+        })
+        .eq("id", id);
+
+      if (subError) throw subError;
+
+      // Generate invoice with 3 business days due date (only if plan has price > 0)
+      if (planPrice > 0) {
+        const { error: invoiceError } = await supabase
+          .from("invoices")
+          .insert({
+            subscription_id: id,
+            condominium_id: data.condominium.id,
+            amount: planPrice,
+            status: "pending",
+            due_date: dueDate.toISOString().split("T")[0],
+            period_start: now.toISOString().split("T")[0],
+            period_end: periodEnd.toISOString().split("T")[0],
+            description: `Primeira mensalidade - Plano ${planData?.name || data.subscription.plan}`,
+          });
+
+        if (invoiceError) throw invoiceError;
+      }
+
+      // Registrar no audit log
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      await supabase
+        .from("audit_logs")
+        .insert({
+          table_name: "subscriptions",
+          action: "END_TRIAL",
+          record_id: id,
+          new_data: {
+            action: "end_trial",
+            ended_by: "super_admin",
+            plan: data.subscription.plan,
+            invoice_amount: planPrice,
+            invoice_due_date: dueDate.toISOString(),
+            period_start: now.toISOString(),
+            period_end: periodEnd.toISOString(),
+            condominium_id: data.subscription.condominium_id,
+            condominium_name: data.condominium?.name || "N/A",
+          },
+          user_id: user?.id || null,
+        });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscription-details", id] });
+      queryClient.invalidateQueries({ queryKey: ["superadmin-subscriptions"] });
+      queryClient.invalidateQueries({ queryKey: ["superadmin-invoices"] });
+      setIsEndTrialDialogOpen(false);
+      toast({
+        title: "Trial encerrado",
+        description: "O trial foi encerrado e a fatura foi gerada com vencimento em 3 dias úteis.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao encerrar trial",
         description: error.message || "Tente novamente.",
         variant: "destructive",
       });
@@ -1076,15 +1172,26 @@ export default function SubscriptionDetails() {
                         );
                       })()}
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsExtendTrialDialogOpen(true)}
-                      className="border-amber-500/30 text-amber-600 hover:bg-amber-500/10"
-                    >
-                      <Clock className="w-4 h-4 mr-2" />
-                      Estender Trial
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsExtendTrialDialogOpen(true)}
+                        className="border-amber-500/30 text-amber-600 hover:bg-amber-500/10"
+                      >
+                        <Clock className="w-4 h-4 mr-2" />
+                        Estender
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsEndTrialDialogOpen(true)}
+                        className="border-destructive/30 text-destructive hover:bg-destructive/10"
+                      >
+                        <XOctagon className="w-4 h-4 mr-2" />
+                        Encerrar Trial
+                      </Button>
+                    </div>
                   </div>
                 </>
               )}
@@ -1887,6 +1994,75 @@ export default function SubscriptionDetails() {
                 <Clock className="w-4 h-4 mr-2" />
               )}
               Ativar Trial de {trialActivationDays} dia{trialActivationDays !== 1 ? "s" : ""}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* End Trial Dialog */}
+      <Dialog open={isEndTrialDialogOpen} onOpenChange={setIsEndTrialDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <XOctagon className="w-5 h-5 text-destructive" />
+              Encerrar Período de Trial
+            </DialogTitle>
+            <DialogDescription>
+              Esta ação irá encerrar o trial e iniciar a cobrança regular.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <p className="text-sm text-amber-700 dark:text-amber-400 font-medium mb-2">
+                O que acontecerá:
+              </p>
+              <ul className="text-sm text-amber-700 dark:text-amber-400 space-y-1 list-disc list-inside">
+                <li>O período de trial será encerrado imediatamente</li>
+                <li>Será gerada uma fatura com vencimento em 3 dias úteis</li>
+                <li>O período regular de 30 dias será iniciado</li>
+              </ul>
+            </div>
+            
+            {data?.subscription && (
+              <div className="p-3 bg-muted rounded-lg space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Plano atual:</span>
+                  <span className="font-medium">{PLAN_INFO[data.subscription.plan as PlanType]?.name}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Vencimento da fatura:</span>
+                  <span className="font-medium">
+                    {format(addBusinessDays(new Date(), 3), "dd/MM/yyyy", { locale: ptBR })}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+              <p className="text-sm text-destructive flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                Esta ação não pode ser desfeita. O síndico será responsável pelo pagamento da fatura gerada.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsEndTrialDialogOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => endTrialMutation.mutate()}
+              disabled={endTrialMutation.isPending}
+            >
+              {endTrialMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <XOctagon className="w-4 h-4 mr-2" />
+              )}
+              Confirmar Encerramento
             </Button>
           </DialogFooter>
         </DialogContent>
