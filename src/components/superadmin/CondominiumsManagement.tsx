@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { isValidCNPJ } from "@/lib/utils";
 import {
   Card,
   CardContent,
@@ -167,6 +168,16 @@ export function CondominiumsManagement() {
   const handleSearchCnpj = async (cnpj: string) => {
     const cleanCnpj = cnpj.replace(/\D/g, "");
     if (cleanCnpj.length !== 14) return;
+
+    // Validar CNPJ matematicamente antes de buscar
+    if (!isValidCNPJ(cleanCnpj)) {
+      toast({
+        title: "CNPJ inválido",
+        description: "O CNPJ informado não é matematicamente válido.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setIsLoadingCnpj(true);
     try {
