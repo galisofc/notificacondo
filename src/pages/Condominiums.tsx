@@ -582,8 +582,8 @@ const Condominiums = () => {
                   </div>
                 </div>
 
-                {/* Plano - somente ao criar novo condomínio */}
-                {!editingCondo && (
+                {/* Plano - seleção ao criar, visualização ao editar */}
+                {!editingCondo ? (
                   <div className="space-y-2">
                     <Label htmlFor="plan">Plano *</Label>
                     <Select
@@ -609,6 +609,21 @@ const Condominiums = () => {
                     </Select>
                     <p className="text-xs text-muted-foreground">
                       O plano define os limites de notificações, advertências e multas
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label>Plano Atual</Label>
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-secondary/50 border border-border">
+                      <Crown className="w-4 h-4 text-primary" />
+                      <span className="font-medium">
+                        {editingCondo.subscription?.plan 
+                          ? editingCondo.subscription.plan.charAt(0).toUpperCase() + editingCondo.subscription.plan.slice(1)
+                          : "Sem plano"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Para alterar o plano, acesse a página de Assinaturas
                     </p>
                   </div>
                 )}
