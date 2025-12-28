@@ -928,11 +928,13 @@ export type Database = {
           fines_limit: number
           fines_used: number
           id: string
+          is_trial: boolean
           mercado_pago_subscription_id: string | null
           mercadopago_preapproval_id: string | null
           notifications_limit: number
           notifications_used: number
           plan: Database["public"]["Enums"]["plan_type"]
+          trial_ends_at: string | null
           updated_at: string
           warnings_limit: number
           warnings_used: number
@@ -946,11 +948,13 @@ export type Database = {
           fines_limit?: number
           fines_used?: number
           id?: string
+          is_trial?: boolean
           mercado_pago_subscription_id?: string | null
           mercadopago_preapproval_id?: string | null
           notifications_limit?: number
           notifications_used?: number
           plan?: Database["public"]["Enums"]["plan_type"]
+          trial_ends_at?: string | null
           updated_at?: string
           warnings_limit?: number
           warnings_used?: number
@@ -964,11 +968,13 @@ export type Database = {
           fines_limit?: number
           fines_used?: number
           id?: string
+          is_trial?: boolean
           mercado_pago_subscription_id?: string | null
           mercadopago_preapproval_id?: string | null
           notifications_limit?: number
           notifications_used?: number
           plan?: Database["public"]["Enums"]["plan_type"]
+          trial_ends_at?: string | null
           updated_at?: string
           warnings_limit?: number
           warnings_used?: number
