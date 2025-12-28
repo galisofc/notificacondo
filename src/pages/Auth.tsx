@@ -505,25 +505,73 @@ const Auth = () => {
           {/* Selected Plan Display */}
           {!isLogin && selectedPlan && (
             <div className="mb-6 p-4 rounded-xl bg-gradient-card border border-primary/30">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 mb-3">
                 <div 
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
+                  className="w-12 h-12 rounded-lg flex items-center justify-center"
                   style={{ background: `linear-gradient(135deg, ${selectedPlan.color}, ${selectedPlan.color}dd)` }}
                 >
-                  <span className="font-display text-sm font-bold text-white">
+                  <span className="font-display text-lg font-bold text-white">
                     {selectedPlan.name[0]}
                   </span>
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm text-muted-foreground">Plano selecionado</p>
-                  <p className="font-semibold text-foreground">{selectedPlan.name}</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Plano selecionado</p>
+                  <p className="font-display text-lg font-bold text-foreground">{selectedPlan.name}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-display text-lg font-bold text-foreground">
+                  <p className="font-display text-2xl font-bold text-foreground">
                     R$ {selectedPlan.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                   <p className="text-xs text-muted-foreground">/mês</p>
                 </div>
+              </div>
+              
+              {selectedPlan.description && (
+                <p className="text-sm text-muted-foreground mb-3">{selectedPlan.description}</p>
+              )}
+              
+              <div className="pt-3 border-t border-border/50">
+                <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wider">Incluído no plano:</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="flex items-center gap-1.5 text-sm">
+                    <Check className="w-4 h-4 text-primary flex-shrink-0" />
+                    <span className="text-foreground">
+                      {selectedPlan.notifications_limit === -1 
+                        ? "Notificações ilimitadas" 
+                        : `${selectedPlan.notifications_limit} notificações`}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-sm">
+                    <Check className="w-4 h-4 text-primary flex-shrink-0" />
+                    <span className="text-foreground">
+                      {selectedPlan.warnings_limit === -1 
+                        ? "Advertências ilimitadas" 
+                        : `${selectedPlan.warnings_limit} advertências`}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-sm">
+                    <Check className="w-4 h-4 text-primary flex-shrink-0" />
+                    <span className="text-foreground">
+                      {selectedPlan.fines_limit === -1 
+                        ? "Multas ilimitadas" 
+                        : selectedPlan.fines_limit === 0 
+                          ? "Sem multas" 
+                          : `${selectedPlan.fines_limit} multas`}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3 pt-3 border-t border-border/50 flex items-center gap-4 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <Check className="w-3 h-3 text-primary" /> Integração WhatsApp
+                </span>
+                <span className="flex items-center gap-1">
+                  <Check className="w-3 h-3 text-primary" /> Registro de ciência
+                </span>
+                <span className="flex items-center gap-1">
+                  <Check className="w-3 h-3 text-primary" /> Conformidade LGPD
+                </span>
               </div>
             </div>
           )}
