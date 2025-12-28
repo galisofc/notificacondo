@@ -1,19 +1,60 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://esm.sh/zod@3.22.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface CreateSindicoRequest {
-  email: string;
-  password: string;
-  full_name: string;
-  cpf: string;
-  phone?: string;
-  plan?: "start" | "essencial" | "profissional" | "enterprise";
-}
+// CPF validation function
+const isValidCPF = (cpf: string): boolean => {
+  const cleanCpf = cpf.replace(/\D/g, "");
+  if (cleanCpf.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(cleanCpf)) return false;
+  
+  let sum = 0;
+  for (let i = 0; i < 9; i++) {
+    sum += parseInt(cleanCpf.charAt(i)) * (10 - i);
+  }
+  let remainder = (sum * 10) % 11;
+  if (remainder === 10 || remainder === 11) remainder = 0;
+  if (remainder !== parseInt(cleanCpf.charAt(9))) return false;
+  
+  sum = 0;
+  for (let i = 0; i < 10; i++) {
+    sum += parseInt(cleanCpf.charAt(i)) * (11 - i);
+  }
+  remainder = (sum * 10) % 11;
+  if (remainder === 10 || remainder === 11) remainder = 0;
+  if (remainder !== parseInt(cleanCpf.charAt(10))) return false;
+  
+  return true;
+};
+
+// Input validation schema
+const CreateSindicoSchema = z.object({
+  email: z.string()
+    .email("Email inválido")
+    .max(255, "Email muito longo")
+    .toLowerCase(),
+  password: z.string()
+    .min(8, "Senha deve ter pelo menos 8 caracteres")
+    .max(72, "Senha muito longa"),
+  full_name: z.string()
+    .min(3, "Nome deve ter pelo menos 3 caracteres")
+    .max(255, "Nome muito longo")
+    .regex(/^[a-zA-ZÀ-ÿ\s'-]+$/, "Nome contém caracteres inválidos"),
+  phone: z.string()
+    .max(20, "Telefone muito longo")
+    .optional()
+    .nullable(),
+  cpf: z.string()
+    .transform(val => val.replace(/\D/g, ""))
+    .refine(val => val.length === 11, "CPF deve ter 11 dígitos")
+    .refine(isValidCPF, "CPF inválido"),
+  plan: z.enum(["start", "essencial", "profissional", "enterprise"]).optional(),
+});
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -35,14 +76,20 @@ serve(async (req) => {
     // Verify the requesting user is a super_admin
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      throw new Error("Não autorizado");
+      return new Response(
+        JSON.stringify({ success: false, error: "Não autorizado" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const token = authHeader.replace("Bearer ", "");
     const { data: { user: requestingUser }, error: authError } = await supabaseAdmin.auth.getUser(token);
     
     if (authError || !requestingUser) {
-      throw new Error("Não autorizado");
+      return new Response(
+        JSON.stringify({ success: false, error: "Não autorizado" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Check if requesting user is super_admin
@@ -54,31 +101,52 @@ serve(async (req) => {
       .single();
 
     if (!roleData) {
-      throw new Error("Acesso negado. Apenas Super Admins podem criar síndicos.");
+      return new Response(
+        JSON.stringify({ success: false, error: "Acesso negado. Apenas Super Admins podem criar síndicos." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // Definir o ID do usuário que está fazendo a ação para auditoria
     console.log("Setting user context for audit:", requestingUser.id);
 
-    const body: CreateSindicoRequest = await req.json();
-    const { email, password, full_name, cpf, phone } = body;
-
-    if (!email || !password || !full_name || !cpf) {
-      throw new Error("Campos obrigatórios: email, password, full_name, cpf");
+    // ========== INPUT VALIDATION ==========
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ success: false, error: "JSON inválido" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // Clean CPF (remove non-digits)
-    const cleanCpf = cpf.replace(/\D/g, "");
+    const parsed = CreateSindicoSchema.safeParse(body);
+    if (!parsed.success) {
+      console.error("Validation error:", parsed.error.errors);
+      return new Response(
+        JSON.stringify({ 
+          success: false,
+          error: "Dados inválidos", 
+          details: parsed.error.errors.map(e => e.message) 
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { email, password, full_name, cpf, phone } = parsed.data;
 
     // Check if CPF already exists
     const { data: existingProfile } = await supabaseAdmin
       .from("profiles")
       .select("id")
-      .eq("cpf", cleanCpf)
+      .eq("cpf", cpf)
       .maybeSingle();
 
     if (existingProfile) {
-      throw new Error("CPF já cadastrado no sistema. Verifique os dados informados.");
+      return new Response(
+        JSON.stringify({ success: false, error: "CPF já cadastrado no sistema. Verifique os dados informados." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Create the user in auth.users
@@ -92,13 +160,16 @@ serve(async (req) => {
     });
 
     if (createUserError) {
-      throw new Error(`Erro ao criar usuário: ${createUserError.message}`);
+      return new Response(
+        JSON.stringify({ success: false, error: `Erro ao criar usuário: ${createUserError.message}` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const userId = newUser.user.id;
 
     console.log("User created with ID:", userId);
-    console.log("CPF to save:", cleanCpf);
+    console.log("CPF to save:", cpf);
 
     // Wait a bit for the trigger to create the profile
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -108,7 +179,7 @@ serve(async (req) => {
       .from("profiles")
       .update({
         full_name,
-        cpf: cleanCpf,
+        cpf,
         phone: phone || null,
       })
       .eq("user_id", userId)
@@ -124,7 +195,7 @@ serve(async (req) => {
           user_id: userId,
           email,
           full_name,
-          cpf: cleanCpf,
+          cpf,
           phone: phone || null,
         }, { onConflict: 'user_id' });
       
@@ -173,7 +244,7 @@ serve(async (req) => {
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 400,
+        status: 500,
       }
     );
   }

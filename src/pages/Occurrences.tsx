@@ -241,11 +241,18 @@ const Occurrences = () => {
         continue;
       }
 
-      const { data: urlData } = supabase.storage
+      // Use signed URL instead of public URL for security
+      const { data: urlData, error: signedUrlError } = await supabase.storage
         .from("occurrence-evidences")
-        .getPublicUrl(fileName);
+        .createSignedUrl(fileName, 60 * 60 * 24 * 365); // 1 year for storage reference
 
-      urls.push(urlData.publicUrl);
+      if (signedUrlError) {
+        console.error("Signed URL error:", signedUrlError);
+        // Fallback to storing just the file path
+        urls.push(fileName);
+      } else {
+        urls.push(urlData.signedUrl);
+      }
     }
 
     return urls;

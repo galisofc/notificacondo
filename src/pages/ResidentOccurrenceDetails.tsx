@@ -217,15 +217,18 @@ const ResidentOccurrenceDetails = () => {
             .upload(fileName, uploadedFile.file);
 
           if (!uploadError) {
-            const { data: urlData } = supabase.storage
+            // Use signed URL instead of public URL for security
+            const { data: urlData, error: signedUrlError } = await supabase.storage
               .from("occurrence-evidences")
-              .getPublicUrl(fileName);
+              .createSignedUrl(fileName, 60 * 60 * 24 * 365); // 1 year for storage reference
 
-            await supabase.from("defense_attachments").insert({
-              defense_id: defenseData.id,
-              file_url: urlData.publicUrl,
-              file_type: uploadedFile.type,
-            });
+            if (!signedUrlError && urlData) {
+              await supabase.from("defense_attachments").insert({
+                defense_id: defenseData.id,
+                file_url: urlData.signedUrl,
+                file_type: uploadedFile.type,
+              });
+            }
           }
         }
       }

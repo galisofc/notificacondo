@@ -1,10 +1,21 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://esm.sh/zod@3.22.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// Input validation schema
+const SendNotificationSchema = z.object({
+  occurrence_id: z.string().uuid("occurrence_id deve ser um UUID válido"),
+  resident_id: z.string().uuid("resident_id deve ser um UUID válido"),
+  message_template: z.string().max(2000, "Mensagem não pode exceder 2000 caracteres").optional(),
+});
+
+// Sanitize strings for use in messages
+const sanitize = (str: string) => str.replace(/[<>"'`]/g, "").trim();
 
 // Multi-provider WhatsApp configuration
 type WhatsAppProvider = "zpro" | "zapi" | "evolution" | "wppconnect";
@@ -30,7 +41,6 @@ interface WhatsAppConfigRow {
 }
 
 // Z-PRO Provider - Uses query parameters via GET
-// API format: GET {api_url}/params/?body=message&number=phone&externalKey=apiKey&bearertoken=token
 const zproProvider: ProviderConfig = {
   async sendMessage(phone: string, message: string, config: ProviderSettings) {
     const baseUrl = config.apiUrl.replace(/\/$/, "");
@@ -65,16 +75,13 @@ const zproProvider: ProviderConfig = {
       }
       
       if (response.ok) {
-        // Extract message ID from various response formats
         const extractedMessageId = data.id || data.messageId || data.key?.id || data.msgId || data.message_id;
         
         if (extractedMessageId && extractedMessageId !== "sent") {
           return { success: true, messageId: String(extractedMessageId) };
         }
         
-        // If no valid ID but status indicates success, generate a tracking ID
         if (data.status === "success" || data.status === "PENDING" || response.status === 200) {
-          // Generate a unique tracking ID if provider doesn't return one
           const trackingId = `zpro_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
           console.log(`Z-PRO: No message ID in response, using tracking ID: ${trackingId}`);
           return { success: true, messageId: trackingId };
@@ -170,12 +177,6 @@ const providers: Record<WhatsAppProvider, ProviderConfig> = {
   wppconnect: wppconnectProvider,
 };
 
-interface SendNotificationRequest {
-  occurrence_id: string;
-  resident_id: string;
-  message_template?: string;
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -186,6 +187,96 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // ========== AUTHENTICATION ==========
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      console.error("No authorization header");
+      return new Response(
+        JSON.stringify({ error: "Não autorizado" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !user) {
+      console.error("Auth error:", authError);
+      return new Response(
+        JSON.stringify({ error: "Não autorizado" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Authenticated user: ${user.id}`);
+
+    // ========== INPUT VALIDATION ==========
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: "JSON inválido" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const parsed = SendNotificationSchema.safeParse(body);
+    if (!parsed.success) {
+      console.error("Validation error:", parsed.error.errors);
+      return new Response(
+        JSON.stringify({ 
+          error: "Dados inválidos", 
+          details: parsed.error.errors.map(e => e.message) 
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { occurrence_id, resident_id, message_template } = parsed.data;
+
+    // ========== AUTHORIZATION ==========
+    // Verify user has permission (owns the condominium or is super_admin)
+    const { data: occurrence, error: occCheckError } = await supabase
+      .from("occurrences")
+      .select("condominium_id")
+      .eq("id", occurrence_id)
+      .single();
+
+    if (occCheckError || !occurrence) {
+      console.error("Occurrence not found for auth check:", occCheckError);
+      return new Response(
+        JSON.stringify({ error: "Ocorrência não encontrada" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { data: condo } = await supabase
+      .from("condominiums")
+      .select("owner_id")
+      .eq("id", occurrence.condominium_id)
+      .single();
+
+    if (!condo || condo.owner_id !== user.id) {
+      // Check if super_admin
+      const { data: superAdminRole } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "super_admin")
+        .maybeSingle();
+
+      if (!superAdminRole) {
+        console.error(`User ${user.id} is not owner of condominium and not super_admin`);
+        return new Response(
+          JSON.stringify({ error: "Sem permissão para enviar notificações neste condomínio" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    console.log(`Authorization passed for user ${user.id}`);
 
     // Fetch WhatsApp config from database
     const { data: whatsappConfig, error: configError } = await supabase
@@ -222,15 +313,6 @@ serve(async (req) => {
     console.log(`Using WhatsApp provider: ${whatsappProvider}`);
     console.log(`API URL: ${whatsappApiUrl.substring(0, 50)}...`);
     console.log(`App URL: ${appBaseUrl}`);
-
-    const { occurrence_id, resident_id, message_template }: SendNotificationRequest = await req.json();
-
-    if (!occurrence_id || !resident_id) {
-      return new Response(
-        JSON.stringify({ error: "occurrence_id e resident_id são obrigatórios" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
 
     // Fetch resident and occurrence details
     const { data: resident, error: residentError } = await supabase
@@ -269,13 +351,13 @@ serve(async (req) => {
       );
     }
 
-    const { data: occurrence, error: occError } = await supabase
+    const { data: occurrenceData, error: occError } = await supabase
       .from("occurrences")
       .select("id, title, type, status")
       .eq("id", occurrence_id)
       .single();
 
-    if (occError || !occurrence) {
+    if (occError || !occurrenceData) {
       console.error("Occurrence not found:", occError);
       return new Response(
         JSON.stringify({ error: "Ocorrência não encontrada" }),
@@ -297,13 +379,13 @@ serve(async (req) => {
       multa: "Multa",
     };
 
-    // Build message
-    const defaultMessage = `🏢 *${condoName}*
+    // Build message with sanitization
+    const defaultMessage = `🏢 *${sanitize(condoName)}*
 
-Olá, *${resident.full_name}*!
+Olá, *${sanitize(resident.full_name)}*!
 
-Você recebeu uma *${typeLabels[occurrence.type] || occurrence.type}*:
-📋 *${occurrence.title}*
+Você recebeu uma *${typeLabels[occurrenceData.type] || occurrenceData.type}*:
+📋 *${sanitize(occurrenceData.title)}*
 
 Acesse o link abaixo para ver os detalhes e apresentar sua defesa:
 👉 ${secureLink}
@@ -311,11 +393,11 @@ Acesse o link abaixo para ver os detalhes e apresentar sua defesa:
 Este link é pessoal e intransferível.`;
 
     const message = message_template 
-      ? message_template
-          .replace("{nome}", resident.full_name)
-          .replace("{tipo}", typeLabels[occurrence.type] || occurrence.type)
-          .replace("{titulo}", occurrence.title)
-          .replace("{condominio}", condoName)
+      ? sanitize(message_template)
+          .replace("{nome}", sanitize(resident.full_name))
+          .replace("{tipo}", typeLabels[occurrenceData.type] || occurrenceData.type)
+          .replace("{titulo}", sanitize(occurrenceData.title))
+          .replace("{condominio}", sanitize(condoName))
           .replace("{link}", secureLink)
       : defaultMessage;
 
@@ -352,7 +434,6 @@ Este link é pessoal e intransferível.`;
     });
 
     // Update notification with result
-    // Note: delivered_at and read_at are updated by the webhook when provider confirms delivery/read
     await supabase
       .from("notifications_sent")
       .update({
