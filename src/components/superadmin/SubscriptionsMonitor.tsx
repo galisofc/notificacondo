@@ -172,14 +172,15 @@ export function SubscriptionsMonitor() {
     if (!subscriptions || !searchTerm.trim()) return subscriptions;
     
     const search = searchTerm.toLowerCase().trim();
+    const searchDigits = searchTerm.replace(/\D/g, ""); // Remove non-digits for CNPJ search
     
     return subscriptions.filter((sub) => {
-      const cnpj = sub.condominium?.cnpj?.toLowerCase() || "";
+      const cnpj = sub.condominium?.cnpj || "";
       const email = sub.owner_profile?.email?.toLowerCase() || "";
       const name = sub.condominium?.name?.toLowerCase() || "";
       const sindicoName = sub.owner_profile?.full_name?.toLowerCase() || "";
       
-      return cnpj.includes(search) || 
+      return (searchDigits.length > 0 && cnpj.includes(searchDigits)) || 
              email.includes(search) || 
              name.includes(search) ||
              sindicoName.includes(search);
