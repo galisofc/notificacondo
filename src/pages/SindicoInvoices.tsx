@@ -54,6 +54,7 @@ type InvoiceStatus = "all" | "pending" | "paid" | "overdue" | "cancelled";
 
 interface Invoice {
   id: string;
+  invoice_number: string | null;
   amount: number;
   status: string;
   due_date: string;
@@ -237,6 +238,7 @@ const SindicoInvoices = () => {
         .from("invoices")
         .select(`
           id,
+          invoice_number,
           amount,
           status,
           due_date,
@@ -485,6 +487,7 @@ const SindicoInvoices = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>Nº Fatura</TableHead>
                       <TableHead>Condomínio</TableHead>
                       <TableHead>Plano</TableHead>
                       <TableHead>Período</TableHead>
@@ -500,6 +503,11 @@ const SindicoInvoices = () => {
 
                       return (
                         <TableRow key={invoice.id}>
+                          <TableCell>
+                            <span className="font-mono text-sm text-muted-foreground">
+                              {invoice.invoice_number || invoice.id.slice(0, 8).toUpperCase()}
+                            </span>
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <Building2 className="h-4 w-4 text-muted-foreground" />
