@@ -6,19 +6,33 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Mail, Lock, User, ArrowLeft, Loader2, Check, Building2 } from "lucide-react";
+import { Shield, Mail, Lock, User, ArrowLeft, Loader2, Check, Building2, Phone, MapPin, FileText, ChevronRight, ChevronLeft } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { Database } from "@/integrations/supabase/types";
+import { MaskedInput } from "@/components/ui/masked-input";
 
 const loginSchema = z.object({
   email: z.string().email("Email inválido"),
   password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
 });
 
-const signupSchema = z.object({
-  fullName: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
-  condominiumName: z.string().min(2, "Nome do condomínio deve ter pelo menos 2 caracteres"),
+const condominiumSchema = z.object({
+  condominiumName: z.string().min(2, "Nome do condomínio é obrigatório"),
+  cnpj: z.string().optional(),
+  address: z.string().optional(),
+  addressNumber: z.string().optional(),
+  neighborhood: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zipCode: z.string().optional(),
+  condominiumPhone: z.string().optional(),
+});
+
+const sindicoSchema = z.object({
+  fullName: z.string().min(2, "Nome completo é obrigatório"),
+  cpf: z.string().optional(),
+  phone: z.string().optional(),
   email: z.string().email("Email inválido"),
   password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
   confirmPassword: z.string(),
@@ -27,12 +41,49 @@ const signupSchema = z.object({
   path: ["confirmPassword"],
 });
 
+interface FormData {
+  // Condominium
+  condominiumName: string;
+  cnpj: string;
+  address: string;
+  addressNumber: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  condominiumPhone: string;
+  // Síndico
+  fullName: string;
+  cpf: string;
+  phone: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+
+const BRAZILIAN_STATES = [
+  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
+  "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN",
+  "RS", "RO", "RR", "SC", "SP", "SE", "TO"
+];
+
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    fullName: "",
+  const [step, setStep] = useState(1);
+  const [formData, setFormData] = useState<FormData>({
     condominiumName: "",
+    cnpj: "",
+    address: "",
+    addressNumber: "",
+    neighborhood: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    condominiumPhone: "",
+    fullName: "",
+    cpf: "",
+    phone: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -78,7 +129,6 @@ const Auth = () => {
     const checkRoleAndRedirect = async () => {
       if (user) {
         try {
-          // Check user role - this is the primary determinant
           const { data: roleData } = await supabase
             .from("user_roles")
             .select("role")
@@ -87,25 +137,21 @@ const Auth = () => {
 
           const role = roleData?.role;
 
-          // Super Admin goes to superadmin dashboard
           if (role === "super_admin") {
             navigate("/superadmin", { replace: true });
             return;
           }
 
-          // Síndico goes to main dashboard (prioritize role over resident check)
           if (role === "sindico") {
             navigate("/dashboard", { replace: true });
             return;
           }
 
-          // Morador goes to resident dashboard
           if (role === "morador") {
             navigate("/resident", { replace: true });
             return;
           }
 
-          // Default fallback for new users without explicit role
           navigate("/dashboard", { replace: true });
         } catch (error) {
           console.error("Error checking role:", error);
@@ -119,7 +165,6 @@ const Auth = () => {
 
   const redirectBasedOnRole = async (userId: string) => {
     try {
-      // Check user role - this is the primary determinant
       const { data: roleData } = await supabase
         .from("user_roles")
         .select("role")
@@ -128,22 +173,10 @@ const Auth = () => {
 
       const role = roleData?.role;
 
-      // Super Admin goes to superadmin dashboard
-      if (role === "super_admin") {
-        return "/superadmin";
-      }
+      if (role === "super_admin") return "/superadmin";
+      if (role === "sindico") return "/dashboard";
+      if (role === "morador") return "/resident";
 
-      // Síndico goes to main dashboard (prioritize role over resident check)
-      if (role === "sindico") {
-        return "/dashboard";
-      }
-
-      // Only for "morador" role, check if user is a resident
-      if (role === "morador") {
-        return "/resident";
-      }
-
-      // Default fallback for new users without explicit role
       return "/dashboard";
     } catch (error) {
       console.error("Error checking role:", error);
@@ -151,10 +184,78 @@ const Auth = () => {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: "" }));
+  };
+
+  const handleMaskedChange = (name: string) => (value: string) => {
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    setErrors((prev) => ({ ...prev, [name]: "" }));
+  };
+
+  const validateStep1 = () => {
+    const result = condominiumSchema.safeParse({
+      condominiumName: formData.condominiumName,
+      cnpj: formData.cnpj,
+      address: formData.address,
+      addressNumber: formData.addressNumber,
+      neighborhood: formData.neighborhood,
+      city: formData.city,
+      state: formData.state,
+      zipCode: formData.zipCode,
+      condominiumPhone: formData.condominiumPhone,
+    });
+
+    if (!result.success) {
+      const fieldErrors: Record<string, string> = {};
+      result.error.errors.forEach((err) => {
+        if (err.path[0]) {
+          fieldErrors[err.path[0] as string] = err.message;
+        }
+      });
+      setErrors(fieldErrors);
+      return false;
+    }
+    return true;
+  };
+
+  const validateStep2 = () => {
+    const result = sindicoSchema.safeParse({
+      fullName: formData.fullName,
+      cpf: formData.cpf,
+      phone: formData.phone,
+      email: formData.email,
+      password: formData.password,
+      confirmPassword: formData.confirmPassword,
+    });
+
+    if (!result.success) {
+      const fieldErrors: Record<string, string> = {};
+      result.error.errors.forEach((err) => {
+        if (err.path[0]) {
+          fieldErrors[err.path[0] as string] = err.message;
+        }
+      });
+      setErrors(fieldErrors);
+      return false;
+    }
+    return true;
+  };
+
+  const handleNextStep = () => {
+    if (step === 1 && validateStep1()) {
+      setStep(2);
+      setErrors({});
+    }
+  };
+
+  const handlePrevStep = () => {
+    if (step === 2) {
+      setStep(1);
+      setErrors({});
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -201,7 +302,6 @@ const Auth = () => {
           return;
         }
 
-        // Get current user to determine redirect
         const { data: { user: currentUser } } = await supabase.auth.getUser();
         if (currentUser) {
           const redirectPath = await redirectBasedOnRole(currentUser.id);
@@ -212,16 +312,8 @@ const Auth = () => {
           navigate(redirectPath, { replace: true });
         }
       } else {
-        const result = signupSchema.safeParse(formData);
-
-        if (!result.success) {
-          const fieldErrors: Record<string, string> = {};
-          result.error.errors.forEach((err) => {
-            if (err.path[0]) {
-              fieldErrors[err.path[0] as string] = err.message;
-            }
-          });
-          setErrors(fieldErrors);
+        // Validate step 2
+        if (!validateStep2()) {
           setIsLoading(false);
           return;
         }
@@ -250,12 +342,29 @@ const Auth = () => {
         const { data: { user: newUser } } = await supabase.auth.getUser();
         
         if (newUser) {
+          // Update profile with additional info
+          await supabase
+            .from('profiles')
+            .update({
+              cpf: formData.cpf || null,
+              phone: formData.phone || null,
+            })
+            .eq('user_id', newUser.id);
+
           // Create the condominium for the new user
           const { data: condominium, error: condoError } = await supabase
             .from('condominiums')
             .insert({
               name: formData.condominiumName,
               owner_id: newUser.id,
+              cnpj: formData.cnpj || null,
+              address: formData.address || null,
+              address_number: formData.addressNumber || null,
+              neighborhood: formData.neighborhood || null,
+              city: formData.city || null,
+              state: formData.state || null,
+              zip_code: formData.zipCode || null,
+              phone: formData.condominiumPhone || null,
             })
             .select()
             .single();
@@ -286,7 +395,6 @@ const Auth = () => {
           }
         }
 
-        // New users (síndicos) go to main dashboard
         toast({
           title: "Conta criada!",
           description: selectedPlan 
@@ -304,6 +412,28 @@ const Auth = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      condominiumName: "",
+      cnpj: "",
+      address: "",
+      addressNumber: "",
+      neighborhood: "",
+      city: "",
+      state: "",
+      zipCode: "",
+      condominiumPhone: "",
+      fullName: "",
+      cpf: "",
+      phone: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+    });
+    setStep(1);
+    setErrors({});
   };
 
   return (
@@ -352,8 +482,8 @@ const Auth = () => {
       </div>
 
       {/* Right Panel - Form */}
-      <div className="flex-1 flex flex-col justify-center p-8 lg:p-12">
-        <div className="max-w-md mx-auto w-full">
+      <div className="flex-1 flex flex-col justify-center p-8 lg:p-12 overflow-y-auto">
+        <div className="max-w-lg mx-auto w-full">
           <button
             onClick={() => navigate("/")}
             className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-8"
@@ -370,17 +500,6 @@ const Auth = () => {
             <span className="font-display text-xl font-bold text-foreground">
               Notifica<span className="text-gradient">Condo</span>
             </span>
-          </div>
-
-          <div className="mb-8">
-            <h2 className="font-display text-2xl font-bold text-foreground mb-2">
-              {isLogin ? "Entrar na sua conta" : "Criar sua conta"}
-            </h2>
-            <p className="text-muted-foreground">
-              {isLogin
-                ? "Acesse seu painel de gestão condominial"
-                : "Comece a gerenciar seu condomínio hoje"}
-            </p>
           </div>
 
           {/* Selected Plan Display */}
@@ -406,34 +525,250 @@ const Auth = () => {
                   <p className="text-xs text-muted-foreground">/mês</p>
                 </div>
               </div>
-              <div className="mt-3 pt-3 border-t border-border/50 flex flex-wrap gap-2">
-                {selectedPlan.notifications_limit === -1 ? (
-                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                    <Check className="w-3 h-3 text-primary" /> Notificações ilimitadas
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                    <Check className="w-3 h-3 text-primary" /> {selectedPlan.notifications_limit} notificações/mês
-                  </span>
-                )}
-                {selectedPlan.warnings_limit === -1 ? (
-                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                    <Check className="w-3 h-3 text-primary" /> Advertências ilimitadas
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                    <Check className="w-3 h-3 text-primary" /> {selectedPlan.warnings_limit} advertências/mês
-                  </span>
-                )}
+            </div>
+          )}
+
+          <div className="mb-6">
+            <h2 className="font-display text-2xl font-bold text-foreground mb-2">
+              {isLogin ? "Entrar na sua conta" : step === 1 ? "Dados do Condomínio" : "Dados do Síndico"}
+            </h2>
+            <p className="text-muted-foreground">
+              {isLogin
+                ? "Acesse seu painel de gestão condominial"
+                : step === 1 
+                  ? "Preencha os dados do condomínio que será gerenciado"
+                  : "Preencha seus dados como síndico responsável"}
+            </p>
+          </div>
+
+          {/* Step Indicator */}
+          {!isLogin && (
+            <div className="flex items-center gap-2 mb-6">
+              <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold ${
+                step >= 1 ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
+              }`}>
+                {step > 1 ? <Check className="w-4 h-4" /> : '1'}
+              </div>
+              <div className={`flex-1 h-1 rounded ${step >= 2 ? 'bg-primary' : 'bg-secondary'}`} />
+              <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold ${
+                step >= 2 ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
+              }`}>
+                2
               </div>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
+            {isLogin ? (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="fullName" className="text-foreground">Nome completo</Label>
+                  <Label htmlFor="email" className="text-foreground">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={formData.email}
+                      onChange={handleChange}
+                      className="pl-10 bg-secondary/50 border-border"
+                    />
+                  </div>
+                  {errors.email && (
+                    <p className="text-sm text-destructive">{errors.email}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-foreground">Senha</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      id="password"
+                      name="password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={formData.password}
+                      onChange={handleChange}
+                      className="pl-10 bg-secondary/50 border-border"
+                    />
+                  </div>
+                  {errors.password && (
+                    <p className="text-sm text-destructive">{errors.password}</p>
+                  )}
+                </div>
+
+                <Button
+                  type="submit"
+                  variant="hero"
+                  className="w-full"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Entrando...
+                    </>
+                  ) : (
+                    "Entrar"
+                  )}
+                </Button>
+              </>
+            ) : step === 1 ? (
+              <>
+                {/* Step 1: Condominium Data */}
+                <div className="space-y-2">
+                  <Label htmlFor="condominiumName" className="text-foreground">
+                    Nome do condomínio <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      id="condominiumName"
+                      name="condominiumName"
+                      type="text"
+                      placeholder="Ex: Residencial das Flores"
+                      value={formData.condominiumName}
+                      onChange={handleChange}
+                      className="pl-10 bg-secondary/50 border-border"
+                    />
+                  </div>
+                  {errors.condominiumName && (
+                    <p className="text-sm text-destructive">{errors.condominiumName}</p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="cnpj" className="text-foreground">CNPJ</Label>
+                    <MaskedInput
+                      id="cnpj"
+                      name="cnpj"
+                      mask="cnpj"
+                      value={formData.cnpj}
+                      onChange={handleMaskedChange('cnpj')}
+                      className="bg-secondary/50 border-border"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="condominiumPhone" className="text-foreground">Telefone</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <MaskedInput
+                        id="condominiumPhone"
+                        name="condominiumPhone"
+                        mask="phone"
+                        value={formData.condominiumPhone}
+                        onChange={handleMaskedChange('condominiumPhone')}
+                        className="pl-10 bg-secondary/50 border-border"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="zipCode" className="text-foreground">CEP</Label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <MaskedInput
+                      id="zipCode"
+                      name="zipCode"
+                      mask="cep"
+                      value={formData.zipCode}
+                      onChange={handleMaskedChange('zipCode')}
+                      className="pl-10 bg-secondary/50 border-border"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="col-span-2 space-y-2">
+                    <Label htmlFor="address" className="text-foreground">Endereço</Label>
+                    <Input
+                      id="address"
+                      name="address"
+                      type="text"
+                      placeholder="Rua, Avenida..."
+                      value={formData.address}
+                      onChange={handleChange}
+                      className="bg-secondary/50 border-border"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="addressNumber" className="text-foreground">Número</Label>
+                    <Input
+                      id="addressNumber"
+                      name="addressNumber"
+                      type="text"
+                      placeholder="123"
+                      value={formData.addressNumber}
+                      onChange={handleChange}
+                      className="bg-secondary/50 border-border"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="neighborhood" className="text-foreground">Bairro</Label>
+                  <Input
+                    id="neighborhood"
+                    name="neighborhood"
+                    type="text"
+                    placeholder="Nome do bairro"
+                    value={formData.neighborhood}
+                    onChange={handleChange}
+                    className="bg-secondary/50 border-border"
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="col-span-2 space-y-2">
+                    <Label htmlFor="city" className="text-foreground">Cidade</Label>
+                    <Input
+                      id="city"
+                      name="city"
+                      type="text"
+                      placeholder="Nome da cidade"
+                      value={formData.city}
+                      onChange={handleChange}
+                      className="bg-secondary/50 border-border"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="state" className="text-foreground">UF</Label>
+                    <select
+                      id="state"
+                      name="state"
+                      value={formData.state}
+                      onChange={handleChange}
+                      className="flex h-10 w-full rounded-md border border-border bg-secondary/50 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      <option value="">UF</option>
+                      {BRAZILIAN_STATES.map((state) => (
+                        <option key={state} value={state}>{state}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="hero"
+                  className="w-full"
+                  onClick={handleNextStep}
+                >
+                  Próximo
+                  <ChevronRight className="w-4 h-4 ml-2" />
+                </Button>
+              </>
+            ) : (
+              <>
+                {/* Step 2: Síndico Data */}
+                <div className="space-y-2">
+                  <Label htmlFor="fullName" className="text-foreground">
+                    Nome completo <span className="text-destructive">*</span>
+                  </Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
@@ -451,101 +786,125 @@ const Auth = () => {
                   )}
                 </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="cpf" className="text-foreground">CPF</Label>
+                    <MaskedInput
+                      id="cpf"
+                      name="cpf"
+                      mask="cpf"
+                      value={formData.cpf}
+                      onChange={handleMaskedChange('cpf')}
+                      className="bg-secondary/50 border-border"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone" className="text-foreground">Telefone</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <MaskedInput
+                        id="phone"
+                        name="phone"
+                        mask="phone"
+                        value={formData.phone}
+                        onChange={handleMaskedChange('phone')}
+                        className="pl-10 bg-secondary/50 border-border"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="condominiumName" className="text-foreground">Nome do condomínio</Label>
+                  <Label htmlFor="email" className="text-foreground">
+                    Email <span className="text-destructive">*</span>
+                  </Label>
                   <div className="relative">
-                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
-                      id="condominiumName"
-                      name="condominiumName"
-                      type="text"
-                      placeholder="Ex: Residencial das Flores"
-                      value={formData.condominiumName}
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={formData.email}
                       onChange={handleChange}
                       className="pl-10 bg-secondary/50 border-border"
                     />
                   </div>
-                  {errors.condominiumName && (
-                    <p className="text-sm text-destructive">{errors.condominiumName}</p>
+                  {errors.email && (
+                    <p className="text-sm text-destructive">{errors.email}</p>
                   )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-foreground">
+                    Senha <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      id="password"
+                      name="password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={formData.password}
+                      onChange={handleChange}
+                      className="pl-10 bg-secondary/50 border-border"
+                    />
+                  </div>
+                  {errors.password && (
+                    <p className="text-sm text-destructive">{errors.password}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword" className="text-foreground">
+                    Confirmar senha <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type="password"
+                      placeholder="••••••••"
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      className="pl-10 bg-secondary/50 border-border"
+                    />
+                  </div>
+                  {errors.confirmPassword && (
+                    <p className="text-sm text-destructive">{errors.confirmPassword}</p>
+                  )}
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={handlePrevStep}
+                  >
+                    <ChevronLeft className="w-4 h-4 mr-2" />
+                    Voltar
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="hero"
+                    className="flex-1"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Criando...
+                      </>
+                    ) : (
+                      "Criar conta"
+                    )}
+                  </Button>
                 </div>
               </>
             )}
-
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-foreground">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="pl-10 bg-secondary/50 border-border"
-                />
-              </div>
-              {errors.email && (
-                <p className="text-sm text-destructive">{errors.email}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-foreground">Senha</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="pl-10 bg-secondary/50 border-border"
-                />
-              </div>
-              {errors.password && (
-                <p className="text-sm text-destructive">{errors.password}</p>
-              )}
-            </div>
-
-            {!isLogin && (
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-foreground">Confirmar senha</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type="password"
-                    placeholder="••••••••"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    className="pl-10 bg-secondary/50 border-border"
-                  />
-                </div>
-                {errors.confirmPassword && (
-                  <p className="text-sm text-destructive">{errors.confirmPassword}</p>
-                )}
-              </div>
-            )}
-
-            <Button
-              type="submit"
-              variant="hero"
-              className="w-full"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  {isLogin ? "Entrando..." : "Criando conta..."}
-                </>
-              ) : (
-                isLogin ? "Entrar" : "Criar conta"
-              )}
-            </Button>
           </form>
 
           <div className="mt-6 text-center">
@@ -555,8 +914,7 @@ const Auth = () => {
                 type="button"
                 onClick={() => {
                   setIsLogin(!isLogin);
-                  setErrors({});
-                  setFormData({ fullName: "", condominiumName: "", email: "", password: "", confirmPassword: "" });
+                  resetForm();
                 }}
                 className="text-primary hover:underline font-medium"
               >
