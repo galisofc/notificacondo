@@ -62,6 +62,7 @@ const TEMPLATE_COLORS: Record<string, string> = {
   condominium_transfer: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
   condominium_transfer_old_owner: "bg-slate-500/10 text-slate-500 border-slate-500/20",
   payment_confirmed: "bg-green-500/10 text-green-500 border-green-500/20",
+  invoice_generated: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
 };
 
 const DEFAULT_TEMPLATES: Record<string, string> = {
@@ -235,6 +236,24 @@ Um pagamento foi confirmado:
 📅 Data: {data_pagamento}
 
 ✅ A fatura foi marcada como paga automaticamente.`,
+  invoice_generated: `📄 *Nova Fatura Gerada*
+
+🏢 *{condominio}*
+
+Olá, *{nome}*!
+
+Uma nova fatura foi gerada para o seu condomínio:
+
+📋 *Detalhes:*
+• Número: {numero_fatura}
+• Período: {periodo}
+• Valor: *{valor}*
+• Vencimento: *{data_vencimento}*
+
+Acesse o sistema para visualizar e efetuar o pagamento:
+👉 {link}
+
+💡 Pague via PIX para confirmação instantânea!`,
 };
 
 export function WhatsAppTemplates() {
