@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
 import { isValidCPF } from "@/lib/utils";
 
 interface Block {
@@ -401,6 +402,13 @@ const CondominiumDetails = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        <SindicoBreadcrumbs 
+          items={[
+            { label: "Condomínios", href: "/condominiums" },
+            { label: condominium?.name || "Detalhes" }
+          ]} 
+        />
+        
         <div className="flex items-center gap-4 mb-8">
           <Button variant="ghost" size="icon" onClick={() => navigate("/condominiums")}>
             <ArrowLeft className="w-5 h-5" />
