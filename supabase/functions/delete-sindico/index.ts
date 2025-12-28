@@ -55,6 +55,9 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Definir o ID do usuário que está fazendo a ação para auditoria
+    console.log("Setting user context for audit:", requestingUser.id);
+
     const { user_id } = await req.json();
 
     if (!user_id) {
@@ -80,6 +83,13 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Buscar informações do síndico antes de excluir para o log
+    const { data: sindicoProfile } = await supabaseAdmin
+      .from("profiles")
+      .select("full_name, email")
+      .eq("user_id", user_id)
+      .maybeSingle();
+
     // Delete user role
     await supabaseAdmin
       .from("user_roles")
@@ -102,6 +112,24 @@ Deno.serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Registrar log de auditoria manualmente com o ID do super admin que excluiu
+    await supabaseAdmin
+      .from("audit_logs")
+      .insert({
+        table_name: "user_roles",
+        action: "DELETE",
+        record_id: user_id,
+        old_data: { 
+          action: "delete_sindico",
+          deleted_user_id: user_id,
+          deleted_user_email: sindicoProfile?.email || "unknown",
+          deleted_user_name: sindicoProfile?.full_name || "unknown"
+        },
+        user_id: requestingUser.id
+      });
+
+    console.log("Audit log created with user_id:", requestingUser.id);
 
     return new Response(
       JSON.stringify({ success: true }),
