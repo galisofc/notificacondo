@@ -55,6 +55,7 @@ interface Condominium {
   cnpj: string | null;
   phone: string | null;
   address: string | null;
+  address_number: string | null;
   city: string | null;
   state: string | null;
   zip_code: string | null;
@@ -359,7 +360,7 @@ const Condominiums = () => {
       phone: condo.phone ? formatPhone(condo.phone) : "",
       zip_code: condo.zip_code ? formatCEP(condo.zip_code) : "",
       address: condo.address || "",
-      address_number: (condo as any).address_number || "",
+      address_number: condo.address_number || "",
       neighborhood: (condo as any).neighborhood || "",
       city: condo.city || "",
       state: condo.state || "",
@@ -720,7 +721,9 @@ const Condominiums = () => {
                 {condo.address && (
                   <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground mb-1">
                     <MapPin className="w-3 h-3" />
-                    <span className="truncate">{condo.address}</span>
+                    <span className="truncate">
+                      {condo.address}{condo.address_number ? `, ${condo.address_number}` : ""}
+                    </span>
                   </div>
                 )}
                 
