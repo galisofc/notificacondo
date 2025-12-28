@@ -582,33 +582,36 @@ const Condominiums = () => {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="plan">Plano *</Label>
-                  <Select
-                    value={formData.plan_slug}
-                    onValueChange={(value) => setFormData({ ...formData, plan_slug: value })}
-                  >
-                    <SelectTrigger className="bg-secondary/50">
-                      <SelectValue placeholder="Selecione um plano" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {plans.map((plan) => (
-                        <SelectItem key={plan.id} value={plan.slug}>
-                          <div className="flex items-center gap-2">
-                            <Crown className="w-4 h-4" />
-                            <span>{plan.name}</span>
-                            <span className="text-muted-foreground">
-                              - R$ {plan.price.toFixed(2)}/mês
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    O plano define os limites de notificações, advertências e multas
-                  </p>
-                </div>
+                {/* Plano - somente ao criar novo condomínio */}
+                {!editingCondo && (
+                  <div className="space-y-2">
+                    <Label htmlFor="plan">Plano *</Label>
+                    <Select
+                      value={formData.plan_slug}
+                      onValueChange={(value) => setFormData({ ...formData, plan_slug: value })}
+                    >
+                      <SelectTrigger className="bg-secondary/50">
+                        <SelectValue placeholder="Selecione um plano" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {plans.map((plan) => (
+                          <SelectItem key={plan.id} value={plan.slug}>
+                            <div className="flex items-center gap-2">
+                              <Crown className="w-4 h-4" />
+                              <span>{plan.name}</span>
+                              <span className="text-muted-foreground">
+                                - R$ {plan.price.toFixed(2)}/mês
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      O plano define os limites de notificações, advertências e multas
+                    </p>
+                  </div>
+                )}
 
                 <div className="flex justify-end gap-3 pt-4 border-t border-border">
                   <Button
