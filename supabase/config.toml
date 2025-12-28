@@ -68,3 +68,11 @@ verify_jwt = false
 # Exclusão de síndico - a função faz sua própria verificação de super_admin
 [functions.delete-sindico]
 verify_jwt = false
+
+# Notificação de trial acabando - executado via cron job
+[functions.notify-trial-ending]
+verify_jwt = false
+
+# Verificação de políticas RLS
+[functions.check-rls-policies]
+verify_jwt = false
