@@ -1,57 +1,100 @@
-import { useEffect, useState } from "react";
-import { formatPhone } from "@/components/ui/masked-input";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { MaskedInput } from "@/components/ui/masked-input";
+import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  User,
-  Mail,
-  Phone,
+  Camera,
+  Eye,
+  EyeOff,
   Loader2,
+  Lock,
+  Save,
   Settings,
-  Edit,
+  User,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import { z } from "zod";
+import { isValidCPF } from "@/lib/utils";
+
+const profileSchema = z.object({
+  full_name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres").max(100),
+  email: z.string().email("Email inválido"),
+  phone: z.string().optional(),
+  cpf: z.string().optional().refine(
+    (val) => !val || val.replace(/\D/g, "").length === 0 || isValidCPF(val),
+    { message: "CPF inválido" }
+  ),
+});
 
 interface Profile {
+  id: string;
   full_name: string;
   email: string;
   phone: string | null;
-  avatar_url: string | null;
   cpf: string | null;
+  avatar_url: string | null;
 }
 
 const SindicoSettings = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [formData, setFormData] = useState({
+    full_name: "",
+    email: "",
+    phone: "",
+    cpf: "",
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  
+  // Password change state
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchProfile = async () => {
       if (!user) return;
 
       try {
-        // Fetch profile
-        const { data: profileData, error: profileError } = await supabase
+        const { data, error } = await supabase
           .from("profiles")
-          .select("full_name, email, phone, avatar_url, cpf")
+          .select("*")
           .eq("user_id", user.id)
           .maybeSingle();
 
-        if (profileError) throw profileError;
-        setProfile(profileData);
+        if (error) throw error;
+        
+        if (data) {
+          setProfile(data);
+          setFormData({
+            full_name: data.full_name || "",
+            email: data.email || "",
+            phone: data.phone || "",
+            cpf: data.cpf || "",
+          });
+        }
       } catch (error) {
-        console.error("Error fetching settings data:", error);
+        console.error("Error fetching profile:", error);
         toast({
           title: "Erro",
-          description: "Não foi possível carregar as configurações.",
+          description: "Não foi possível carregar o perfil.",
           variant: "destructive",
         });
       } finally {
@@ -59,8 +102,197 @@ const SindicoSettings = () => {
       }
     };
 
-    fetchData();
+    fetchProfile();
   }, [user]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !profile) return;
+
+    try {
+      const validated = profileSchema.parse(formData);
+      setErrors({});
+      setSaving(true);
+
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          full_name: validated.full_name,
+          email: validated.email,
+          phone: validated.phone || null,
+          cpf: validated.cpf || null,
+        })
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      setProfile((prev) => prev ? { 
+        ...prev, 
+        full_name: validated.full_name,
+        email: validated.email,
+        phone: validated.phone || null,
+        cpf: validated.cpf || null,
+      } : null);
+
+      toast({
+        title: "Sucesso",
+        description: "Perfil atualizado com sucesso!",
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const fieldErrors: Record<string, string> = {};
+        error.errors.forEach((err) => {
+          if (err.path[0]) {
+            fieldErrors[err.path[0] as string] = err.message;
+          }
+        });
+        setErrors(fieldErrors);
+      } else {
+        console.error("Error updating profile:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível atualizar o perfil.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Erro",
+        description: "Por favor, selecione uma imagem.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Erro",
+        description: "A imagem deve ter no máximo 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setUploading(true);
+
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${user.id}/avatar.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(fileName);
+
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ avatar_url: urlData.publicUrl })
+        .eq("user_id", user.id);
+
+      if (updateError) throw updateError;
+
+      setProfile((prev) => prev ? { ...prev, avatar_url: urlData.publicUrl } : null);
+
+      toast({
+        title: "Sucesso",
+        description: "Foto de perfil atualizada!",
+      });
+    } catch (error) {
+      console.error("Error uploading avatar:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar a foto.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
+  };
+
+  const handleChangePassword = async () => {
+    if (newPassword.length < 6) {
+      toast({
+        title: "Erro",
+        description: "A nova senha deve ter pelo menos 6 caracteres.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Erro",
+        description: "As senhas não coincidem.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsChangingPassword(true);
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Senha alterada com sucesso!",
+      });
+
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error: any) {
+      console.error("Error changing password:", error);
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível alterar a senha.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -77,7 +309,7 @@ const SindicoSettings = () => {
       <Helmet>
         <title>Configurações | CondoManager</title>
       </Helmet>
-      <div className="space-y-6 animate-fade-up">
+      <div className="space-y-6 animate-fade-up max-w-3xl">
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground flex items-center gap-3">
             <Settings className="w-8 h-8 text-primary" />
@@ -88,73 +320,237 @@ const SindicoSettings = () => {
           </p>
         </div>
 
-        {/* Profile Card */}
+        {/* Avatar Section */}
         <Card className="bg-gradient-card border-border/50">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <User className="w-5 h-5 text-primary" />
-              Dados da Conta
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <User className="w-4 h-4" />
-                  Nome
-                </div>
-                <p className="font-medium text-foreground text-lg">
-                  {profile?.full_name || "-"}
-                </p>
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center">
+              <div className="relative group">
+                <Avatar className="w-24 h-24 border-4 border-background shadow-lg">
+                  <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name} />
+                  <AvatarFallback className="bg-primary/10 text-primary text-2xl font-semibold">
+                    {profile?.full_name ? getInitials(profile.full_name) : <User className="w-8 h-8" />}
+                  </AvatarFallback>
+                </Avatar>
+                <button
+                  type="button"
+                  onClick={handleAvatarClick}
+                  disabled={uploading}
+                  className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer disabled:cursor-not-allowed"
+                >
+                  {uploading ? (
+                    <Loader2 className="w-6 h-6 text-white animate-spin" />
+                  ) : (
+                    <Camera className="w-6 h-6 text-white" />
+                  )}
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
               </div>
-              
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Mail className="w-4 h-4" />
-                  Email
-                </div>
-                <p className="font-medium text-foreground text-lg">
-                  {profile?.email || "-"}
-                </p>
-              </div>
-              
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Phone className="w-4 h-4" />
-                  Telefone
-                </div>
-                <p className="font-medium text-foreground text-lg">
-                  {profile?.phone ? formatPhone(profile.phone) : "-"}
-                </p>
-              </div>
-            </div>
-            
-            <div className="mt-8 pt-6 border-t border-border/50">
-              <Button 
-                onClick={() => navigate("/sindico/profile")}
-                className="gap-2"
-              >
-                <Edit className="w-4 h-4" />
-                Editar Perfil
-              </Button>
+              <p className="text-sm text-muted-foreground mt-3">
+                Clique para alterar a foto
+              </p>
             </div>
           </CardContent>
         </Card>
 
-        {/* Info Card */}
-        <Card className="bg-primary/5 border-primary/20">
-          <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">
-              Para gerenciar os planos e assinaturas dos seus condomínios, acesse a página de{" "}
-              <Button 
-                variant="link" 
-                className="p-0 h-auto text-primary"
-                onClick={() => navigate("/sindico/subscriptions")}
-              >
-                Assinaturas
-              </Button>
-              .
-            </p>
+        {/* Profile Form */}
+        <Card className="bg-gradient-card border-border/50">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <User className="w-5 h-5 text-primary" />
+              Informações Pessoais
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="full_name">Nome Completo</Label>
+                  <Input
+                    id="full_name"
+                    name="full_name"
+                    value={formData.full_name}
+                    onChange={handleInputChange}
+                    placeholder="Seu nome completo"
+                    className={errors.full_name ? "border-destructive" : ""}
+                  />
+                  {errors.full_name && (
+                    <p className="text-sm text-destructive">{errors.full_name}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    placeholder="seu@email.com"
+                    className={errors.email ? "border-destructive" : ""}
+                  />
+                  {errors.email && (
+                    <p className="text-sm text-destructive">{errors.email}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Telefone</Label>
+                  <MaskedInput
+                    id="phone"
+                    mask="phone"
+                    value={formData.phone}
+                    onChange={(value) => setFormData((prev) => ({ ...prev, phone: value }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="cpf">CPF</Label>
+                  <MaskedInput
+                    id="cpf"
+                    mask="cpf"
+                    value={formData.cpf}
+                    onChange={(value) => setFormData((prev) => ({ ...prev, cpf: value }))}
+                  />
+                  {errors.cpf && (
+                    <p className="text-sm text-destructive">{errors.cpf}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="pt-4">
+                <Button type="submit" disabled={saving}>
+                  {saving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      Salvar Alterações
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Password Change Section */}
+        <Card className="bg-gradient-card border-border/50">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Lock className="w-5 h-5 text-primary" />
+              Alterar Senha
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="currentPassword">Senha Atual</Label>
+                <div className="relative max-w-sm">
+                  <Input
+                    id="currentPassword"
+                    type={showCurrentPassword ? "text" : "password"}
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Digite sua senha atual"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full px-3"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  >
+                    {showCurrentPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">Nova Senha</Label>
+                <div className="relative">
+                  <Input
+                    id="newPassword"
+                    type={showNewPassword ? "text" : "password"}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Digite a nova senha"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full px-3"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                  >
+                    {showNewPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Mínimo de 6 caracteres
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirme a nova senha"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full px-3"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <Button
+              onClick={handleChangePassword}
+              disabled={isChangingPassword || !newPassword || !confirmPassword}
+            >
+              {isChangingPassword ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Alterando...
+                </>
+              ) : (
+                <>
+                  <Lock className="w-4 h-4 mr-2" />
+                  Alterar Senha
+                </>
+              )}
+            </Button>
           </CardContent>
         </Card>
       </div>

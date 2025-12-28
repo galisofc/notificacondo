@@ -24,7 +24,7 @@ import DefenseAnalysis from "./pages/DefenseAnalysis";
 import SindicoSettings from "./pages/SindicoSettings";
 import SindicoInvoices from "./pages/SindicoInvoices";
 import SindicoSubscriptions from "./pages/SindicoSubscriptions";
-import SindicoProfile from "./pages/SindicoProfile";
+import { Navigate } from "react-router-dom";
 import ResidentAccess from "./pages/ResidentAccess";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import Sindicos from "./pages/superadmin/Sindicos";
@@ -144,11 +144,7 @@ const App = () => (
               />
               <Route
                 path="/sindico/profile"
-                element={
-                  <ProtectedRoute requiredRole="sindico">
-                    <SindicoProfile />
-                  </ProtectedRoute>
-                }
+                element={<Navigate to="/sindico/settings" replace />}
               />
 
               {/* Resident Routes */}
