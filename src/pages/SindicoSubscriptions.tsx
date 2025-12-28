@@ -62,16 +62,18 @@ interface Subscription {
   plan: string;
   active: boolean;
   notifications_limit: number;
-  notifications_used: number;
   warnings_limit: number;
-  warnings_used: number;
   fines_limit: number;
-  fines_used: number;
   current_period_start: string | null;
   current_period_end: string | null;
   condominium: {
     id: string;
     name: string;
+  };
+  realUsage: {
+    notifications: number;
+    warnings: number;
+    fines: number;
   };
 }
 
@@ -138,18 +140,64 @@ const SindicoSubscriptions = () => {
           plan,
           active,
           notifications_limit,
-          notifications_used,
           warnings_limit,
-          warnings_used,
           fines_limit,
-          fines_used,
           current_period_start,
           current_period_end,
           condominium:condominiums!inner(id, name, owner_id)
         `)
         .eq("condominiums.owner_id", user.id);
       if (error) throw error;
-      return (data as unknown as Subscription[]) || [];
+
+      // Calculate real usage for each subscription
+      const subscriptionsWithUsage = await Promise.all(
+        (data || []).map(async (sub: any) => {
+          const periodStart = sub.current_period_start;
+          const periodEnd = sub.current_period_end;
+          const condominiumId = sub.condominium.id;
+
+          // Fetch occurrences with relevant statuses
+          let occurrencesQuery = supabase
+            .from("occurrences")
+            .select("type, status")
+            .eq("condominium_id", condominiumId)
+            .in("status", ["notificado", "arquivada", "advertido", "multado"]);
+
+          if (periodStart) {
+            occurrencesQuery = occurrencesQuery.gte("created_at", periodStart);
+          }
+          if (periodEnd) {
+            occurrencesQuery = occurrencesQuery.lte("created_at", periodEnd);
+          }
+
+          const { data: occurrences } = await occurrencesQuery;
+
+          const realUsage = {
+            notifications: 0,
+            warnings: 0,
+            fines: 0,
+          };
+
+          if (occurrences) {
+            occurrences.forEach((occ) => {
+              if (occ.type === "notificacao") {
+                realUsage.notifications++;
+              } else if (occ.type === "advertencia") {
+                realUsage.warnings++;
+              } else if (occ.type === "multa") {
+                realUsage.fines++;
+              }
+            });
+          }
+
+          return {
+            ...sub,
+            realUsage,
+          } as Subscription;
+        })
+      );
+
+      return subscriptionsWithUsage;
     },
     enabled: !!user,
   });
@@ -387,7 +435,7 @@ const SindicoSubscriptions = () => {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">
-                    {subscriptions?.reduce((acc, s) => acc + s.notifications_used, 0) || 0}
+                    {subscriptions?.reduce((acc, s) => acc + s.realUsage.notifications, 0) || 0}
                   </p>
                   <p className="text-xs text-muted-foreground">Notificações Usadas</p>
                 </div>
@@ -481,13 +529,13 @@ const SindicoSubscriptions = () => {
                 {filteredSubscriptions.map((sub) => {
                   const currentPlan = plans?.find((p) => p.slug === sub.plan);
                   const notificationsPercent = sub.notifications_limit > 0 
-                    ? Math.round((sub.notifications_used / sub.notifications_limit) * 100) 
+                    ? Math.round((sub.realUsage.notifications / sub.notifications_limit) * 100) 
                     : 0;
                   const warningsPercent = sub.warnings_limit > 0 
-                    ? Math.round((sub.warnings_used / sub.warnings_limit) * 100) 
+                    ? Math.round((sub.realUsage.warnings / sub.warnings_limit) * 100) 
                     : 0;
                   const finesPercent = sub.fines_limit > 0 
-                    ? Math.round((sub.fines_used / sub.fines_limit) * 100) 
+                    ? Math.round((sub.realUsage.fines / sub.fines_limit) * 100) 
                     : 0;
 
                   return (
@@ -569,7 +617,7 @@ const SindicoSubscriptions = () => {
                             <span>Notificações</span>
                           </div>
                           <span className={notificationsPercent >= 80 ? "text-destructive" : "text-muted-foreground"}>
-                            {sub.notifications_used}/{sub.notifications_limit}
+                            {sub.realUsage.notifications}/{sub.notifications_limit}
                           </span>
                         </div>
                         <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
@@ -585,7 +633,7 @@ const SindicoSubscriptions = () => {
                             <span>Advertências</span>
                           </div>
                           <span className={warningsPercent >= 80 ? "text-destructive" : "text-muted-foreground"}>
-                            {sub.warnings_used}/{sub.warnings_limit}
+                            {sub.realUsage.warnings}/{sub.warnings_limit}
                           </span>
                         </div>
                         <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
@@ -603,7 +651,7 @@ const SindicoSubscriptions = () => {
                                 <span>Multas</span>
                               </div>
                               <span className={finesPercent >= 80 ? "text-destructive" : "text-muted-foreground"}>
-                                {sub.fines_used}/{sub.fines_limit}
+                                {sub.realUsage.fines}/{sub.fines_limit}
                               </span>
                             </div>
                             <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
