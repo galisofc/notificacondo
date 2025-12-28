@@ -939,8 +939,8 @@ export default function SuperAdminSettings() {
                         Configure as credenciais de acesso à API de WhatsApp
                       </p>
                     </div>
-                    <Button variant="outline" onClick={() => window.location.href = "/superadmin/whatsapp"}>
-                      Configurar
+                    <Button variant="outline" asChild>
+                      <a href="/superadmin/whatsapp">Configurar</a>
                     </Button>
                   </div>
                 </div>
