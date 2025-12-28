@@ -244,6 +244,33 @@ export function InvoicesManagement() {
     );
   };
 
+  const formatCNPJInput = (value: string) => {
+    const digits = value.replace(/\D/g, "");
+    if (digits.length === 0) return value;
+    
+    // Se parece ser um CNPJ (apenas números), aplica a máscara
+    if (/^\d+$/.test(value.replace(/[\.\-\/]/g, ""))) {
+      let formatted = digits;
+      if (digits.length > 2) formatted = digits.slice(0, 2) + "." + digits.slice(2);
+      if (digits.length > 5) formatted = formatted.slice(0, 6) + "." + digits.slice(5);
+      if (digits.length > 8) formatted = formatted.slice(0, 10) + "/" + digits.slice(8);
+      if (digits.length > 12) formatted = formatted.slice(0, 15) + "-" + digits.slice(12, 14);
+      return formatted;
+    }
+    return value;
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const onlyDigitsOrMask = /^[\d\.\-\/]*$/.test(value);
+    
+    if (onlyDigitsOrMask && value.replace(/\D/g, "").length <= 14) {
+      setSearchQuery(formatCNPJInput(value));
+    } else {
+      setSearchQuery(value);
+    }
+  };
+
   const getStatusBadge = (status: string, dueDate: string) => {
     const today = new Date();
     const due = new Date(dueDate);
@@ -395,7 +422,7 @@ export function InvoicesManagement() {
                 <Input
                   placeholder="Buscar por CNPJ, email ou condomínio..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={handleSearchChange}
                   className="pl-9 w-full sm:w-[280px]"
                 />
               </div>
