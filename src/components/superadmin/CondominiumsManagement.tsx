@@ -80,6 +80,7 @@ export function CondominiumsManagement() {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedCondominium, setSelectedCondominium] = useState<CondominiumWithOwner | null>(null);
   const [isLoadingCep, setIsLoadingCep] = useState(false);
+  const [isLoadingCnpj, setIsLoadingCnpj] = useState(false);
   
   const [editForm, setEditForm] = useState({
     name: "",
@@ -162,6 +163,51 @@ export function CondominiumsManagement() {
       });
     },
   });
+
+  const handleSearchCnpj = async (cnpj: string) => {
+    const cleanCnpj = cnpj.replace(/\D/g, "");
+    if (cleanCnpj.length !== 14) return;
+
+    setIsLoadingCnpj(true);
+    try {
+      const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleanCnpj}`);
+      const data = await response.json();
+
+      if (data.message || response.status !== 200) {
+        toast({
+          title: "CNPJ não encontrado",
+          description: data.message || "Verifique o CNPJ informado.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Fill form with company data
+      setEditForm(prev => ({
+        ...prev,
+        name: data.razao_social || data.nome_fantasia || prev.name,
+        phone: data.ddd_telefone_1 ? data.ddd_telefone_1.replace(/\D/g, "") : prev.phone,
+        zip_code: data.cep ? data.cep.replace(/\D/g, "") : prev.zip_code,
+        address: data.logradouro ? `${data.logradouro}${data.numero ? `, ${data.numero}` : ""}` : prev.address,
+        neighborhood: data.bairro || prev.neighborhood,
+        city: data.municipio || prev.city,
+        state: data.uf || prev.state,
+      }));
+
+      toast({
+        title: "CNPJ encontrado",
+        description: `Dados de "${data.razao_social || data.nome_fantasia}" preenchidos automaticamente.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao buscar CNPJ",
+        description: "Tente novamente mais tarde.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingCnpj(false);
+    }
+  };
 
   const handleSearchCep = async (cep: string, autoSearch = false) => {
     const cleanCep = cep.replace(/\D/g, "");
@@ -566,16 +612,30 @@ export function CondominiumsManagement() {
           </DialogHeader>
           <div className="space-y-4 max-h-[60vh] overflow-y-auto py-4">
             <div className="grid gap-4 sm:grid-cols-2">
-              {/* CNPJ - Primeiro campo */}
+              {/* CNPJ - Primeiro campo com busca automática */}
               <div className="sm:col-span-2 space-y-2">
-                <Label htmlFor="cnpj">CNPJ</Label>
-                <MaskedInput
-                  id="cnpj"
-                  mask="cnpj"
-                  value={editForm.cnpj}
-                  onChange={(value) => setEditForm(prev => ({ ...prev, cnpj: value }))}
-                  placeholder="00.000.000/0000-00"
-                />
+                <Label htmlFor="cnpj">CNPJ (busca automática)</Label>
+                <div className="relative">
+                  <MaskedInput
+                    id="cnpj"
+                    mask="cnpj"
+                    value={editForm.cnpj}
+                    onChange={(value) => {
+                      setEditForm(prev => ({ ...prev, cnpj: value }));
+                      // Busca automática quando completar 14 dígitos
+                      const cleanCnpj = value.replace(/\D/g, "");
+                      if (cleanCnpj.length === 14) {
+                        handleSearchCnpj(value);
+                      }
+                    }}
+                    placeholder="00.000.000/0000-00"
+                  />
+                  {isLoadingCnpj && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="sm:col-span-2 space-y-2">
