@@ -54,6 +54,7 @@ interface Condominium {
   cnpj: string | null;
   phone: string | null;
   address: string | null;
+  address_number: string | null;
   neighborhood: string | null;
   city: string | null;
   state: string | null;
@@ -533,9 +534,15 @@ export function CondominiumsManagement() {
                 </div>
               </div>
 
-              <div>
-                <p className="text-sm text-muted-foreground">Endereço</p>
-                <p className="font-medium">{selectedCondominium.address || "—"}</p>
+              <div className="grid gap-4 sm:grid-cols-4">
+                <div className="sm:col-span-3">
+                  <p className="text-sm text-muted-foreground">Endereço</p>
+                  <p className="font-medium">{selectedCondominium.address || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Nº</p>
+                  <p className="font-medium">{selectedCondominium.address_number || "—"}</p>
+                </div>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-3">
