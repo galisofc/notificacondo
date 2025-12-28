@@ -1147,6 +1147,7 @@ export type Database = {
         Args: { _condominium_id: string; _user_id: string }
         Returns: boolean
       }
+      toggle_cron_job: { Args: { p_jobid: number }; Returns: boolean }
     }
     Enums: {
       app_role: "super_admin" | "sindico" | "morador"
