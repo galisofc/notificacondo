@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { formatCNPJ } from "@/components/ui/masked-input";
 import {
   Card,
   CardContent,
@@ -284,8 +285,8 @@ export function SubscriptionsMonitor() {
                       <TableCell>
                         <div>
                           <p className="font-medium">{sub.condominium?.name || "—"}</p>
-                          {sub.condominium?.cnpj && (
-                            <p className="text-xs text-muted-foreground">{sub.condominium.cnpj}</p>
+                        {sub.condominium?.cnpj && (
+                            <p className="text-xs text-muted-foreground">{formatCNPJ(sub.condominium.cnpj)}</p>
                           )}
                         </div>
                       </TableCell>
