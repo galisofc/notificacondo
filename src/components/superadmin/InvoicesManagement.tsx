@@ -234,6 +234,16 @@ export function InvoicesManagement() {
     return format(new Date(date), "dd/MM/yyyy", { locale: ptBR });
   };
 
+  const formatCNPJ = (cnpj: string | null) => {
+    if (!cnpj) return "—";
+    const digits = cnpj.replace(/\D/g, "");
+    if (digits.length !== 14) return cnpj;
+    return digits.replace(
+      /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,
+      "$1.$2.$3/$4-$5"
+    );
+  };
+
   const getStatusBadge = (status: string, dueDate: string) => {
     const today = new Date();
     const due = new Date(dueDate);
@@ -442,7 +452,7 @@ export function InvoicesManagement() {
                       </TableCell>
                       <TableCell>
                         <span className="text-sm text-muted-foreground font-mono">
-                          {invoice.condominium?.cnpj || "—"}
+                          {formatCNPJ(invoice.condominium?.cnpj)}
                         </span>
                       </TableCell>
                       <TableCell>
