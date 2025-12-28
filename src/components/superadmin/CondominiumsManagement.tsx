@@ -356,14 +356,7 @@ export function CondominiumsManagement() {
                 placeholder="Buscar por nome, CNPJ, cidade..."
                 value={searchTerm}
                 onChange={(e) => {
-                  const value = e.target.value;
-                  const digits = value.replace(/\D/g, "");
-                  // Se o valor for apenas dígitos, aplicar máscara de CNPJ
-                  if (digits.length > 0 && digits.length === value.replace(/[\s.-/]/g, "").length) {
-                    setSearchTerm(formatCNPJ(value));
-                  } else {
-                    setSearchTerm(value);
-                  }
+                  setSearchTerm(e.target.value);
                   setCurrentPage(1);
                 }}
                 className="pl-9"
