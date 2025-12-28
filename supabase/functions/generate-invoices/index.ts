@@ -29,12 +29,29 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  // Determine trigger type from request header or default to manual
+  const triggerType = req.headers.get("x-trigger-type") || "manual";
+
+  // Create execution log entry
+  const { data: logEntry } = await supabase
+    .from("edge_function_logs")
+    .insert({
+      function_name: "generate-invoices",
+      trigger_type: triggerType,
+      status: "running",
+      started_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+
+  const logId = logEntry?.id;
+
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
     console.log("Starting invoice generation process...");
 
     // Check if this function is paused
@@ -46,6 +63,20 @@ Deno.serve(async (req) => {
 
     if (pauseControl?.paused) {
       console.log("Function generate-invoices is PAUSED. Skipping execution.");
+      
+      // Update log as skipped
+      if (logId) {
+        await supabase
+          .from("edge_function_logs")
+          .update({
+            status: "skipped",
+            ended_at: new Date().toISOString(),
+            duration_ms: Date.now() - startTime,
+            result: { reason: "Function is paused via admin panel" },
+          })
+          .eq("id", logId);
+      }
+
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -60,10 +91,6 @@ Deno.serve(async (req) => {
     const today = now.toISOString().split("T")[0];
 
     // Fetch all active subscriptions that need invoice generation
-    // A subscription needs an invoice if:
-    // 1. Trial has ended (trial_ends_at is today or in the past) AND is_trial is true
-    // 2. Or: has no current_period_end (new subscription after trial)
-    // 3. Or: current_period_end is today or in the past (period ended)
     const { data: subscriptions, error: fetchError } = await supabase
       .from("subscriptions")
       .select("id, condominium_id, plan, active, current_period_start, current_period_end, is_trial, trial_ends_at")
@@ -287,12 +314,27 @@ Deno.serve(async (req) => {
 
     console.log("Invoice generation complete:", results);
 
+    const finalResult = {
+      success: true,
+      message: "Invoice generation completed",
+      results,
+    };
+
+    // Update log as success
+    if (logId) {
+      await supabase
+        .from("edge_function_logs")
+        .update({
+          status: "success",
+          ended_at: new Date().toISOString(),
+          duration_ms: Date.now() - startTime,
+          result: finalResult,
+        })
+        .eq("id", logId);
+    }
+
     return new Response(
-      JSON.stringify({
-        success: true,
-        message: "Invoice generation completed",
-        results,
-      }),
+      JSON.stringify(finalResult),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
@@ -300,6 +342,20 @@ Deno.serve(async (req) => {
     );
   } catch (error: any) {
     console.error("Error in generate-invoices function:", error);
+
+    // Update log as error
+    if (logId) {
+      await supabase
+        .from("edge_function_logs")
+        .update({
+          status: "error",
+          ended_at: new Date().toISOString(),
+          duration_ms: Date.now() - startTime,
+          error_message: error.message,
+        })
+        .eq("id", logId);
+    }
+
     return new Response(
       JSON.stringify({
         success: false,
