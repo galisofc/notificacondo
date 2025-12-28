@@ -81,6 +81,7 @@ export function MercadoPagoSettings() {
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [showAccessToken, setShowAccessToken] = useState(false);
   const [showWebhookSecret, setShowWebhookSecret] = useState(false);
+  const [showPublicKey, setShowPublicKey] = useState(false);
 
   // Fetch config
   const { data: config, isLoading } = useQuery({
@@ -249,14 +250,32 @@ export function MercadoPagoSettings() {
               {/* Public Key */}
               <div className="space-y-2">
                 <Label htmlFor="public_key">Public Key</Label>
-                <Input
-                  id="public_key"
-                  value={formData.public_key}
-                  onChange={(e) =>
-                    setFormData({ ...formData, public_key: e.target.value })
-                  }
-                  placeholder="APP_USR-xxxxxxxxxxxxxxxxxxxx"
-                />
+                <div className="relative">
+                  <Input
+                    id="public_key"
+                    type={showPublicKey ? "text" : "password"}
+                    value={formData.public_key}
+                    onChange={(e) =>
+                      setFormData({ ...formData, public_key: e.target.value })
+                    }
+                    placeholder="APP_USR-xxxxxxxxxxxxxxxxxxxx"
+                    className="pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                    onClick={() => setShowPublicKey(!showPublicKey)}
+                    tabIndex={-1}
+                  >
+                    {showPublicKey ? (
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </Button>
+                </div>
                 <p className="text-xs text-muted-foreground">
                   Chave pública para checkout transparente (opcional)
                 </p>
