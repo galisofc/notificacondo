@@ -59,6 +59,8 @@ const TEMPLATE_COLORS: Record<string, string> = {
   trial_ending: "bg-orange-500/10 text-orange-500 border-orange-500/20",
   trial_expired: "bg-red-500/10 text-red-500 border-red-500/20",
   trial_welcome: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+  condominium_transfer: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
+  condominium_transfer_old_owner: "bg-slate-500/10 text-slate-500 border-slate-500/20",
 };
 
 const DEFAULT_TEMPLATES: Record<string, string> = {
@@ -190,6 +192,35 @@ Acesse agora e explore:
 👉 {link_dashboard}
 
 Qualquer dúvida, estamos aqui para ajudar!`,
+  condominium_transfer: `🔄 *TRANSFERÊNCIA DE CONDOMÍNIO*
+
+Olá, *{nome_novo_sindico}*!
+
+O condomínio *{condominio}* foi transferido para sua gestão.
+
+📋 *Detalhes da transferência:*
+• Síndico anterior: {nome_antigo_sindico}
+• Data: {data_transferencia}
+{observacoes}
+
+Acesse o sistema para gerenciar seu novo condomínio:
+👉 {link}
+
+Bem-vindo(a) à gestão do condomínio!`,
+  condominium_transfer_old_owner: `🔄 *TRANSFERÊNCIA DE CONDOMÍNIO*
+
+Olá, *{nome_antigo_sindico}*!
+
+O condomínio *{condominio}* foi transferido da sua gestão.
+
+📋 *Detalhes da transferência:*
+• Novo síndico: {nome_novo_sindico}
+• Data: {data_transferencia}
+{observacoes}
+
+Agradecemos pelo seu trabalho na gestão do condomínio!
+
+Em caso de dúvidas, entre em contato com o suporte.`,
 };
 
 export function WhatsAppTemplates() {
