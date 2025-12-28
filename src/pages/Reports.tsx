@@ -520,8 +520,8 @@ const Reports = () => {
           </CardContent>
         </Card>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {/* Resumo por Tipo de Ocorrência */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <Card className="bg-gradient-card border-border/50">
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
@@ -529,8 +529,8 @@ const Reports = () => {
                   <FileText className="w-6 h-6 text-blue-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Ocorrências</p>
-                  <p className="text-2xl font-bold text-foreground">{stats.totalOccurrences}</p>
+                  <p className="text-sm text-muted-foreground">Notificações</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.byType.notificacao}</p>
                 </div>
               </div>
             </CardContent>
@@ -539,17 +539,30 @@ const Reports = () => {
           <Card className="bg-gradient-card border-border/50">
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <AlertTriangle className="w-6 h-6 text-primary" />
+                <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                  <AlertTriangle className="w-6 h-6 text-amber-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Multas Aplicadas</p>
-                  <p className="text-2xl font-bold text-foreground">{stats.totalFines}</p>
+                  <p className="text-sm text-muted-foreground">Advertências</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.byType.advertencia}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
+          <Card className="bg-gradient-card border-border/50">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center">
+                  <XCircle className="w-6 h-6 text-red-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Multas</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.byType.multa}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Charts Row */}
