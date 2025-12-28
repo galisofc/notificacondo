@@ -398,11 +398,13 @@ export function SindicosManagement() {
       s.profile?.full_name?.toLowerCase().includes(query) ||
       s.profile?.email?.toLowerCase().includes(query);
     
-    // Search by CPF - compare digits only
-    const matchesCpf = queryDigits.length > 0 && s.profile?.cpf && s.profile.cpf.includes(queryDigits);
+    // Search by CPF - compare digits only (normalize both sides)
+    const cpfDigits = s.profile?.cpf?.replace(/\D/g, "") || "";
+    const matchesCpf = queryDigits.length > 0 && cpfDigits.includes(queryDigits);
     
-    // Search by phone - compare digits only
-    const matchesPhone = queryDigits.length > 0 && s.profile?.phone && s.profile.phone.replace(/\D/g, "").includes(queryDigits);
+    // Search by phone - compare digits only (normalize both sides)
+    const phoneDigits = s.profile?.phone?.replace(/\D/g, "") || "";
+    const matchesPhone = queryDigits.length > 0 && phoneDigits.includes(queryDigits);
     
     return matchesText || matchesCpf || matchesPhone;
   });
