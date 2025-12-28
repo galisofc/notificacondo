@@ -383,11 +383,12 @@ export function SindicosManagement() {
   const filteredSindicos = sindicos?.filter((s) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
-    const queryDigits = searchQuery.replace(/\D/g, ""); // Remove non-digits for CPF search
+    const queryDigits = searchQuery.replace(/\D/g, ""); // Remove non-digits for CPF/phone search
     return (
       s.profile?.full_name?.toLowerCase().includes(query) ||
       s.profile?.email?.toLowerCase().includes(query) ||
-      (s.profile?.cpf && s.profile.cpf.includes(queryDigits))
+      (s.profile?.cpf && s.profile.cpf.includes(queryDigits)) ||
+      (s.profile?.phone && s.profile.phone.includes(queryDigits))
     );
   });
 
@@ -600,7 +601,7 @@ export function SindicosManagement() {
           <div className="relative w-full sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por nome ou email..."
+              placeholder="Buscar por nome, email, CPF ou telefone..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
