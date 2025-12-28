@@ -82,6 +82,7 @@ export function MercadoPagoSettings() {
   const [showAccessToken, setShowAccessToken] = useState(false);
   const [showWebhookSecret, setShowWebhookSecret] = useState(false);
   const [showPublicKey, setShowPublicKey] = useState(false);
+  const [hasExistingToken, setHasExistingToken] = useState(false);
 
   // Fetch config
   const { data: config, isLoading } = useQuery({
@@ -96,8 +97,9 @@ export function MercadoPagoSettings() {
 
       if (error && error.code !== "PGRST116") throw error;
       if (data) {
+        setHasExistingToken(!!data.access_token_encrypted);
         setFormData({
-          access_token: "***************",
+          access_token: "",
           public_key: data.public_key || "",
           webhook_secret: data.webhook_secret || "",
           is_sandbox: data.is_sandbox,
@@ -113,7 +115,7 @@ export function MercadoPagoSettings() {
   const saveConfigMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       const payload = {
-        access_token_encrypted: data.access_token !== "***************" 
+        access_token_encrypted: data.access_token 
           ? data.access_token 
           : config?.access_token_encrypted,
         public_key: data.public_key || null,
@@ -206,7 +208,15 @@ export function MercadoPagoSettings() {
 
               {/* Access Token */}
               <div className="space-y-2">
-                <Label htmlFor="access_token">Access Token *</Label>
+                <Label htmlFor="access_token" className="flex items-center gap-2">
+                  Access Token *
+                  {hasExistingToken && !formData.access_token && (
+                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-xs">
+                      <CheckCircle2 className="w-3 h-3 mr-1" />
+                      Configurado
+                    </Badge>
+                  )}
+                </Label>
                 <div className="relative">
                   <Input
                     id="access_token"
@@ -215,7 +225,7 @@ export function MercadoPagoSettings() {
                     onChange={(e) =>
                       setFormData({ ...formData, access_token: e.target.value })
                     }
-                    placeholder="APP_USR-xxxxxxxxxxxxxxxxxxxx"
+                    placeholder={hasExistingToken ? "Digite para substituir o token atual" : "APP_USR-xxxxxxxxxxxxxxxxxxxx"}
                     className="pr-10"
                   />
                   <Button
@@ -234,16 +244,20 @@ export function MercadoPagoSettings() {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Token de acesso do Mercado Pago. Obtenha em{" "}
-                  <a
-                    href="https://www.mercadopago.com.br/developers/panel"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline inline-flex items-center gap-1"
-                  >
-                    Painel de Desenvolvedores
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
+                  {hasExistingToken && !formData.access_token 
+                    ? "Token já configurado. Deixe em branco para manter o atual ou digite um novo para substituir."
+                    : <>Token de acesso do Mercado Pago. Obtenha em{" "}
+                      <a
+                        href="https://www.mercadopago.com.br/developers/panel"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline inline-flex items-center gap-1"
+                      >
+                        Painel de Desenvolvedores
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </>
+                  }
                 </p>
               </div>
 
