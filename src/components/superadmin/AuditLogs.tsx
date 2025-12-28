@@ -28,7 +28,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, Search, Plus, Edit, Trash2, Eye } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { FileText, Search, Plus, Edit, Trash2, Eye, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface AuditLog {
   id: string;
@@ -42,19 +43,47 @@ interface AuditLog {
   created_at: string;
 }
 
+const ITEMS_PER_PAGE = 20;
+
 export function AuditLogs() {
   const [actionFilter, setActionFilter] = useState<string>("all");
   const [tableFilter, setTableFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Query para contar total de registros
+  const { data: totalCount } = useQuery({
+    queryKey: ["superadmin-audit-logs-count", actionFilter, tableFilter],
+    queryFn: async () => {
+      let query = supabase
+        .from("audit_logs")
+        .select("*", { count: "exact", head: true });
+
+      if (actionFilter !== "all") {
+        query = query.eq("action", actionFilter);
+      }
+
+      if (tableFilter !== "all") {
+        query = query.eq("table_name", tableFilter);
+      }
+
+      const { count, error } = await query;
+      if (error) throw error;
+      return count || 0;
+    },
+  });
 
   const { data: logs, isLoading } = useQuery({
-    queryKey: ["superadmin-audit-logs", actionFilter, tableFilter],
+    queryKey: ["superadmin-audit-logs", actionFilter, tableFilter, currentPage],
     queryFn: async () => {
+      const from = (currentPage - 1) * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
+
       let query = supabase
         .from("audit_logs")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(200);
+        .range(from, to);
 
       if (actionFilter !== "all") {
         query = query.eq("action", actionFilter);
@@ -94,6 +123,26 @@ export function AuditLogs() {
     );
   });
 
+  const totalPages = Math.ceil((totalCount || 0) / ITEMS_PER_PAGE);
+
+  const handlePreviousPage = () => {
+    setCurrentPage((prev) => Math.max(1, prev - 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage((prev) => Math.min(totalPages, prev + 1));
+  };
+
+  // Reset para página 1 quando filtros mudam
+  const handleFilterChange = (type: "action" | "table", value: string) => {
+    setCurrentPage(1);
+    if (type === "action") {
+      setActionFilter(value);
+    } else {
+      setTableFilter(value);
+    }
+  };
+
   const getActionIcon = (action: string) => {
     switch (action.toLowerCase()) {
       case "insert":
@@ -123,6 +172,9 @@ export function AuditLogs() {
         <CardTitle>Logs de Auditoria</CardTitle>
         <CardDescription>
           Histórico de ações realizadas no sistema
+          {totalCount !== undefined && (
+            <span className="ml-2 text-xs">({totalCount.toLocaleString("pt-BR")} registros)</span>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -136,7 +188,7 @@ export function AuditLogs() {
               className="pl-10"
             />
           </div>
-          <Select value={actionFilter} onValueChange={setActionFilter}>
+          <Select value={actionFilter} onValueChange={(v) => handleFilterChange("action", v)}>
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Ação" />
             </SelectTrigger>
@@ -147,7 +199,7 @@ export function AuditLogs() {
               <SelectItem value="DELETE">Delete</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={tableFilter} onValueChange={setTableFilter}>
+          <Select value={tableFilter} onValueChange={(v) => handleFilterChange("table", v)}>
             <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="Tabela" />
             </SelectTrigger>
@@ -174,56 +226,87 @@ export function AuditLogs() {
             <p className="text-muted-foreground">Nenhum log encontrado</p>
           </div>
         ) : (
-          <div className="rounded-md border overflow-hidden max-h-[600px] overflow-y-auto">
-            <Table>
-              <TableHeader className="sticky top-0 bg-background">
-                <TableRow>
-                  <TableHead>Data/Hora</TableHead>
-                  <TableHead>Tabela</TableHead>
-                  <TableHead>Ação</TableHead>
-                  <TableHead>ID do Registro</TableHead>
-                  <TableHead>IP</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredLogs?.map((log) => (
-                  <TableRow key={log.id}>
-                    <TableCell>
-                      <div>
-                        <p className="text-sm font-medium">
-                          {format(new Date(log.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {format(new Date(log.created_at), "HH:mm:ss", { locale: ptBR })}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <code className="text-xs bg-muted px-2 py-1 rounded">
-                        {log.table_name}
-                      </code>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={`gap-1 ${getActionBadge(log.action)}`}>
-                        {getActionIcon(log.action)}
-                        {log.action}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <code className="text-xs text-muted-foreground">
-                        {log.record_id?.slice(0, 8) || "—"}
-                      </code>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm text-muted-foreground">
-                        {log.ip_address || "—"}
-                      </span>
-                    </TableCell>
+          <>
+            <div className="rounded-md border overflow-hidden">
+              <Table>
+                <TableHeader className="bg-muted/50">
+                  <TableRow>
+                    <TableHead>Data/Hora</TableHead>
+                    <TableHead>Tabela</TableHead>
+                    <TableHead>Ação</TableHead>
+                    <TableHead>ID do Registro</TableHead>
+                    <TableHead>IP</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {filteredLogs?.map((log) => (
+                    <TableRow key={log.id}>
+                      <TableCell>
+                        <div>
+                          <p className="text-sm font-medium">
+                            {format(new Date(log.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(log.created_at), "HH:mm:ss", { locale: ptBR })}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <code className="text-xs bg-muted px-2 py-1 rounded">
+                          {log.table_name}
+                        </code>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={`gap-1 ${getActionBadge(log.action)}`}>
+                          {getActionIcon(log.action)}
+                          {log.action}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <code className="text-xs text-muted-foreground">
+                          {log.record_id?.slice(0, 8) || "—"}
+                        </code>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">
+                          {log.ip_address || "—"}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Paginação */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4">
+                <p className="text-sm text-muted-foreground">
+                  Página {currentPage} de {totalPages}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePreviousPage}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    Anterior
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages}
+                  >
+                    Próxima
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </CardContent>
     </Card>
