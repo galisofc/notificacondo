@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, differenceInDays, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import jsPDF from "jspdf";
 import {
   Card,
   CardContent,
@@ -71,6 +72,7 @@ interface InvoiceWithDetails {
   payment_reference: string | null;
   description: string | null;
   created_at: string;
+  invoice_number: string | null;
   condominium: {
     name: string;
     owner_id: string;
@@ -263,6 +265,88 @@ export function InvoicesManagement() {
     }
     return value;
   };
+
+  const generateInvoicePDF = (invoice: InvoiceWithDetails) => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    
+    // Header
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
+    doc.text("FATURA", pageWidth / 2, 25, { align: "center" });
+    
+    // Invoice Number
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "normal");
+    doc.text(invoice.invoice_number || "—", pageWidth / 2, 35, { align: "center" });
+    
+    // Line separator
+    doc.setLineWidth(0.5);
+    doc.line(20, 45, pageWidth - 20, 45);
+    
+    // Condominium Info
+    let yPos = 60;
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("Dados do Condominio", 20, yPos);
+    
+    yPos += 10;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text("Nome: " + (invoice.condominium?.name || "—"), 20, yPos);
+    yPos += 7;
+    doc.text("CNPJ: " + formatCNPJ(invoice.condominium?.cnpj || null), 20, yPos);
+    yPos += 7;
+    doc.text("Sindico: " + (invoice.owner_profile?.full_name || "—"), 20, yPos);
+    yPos += 7;
+    doc.text("Email: " + (invoice.owner_profile?.email || "—"), 20, yPos);
+    
+    // Invoice Details
+    yPos += 20;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("Detalhes da Fatura", 20, yPos);
+    
+    yPos += 10;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text("Periodo: " + formatDate(invoice.period_start) + " a " + formatDate(invoice.period_end), 20, yPos);
+    yPos += 7;
+    doc.text("Vencimento: " + formatDate(invoice.due_date), 20, yPos);
+    yPos += 7;
+    const statusText = invoice.status === "paid" ? "Pago" : invoice.status === "pending" ? "Pendente" : invoice.status;
+    doc.text("Status: " + statusText, 20, yPos);
+    
+    if (invoice.paid_at) {
+      yPos += 7;
+      doc.text("Pago em: " + formatDate(invoice.paid_at), 20, yPos);
+    }
+    
+    if (invoice.payment_method) {
+      yPos += 7;
+      doc.text("Forma de pagamento: " + invoice.payment_method, 20, yPos);
+    }
+    
+    // Amount
+    yPos += 20;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text("Valor: " + formatCurrency(Number(invoice.amount)), 20, yPos);
+    
+    // Footer
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.text("Gerado em: " + format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR }), pageWidth / 2, 280, { align: "center" });
+    
+    // Save
+    doc.save((invoice.invoice_number || "fatura") + ".pdf");
+    
+    toast({
+      title: "PDF gerado",
+      description: "Fatura " + (invoice.invoice_number || "") + " exportada com sucesso.",
+    });
+  };
+
   const getStatusBadge = (status: string, dueDate: string) => {
     const today = new Date();
     const due = new Date(dueDate);
@@ -534,6 +618,14 @@ export function InvoicesManagement() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => generateInvoicePDF(invoice)}
+                              title="Baixar PDF"
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="icon"
