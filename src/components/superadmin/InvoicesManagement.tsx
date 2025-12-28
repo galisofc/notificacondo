@@ -112,7 +112,145 @@ export function InvoicesManagement() {
     return (saved as SortDirection) || "desc";
   });
   const [generatingPix, setGeneratingPix] = useState<string | null>(null);
+  const [showPixDialog, setShowPixDialog] = useState(false);
+  const [pixInvoice, setPixInvoice] = useState<InvoiceWithDetails | null>(null);
+  const [pixDocument, setPixDocument] = useState("");
+  const [pixDocumentType, setPixDocumentType] = useState<"CPF" | "CNPJ">("CPF");
+  const [pixDocumentError, setPixDocumentError] = useState("");
   const itemsPerPage = 10;
+
+  // Validação de CPF
+  const validateCPF = (cpf: string): boolean => {
+    cpf = cpf.replace(/\D/g, "");
+    if (cpf.length !== 11) return false;
+    if (/^(\d)\1{10}$/.test(cpf)) return false;
+
+    let sum = 0;
+    for (let i = 0; i < 9; i++) {
+      sum += parseInt(cpf.charAt(i)) * (10 - i);
+    }
+    let remainder = (sum * 10) % 11;
+    if (remainder === 10 || remainder === 11) remainder = 0;
+    if (remainder !== parseInt(cpf.charAt(9))) return false;
+
+    sum = 0;
+    for (let i = 0; i < 10; i++) {
+      sum += parseInt(cpf.charAt(i)) * (11 - i);
+    }
+    remainder = (sum * 10) % 11;
+    if (remainder === 10 || remainder === 11) remainder = 0;
+    if (remainder !== parseInt(cpf.charAt(10))) return false;
+
+    return true;
+  };
+
+  // Validação de CNPJ
+  const validateCNPJ = (cnpj: string): boolean => {
+    cnpj = cnpj.replace(/\D/g, "");
+    if (cnpj.length !== 14) return false;
+    if (/^(\d)\1{13}$/.test(cnpj)) return false;
+
+    let size = cnpj.length - 2;
+    let numbers = cnpj.substring(0, size);
+    const digits = cnpj.substring(size);
+    let sum = 0;
+    let pos = size - 7;
+
+    for (let i = size; i >= 1; i--) {
+      sum += parseInt(numbers.charAt(size - i)) * pos--;
+      if (pos < 2) pos = 9;
+    }
+
+    let result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+    if (result !== parseInt(digits.charAt(0))) return false;
+
+    size = size + 1;
+    numbers = cnpj.substring(0, size);
+    sum = 0;
+    pos = size - 7;
+
+    for (let i = size; i >= 1; i--) {
+      sum += parseInt(numbers.charAt(size - i)) * pos--;
+      if (pos < 2) pos = 9;
+    }
+
+    result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+    if (result !== parseInt(digits.charAt(1))) return false;
+
+    return true;
+  };
+
+  // Formatar CPF/CNPJ durante digitação
+  const formatDocument = (value: string, type: "CPF" | "CNPJ"): string => {
+    const numbers = value.replace(/\D/g, "");
+    if (type === "CPF") {
+      return numbers
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d{1,2})$/, "$1-$2")
+        .substring(0, 14);
+    } else {
+      return numbers
+        .replace(/(\d{2})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d)/, "$1/$2")
+        .replace(/(\d{4})(\d{1,2})$/, "$1-$2")
+        .substring(0, 18);
+    }
+  };
+
+  // Handler para abrir dialog do PIX
+  const handleOpenPixDialog = (invoice: InvoiceWithDetails) => {
+    if (invoice.status === "paid") {
+      toast({
+        title: "Fatura já paga",
+        description: "Esta fatura já foi paga, não é possível gerar PIX.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setPixInvoice(invoice);
+    setPixDocument("");
+    setPixDocumentError("");
+    setPixDocumentType("CPF");
+    setShowPixDialog(true);
+  };
+
+  // Handler para mudança de documento
+  const handleDocumentChange = (value: string) => {
+    const formatted = formatDocument(value, pixDocumentType);
+    setPixDocument(formatted);
+    setPixDocumentError("");
+  };
+
+  // Handler para mudança de tipo de documento
+  const handleDocumentTypeChange = (type: "CPF" | "CNPJ") => {
+    setPixDocumentType(type);
+    setPixDocument("");
+    setPixDocumentError("");
+  };
+
+  // Validar e gerar PIX
+  const handleGeneratePixWithValidation = async () => {
+    if (!pixInvoice) return;
+
+    const cleanDocument = pixDocument.replace(/\D/g, "");
+    
+    if (pixDocumentType === "CPF") {
+      if (!validateCPF(cleanDocument)) {
+        setPixDocumentError("CPF inválido. Verifique os dígitos.");
+        return;
+      }
+    } else {
+      if (!validateCNPJ(cleanDocument)) {
+        setPixDocumentError("CNPJ inválido. Verifique os dígitos.");
+        return;
+      }
+    }
+
+    setShowPixDialog(false);
+    await generateInvoicePDFWithPix(pixInvoice, cleanDocument, pixDocumentType);
+  };
 
   // Persistir preferências de ordenação
   useEffect(() => {
@@ -503,16 +641,11 @@ export function InvoicesManagement() {
   };
 
   // Gerar PDF com QR Code PIX
-  const generateInvoicePDFWithPix = async (invoice: InvoiceWithDetails) => {
-    if (invoice.status === "paid") {
-      toast({
-        title: "Fatura já paga",
-        description: "Esta fatura já foi paga, não é possível gerar PIX.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const generateInvoicePDFWithPix = async (
+    invoice: InvoiceWithDetails, 
+    documentNumber: string, 
+    documentType: "CPF" | "CNPJ"
+  ) => {
     setGeneratingPix(invoice.id);
 
     try {
@@ -525,6 +658,8 @@ export function InvoicesManagement() {
             payer_email: invoice.owner_profile?.email || "cliente@email.com",
             payer_first_name: invoice.owner_profile?.full_name?.split(" ")[0] || "Cliente",
             payer_last_name: invoice.owner_profile?.full_name?.split(" ").slice(1).join(" ") || "NotificaCondo",
+            payer_identification_type: documentType,
+            payer_identification_number: documentNumber,
           },
         }
       );
@@ -1032,7 +1167,7 @@ export function InvoicesManagement() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => generateInvoicePDFWithPix(invoice)}
+                                onClick={() => handleOpenPixDialog(invoice)}
                                 title="Baixar PDF com PIX"
                                 disabled={generatingPix === invoice.id}
                                 className="text-primary hover:text-primary hover:bg-primary/10"
@@ -1283,6 +1418,97 @@ export function InvoicesManagement() {
             >
               <CheckCircle2 className="h-4 w-4 mr-2" />
               {markAsPaidMutation.isPending ? "Registrando..." : "Confirmar Pagamento"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* PIX Document Validation Dialog */}
+      <Dialog open={showPixDialog} onOpenChange={setShowPixDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <QrCode className="h-5 w-5 text-primary" />
+              Gerar PIX
+            </DialogTitle>
+            <DialogDescription>
+              Informe o CPF ou CNPJ do pagador para gerar o QR Code PIX
+            </DialogDescription>
+          </DialogHeader>
+          {pixInvoice && (
+            <div className="space-y-4">
+              <div className="p-3 bg-muted rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">{pixInvoice.condominium?.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Fatura: {pixInvoice.invoice_number}
+                    </p>
+                  </div>
+                  <p className="font-bold text-lg">
+                    {formatCurrency(Number(pixInvoice.amount))}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <Label>Tipo de Documento</Label>
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      type="button"
+                      variant={pixDocumentType === "CPF" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handleDocumentTypeChange("CPF")}
+                      className={pixDocumentType === "CPF" ? "" : ""}
+                    >
+                      CPF
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={pixDocumentType === "CNPJ" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handleDocumentTypeChange("CNPJ")}
+                    >
+                      CNPJ
+                    </Button>
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="pix-document">
+                    {pixDocumentType} do Pagador *
+                  </Label>
+                  <Input
+                    id="pix-document"
+                    placeholder={pixDocumentType === "CPF" ? "000.000.000-00" : "00.000.000/0000-00"}
+                    value={pixDocument}
+                    onChange={(e) => handleDocumentChange(e.target.value)}
+                    maxLength={pixDocumentType === "CPF" ? 14 : 18}
+                    className={pixDocumentError ? "border-destructive" : ""}
+                  />
+                  {pixDocumentError && (
+                    <p className="text-sm text-destructive mt-1">{pixDocumentError}</p>
+                  )}
+                </div>
+
+                <div className="text-xs text-muted-foreground">
+                  <AlertCircle className="h-3 w-3 inline mr-1" />
+                  O documento do pagador é necessário para validar o pagamento PIX junto ao Mercado Pago.
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPixDialog(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleGeneratePixWithValidation}
+              disabled={!pixDocument || pixDocument.replace(/\D/g, "").length < (pixDocumentType === "CPF" ? 11 : 14)}
+            >
+              <QrCode className="h-4 w-4 mr-2" />
+              Gerar QR Code PIX
             </Button>
           </DialogFooter>
         </DialogContent>
