@@ -19,7 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { MessageCircle, Save, TestTube, CheckCircle, XCircle, Loader2, AlertCircle, Eye, EyeOff, Send, Phone, Settings, FileText } from "lucide-react";
+import { MessageCircle, Save, TestTube, CheckCircle, XCircle, Loader2, AlertCircle, Eye, EyeOff, Send, Phone, Settings, FileText, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { WhatsAppTemplates } from "./WhatsAppTemplates";
 
@@ -84,6 +84,8 @@ export function WhatsAppConfig() {
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [showToken, setShowToken] = useState(false);
   const [testPhone, setTestPhone] = useState("");
+  const [connectionStatus, setConnectionStatus] = useState<"checking" | "connected" | "disconnected" | "not_configured">("checking");
+  const [lastChecked, setLastChecked] = useState<Date | null>(null);
 
   const [config, setConfig] = useState<WhatsAppConfigData>({
     provider: "zpro",
@@ -103,6 +105,59 @@ export function WhatsAppConfig() {
   useEffect(() => {
     setErrors({});
   }, [config.provider]);
+
+  // Test connection when config is loaded
+  const testConnectionStatus = async () => {
+    if (!config.id) {
+      setConnectionStatus("not_configured");
+      return;
+    }
+
+    setConnectionStatus("checking");
+
+    try {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/test-whatsapp-connection`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setConnectionStatus("connected");
+      } else {
+        setConnectionStatus("disconnected");
+      }
+      
+      setLastChecked(new Date());
+    } catch (error) {
+      console.error("Connection test failed:", error);
+      setConnectionStatus("disconnected");
+      setLastChecked(new Date());
+    }
+  };
+
+  // Auto-test connection when config changes
+  useEffect(() => {
+    if (!isLoading && config.id) {
+      testConnectionStatus();
+    } else if (!isLoading && !config.id) {
+      setConnectionStatus("not_configured");
+    }
+  }, [isLoading, config.id]);
+
+  // Auto-refresh every 60 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (config.id) {
+        testConnectionStatus();
+      }
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [config.id]);
 
   const loadConfig = async () => {
     setIsLoading(true);
@@ -387,13 +442,29 @@ export function WhatsAppConfig() {
 
       <TabsContent value="config" className="space-y-6">
         {/* Status Card */}
-        <Card className={config.id ? "border-green-500/30 bg-green-500/5" : "border-amber-500/30 bg-amber-500/5"}>
+        <Card className={
+          connectionStatus === "connected" 
+            ? "border-green-500/30 bg-green-500/5" 
+            : connectionStatus === "disconnected"
+            ? "border-red-500/30 bg-red-500/5"
+            : connectionStatus === "checking"
+            ? "border-blue-500/30 bg-blue-500/5"
+            : "border-amber-500/30 bg-amber-500/5"
+        }>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                {config.id ? (
+                {connectionStatus === "checking" ? (
+                  <div className="p-2 rounded-lg bg-blue-500/10">
+                    <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+                  </div>
+                ) : connectionStatus === "connected" ? (
                   <div className="p-2 rounded-lg bg-green-500/10">
                     <CheckCircle className="w-5 h-5 text-green-500" />
+                  </div>
+                ) : connectionStatus === "disconnected" ? (
+                  <div className="p-2 rounded-lg bg-red-500/10">
+                    <XCircle className="w-5 h-5 text-red-500" />
                   </div>
                 ) : (
                   <div className="p-2 rounded-lg bg-amber-500/10">
@@ -402,27 +473,64 @@ export function WhatsAppConfig() {
                 )}
                 <div>
                   <p className="font-medium text-foreground">
-                    {config.id ? "Integração Configurada" : "Integração Não Configurada"}
+                    {connectionStatus === "checking" 
+                      ? "Verificando Conexão..." 
+                      : connectionStatus === "connected"
+                      ? "Integração Conectada"
+                      : connectionStatus === "disconnected"
+                      ? "Falha na Conexão"
+                      : "Integração Não Configurada"}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {config.id 
-                      ? `Provedor: ${config.provider?.toUpperCase()} • Status: ${config.is_active ? "Ativo" : "Inativo"}`
+                    {connectionStatus === "checking" 
+                      ? "Testando conexão com a API..."
+                      : connectionStatus === "connected"
+                      ? `Provedor: ${config.provider?.toUpperCase()} • Conexão ativa`
+                      : connectionStatus === "disconnected"
+                      ? "Verifique as credenciais da API"
                       : "Configure as credenciais abaixo para ativar o envio de notificações"}
+                    {lastChecked && connectionStatus !== "checking" && (
+                      <span className="ml-2 text-xs">
+                        (verificado às {lastChecked.toLocaleTimeString("pt-BR")})
+                      </span>
+                    )}
                   </p>
                 </div>
               </div>
-              {config.id && (
-                <Badge 
-                  variant="outline" 
-                  className={config.is_active 
-                    ? "bg-green-500/10 text-green-500 border-green-500/20 gap-1" 
-                    : "bg-muted text-muted-foreground border-border gap-1"
-                  }
-                >
-                  <div className={`w-2 h-2 rounded-full ${config.is_active ? "bg-green-500 animate-pulse" : "bg-muted-foreground"}`} />
-                  {config.is_active ? "Online" : "Offline"}
-                </Badge>
-              )}
+              <div className="flex items-center gap-2">
+                {config.id && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={testConnectionStatus}
+                    disabled={connectionStatus === "checking"}
+                    className="h-8 w-8 p-0"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${connectionStatus === "checking" ? "animate-spin" : ""}`} />
+                  </Button>
+                )}
+                {connectionStatus === "checking" ? (
+                  <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20 gap-1">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Verificando
+                  </Badge>
+                ) : connectionStatus === "connected" ? (
+                  <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20 gap-1">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    Conectado
+                  </Badge>
+                ) : connectionStatus === "disconnected" ? (
+                  <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20 gap-1">
+                    <div className="w-2 h-2 rounded-full bg-red-500" />
+                    Desconectado
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 gap-1">
+                    <div className="w-2 h-2 rounded-full bg-amber-500" />
+                    Não configurado
+                  </Badge>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
