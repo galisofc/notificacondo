@@ -411,8 +411,8 @@ export function SindicosManagement() {
     if (selectedSindico?.profile) {
       setEditProfileData({
         full_name: selectedSindico.profile.full_name || "",
-        phone: selectedSindico.profile.phone || "",
-        cpf: selectedSindico.profile.cpf || "",
+        phone: selectedSindico.profile.phone ? formatPhone(selectedSindico.profile.phone) : "",
+        cpf: selectedSindico.profile.cpf ? formatCPF(selectedSindico.profile.cpf) : "",
       });
       setIsEditingProfile(true);
     }
