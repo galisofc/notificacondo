@@ -107,6 +107,8 @@ export default function SuperAdminSettings() {
   
   // App settings state
   const [sindicoDiscount, setSindicoDiscount] = useState<number>(15);
+  const [defaultTrialDays, setDefaultTrialDays] = useState<number>(7);
+  const [invoiceDueDays, setInvoiceDueDays] = useState<number>(5);
   
   const [formData, setFormData] = useState({
     slug: "",
@@ -130,14 +132,24 @@ export default function SuperAdminSettings() {
         .select("*");
       if (error) throw error;
       
-      // Update sindicoDiscount state when data loads
-      const discountSetting = data?.find(s => s.key === "sindico_early_trial_discount");
-      if (discountSetting) {
-        const value = typeof discountSetting.value === 'string' 
-          ? Number(discountSetting.value) 
-          : Number(discountSetting.value);
-        setSindicoDiscount(isNaN(value) ? 15 : value);
-      }
+      // Update states when data loads
+      data?.forEach(setting => {
+        const value = typeof setting.value === 'string' 
+          ? Number(setting.value) 
+          : Number(setting.value);
+        
+        switch (setting.key) {
+          case "sindico_early_trial_discount":
+            setSindicoDiscount(isNaN(value) ? 15 : value);
+            break;
+          case "default_trial_days":
+            setDefaultTrialDays(isNaN(value) ? 7 : value);
+            break;
+          case "invoice_due_days":
+            setInvoiceDueDays(isNaN(value) ? 5 : value);
+            break;
+        }
+      });
       
       return data;
     },
@@ -601,6 +613,95 @@ export default function SuperAdminSettings() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-4">
+                  {/* Dias de Trial Padrão */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg border border-border/50">
+                    <div className="flex-1">
+                      <Label htmlFor="default-trial-days" className="text-base font-medium">
+                        Dias de trial padrão
+                      </Label>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Número de dias do período de trial para novos condomínios
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="default-trial-days"
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={defaultTrialDays}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '');
+                            const num = val === '' ? 0 : Math.min(365, Math.max(1, parseInt(val, 10)));
+                            setDefaultTrialDays(num);
+                          }}
+                          className="w-20 text-center"
+                        />
+                        <span className="text-muted-foreground">dias</span>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => updateSettingMutation.mutate({ 
+                          key: "default_trial_days", 
+                          value: String(defaultTrialDays) 
+                        })}
+                        disabled={updateSettingMutation.isPending}
+                      >
+                        {updateSettingMutation.isPending ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Save className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Dias Úteis para Vencimento */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg border border-border/50">
+                    <div className="flex-1">
+                      <Label htmlFor="invoice-due-days" className="text-base font-medium">
+                        Dias úteis para vencimento
+                      </Label>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Número de dias úteis para vencimento das faturas após emissão
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="invoice-due-days"
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={invoiceDueDays}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '');
+                            const num = val === '' ? 0 : Math.min(30, Math.max(1, parseInt(val, 10)));
+                            setInvoiceDueDays(num);
+                          }}
+                          className="w-20 text-center"
+                        />
+                        <span className="text-muted-foreground">dias úteis</span>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => updateSettingMutation.mutate({ 
+                          key: "invoice_due_days", 
+                          value: String(invoiceDueDays) 
+                        })}
+                        disabled={updateSettingMutation.isPending}
+                      >
+                        {updateSettingMutation.isPending ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Save className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Desconto Encerramento Antecipado */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg border border-border/50">
                     <div className="flex-1">
                       <Label htmlFor="sindico-discount" className="text-base font-medium">
@@ -646,7 +747,7 @@ export default function SuperAdminSettings() {
                   
                   <div className="p-4 rounded-lg bg-muted/30">
                     <p className="text-sm text-muted-foreground">
-                      <strong>Nota:</strong> Este desconto é aplicado automaticamente na primeira fatura quando o síndico 
+                      <strong>Nota:</strong> O desconto para encerramento antecipado é aplicado automaticamente na primeira fatura quando o síndico 
                       decide encerrar o período de trial antes da data de expiração. O super admin pode escolher 
                       um desconto diferente ao encerrar o trial manualmente.
                     </p>
