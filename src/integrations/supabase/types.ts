@@ -1087,6 +1087,35 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_cron_job_runs: {
+        Args: never
+        Returns: {
+          command: string
+          database: string
+          end_time: string
+          job_pid: number
+          jobid: number
+          return_message: string
+          runid: number
+          start_time: string
+          status: string
+          username: string
+        }[]
+      }
+      get_cron_jobs: {
+        Args: never
+        Returns: {
+          active: boolean
+          command: string
+          database: string
+          jobid: number
+          jobname: string
+          nodename: string
+          nodeport: number
+          schedule: string
+          username: string
+        }[]
+      }
       get_rls_status: {
         Args: never
         Returns: {
