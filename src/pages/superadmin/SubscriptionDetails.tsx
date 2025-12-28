@@ -116,6 +116,8 @@ export default function SubscriptionDetails() {
   const [trialActivationJustification, setTrialActivationJustification] = useState("");
   const [extraDays, setExtraDays] = useState<number>(0);
   const [extraDaysJustification, setExtraDaysJustification] = useState("");
+  const [endTrialDiscount, setEndTrialDiscount] = useState<number>(0);
+  const [endTrialDiscountType, setEndTrialDiscountType] = useState<"percentage" | "fixed">("percentage");
   const [periodStartDate, setPeriodStartDate] = useState("");
   const [periodEndDate, setPeriodEndDate] = useState("");
   const [transferCpf, setTransferCpf] = useState("");
@@ -223,6 +225,19 @@ export default function SubscriptionDetails() {
       };
     },
     enabled: !!id,
+  });
+
+  // Fetch plans for pricing info
+  const { data: plans } = useQuery({
+    queryKey: ["active-plans"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("plans")
+        .select("*")
+        .eq("is_active", true);
+      if (error) throw error;
+      return data;
+    },
   });
 
   const updateMutation = useMutation({
@@ -504,7 +519,7 @@ export default function SubscriptionDetails() {
   });
 
   const endTrialMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({ discount, discountType }: { discount: number; discountType: "percentage" | "fixed" }) => {
       if (!id || !data?.subscription || !data?.condominium) throw new Error("Dados não encontrados");
 
       const now = new Date();
@@ -522,6 +537,18 @@ export default function SubscriptionDetails() {
         .single();
 
       const planPrice = planData?.price || 0;
+      
+      // Calculate final amount with discount
+      let finalAmount = planPrice;
+      let discountAmount = 0;
+      if (discount > 0) {
+        if (discountType === "percentage") {
+          discountAmount = (planPrice * discount) / 100;
+        } else {
+          discountAmount = discount;
+        }
+        finalAmount = Math.max(0, planPrice - discountAmount);
+      }
 
       // Update subscription to end trial
       const { error: subError } = await supabase
@@ -538,17 +565,21 @@ export default function SubscriptionDetails() {
 
       // Generate invoice with 3 business days due date (only if plan has price > 0)
       if (planPrice > 0) {
+        const discountDescription = discount > 0 
+          ? ` (Desconto: ${discountType === "percentage" ? `${discount}%` : `R$ ${discount.toFixed(2)}`})`
+          : "";
+        
         const { error: invoiceError } = await supabase
           .from("invoices")
           .insert({
             subscription_id: id,
             condominium_id: data.condominium.id,
-            amount: planPrice,
+            amount: finalAmount,
             status: "pending",
             due_date: dueDate.toISOString().split("T")[0],
             period_start: now.toISOString().split("T")[0],
             period_end: periodEnd.toISOString().split("T")[0],
-            description: `Primeira mensalidade - Plano ${planData?.name || data.subscription.plan}`,
+            description: `Primeira mensalidade - Plano ${planData?.name || data.subscription.plan}${discountDescription}`,
           });
 
         if (invoiceError) throw invoiceError;
@@ -567,7 +598,11 @@ export default function SubscriptionDetails() {
             action: "end_trial",
             ended_by: "super_admin",
             plan: data.subscription.plan,
-            invoice_amount: planPrice,
+            original_amount: planPrice,
+            discount_amount: discountAmount,
+            discount_type: discountType,
+            discount_value: discount,
+            invoice_amount: finalAmount,
             invoice_due_date: dueDate.toISOString(),
             period_start: now.toISOString(),
             period_end: periodEnd.toISOString(),
@@ -582,6 +617,8 @@ export default function SubscriptionDetails() {
       queryClient.invalidateQueries({ queryKey: ["superadmin-subscriptions"] });
       queryClient.invalidateQueries({ queryKey: ["superadmin-invoices"] });
       setIsEndTrialDialogOpen(false);
+      setEndTrialDiscount(0);
+      setEndTrialDiscountType("percentage");
       toast({
         title: "Trial encerrado",
         description: "O trial foi encerrado e a fatura foi gerada com vencimento em 3 dias úteis.",
@@ -2000,7 +2037,13 @@ export default function SubscriptionDetails() {
       </Dialog>
 
       {/* End Trial Dialog */}
-      <Dialog open={isEndTrialDialogOpen} onOpenChange={setIsEndTrialDialogOpen}>
+      <Dialog open={isEndTrialDialogOpen} onOpenChange={(open) => {
+        setIsEndTrialDialogOpen(open);
+        if (!open) {
+          setEndTrialDiscount(0);
+          setEndTrialDiscountType("percentage");
+        }
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -2023,20 +2066,110 @@ export default function SubscriptionDetails() {
               </ul>
             </div>
             
-            {data?.subscription && (
-              <div className="p-3 bg-muted rounded-lg space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Plano atual:</span>
-                  <span className="font-medium">{PLAN_INFO[data.subscription.plan as PlanType]?.name}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Vencimento da fatura:</span>
-                  <span className="font-medium">
-                    {format(addBusinessDays(new Date(), 3), "dd/MM/yyyy", { locale: ptBR })}
-                  </span>
-                </div>
+            {/* Discount Section */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Desconto na primeira fatura (opcional)</Label>
+              <div className="flex gap-2">
+                <Select
+                  value={endTrialDiscountType}
+                  onValueChange={(value: "percentage" | "fixed") => setEndTrialDiscountType(value)}
+                >
+                  <SelectTrigger className="w-[130px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="percentage">Percentual (%)</SelectItem>
+                    <SelectItem value="fixed">Valor Fixo (R$)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="number"
+                  min="0"
+                  max={endTrialDiscountType === "percentage" ? 100 : undefined}
+                  value={endTrialDiscount}
+                  onChange={(e) => setEndTrialDiscount(Number(e.target.value))}
+                  placeholder={endTrialDiscountType === "percentage" ? "0%" : "R$ 0,00"}
+                  className="flex-1"
+                />
               </div>
-            )}
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { setEndTrialDiscountType("percentage"); setEndTrialDiscount(10); }}
+                  className={endTrialDiscountType === "percentage" && endTrialDiscount === 10 ? "border-primary" : ""}
+                >
+                  10%
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { setEndTrialDiscountType("percentage"); setEndTrialDiscount(20); }}
+                  className={endTrialDiscountType === "percentage" && endTrialDiscount === 20 ? "border-primary" : ""}
+                >
+                  20%
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { setEndTrialDiscountType("percentage"); setEndTrialDiscount(50); }}
+                  className={endTrialDiscountType === "percentage" && endTrialDiscount === 50 ? "border-primary" : ""}
+                >
+                  50%
+                </Button>
+              </div>
+            </div>
+
+            {data?.subscription && (() => {
+              const currentPlan = plans?.find(p => p.slug === data.subscription.plan);
+              const planPrice = currentPlan?.price || 0;
+              let finalAmount = planPrice;
+              if (endTrialDiscount > 0) {
+                if (endTrialDiscountType === "percentage") {
+                  finalAmount = planPrice - (planPrice * endTrialDiscount / 100);
+                } else {
+                  finalAmount = planPrice - endTrialDiscount;
+                }
+                finalAmount = Math.max(0, finalAmount);
+              }
+              
+              return (
+                <div className="p-3 bg-muted rounded-lg space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Plano atual:</span>
+                    <span className="font-medium">{PLAN_INFO[data.subscription.plan as PlanType]?.name}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Valor original:</span>
+                    <span className="font-medium">R$ {planPrice.toFixed(2)}</span>
+                  </div>
+                  {endTrialDiscount > 0 && (
+                    <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
+                      <span>Desconto:</span>
+                      <span className="font-medium">
+                        -{endTrialDiscountType === "percentage" ? `${endTrialDiscount}%` : `R$ ${endTrialDiscount.toFixed(2)}`}
+                      </span>
+                    </div>
+                  )}
+                  <Separator />
+                  <div className="flex justify-between text-sm font-semibold">
+                    <span>Valor final da fatura:</span>
+                    <span className={endTrialDiscount > 0 ? "text-green-600 dark:text-green-400" : ""}>
+                      R$ {finalAmount.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Vencimento da fatura:</span>
+                    <span className="font-medium">
+                      {format(addBusinessDays(new Date(), 3), "dd/MM/yyyy", { locale: ptBR })}
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
 
             <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
               <p className="text-sm text-destructive flex items-start gap-2">
@@ -2054,7 +2187,7 @@ export default function SubscriptionDetails() {
             </Button>
             <Button
               variant="destructive"
-              onClick={() => endTrialMutation.mutate()}
+              onClick={() => endTrialMutation.mutate({ discount: endTrialDiscount, discountType: endTrialDiscountType })}
               disabled={endTrialMutation.isPending}
             >
               {endTrialMutation.isPending ? (

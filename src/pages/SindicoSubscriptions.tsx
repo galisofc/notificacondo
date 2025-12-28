@@ -112,6 +112,8 @@ const SindicoSubscriptions = () => {
     open: false,
     subscription: null,
   });
+  const [endTrialDiscount, setEndTrialDiscount] = useState<number>(0);
+  const [endTrialDiscountType, setEndTrialDiscountType] = useState<"percentage" | "fixed">("percentage");
 
   // Fetch user profile to get email
   const { data: userProfile } = useQuery({
@@ -386,7 +388,7 @@ const SindicoSubscriptions = () => {
 
   // Mutation to end trial early
   const endTrialMutation = useMutation({
-    mutationFn: async (subscription: Subscription) => {
+    mutationFn: async ({ subscription, discount, discountType }: { subscription: Subscription; discount: number; discountType: "percentage" | "fixed" }) => {
       const now = new Date();
       const periodEnd = new Date(now);
       periodEnd.setDate(periodEnd.getDate() + 30);
@@ -402,6 +404,18 @@ const SindicoSubscriptions = () => {
         .single();
 
       const planPrice = planData?.price || 0;
+      
+      // Calculate final amount with discount
+      let finalAmount = planPrice;
+      let discountAmount = 0;
+      if (discount > 0) {
+        if (discountType === "percentage") {
+          discountAmount = (planPrice * discount) / 100;
+        } else {
+          discountAmount = discount;
+        }
+        finalAmount = Math.max(0, planPrice - discountAmount);
+      }
 
       // Update subscription to end trial
       const { error: subError } = await supabase
@@ -418,17 +432,21 @@ const SindicoSubscriptions = () => {
 
       // Generate invoice with 3 business days due date (only if plan has price > 0)
       if (planPrice > 0) {
+        const discountDescription = discount > 0 
+          ? ` (Desconto: ${discountType === "percentage" ? `${discount}%` : `R$ ${discount.toFixed(2)}`})`
+          : "";
+        
         const { error: invoiceError } = await supabase
           .from("invoices")
           .insert({
             subscription_id: subscription.id,
             condominium_id: subscription.condominium.id,
-            amount: planPrice,
+            amount: finalAmount,
             status: "pending",
             due_date: dueDate.toISOString().split("T")[0],
             period_start: now.toISOString().split("T")[0],
             period_end: periodEnd.toISOString().split("T")[0],
-            description: `Primeira mensalidade - Plano ${planData?.name || subscription.plan}`,
+            description: `Primeira mensalidade - Plano ${planData?.name || subscription.plan}${discountDescription}`,
           });
 
         if (invoiceError) throw invoiceError;
@@ -438,6 +456,8 @@ const SindicoSubscriptions = () => {
       queryClient.invalidateQueries({ queryKey: ["sindico-subscriptions"] });
       queryClient.invalidateQueries({ queryKey: ["sindico-invoices"] });
       setEndTrialDialog({ open: false, subscription: null });
+      setEndTrialDiscount(0);
+      setEndTrialDiscountType("percentage");
       toast({
         title: "Trial encerrado",
         description: "O trial foi encerrado e a fatura foi gerada com vencimento em 3 dias úteis.",
@@ -960,7 +980,13 @@ const SindicoSubscriptions = () => {
         </Dialog>
 
         {/* End Trial Dialog */}
-        <Dialog open={endTrialDialog.open} onOpenChange={(open) => setEndTrialDialog({ open, subscription: open ? endTrialDialog.subscription : null })}>
+        <Dialog open={endTrialDialog.open} onOpenChange={(open) => {
+          setEndTrialDialog({ open, subscription: open ? endTrialDialog.subscription : null });
+          if (!open) {
+            setEndTrialDiscount(0);
+            setEndTrialDiscountType("percentage");
+          }
+        }}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -980,14 +1006,109 @@ const SindicoSubscriptions = () => {
                   <li>O período regular de 30 dias será iniciado</li>
                 </ul>
               </div>
-              {endTrialDialog.subscription && (
-                <div className="p-3 bg-muted rounded-lg">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Vencimento da fatura:</span>
-                    <span className="font-medium">{format(addBusinessDays(new Date(), 3), "dd/MM/yyyy", { locale: ptBR })}</span>
-                  </div>
+              
+              {/* Discount Section */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium">Desconto na primeira fatura (opcional)</label>
+                <div className="flex gap-2">
+                  <Select
+                    value={endTrialDiscountType}
+                    onValueChange={(value: "percentage" | "fixed") => setEndTrialDiscountType(value)}
+                  >
+                    <SelectTrigger className="w-[130px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="percentage">Percentual (%)</SelectItem>
+                      <SelectItem value="fixed">Valor Fixo (R$)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    type="number"
+                    min="0"
+                    max={endTrialDiscountType === "percentage" ? 100 : undefined}
+                    value={endTrialDiscount}
+                    onChange={(e) => setEndTrialDiscount(Number(e.target.value))}
+                    placeholder={endTrialDiscountType === "percentage" ? "0%" : "R$ 0,00"}
+                    className="flex-1"
+                  />
                 </div>
-              )}
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setEndTrialDiscountType("percentage"); setEndTrialDiscount(10); }}
+                    className={endTrialDiscountType === "percentage" && endTrialDiscount === 10 ? "border-primary" : ""}
+                  >
+                    10%
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setEndTrialDiscountType("percentage"); setEndTrialDiscount(20); }}
+                    className={endTrialDiscountType === "percentage" && endTrialDiscount === 20 ? "border-primary" : ""}
+                  >
+                    20%
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setEndTrialDiscountType("percentage"); setEndTrialDiscount(50); }}
+                    className={endTrialDiscountType === "percentage" && endTrialDiscount === 50 ? "border-primary" : ""}
+                  >
+                    50%
+                  </Button>
+                </div>
+              </div>
+
+              {endTrialDialog.subscription && (() => {
+                const plan = plans?.find(p => p.slug === endTrialDialog.subscription?.plan);
+                const planPrice = plan?.price || 0;
+                let finalAmount = planPrice;
+                if (endTrialDiscount > 0) {
+                  if (endTrialDiscountType === "percentage") {
+                    finalAmount = planPrice - (planPrice * endTrialDiscount / 100);
+                  } else {
+                    finalAmount = planPrice - endTrialDiscount;
+                  }
+                  finalAmount = Math.max(0, finalAmount);
+                }
+                
+                return (
+                  <div className="p-3 bg-muted rounded-lg space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Plano atual:</span>
+                      <span className="font-medium">{plan?.name || endTrialDialog.subscription.plan}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Valor original:</span>
+                      <span className="font-medium">R$ {planPrice.toFixed(2)}</span>
+                    </div>
+                    {endTrialDiscount > 0 && (
+                      <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
+                        <span>Desconto:</span>
+                        <span className="font-medium">
+                          -{endTrialDiscountType === "percentage" ? `${endTrialDiscount}%` : `R$ ${endTrialDiscount.toFixed(2)}`}
+                        </span>
+                      </div>
+                    )}
+                    <div className="border-t border-border my-2" />
+                    <div className="flex justify-between text-sm font-semibold">
+                      <span>Valor final da fatura:</span>
+                      <span className={endTrialDiscount > 0 ? "text-green-600 dark:text-green-400" : ""}>
+                        R$ {finalAmount.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Vencimento da fatura:</span>
+                      <span className="font-medium">{format(addBusinessDays(new Date(), 3), "dd/MM/yyyy", { locale: ptBR })}</span>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setEndTrialDialog({ open: false, subscription: null })}>
@@ -995,7 +1116,11 @@ const SindicoSubscriptions = () => {
               </Button>
               <Button
                 variant="destructive"
-                onClick={() => endTrialDialog.subscription && endTrialMutation.mutate(endTrialDialog.subscription)}
+                onClick={() => endTrialDialog.subscription && endTrialMutation.mutate({ 
+                  subscription: endTrialDialog.subscription, 
+                  discount: endTrialDiscount, 
+                  discountType: endTrialDiscountType 
+                })}
                 disabled={endTrialMutation.isPending}
               >
                 {endTrialMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <XOctagon className="w-4 h-4 mr-2" />}
