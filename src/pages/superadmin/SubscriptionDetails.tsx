@@ -106,8 +106,11 @@ export default function SubscriptionDetails() {
   const [isAddDaysDialogOpen, setIsAddDaysDialogOpen] = useState(false);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [isExtendTrialDialogOpen, setIsExtendTrialDialogOpen] = useState(false);
+  const [isActivateTrialDialogOpen, setIsActivateTrialDialogOpen] = useState(false);
   const [trialExtensionDays, setTrialExtensionDays] = useState<number>(7);
+  const [trialActivationDays, setTrialActivationDays] = useState<number>(14);
   const [trialExtensionJustification, setTrialExtensionJustification] = useState("");
+  const [trialActivationJustification, setTrialActivationJustification] = useState("");
   const [extraDays, setExtraDays] = useState<number>(0);
   const [extraDaysJustification, setExtraDaysJustification] = useState("");
   const [periodStartDate, setPeriodStartDate] = useState("");
@@ -434,6 +437,63 @@ export default function SubscriptionDetails() {
     onError: (error: any) => {
       toast({
         title: "Erro ao estender trial",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const activateTrialMutation = useMutation({
+    mutationFn: async ({ days, justification }: { days: number; justification: string }) => {
+      if (!id || !data?.subscription) throw new Error("Dados não encontrados");
+
+      const newTrialEnd = new Date();
+      newTrialEnd.setDate(newTrialEnd.getDate() + days);
+
+      const { error } = await supabase
+        .from("subscriptions")
+        .update({
+          trial_ends_at: newTrialEnd.toISOString(),
+          is_trial: true,
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      // Registrar no audit log
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      await supabase
+        .from("audit_logs")
+        .insert({
+          table_name: "subscriptions",
+          action: "ACTIVATE_TRIAL",
+          record_id: id,
+          new_data: {
+            action: "activate_trial",
+            trial_days: days,
+            trial_end: newTrialEnd.toISOString(),
+            condominium_id: data.subscription.condominium_id,
+            condominium_name: data.condominium?.name || "N/A",
+            justification: justification.trim() || "Sem justificativa informada",
+          },
+          user_id: user?.id || null,
+        });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscription-details", id] });
+      queryClient.invalidateQueries({ queryKey: ["superadmin-subscriptions"] });
+      setIsActivateTrialDialogOpen(false);
+      setTrialActivationDays(14);
+      setTrialActivationJustification("");
+      toast({
+        title: "Trial ativado",
+        description: `O período de trial foi ativado com sucesso.`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao ativar trial",
         description: error.message || "Tente novamente.",
         variant: "destructive",
       });
@@ -1024,6 +1084,35 @@ export default function SubscriptionDetails() {
                     >
                       <Clock className="w-4 h-4 mr-2" />
                       Estender Trial
+                    </Button>
+                  </div>
+                </>
+              )}
+
+              {/* Activate Trial Section - when not in trial */}
+              {!subscription.is_trial && (
+                <>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-muted">
+                        <Clock className="w-5 h-5 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <span className="font-medium">Período de Trial</span>
+                        <p className="text-sm text-muted-foreground">
+                          Esta assinatura não está em período de trial
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsActivateTrialDialogOpen(true)}
+                      className="border-amber-500/30 text-amber-600 hover:bg-amber-500/10"
+                    >
+                      <Clock className="w-4 h-4 mr-2" />
+                      Ativar Trial
                     </Button>
                   </div>
                 </>
@@ -1693,6 +1782,97 @@ export default function SubscriptionDetails() {
                 <Clock className="w-4 h-4 mr-2" />
               )}
               Estender {trialExtensionDays} dia{trialExtensionDays !== 1 ? "s" : ""}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Activate Trial Dialog */}
+      <Dialog open={isActivateTrialDialogOpen} onOpenChange={setIsActivateTrialDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-amber-500" />
+              Ativar Período de Trial
+            </DialogTitle>
+            <DialogDescription>
+              Ative um novo período de trial para esta assinatura.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="trial-activation-days">Duração do trial (dias)</Label>
+              <Input
+                id="trial-activation-days"
+                type="number"
+                min="1"
+                max="90"
+                value={trialActivationDays || ""}
+                onChange={(e) => setTrialActivationDays(parseInt(e.target.value) || 0)}
+                placeholder="Ex: 7, 14, 30..."
+              />
+            </div>
+            
+            {trialActivationDays > 0 && (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                <p className="text-sm text-amber-700 dark:text-amber-400">
+                  <span className="font-medium">Trial expira em:</span>{" "}
+                  {format(
+                    new Date(Date.now() + trialActivationDays * 24 * 60 * 60 * 1000),
+                    "dd/MM/yyyy 'às' HH:mm",
+                    { locale: ptBR }
+                  )}
+                </p>
+              </div>
+            )}
+            
+            <div className="flex gap-2">
+              {[7, 14, 30].map((days) => (
+                <Button
+                  key={days}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTrialActivationDays(days)}
+                  className={trialActivationDays === days ? "border-amber-500 bg-amber-500/10" : ""}
+                >
+                  {days} dias
+                </Button>
+              ))}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="trial-activation-justification">Justificativa</Label>
+              <Textarea
+                id="trial-activation-justification"
+                value={trialActivationJustification}
+                onChange={(e) => setTrialActivationJustification(e.target.value)}
+                placeholder="Informe o motivo para ativar o trial (ex: cliente em renegociação, nova avaliação, cortesia comercial...)"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsActivateTrialDialogOpen(false);
+                setTrialActivationDays(14);
+                setTrialActivationJustification("");
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => activateTrialMutation.mutate({ days: trialActivationDays, justification: trialActivationJustification })}
+              disabled={activateTrialMutation.isPending || trialActivationDays < 1 || !trialActivationJustification.trim()}
+              className="bg-amber-500 hover:bg-amber-600 text-white"
+            >
+              {activateTrialMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Clock className="w-4 h-4 mr-2" />
+              )}
+              Ativar Trial de {trialActivationDays} dia{trialActivationDays !== 1 ? "s" : ""}
             </Button>
           </DialogFooter>
         </DialogContent>
