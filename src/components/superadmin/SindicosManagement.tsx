@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -97,9 +97,88 @@ export function SindicosManagement() {
     phone: "",
     cpf: "",
   });
+  const [cpfStatus, setCpfStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
+  const [cpfCheckTimeout, setCpfCheckTimeout] = useState<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+
+  // Função para verificar CPF em tempo real
+  const checkCpfAvailability = useCallback(async (cpf: string) => {
+    const cleanCpf = cpf.replace(/\D/g, "");
+    
+    // CPF incompleto
+    if (cleanCpf.length < 11) {
+      setCpfStatus("idle");
+      return;
+    }
+
+    // Validar formato do CPF
+    if (!isValidCPF(cleanCpf)) {
+      setCpfStatus("invalid");
+      return;
+    }
+
+    setCpfStatus("checking");
+
+    try {
+      const { data: existingProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("cpf", cleanCpf)
+        .maybeSingle();
+
+      if (existingProfile) {
+        setCpfStatus("taken");
+      } else {
+        setCpfStatus("available");
+      }
+    } catch (error) {
+      console.error("Error checking CPF:", error);
+      setCpfStatus("idle");
+    }
+  }, []);
+
+  // Debounce para verificação do CPF
+  const handleCpfChange = useCallback((value: string) => {
+    setFormData(prev => ({ ...prev, cpf: value }));
+    
+    // Limpar timeout anterior
+    if (cpfCheckTimeout) {
+      clearTimeout(cpfCheckTimeout);
+    }
+
+    const cleanCpf = value.replace(/\D/g, "");
+    
+    // Se CPF estiver incompleto, resetar status
+    if (cleanCpf.length < 11) {
+      setCpfStatus("idle");
+      return;
+    }
+
+    // Agendar verificação com debounce de 500ms
+    const timeout = setTimeout(() => {
+      checkCpfAvailability(value);
+    }, 500);
+
+    setCpfCheckTimeout(timeout);
+  }, [cpfCheckTimeout, checkCpfAvailability]);
+
+  // Limpar timeout ao desmontar
+  useEffect(() => {
+    return () => {
+      if (cpfCheckTimeout) {
+        clearTimeout(cpfCheckTimeout);
+      }
+    };
+  }, [cpfCheckTimeout]);
+
+  // Resetar status do CPF quando o dialog fecha
+  useEffect(() => {
+    if (!isCreateDialogOpen) {
+      setCpfStatus("idle");
+    }
+  }, [isCreateDialogOpen]);
 
   const { data: sindicos, isLoading } = useQuery({
     queryKey: ["superadmin-sindicos"],
@@ -436,12 +515,49 @@ export function SindicosManagement() {
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="cpf">CPF *</Label>
-                    <MaskedInput
-                      id="cpf"
-                      mask="cpf"
-                      value={formData.cpf}
-                      onChange={(value) => setFormData({ ...formData, cpf: value })}
-                    />
+                    <div className="relative">
+                      <MaskedInput
+                        id="cpf"
+                        mask="cpf"
+                        value={formData.cpf}
+                        onChange={handleCpfChange}
+                        className={
+                          cpfStatus === "taken" ? "border-destructive pr-10" :
+                          cpfStatus === "available" ? "border-emerald-500 pr-10" :
+                          cpfStatus === "invalid" ? "border-amber-500 pr-10" :
+                          "pr-10"
+                        }
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        {cpfStatus === "checking" && (
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        )}
+                        {cpfStatus === "available" && (
+                          <CheckCircle className="h-4 w-4 text-emerald-500" />
+                        )}
+                        {cpfStatus === "taken" && (
+                          <XCircle className="h-4 w-4 text-destructive" />
+                        )}
+                        {cpfStatus === "invalid" && (
+                          <AlertTriangle className="h-4 w-4 text-amber-500" />
+                        )}
+                      </div>
+                    </div>
+                    {cpfStatus === "taken" && (
+                      <p className="text-xs text-destructive">
+                        Este CPF já está cadastrado no sistema.
+                      </p>
+                    )}
+                    {cpfStatus === "available" && (
+                      <p className="text-xs text-emerald-500">
+                        CPF disponível para cadastro.
+                      </p>
+                    )}
+                    {cpfStatus === "invalid" && (
+                      <p className="text-xs text-amber-500">
+                        CPF inválido. Verifique os dígitos.
+                      </p>
+                    )}
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="phone">Telefone</Label>
@@ -463,7 +579,7 @@ export function SindicosManagement() {
                   >
                     Cancelar
                   </Button>
-                  <Button type="submit" disabled={createSindicoMutation.isPending} className="w-full sm:w-auto">
+                  <Button type="submit" disabled={createSindicoMutation.isPending || cpfStatus === "taken" || cpfStatus === "invalid" || cpfStatus === "checking"} className="w-full sm:w-auto">
                     {createSindicoMutation.isPending ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
