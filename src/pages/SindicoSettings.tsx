@@ -17,6 +17,9 @@ import {
   Save,
   Settings,
   User,
+  X,
+  Check,
+  ImageIcon,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -68,6 +71,11 @@ const SindicoSettings = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  
+  // Avatar preview state
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -173,62 +181,93 @@ const SindicoSettings = () => {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const ALLOWED_FORMATS = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user) return;
+    if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      toast({
-        title: "Erro",
-        description: "Por favor, selecione uma imagem.",
-        variant: "destructive",
-      });
+    setImageError(null);
+
+    // Validate format
+    if (!ALLOWED_FORMATS.includes(file.type)) {
+      setImageError("Formato inválido. Use JPG, PNG, WebP ou GIF.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "Erro",
-        description: "A imagem deve ter no máximo 5MB.",
-        variant: "destructive",
-      });
+    // Validate size
+    if (file.size > MAX_FILE_SIZE) {
+      setImageError(`Arquivo muito grande (${formatFileSize(file.size)}). Máximo: 5MB.`);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreviewImage(reader.result as string);
+      setSelectedFile(file);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCancelPreview = () => {
+    setPreviewImage(null);
+    setSelectedFile(null);
+    setImageError(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleConfirmUpload = async () => {
+    if (!selectedFile || !user) return;
 
     try {
       setUploading(true);
 
-      const fileExt = file.name.split(".").pop();
+      const fileExt = selectedFile.name.split(".").pop()?.toLowerCase() || "jpg";
       const fileName = `${user.id}/avatar.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from("avatars")
-        .upload(fileName, file, { upsert: true });
+        .upload(fileName, selectedFile, { upsert: true });
 
       if (uploadError) throw uploadError;
 
+      // Add cache-busting timestamp to URL
       const { data: urlData } = supabase.storage
         .from("avatars")
         .getPublicUrl(fileName);
 
+      const avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+
       const { error: updateError } = await supabase
         .from("profiles")
-        .update({ avatar_url: urlData.publicUrl })
+        .update({ avatar_url: avatarUrl })
         .eq("user_id", user.id);
 
       if (updateError) throw updateError;
 
-      setProfile((prev) => prev ? { ...prev, avatar_url: urlData.publicUrl } : null);
+      setProfile((prev) => prev ? { ...prev, avatar_url: avatarUrl } : null);
+      setPreviewImage(null);
+      setSelectedFile(null);
 
       toast({
         title: "Sucesso",
         description: "Foto de perfil atualizada!",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error uploading avatar:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível atualizar a foto.",
+        description: error.message || "Não foi possível atualizar a foto.",
         variant: "destructive",
       });
     } finally {
@@ -326,36 +365,94 @@ const SindicoSettings = () => {
         <Card className="bg-gradient-card border-border/50">
           <CardContent className="pt-6">
             <div className="flex flex-col items-center">
-              <div className="relative group">
-                <Avatar className="w-24 h-24 border-4 border-background shadow-lg">
-                  <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name} />
-                  <AvatarFallback className="bg-primary/10 text-primary text-2xl font-semibold">
-                    {profile?.full_name ? getInitials(profile.full_name) : <User className="w-8 h-8" />}
-                  </AvatarFallback>
-                </Avatar>
-                <button
-                  type="button"
-                  onClick={handleAvatarClick}
-                  disabled={uploading}
-                  className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer disabled:cursor-not-allowed"
-                >
-                  {uploading ? (
-                    <Loader2 className="w-6 h-6 text-white animate-spin" />
-                  ) : (
-                    <Camera className="w-6 h-6 text-white" />
-                  )}
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-              </div>
-              <p className="text-sm text-muted-foreground mt-3">
-                Clique para alterar a foto
-              </p>
+              {/* Preview Mode */}
+              {previewImage ? (
+                <div className="space-y-4">
+                  <div className="relative">
+                    <img
+                      src={previewImage}
+                      alt="Preview"
+                      className="w-32 h-32 rounded-full object-cover border-4 border-primary shadow-lg"
+                    />
+                  </div>
+                  <div className="text-center space-y-2">
+                    <p className="text-sm font-medium text-foreground">
+                      {selectedFile?.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedFile && formatFileSize(selectedFile.size)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCancelPreview}
+                      disabled={uploading}
+                      className="flex-1"
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="hero"
+                      size="sm"
+                      onClick={handleConfirmUpload}
+                      disabled={uploading}
+                      className="flex-1"
+                    >
+                      {uploading ? (
+                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      ) : (
+                        <Check className="w-4 h-4 mr-1" />
+                      )}
+                      Confirmar
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="relative group">
+                    <Avatar className="w-24 h-24 border-4 border-background shadow-lg">
+                      <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name} />
+                      <AvatarFallback className="bg-primary/10 text-primary text-2xl font-semibold">
+                        {profile?.full_name ? getInitials(profile.full_name) : <User className="w-8 h-8" />}
+                      </AvatarFallback>
+                    </Avatar>
+                    <button
+                      type="button"
+                      onClick={handleAvatarClick}
+                      disabled={uploading}
+                      className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer disabled:cursor-not-allowed"
+                    >
+                      <Camera className="w-6 h-6 text-white" />
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.webp,.gif"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-3">
+                    Clique para alterar a foto
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    JPG, PNG, WebP ou GIF • Máximo 5MB
+                  </p>
+                </>
+              )}
+              
+              {/* Error Message */}
+              {imageError && (
+                <div className="mt-3 flex items-center gap-2 text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg">
+                  <ImageIcon className="w-4 h-4" />
+                  {imageError}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
