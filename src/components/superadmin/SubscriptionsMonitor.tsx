@@ -188,16 +188,26 @@ export function SubscriptionsMonitor() {
     const endDate = new Date(trialEndsAt);
     
     if (isPast(endDate)) {
-      return { status: "expired", daysRemaining: 0, label: "Expirado" };
+      return { status: "expired", daysRemaining: 0, hoursRemaining: 0, label: "Expirado" };
     }
     
     const hoursRemaining = differenceInHours(endDate, new Date());
     const daysRemaining = Math.ceil(hoursRemaining / 24);
     
-    if (daysRemaining <= 2) {
-      return { status: "critical", daysRemaining, label: `${daysRemaining}d restante${daysRemaining !== 1 ? 's' : ''}` };
+    // Show hours when less than 24h remaining
+    if (hoursRemaining < 24) {
+      return { 
+        status: "critical", 
+        daysRemaining: 0, 
+        hoursRemaining, 
+        label: `${hoursRemaining}h restante${hoursRemaining !== 1 ? 's' : ''}` 
+      };
     }
-    return { status: "normal", daysRemaining, label: `${daysRemaining}d` };
+    
+    if (daysRemaining <= 2) {
+      return { status: "critical", daysRemaining, hoursRemaining, label: `${daysRemaining}d restante${daysRemaining !== 1 ? 's' : ''}` };
+    }
+    return { status: "normal", daysRemaining, hoursRemaining, label: `${daysRemaining}d` };
   };
 
   // Filter subscriptions based on search term (CNPJ or email)
