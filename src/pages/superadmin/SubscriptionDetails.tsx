@@ -1331,7 +1331,7 @@ export default function SubscriptionDetails() {
             </Button>
             <Button
               onClick={() => addExtraDaysMutation.mutate({ days: extraDays, justification: extraDaysJustification })}
-              disabled={addExtraDaysMutation.isPending || extraDays < 1}
+              disabled={addExtraDaysMutation.isPending || extraDays < 1 || !extraDaysJustification.trim()}
             >
               {addExtraDaysMutation.isPending ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
