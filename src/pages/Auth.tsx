@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Mail, Lock, User, ArrowLeft, Loader2, Check, Building2, Phone, MapPin, ChevronRight, ChevronLeft, RefreshCw } from "lucide-react";
+import { Shield, Mail, Lock, User, ArrowLeft, Loader2, Check, Building2, Phone, MapPin, ChevronRight, ChevronLeft, RefreshCw, FileText } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { Database } from "@/integrations/supabase/types";
@@ -70,6 +70,7 @@ const BRAZILIAN_STATES = [
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSearchingCnpj, setIsSearchingCnpj] = useState(false);
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({
     condominiumName: "",
@@ -193,6 +194,63 @@ const Auth = () => {
   const handleMaskedChange = (name: string) => (value: string) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: "" }));
+  };
+
+  // Busca automática de dados pelo CNPJ
+  const searchCnpj = async (cnpj: string) => {
+    const cleanCnpj = cnpj.replace(/\D/g, '');
+    if (cleanCnpj.length !== 14) return;
+
+    setIsSearchingCnpj(true);
+    try {
+      const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleanCnpj}`);
+      if (response.ok) {
+        const data = await response.json();
+        setFormData((prev) => ({
+          ...prev,
+          condominiumName: data.razao_social || data.nome_fantasia || prev.condominiumName,
+          address: data.logradouro || prev.address,
+          addressNumber: data.numero || prev.addressNumber,
+          neighborhood: data.bairro || prev.neighborhood,
+          city: data.municipio || prev.city,
+          state: data.uf || prev.state,
+          zipCode: data.cep ? data.cep.replace(/\D/g, '').replace(/(\d{5})(\d{3})/, '$1-$2') : prev.zipCode,
+          condominiumPhone: data.ddd_telefone_1 
+            ? `(${data.ddd_telefone_1.slice(0, 2)}) ${data.ddd_telefone_1.slice(2).replace(/(\d{4,5})(\d{4})/, '$1-$2')}`
+            : prev.condominiumPhone,
+        }));
+        toast({
+          title: "CNPJ encontrado!",
+          description: "Os dados foram preenchidos automaticamente.",
+        });
+      } else {
+        toast({
+          title: "CNPJ não encontrado",
+          description: "Verifique o número ou preencha os dados manualmente.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao buscar CNPJ:', error);
+      toast({
+        title: "Erro na busca",
+        description: "Não foi possível buscar o CNPJ. Preencha os dados manualmente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSearchingCnpj(false);
+    }
+  };
+
+  const handleCnpjChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, cnpj: value }));
+    setErrors((prev) => ({ ...prev, cnpj: "" }));
+    
+    // Buscar automaticamente quando o CNPJ estiver completo
+    const cleanCnpj = value.replace(/\D/g, '');
+    if (cleanCnpj.length === 14) {
+      searchCnpj(value);
+    }
   };
 
   const validateStep1 = () => {
@@ -677,6 +735,29 @@ const Auth = () => {
               <>
                 {/* Step 1: Condominium Data */}
                 <div className="space-y-2">
+                  <Label htmlFor="cnpj" className="text-foreground">
+                    CNPJ do Condomínio
+                  </Label>
+                  <div className="relative">
+                    <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <MaskedInput
+                      id="cnpj"
+                      name="cnpj"
+                      mask="cnpj"
+                      value={formData.cnpj}
+                      onChange={handleCnpjChange}
+                      className="pl-10 bg-secondary/50 border-border"
+                    />
+                    {isSearchingCnpj && (
+                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-primary" />
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Digite o CNPJ para preencher os dados automaticamente
+                  </p>
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="condominiumName" className="text-foreground">
                     Nome do condomínio <span className="text-destructive">*</span>
                   </Label>
@@ -697,31 +778,18 @@ const Auth = () => {
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="cnpj" className="text-foreground">CNPJ</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="condominiumPhone" className="text-foreground">Telefone</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <MaskedInput
-                      id="cnpj"
-                      name="cnpj"
-                      mask="cnpj"
-                      value={formData.cnpj}
-                      onChange={handleMaskedChange('cnpj')}
-                      className="bg-secondary/50 border-border"
+                      id="condominiumPhone"
+                      name="condominiumPhone"
+                      mask="phone"
+                      value={formData.condominiumPhone}
+                      onChange={handleMaskedChange('condominiumPhone')}
+                      className="pl-10 bg-secondary/50 border-border"
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="condominiumPhone" className="text-foreground">Telefone</Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <MaskedInput
-                        id="condominiumPhone"
-                        name="condominiumPhone"
-                        mask="phone"
-                        value={formData.condominiumPhone}
-                        onChange={handleMaskedChange('condominiumPhone')}
-                        className="pl-10 bg-secondary/50 border-border"
-                      />
-                    </div>
                   </div>
                 </div>
 
