@@ -103,7 +103,7 @@ export function InvoicesManagement() {
       let query = supabase
         .from("invoices")
         .select("*")
-        .order("due_date", { ascending: false });
+        .order("invoice_number", { ascending: false, nullsFirst: false });
 
       if (statusFilter !== "all") {
         query = query.eq("status", statusFilter);
