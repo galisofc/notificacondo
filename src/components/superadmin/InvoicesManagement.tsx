@@ -92,6 +92,23 @@ interface InvoiceWithDetails {
 type SortColumn = "invoice_number" | "due_date" | "amount" | "status";
 type SortDirection = "asc" | "desc";
 
+// Helper para traduzir métodos de pagamento
+const translatePaymentMethod = (method: string | null): string => {
+  if (!method) return "—";
+  const translations: Record<string, string> = {
+    "mercadopago_bank_transfer": "PIX (Mercado Pago)",
+    "bank_transfer": "Transferência Bancária",
+    "pix": "PIX",
+    "credit_card": "Cartão de Crédito",
+    "debit_card": "Cartão de Débito",
+    "boleto": "Boleto",
+    "manual": "Manual",
+    "cash": "Dinheiro",
+    "check": "Cheque",
+  };
+  return translations[method] || method;
+};
+
 export function InvoicesManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -605,7 +622,7 @@ export function InvoicesManagement() {
     
     if (invoice.payment_method) {
       yPos += 5;
-      doc.text("Forma de pagamento: " + invoice.payment_method, 20, yPos);
+      doc.text("Forma de pagamento: " + translatePaymentMethod(invoice.payment_method), 20, yPos);
     }
     
     if (invoice.payment_reference) {
@@ -1325,13 +1342,7 @@ export function InvoicesManagement() {
                   </div>
                   <div>
                     <Label className="text-muted-foreground text-xs">Método</Label>
-                    <p className="text-sm">
-                      {selectedInvoice.payment_method === "mercadopago_bank_transfer" 
-                        ? "PIX (Mercado Pago)" 
-                        : selectedInvoice.payment_method === "manual" 
-                          ? "Manual" 
-                          : selectedInvoice.payment_method || "—"}
-                    </p>
+                    <p className="text-sm">{translatePaymentMethod(selectedInvoice.payment_method)}</p>
                   </div>
                   {selectedInvoice.payment_reference && (
                     <div className="col-span-2">
