@@ -270,22 +270,58 @@ export function InvoicesManagement() {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     
-    // Header
+    // Logo placeholder (building icon as SVG path)
+    doc.setFillColor(59, 130, 246); // Blue color
+    doc.roundedRect(20, 15, 30, 30, 3, 3, "F");
+    
+    // Building icon simplified (white)
+    doc.setFillColor(255, 255, 255);
+    doc.rect(26, 22, 6, 16, "F"); // Left building
+    doc.rect(34, 26, 6, 12, "F"); // Middle building
+    doc.rect(42, 20, 4, 18, "F"); // Right building (taller)
+    
+    // Windows
+    doc.setFillColor(59, 130, 246);
+    doc.rect(27, 24, 2, 2, "F");
+    doc.rect(27, 28, 2, 2, "F");
+    doc.rect(31, 24, 2, 2, "F");
+    doc.rect(31, 28, 2, 2, "F");
+    doc.rect(35, 28, 2, 2, "F");
+    doc.rect(35, 32, 2, 2, "F");
+    doc.rect(43, 22, 1.5, 1.5, "F");
+    doc.rect(43, 26, 1.5, 1.5, "F");
+    doc.rect(43, 30, 1.5, 1.5, "F");
+    
+    // Company name next to logo
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(59, 130, 246);
+    doc.text("CondoGest", 55, 28);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100, 100, 100);
+    doc.text("Sistema de Gestao Condominial", 55, 35);
+    
+    // Reset text color
+    doc.setTextColor(0, 0, 0);
+    
+    // Header - FATURA on the right
     doc.setFontSize(20);
     doc.setFont("helvetica", "bold");
-    doc.text("FATURA", pageWidth / 2, 25, { align: "center" });
+    doc.text("FATURA", pageWidth - 20, 25, { align: "right" });
     
     // Invoice Number
-    doc.setFontSize(14);
+    doc.setFontSize(12);
     doc.setFont("helvetica", "normal");
-    doc.text(invoice.invoice_number || "—", pageWidth / 2, 35, { align: "center" });
+    doc.text(invoice.invoice_number || "—", pageWidth - 20, 35, { align: "right" });
     
     // Line separator
     doc.setLineWidth(0.5);
-    doc.line(20, 45, pageWidth - 20, 45);
+    doc.setDrawColor(200, 200, 200);
+    doc.line(20, 50, pageWidth - 20, 50);
     
     // Condominium Info
-    let yPos = 60;
+    let yPos = 65;
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
     doc.text("Dados do Condominio", 20, yPos);
