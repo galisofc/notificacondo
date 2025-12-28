@@ -23,7 +23,6 @@ import { MessageCircle, Save, TestTube, CheckCircle, XCircle, Loader2, AlertCirc
 import { supabase } from "@/integrations/supabase/client";
 import { WhatsAppTemplates } from "./WhatsAppTemplates";
 
-const SUPABASE_URL = "https://iyeljkdrypcxvljebqtn.supabase.co";
 import { z } from "zod";
 
 interface WhatsAppConfigData {
@@ -44,7 +43,8 @@ interface ValidationErrors {
 }
 
 // Validation schemas per provider
-const zproUrlSchema = z.string()
+const zproUrlSchema = z
+  .string()
   .min(1, "URL da API é obrigatória")
   .url("URL inválida")
   .max(500, "URL deve ter no máximo 500 caracteres")
@@ -53,24 +53,25 @@ const zproUrlSchema = z.string()
     "URL deve conter o endpoint da API Z-PRO"
   );
 
-const zproBearerTokenSchema = z.string()
+const zproBearerTokenSchema = z
+  .string()
   .min(1, "Bearer Token é obrigatório")
   .max(1000, "Token deve ter no máximo 1000 caracteres")
-  .refine(
-    (token) => token.startsWith("eyJ") || token.length > 20,
-    "Token parece inválido"
-  );
+  .refine((token) => token.startsWith("eyJ") || token.length > 20, "Token parece inválido");
 
-const instanceIdSchema = z.string()
+const instanceIdSchema = z
+  .string()
   .min(1, "ID da Instância é obrigatório")
   .max(100, "ID deve ter no máximo 100 caracteres");
 
-const apiUrlSchema = z.string()
+const apiUrlSchema = z
+  .string()
   .min(1, "URL da API é obrigatória")
   .url("URL inválida. Use o formato: https://api.exemplo.com")
   .max(500, "URL deve ter no máximo 500 caracteres");
 
-const apiKeySchema = z.string()
+const apiKeySchema = z
+  .string()
   .min(1, "Chave da API é obrigatória")
   .max(500, "Chave deve ter no máximo 500 caracteres");
 
@@ -84,7 +85,9 @@ export function WhatsAppConfig() {
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [showToken, setShowToken] = useState(false);
   const [testPhone, setTestPhone] = useState("");
-  const [connectionStatus, setConnectionStatus] = useState<"checking" | "connected" | "disconnected" | "not_configured">("checking");
+  const [connectionStatus, setConnectionStatus] = useState<
+    "checking" | "connected" | "disconnected" | "not_configured"
+  >("checking");
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
 
   const [config, setConfig] = useState<WhatsAppConfigData>({
@@ -106,31 +109,45 @@ export function WhatsAppConfig() {
     setErrors({});
   }, [config.provider]);
 
-  // Test connection when config is loaded
+  const isConfigReadyForStatusCheck = () => {
+    if (!config.api_url?.trim() || !config.api_key?.trim()) return false;
+    if (config.provider === "zpro") return true;
+    return !!config.instance_id?.trim();
+  };
+
+  // Test connection status for CURRENT form values (even if not saved)
   const testConnectionStatus = async () => {
-    if (!config.id) {
+    if (!isConfigReadyForStatusCheck()) {
       setConnectionStatus("not_configured");
+      setLastChecked(new Date());
       return;
     }
 
     setConnectionStatus("checking");
 
     try {
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/test-whatsapp-connection`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const { data, error } = await supabase.functions.invoke("test-whatsapp-connection", {
+        body: {
+          provider: config.provider,
+          api_url: config.api_url.trim(),
+          api_key: config.api_key.trim(),
+          instance_id: config.instance_id.trim(),
         },
       });
 
-      const data = await response.json();
-      
-      if (data.success) {
+      if (error) {
+        console.error("Connection test failed:", error);
+        setConnectionStatus("disconnected");
+        setLastChecked(new Date());
+        return;
+      }
+
+      if ((data as any)?.success) {
         setConnectionStatus("connected");
       } else {
         setConnectionStatus("disconnected");
       }
-      
+
       setLastChecked(new Date());
     } catch (error) {
       console.error("Connection test failed:", error);
@@ -139,25 +156,21 @@ export function WhatsAppConfig() {
     }
   };
 
-  // Auto-test connection when config changes
+  // Auto-test connection when config changes (provider/credentials)
   useEffect(() => {
-    if (!isLoading && config.id) {
-      testConnectionStatus();
-    } else if (!isLoading && !config.id) {
-      setConnectionStatus("not_configured");
-    }
-  }, [isLoading, config.id]);
+    if (!isLoading) testConnectionStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, config.provider, config.api_url, config.api_key, config.instance_id]);
 
   // Auto-refresh every 60 seconds
   useEffect(() => {
     const interval = setInterval(() => {
-      if (config.id) {
-        testConnectionStatus();
-      }
+      testConnectionStatus();
     }, 60000);
 
     return () => clearInterval(interval);
-  }, [config.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config.provider, config.api_url, config.api_key, config.instance_id]);
 
   const loadConfig = async () => {
     setIsLoading(true);
@@ -319,28 +332,32 @@ export function WhatsAppConfig() {
     setTestResult(null);
     
     try {
-      // Use the edge function to test the connection (avoids CORS issues)
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/test-whatsapp-connection`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const { data, error } = await supabase.functions.invoke("test-whatsapp-connection", {
+        body: {
+          provider: config.provider,
+          api_url: config.api_url.trim(),
+          api_key: config.api_key.trim(),
+          instance_id: config.instance_id.trim(),
         },
       });
 
-      const data = await response.json();
+      if (error) throw error;
+
       console.log("Test result:", data);
 
-      if (data.success) {
+      if ((data as any)?.success) {
         setTestResult("success");
         toast({
           title: "Conexão bem-sucedida",
-          description: data.message || "A conexão com a API do WhatsApp foi estabelecida.",
+          description:
+            (data as any)?.message || "A conexão com a API do WhatsApp foi estabelecida.",
         });
       } else {
         setTestResult("error");
         toast({
           title: "Falha na conexão",
-          description: data.error || "Não foi possível conectar à API. Verifique as configurações.",
+          description:
+            (data as any)?.error || "Não foi possível conectar à API. Verifique as configurações.",
           variant: "destructive",
         });
       }
@@ -379,17 +396,14 @@ export function WhatsAppConfig() {
     setIsSendingTest(true);
 
     try {
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp-test`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke("send-whatsapp-test", {
+        body: {
           phone: testPhone,
-        }),
+        },
       });
 
-      const data = await response.json();
+      if (error) throw error;
+
       console.log("Send test result:", data);
 
       if (data.success) {
