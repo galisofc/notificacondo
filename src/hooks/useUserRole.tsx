@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -34,6 +34,7 @@ interface UseUserRoleReturn {
   isSuperAdmin: boolean;
   residentInfo: ResidentInfo | null;
   profileInfo: ProfileInfo | null;
+  refetchProfile: () => Promise<void>;
 }
 
 export const useUserRole = (): UseUserRoleReturn => {
@@ -42,6 +43,35 @@ export const useUserRole = (): UseUserRoleReturn => {
   const [loading, setLoading] = useState(true);
   const [residentInfo, setResidentInfo] = useState<ResidentInfo | null>(null);
   const [profileInfo, setProfileInfo] = useState<ProfileInfo | null>(null);
+
+  const fetchProfileInfo = useCallback(async (userId: string) => {
+    const { data: profileData, error: profileError } = await supabase
+      .from("profiles")
+      .select("id, full_name, email, phone, avatar_url")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error("Error fetching profile info:", profileError);
+      return;
+    }
+
+    if (profileData) {
+      setProfileInfo({
+        id: profileData.id,
+        full_name: profileData.full_name,
+        email: profileData.email,
+        phone: profileData.phone,
+        avatar_url: profileData.avatar_url,
+      });
+    }
+  }, []);
+
+  const refetchProfile = useCallback(async () => {
+    if (user && (role === "sindico" || role === "super_admin")) {
+      await fetchProfileInfo(user.id);
+    }
+  }, [user, role, fetchProfileInfo]);
 
   useEffect(() => {
     const fetchUserRole = async () => {
@@ -69,25 +99,7 @@ export const useUserRole = (): UseUserRoleReturn => {
 
         // Fetch profile info for sindico and super_admin
         if (userRole === "sindico" || userRole === "super_admin") {
-          const { data: profileData, error: profileError } = await supabase
-            .from("profiles")
-            .select("id, full_name, email, phone, avatar_url")
-            .eq("user_id", user.id)
-            .maybeSingle();
-
-          if (profileError) {
-            console.error("Error fetching profile info:", profileError);
-          }
-
-          if (profileData) {
-            setProfileInfo({
-              id: profileData.id,
-              full_name: profileData.full_name,
-              email: profileData.email,
-              phone: profileData.phone,
-              avatar_url: profileData.avatar_url,
-            });
-          }
+          await fetchProfileInfo(user.id);
         }
 
         // If user is a resident, fetch their resident info
@@ -145,7 +157,41 @@ export const useUserRole = (): UseUserRoleReturn => {
     };
 
     fetchUserRole();
-  }, [user]);
+  }, [user, fetchProfileInfo]);
+
+  // Subscribe to realtime profile updates
+  useEffect(() => {
+    if (!user || (role !== "sindico" && role !== "super_admin")) return;
+
+    const channel = supabase
+      .channel("profile-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "profiles",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const newData = payload.new as any;
+          if (newData) {
+            setProfileInfo({
+              id: newData.id,
+              full_name: newData.full_name,
+              email: newData.email,
+              phone: newData.phone,
+              avatar_url: newData.avatar_url,
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, role]);
 
   return {
     role,
@@ -155,5 +201,6 @@ export const useUserRole = (): UseUserRoleReturn => {
     isSuperAdmin: role === "super_admin",
     residentInfo,
     profileInfo,
+    refetchProfile,
   };
 };
