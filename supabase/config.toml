@@ -64,3 +64,7 @@ verify_jwt = false
 # Notificação de transferência de condomínio
 [functions.notify-transfer]
 verify_jwt = false
+
+# Exclusão de síndico - a função faz sua própria verificação de super_admin
+[functions.delete-sindico]
+verify_jwt = false
