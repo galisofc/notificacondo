@@ -32,6 +32,85 @@ import {
 } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 
+// Função para obter ícone baseado na ação
+const getActionIcon = (tableName: string, action: string, newData: any): LucideIcon => {
+  // Ações especiais
+  if (newData?.action === "create_sindico") return UserPlus;
+  if (newData?.action === "delete_sindico") return UserMinus;
+  if (newData?.action === "add_extra_days") return Calendar;
+
+  // Por tabela
+  const tableIcons: Record<string, LucideIcon> = {
+    user_roles: Users,
+    condominiums: Building2,
+    subscriptions: CreditCard,
+    profiles: Users,
+    occurrences: FileText,
+    notifications_sent: Bell,
+    invoices: Receipt,
+    residents: Home,
+    blocks: Building2,
+    apartments: DoorOpen,
+  };
+
+  return tableIcons[tableName] || Activity;
+};
+
+// Função para obter cor do ícone baseado na ação
+const getActionIconColor = (action: string, newData: any): string => {
+  if (newData?.action === "create_sindico") return "bg-emerald-500/10 text-emerald-500";
+  if (newData?.action === "delete_sindico") return "bg-red-500/10 text-red-500";
+  if (newData?.action === "add_extra_days") return "bg-blue-500/10 text-blue-500";
+
+  const actionColors: Record<string, string> = {
+    INSERT: "bg-emerald-500/10 text-emerald-500",
+    UPDATE: "bg-amber-500/10 text-amber-500",
+    DELETE: "bg-red-500/10 text-red-500",
+    ADD_EXTRA_DAYS: "bg-blue-500/10 text-blue-500",
+  };
+
+  return actionColors[action] || "bg-primary/10 text-primary";
+};
+
+// Função para formatar ações de auditoria
+const formatAuditAction = (tableName: string, action: string, newData: any): string => {
+  const tableNames: Record<string, string> = {
+    user_roles: "Usuário",
+    condominiums: "Condomínio",
+    subscriptions: "Assinatura",
+    profiles: "Perfil",
+    occurrences: "Ocorrência",
+    notifications_sent: "Notificação",
+    invoices: "Fatura",
+    residents: "Morador",
+    blocks: "Bloco",
+    apartments: "Apartamento",
+  };
+
+  const actionNames: Record<string, string> = {
+    INSERT: "criado",
+    UPDATE: "atualizado",
+    DELETE: "removido",
+    ADD_EXTRA_DAYS: "dias extras adicionados",
+  };
+
+  // Ações especiais baseadas em new_data
+  if (newData?.action === "create_sindico") {
+    return `Síndico criado: ${newData.created_user_name || "N/A"}`;
+  }
+  if (newData?.action === "delete_sindico") {
+    return `Síndico removido: ${newData.deleted_user_name || "N/A"}`;
+  }
+  if (newData?.action === "add_extra_days") {
+    return `+${newData.days_added} dias: ${newData.condominium_name || "Assinatura"}`;
+  }
+
+  const table = tableNames[tableName] || tableName;
+  const actionText = actionNames[action] || action.toLowerCase();
+
+  return `${table} ${actionText}`;
+};
+
 export default function SuperAdminDashboard() {
   const navigate = useNavigate();
   
@@ -109,85 +188,6 @@ export default function SuperAdminDashboard() {
       })) || [];
     },
   });
-
-  // Função para obter ícone baseado na ação
-  const getActionIcon = (tableName: string, action: string, newData: any): LucideIcon => {
-    // Ações especiais
-    if (newData?.action === "create_sindico") return UserPlus;
-    if (newData?.action === "delete_sindico") return UserMinus;
-    if (newData?.action === "add_extra_days") return Calendar;
-
-    // Por tabela
-    const tableIcons: Record<string, LucideIcon> = {
-      user_roles: Users,
-      condominiums: Building2,
-      subscriptions: CreditCard,
-      profiles: Users,
-      occurrences: FileText,
-      notifications_sent: Bell,
-      invoices: Receipt,
-      residents: Home,
-      blocks: Building2,
-      apartments: DoorOpen,
-    };
-
-    return tableIcons[tableName] || Activity;
-  };
-
-  // Função para obter cor do ícone baseado na ação
-  const getActionIconColor = (action: string, newData: any): string => {
-    if (newData?.action === "create_sindico") return "bg-emerald-500/10 text-emerald-500";
-    if (newData?.action === "delete_sindico") return "bg-red-500/10 text-red-500";
-    if (newData?.action === "add_extra_days") return "bg-blue-500/10 text-blue-500";
-
-    const actionColors: Record<string, string> = {
-      INSERT: "bg-emerald-500/10 text-emerald-500",
-      UPDATE: "bg-amber-500/10 text-amber-500",
-      DELETE: "bg-red-500/10 text-red-500",
-      ADD_EXTRA_DAYS: "bg-blue-500/10 text-blue-500",
-    };
-
-    return actionColors[action] || "bg-primary/10 text-primary";
-  };
-
-  // Função para formatar ações de auditoria
-  const formatAuditAction = (tableName: string, action: string, newData: any): string => {
-    const tableNames: Record<string, string> = {
-      user_roles: "Usuário",
-      condominiums: "Condomínio",
-      subscriptions: "Assinatura",
-      profiles: "Perfil",
-      occurrences: "Ocorrência",
-      notifications_sent: "Notificação",
-      invoices: "Fatura",
-      residents: "Morador",
-      blocks: "Bloco",
-      apartments: "Apartamento",
-    };
-
-    const actionNames: Record<string, string> = {
-      INSERT: "criado",
-      UPDATE: "atualizado",
-      DELETE: "removido",
-      ADD_EXTRA_DAYS: "dias extras adicionados",
-    };
-
-    // Ações especiais baseadas em new_data
-    if (newData?.action === "create_sindico") {
-      return `Síndico criado: ${newData.created_user_name || "N/A"}`;
-    }
-    if (newData?.action === "delete_sindico") {
-      return `Síndico removido: ${newData.deleted_user_name || "N/A"}`;
-    }
-    if (newData?.action === "add_extra_days") {
-      return `+${newData.days_added} dias: ${newData.condominium_name || "Assinatura"}`;
-    }
-
-    const table = tableNames[tableName] || tableName;
-    const actionText = actionNames[action] || action.toLowerCase();
-
-    return `${table} ${actionText}`;
-  };
 
   const statCards = [
     {
