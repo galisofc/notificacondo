@@ -59,6 +59,7 @@ import {
   ArrowRightLeft,
   Search,
 } from "lucide-react";
+import { SubscriptionHistory } from "@/components/superadmin/SubscriptionHistory";
 import {
   Table,
   TableBody,
@@ -1177,6 +1178,12 @@ export default function SubscriptionDetails() {
             )}
           </CardContent>
         </Card>
+
+        {/* Subscription History */}
+        <SubscriptionHistory 
+          subscriptionId={subscription.id} 
+          condominiumId={condominium.id} 
+        />
 
         {/* Metadata */}
         <Card className="bg-gradient-card border-border/50">
