@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,7 +29,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CreditCard, AlertCircle, Eye } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { CreditCard, AlertCircle, Eye, Search } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 interface SubscriptionWithCondominium {
@@ -48,6 +49,7 @@ interface SubscriptionWithCondominium {
   condominium: {
     name: string;
     owner_id: string;
+    cnpj: string | null;
   } | null;
   owner_profile: {
     full_name: string;
@@ -58,6 +60,7 @@ interface SubscriptionWithCondominium {
 export function SubscriptionsMonitor() {
   const navigate = useNavigate();
   const [planFilter, setPlanFilter] = useState<string>("all");
+  const [searchTerm, setSearchTerm] = useState<string>("");
 
   const { data: subscriptions, isLoading } = useQuery({
     queryKey: ["superadmin-subscriptions", planFilter],
@@ -79,7 +82,7 @@ export function SubscriptionsMonitor() {
           // Get condominium details
           const { data: condo } = await supabase
             .from("condominiums")
-            .select("name, owner_id")
+            .select("name, owner_id, cnpj")
             .eq("id", sub.condominium_id)
             .single();
 
@@ -149,6 +152,25 @@ export function SubscriptionsMonitor() {
     return Math.min((used / limit) * 100, 100);
   };
 
+  // Filter subscriptions based on search term (CNPJ or email)
+  const filteredSubscriptions = useMemo(() => {
+    if (!subscriptions || !searchTerm.trim()) return subscriptions;
+    
+    const search = searchTerm.toLowerCase().trim();
+    
+    return subscriptions.filter((sub) => {
+      const cnpj = sub.condominium?.cnpj?.toLowerCase() || "";
+      const email = sub.owner_profile?.email?.toLowerCase() || "";
+      const name = sub.condominium?.name?.toLowerCase() || "";
+      const sindicoName = sub.owner_profile?.full_name?.toLowerCase() || "";
+      
+      return cnpj.includes(search) || 
+             email.includes(search) || 
+             name.includes(search) ||
+             sindicoName.includes(search);
+    });
+  }, [subscriptions, searchTerm]);
+
   return (
     <div className="space-y-6">
       {/* Plan Stats */}
@@ -180,18 +202,29 @@ export function SubscriptionsMonitor() {
                 Acompanhe planos e uso de recursos dos condomínios
               </CardDescription>
             </div>
-            <Select value={planFilter} onValueChange={setPlanFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Filtrar plano" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os planos</SelectItem>
-                <SelectItem value="start">Start</SelectItem>
-                <SelectItem value="essencial">Essencial</SelectItem>
-                <SelectItem value="profissional">Profissional</SelectItem>
-                <SelectItem value="enterprise">Enterprise</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por CNPJ, email ou nome..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 w-full sm:w-[280px]"
+                />
+              </div>
+              <Select value={planFilter} onValueChange={setPlanFilter}>
+                <SelectTrigger className="w-full sm:w-[150px]">
+                  <SelectValue placeholder="Filtrar plano" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os planos</SelectItem>
+                  <SelectItem value="start">Start</SelectItem>
+                  <SelectItem value="essencial">Essencial</SelectItem>
+                  <SelectItem value="profissional">Profissional</SelectItem>
+                  <SelectItem value="enterprise">Enterprise</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -201,10 +234,12 @@ export function SubscriptionsMonitor() {
                 <Skeleton key={i} className="h-20 w-full" />
               ))}
             </div>
-          ) : subscriptions?.length === 0 ? (
+          ) : filteredSubscriptions?.length === 0 ? (
             <div className="text-center py-12">
               <CreditCard className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-              <p className="text-muted-foreground">Nenhuma assinatura encontrada</p>
+              <p className="text-muted-foreground">
+                {searchTerm ? "Nenhuma assinatura encontrada para a busca" : "Nenhuma assinatura encontrada"}
+              </p>
             </div>
           ) : (
             <div className="rounded-md border overflow-hidden">
@@ -222,10 +257,15 @@ export function SubscriptionsMonitor() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {subscriptions?.map((sub) => (
+                  {filteredSubscriptions?.map((sub) => (
                     <TableRow key={sub.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/superadmin/subscriptions/${sub.id}`)}>
                       <TableCell>
-                        <p className="font-medium">{sub.condominium?.name || "—"}</p>
+                        <div>
+                          <p className="font-medium">{sub.condominium?.name || "—"}</p>
+                          {sub.condominium?.cnpj && (
+                            <p className="text-xs text-muted-foreground">{sub.condominium.cnpj}</p>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div>
