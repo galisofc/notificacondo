@@ -53,6 +53,8 @@ import {
   Eye,
   Check,
   Download,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 interface InvoiceWithDetails {
@@ -90,6 +92,8 @@ export function InvoicesManagement() {
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("");
   const [paymentReference, setPaymentReference] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const { data: invoices, isLoading } = useQuery({
     queryKey: ["superadmin-invoices", statusFilter],
@@ -259,18 +263,6 @@ export function InvoicesManagement() {
     }
     return value;
   };
-
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    const onlyDigitsOrMask = /^[\d\.\-\/]*$/.test(value);
-    
-    if (onlyDigitsOrMask && value.replace(/\D/g, "").length <= 14) {
-      setSearchQuery(formatCNPJInput(value));
-    } else {
-      setSearchQuery(value);
-    }
-  };
-
   const getStatusBadge = (status: string, dueDate: string) => {
     const today = new Date();
     const due = new Date(dueDate);
@@ -323,6 +315,25 @@ export function InvoicesManagement() {
 
     return matchesSearch;
   });
+
+  // Paginação
+  const totalItems = filteredInvoices?.length || 0;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedInvoices = filteredInvoices?.slice(startIndex, startIndex + itemsPerPage);
+
+  // Reset página quando filtros mudam
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const onlyDigitsOrMask = /^[\d\.\-\/]*$/.test(value);
+    
+    if (onlyDigitsOrMask && value.replace(/\D/g, "").length <= 14) {
+      setSearchQuery(formatCNPJInput(value));
+    } else {
+      setSearchQuery(value);
+    }
+    setCurrentPage(1);
+  };
 
   const handleMarkAsPaid = () => {
     if (!selectedInvoice || !paymentMethod) return;
@@ -452,100 +463,155 @@ export function InvoicesManagement() {
               <p className="text-muted-foreground">Nenhuma fatura encontrada</p>
             </div>
           ) : (
-            <div className="rounded-md border overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Condomínio</TableHead>
-                    <TableHead>CNPJ</TableHead>
-                    <TableHead>Síndico</TableHead>
-                    <TableHead>Período</TableHead>
-                    <TableHead>Vencimento</TableHead>
-                    <TableHead>Valor</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredInvoices?.map((invoice) => (
-                    <TableRow key={invoice.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">
-                            {invoice.condominium?.name || "—"}
+            <>
+              <div className="rounded-md border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Condomínio</TableHead>
+                      <TableHead>CNPJ</TableHead>
+                      <TableHead>Síndico</TableHead>
+                      <TableHead>Período</TableHead>
+                      <TableHead>Vencimento</TableHead>
+                      <TableHead>Valor</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedInvoices?.map((invoice) => (
+                      <TableRow key={invoice.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium">
+                              {invoice.condominium?.name || "—"}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm text-muted-foreground font-mono">
+                            {formatCNPJ(invoice.condominium?.cnpj)}
                           </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground font-mono">
-                          {formatCNPJ(invoice.condominium?.cnpj)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">
-                            {invoice.owner_profile?.full_name || "—"}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {invoice.owner_profile?.email}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1 text-sm">
-                          <Calendar className="h-3 w-3 text-muted-foreground" />
-                          <span>
-                            {formatDate(invoice.period_start)} - {formatDate(invoice.period_end)}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">{formatDate(invoice.due_date)}</span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <DollarSign className="h-3 w-3 text-muted-foreground" />
-                          <span className="font-semibold">
-                            {formatCurrency(Number(invoice.amount))}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {getStatusBadge(invoice.status, invoice.due_date)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setSelectedInvoice(invoice);
-                              setShowDetailsDialog(true);
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          {invoice.status === "pending" && (
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">
+                              {invoice.owner_profile?.full_name || "—"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {invoice.owner_profile?.email}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1 text-sm">
+                            <Calendar className="h-3 w-3 text-muted-foreground" />
+                            <span>
+                              {formatDate(invoice.period_start)} - {formatDate(invoice.period_end)}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm">{formatDate(invoice.due_date)}</span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <DollarSign className="h-3 w-3 text-muted-foreground" />
+                            <span className="font-semibold">
+                              {formatCurrency(Number(invoice.amount))}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {getStatusBadge(invoice.status, invoice.due_date)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10"
                               onClick={() => {
                                 setSelectedInvoice(invoice);
-                                setShowPaymentDialog(true);
+                                setShowDetailsDialog(true);
                               }}
                             >
-                              <Check className="h-4 w-4" />
+                              <Eye className="h-4 w-4" />
                             </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                            {invoice.status === "pending" && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10"
+                                onClick={() => {
+                                  setSelectedInvoice(invoice);
+                                  setShowPaymentDialog(true);
+                                }}
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              
+              {/* Paginação */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    Mostrando {startIndex + 1} a {Math.min(startIndex + itemsPerPage, totalItems)} de {totalItems} faturas
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-1" />
+                      Anterior
+                    </Button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter((page) => {
+                          if (totalPages <= 5) return true;
+                          if (page === 1 || page === totalPages) return true;
+                          if (Math.abs(page - currentPage) <= 1) return true;
+                          return false;
+                        })
+                        .map((page, idx, arr) => (
+                          <span key={page} className="flex items-center">
+                            {idx > 0 && arr[idx - 1] !== page - 1 && (
+                              <span className="px-1 text-muted-foreground">...</span>
+                            )}
+                            <Button
+                              variant={currentPage === page ? "default" : "outline"}
+                              size="sm"
+                              className="w-8 h-8 p-0"
+                              onClick={() => setCurrentPage(page)}
+                            >
+                              {page}
+                            </Button>
+                          </span>
+                        ))}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Próximo
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
