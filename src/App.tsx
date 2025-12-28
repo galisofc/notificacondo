@@ -28,7 +28,7 @@ import SindicoProfile from "./pages/SindicoProfile";
 import ResidentAccess from "./pages/ResidentAccess";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import Sindicos from "./pages/superadmin/Sindicos";
-import SuperAdminCondominiums from "./pages/superadmin/Condominiums";
+
 import Subscriptions from "./pages/superadmin/Subscriptions";
 import SubscriptionDetails from "./pages/superadmin/SubscriptionDetails";
 import SuperAdminInvoices from "./pages/superadmin/Invoices";
@@ -201,14 +201,6 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole="super_admin">
                     <Sindicos />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/superadmin/condominiums"
-                element={
-                  <ProtectedRoute requiredRole="super_admin">
-                    <SuperAdminCondominiums />
                   </ProtectedRoute>
                 }
               />

@@ -56,7 +56,6 @@ interface NavItem {
 const superAdminNavItems: NavItem[] = [
   { title: "Início", url: "/superadmin", icon: Home },
   { title: "Síndicos", url: "/superadmin/sindicos", icon: Users },
-  { title: "Condomínios", url: "/superadmin/condominiums", icon: Building2 },
   { title: "Assinaturas", url: "/superadmin/subscriptions", icon: CreditCard },
   { title: "Faturas", url: "/superadmin/invoices", icon: Receipt },
   { title: "Transferências", url: "/superadmin/transfers", icon: Scale },
