@@ -1,6 +1,7 @@
 import { Helmet } from "react-helmet-async";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { InvoicesManagement } from "@/components/superadmin/InvoicesManagement";
+import SuperAdminBreadcrumbs from "@/components/superadmin/SuperAdminBreadcrumbs";
 
 export default function Invoices() {
   return (
@@ -9,6 +10,7 @@ export default function Invoices() {
         <title>Central de Faturas | Super Admin</title>
       </Helmet>
       <div className="space-y-6 animate-fade-up">
+        <SuperAdminBreadcrumbs items={[{ label: "Faturas" }]} />
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground">Faturas</h1>
           <p className="text-muted-foreground mt-1">

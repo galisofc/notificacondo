@@ -1,6 +1,7 @@
 import { Helmet } from "react-helmet-async";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { AuditLogs } from "@/components/superadmin/AuditLogs";
+import SuperAdminBreadcrumbs from "@/components/superadmin/SuperAdminBreadcrumbs";
 
 export default function Logs() {
   return (
@@ -9,6 +10,7 @@ export default function Logs() {
         <title>Logs de Auditoria | Super Admin</title>
       </Helmet>
       <div className="space-y-6 animate-fade-up">
+        <SuperAdminBreadcrumbs items={[{ label: "Logs de Auditoria" }]} />
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground">Logs de Auditoria</h1>
           <p className="text-muted-foreground mt-1">

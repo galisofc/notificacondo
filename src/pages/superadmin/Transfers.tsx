@@ -49,6 +49,7 @@ import {
   X,
   MessageSquare,
 } from "lucide-react";
+import SuperAdminBreadcrumbs from "@/components/superadmin/SuperAdminBreadcrumbs";
 
 interface TransferWithDetails {
   id: string;
@@ -182,6 +183,7 @@ export default function Transfers() {
       </Helmet>
 
       <div className="space-y-6">
+        <SuperAdminBreadcrumbs items={[{ label: "Transferências" }]} />
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>

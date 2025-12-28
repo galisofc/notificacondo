@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
 
 interface Condominium {
   id: string;
@@ -475,6 +476,7 @@ const Occurrences = () => {
         <title>Ocorrências | CondoManager</title>
       </Helmet>
       <div className="space-y-4 md:space-y-6 animate-fade-up">
+        <SindicoBreadcrumbs items={[{ label: "Ocorrências" }]} />
         <div>
           <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground">
             Ocorrências

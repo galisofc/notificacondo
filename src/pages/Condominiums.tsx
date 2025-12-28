@@ -35,6 +35,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
 import { isValidCNPJ, formatCNPJ, formatPhone, formatCEP } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
@@ -426,6 +427,7 @@ const Condominiums = () => {
         <title>Condomínios | CondoManager</title>
       </Helmet>
       <div className="space-y-4 md:space-y-6 animate-fade-up">
+        <SindicoBreadcrumbs items={[{ label: "Condomínios" }]} />
         <div>
           <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground">
             Condomínios

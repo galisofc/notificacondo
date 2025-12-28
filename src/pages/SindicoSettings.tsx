@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
 import { z } from "zod";
 import { isValidCPF } from "@/lib/utils";
 
@@ -310,6 +311,7 @@ const SindicoSettings = () => {
         <title>Configurações | CondoManager</title>
       </Helmet>
       <div className="space-y-6 animate-fade-up max-w-3xl">
+        <SindicoBreadcrumbs items={[{ label: "Configurações" }]} />
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground flex items-center gap-3">
             <Settings className="w-8 h-8 text-primary" />
