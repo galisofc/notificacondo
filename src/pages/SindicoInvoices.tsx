@@ -43,6 +43,10 @@ import {
   RefreshCw,
   ShieldCheck,
   ShieldX,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 import {
   Tooltip,
@@ -111,6 +115,8 @@ const SindicoInvoices = () => {
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus>("all");
   const [condominiumFilter, setCondominiumFilter] = useState<string>("all");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Subscribe to realtime updates on invoices table
   useEffect(() => {
@@ -268,6 +274,11 @@ const SindicoInvoices = () => {
     enabled: !!user,
   });
 
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, condominiumFilter]);
+
   // Calculate stats
   const stats = {
     total: invoices?.length || 0,
@@ -278,6 +289,13 @@ const SindicoInvoices = () => {
     paidAmount: invoices?.filter((i) => i.status === "paid").reduce((sum, i) => sum + Number(i.amount), 0) || 0,
     pendingAmount: invoices?.filter((i) => i.status === "pending" || i.status === "overdue").reduce((sum, i) => sum + Number(i.amount), 0) || 0,
   };
+
+  // Pagination calculations
+  const totalItems = invoices?.length || 0;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedInvoices = invoices?.slice(startIndex, endIndex) || [];
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -483,90 +501,163 @@ const SindicoInvoices = () => {
             </div>
 
             {invoices && invoices.length > 0 ? (
-              <div className="rounded-md border overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nº Fatura</TableHead>
-                      <TableHead>Condomínio</TableHead>
-                      <TableHead>Plano</TableHead>
-                      <TableHead>Período</TableHead>
-                      <TableHead>Vencimento</TableHead>
-                      <TableHead>Valor</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {invoices.map((invoice) => {
-                      const statusConfig = STATUS_CONFIG[invoice.status] || STATUS_CONFIG.pending;
+              <>
+                <div className="rounded-md border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nº Fatura</TableHead>
+                        <TableHead>Condomínio</TableHead>
+                        <TableHead>Plano</TableHead>
+                        <TableHead>Período</TableHead>
+                        <TableHead>Vencimento</TableHead>
+                        <TableHead>Valor</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedInvoices.map((invoice) => {
+                        const statusConfig = STATUS_CONFIG[invoice.status] || STATUS_CONFIG.pending;
 
-                      return (
-                        <TableRow key={invoice.id}>
-                          <TableCell>
-                            <span className="font-mono text-sm font-medium text-primary">
-                              {invoice.invoice_number || "—"}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Building2 className="h-4 w-4 text-muted-foreground" />
-                              <span className="font-medium">{invoice.condominium?.name}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">
-                              {PLAN_NAMES[invoice.subscription?.plan] || invoice.subscription?.plan}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {formatDate(invoice.period_start)} - {formatDate(invoice.period_end)}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1.5">
-                              <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                              {formatDate(invoice.due_date)}
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-semibold">
-                            {formatCurrency(invoice.amount)}
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={`${statusConfig.color} flex items-center gap-1 w-fit`}>
-                              {statusConfig.icon}
-                              {statusConfig.label}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {invoice.status === "pending" || invoice.status === "overdue" ? (
-                              userProfile?.email ? (
-                                <MercadoPagoTransparentCheckout
-                                  invoiceId={invoice.id}
-                                  payerEmail={userProfile.email}
-                                  amount={invoice.amount}
-                                  buttonText="Pagar"
-                                  onPaymentSuccess={() => {
-                                    queryClient.invalidateQueries({ queryKey: ["sindico-invoices"] });
-                                  }}
-                                />
-                              ) : (
-                                <Button size="sm" variant="outline" disabled>
-                                  <CreditCard className="h-4 w-4 mr-1" />
-                                  Pagar
-                                </Button>
-                              )
-                            ) : invoice.status === "paid" ? (
-                              <span className="text-xs text-muted-foreground">
-                                Pago em {invoice.paid_at && formatDate(invoice.paid_at)}
+                        return (
+                          <TableRow key={invoice.id}>
+                            <TableCell>
+                              <span className="font-mono text-sm font-medium text-primary">
+                                {invoice.invoice_number || "—"}
                               </span>
-                            ) : null}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Building2 className="h-4 w-4 text-muted-foreground" />
+                                <span className="font-medium">{invoice.condominium?.name}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">
+                                {PLAN_NAMES[invoice.subscription?.plan] || invoice.subscription?.plan}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {formatDate(invoice.period_start)} - {formatDate(invoice.period_end)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1.5">
+                                <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                                {formatDate(invoice.due_date)}
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-semibold">
+                              {formatCurrency(invoice.amount)}
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={`${statusConfig.color} flex items-center gap-1 w-fit`}>
+                                {statusConfig.icon}
+                                {statusConfig.label}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {invoice.status === "pending" || invoice.status === "overdue" ? (
+                                userProfile?.email ? (
+                                  <MercadoPagoTransparentCheckout
+                                    invoiceId={invoice.id}
+                                    payerEmail={userProfile.email}
+                                    amount={invoice.amount}
+                                    buttonText="Pagar"
+                                    onPaymentSuccess={() => {
+                                      queryClient.invalidateQueries({ queryKey: ["sindico-invoices"] });
+                                    }}
+                                  />
+                                ) : (
+                                  <Button size="sm" variant="outline" disabled>
+                                    <CreditCard className="h-4 w-4 mr-1" />
+                                    Pagar
+                                  </Button>
+                                )
+                              ) : invoice.status === "paid" ? (
+                                <span className="text-xs text-muted-foreground">
+                                  Pago em {invoice.paid_at && formatDate(invoice.paid_at)}
+                                </span>
+                              ) : null}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Pagination Controls */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 border-t">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>Exibindo</span>
+                    <Select
+                      value={itemsPerPage.toString()}
+                      onValueChange={(value) => {
+                        setItemsPerPage(Number(value));
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="w-[70px] h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="5">5</SelectItem>
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="20">20</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <span>de {totalItems} faturas</span>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setCurrentPage(1)}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronsLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    
+                    <div className="flex items-center gap-1 px-2">
+                      <span className="text-sm font-medium">{currentPage}</span>
+                      <span className="text-sm text-muted-foreground">de</span>
+                      <span className="text-sm font-medium">{totalPages || 1}</span>
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages || totalPages === 0}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setCurrentPage(totalPages)}
+                      disabled={currentPage === totalPages || totalPages === 0}
+                    >
+                      <ChevronsRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </>
             ) : (
               <div className="text-center py-12">
                 <Receipt className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
