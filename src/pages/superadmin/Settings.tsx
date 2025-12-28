@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -940,7 +941,7 @@ export default function SuperAdminSettings() {
                       </p>
                     </div>
                     <Button variant="outline" asChild>
-                      <a href="/superadmin/whatsapp">Configurar</a>
+                      <Link to="/superadmin/whatsapp">Configurar</Link>
                     </Button>
                   </div>
                 </div>
