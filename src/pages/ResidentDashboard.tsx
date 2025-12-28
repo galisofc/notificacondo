@@ -16,6 +16,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import ResidentBreadcrumbs from "@/components/resident/ResidentBreadcrumbs";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface ResidentStats {
@@ -225,6 +226,7 @@ const ResidentDashboard = () => {
       </Helmet>
 
       <div className="space-y-6 md:space-y-8 animate-fade-up">
+        <ResidentBreadcrumbs items={[{ label: "Dashboard" }]} />
         {/* Pending Defense Alert */}
         {stats.pendingDefenses > 0 && (
           <div 

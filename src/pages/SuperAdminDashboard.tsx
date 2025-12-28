@@ -40,6 +40,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import SuperAdminBreadcrumbs from "@/components/superadmin/SuperAdminBreadcrumbs";
 
 // Função para obter ícone baseado na ação
 const getActionIcon = (tableName: string, action: string, newData: any): LucideIcon => {
@@ -335,6 +336,7 @@ export default function SuperAdminDashboard() {
       </Helmet>
 
       <div className="space-y-8 animate-fade-up">
+        <SuperAdminBreadcrumbs items={[{ label: "Dashboard" }]} />
         {/* Page Header */}
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground">
