@@ -17,32 +17,52 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch WhatsApp config from database
-    const { data: whatsappConfig, error: configError } = await supabase
-      .from("whatsapp_config")
-      .select("*")
-      .eq("is_active", true)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    // Optional: allow client to send config to test current (unsaved) form values
+    const body = await req.json().catch(() => null) as null | {
+      provider?: string;
+      api_url?: string;
+      api_key?: string;
+      instance_id?: string;
+    };
 
-    if (configError) {
-      console.error("Error fetching WhatsApp config:", configError);
-      return new Response(
-        JSON.stringify({ success: false, error: "Erro ao buscar configuração" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    let provider: string;
+    let api_url: string;
+    let api_key: string;
+    let instance_id: string;
+
+    if (body?.provider && body?.api_url && body?.api_key) {
+      ({ provider, api_url, api_key } = body as any);
+      instance_id = body.instance_id ?? "";
+      console.log(`Testing connection using request body provider=${provider}`);
+    } else {
+      // Fetch WhatsApp config from database
+      const { data: whatsappConfig, error: configError } = await supabase
+        .from("whatsapp_config")
+        .select("*")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (configError) {
+        console.error("Error fetching WhatsApp config:", configError);
+        return new Response(
+          JSON.stringify({ success: false, error: "Erro ao buscar configuração" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (!whatsappConfig) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Configuração não encontrada" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      ({ provider, api_url, api_key, instance_id } = whatsappConfig as any);
+      console.log(`Testing ${provider} connection (db config)...`);
     }
 
-    if (!whatsappConfig) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Configuração não encontrada" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const { provider, api_url, api_key, instance_id } = whatsappConfig;
-    console.log(`Testing ${provider} connection...`);
 
     let testUrl = "";
     const headers: Record<string, string> = {
