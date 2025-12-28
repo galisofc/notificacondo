@@ -95,6 +95,7 @@ export default function SubscriptionDetails() {
   const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
   const [isPeriodDialogOpen, setIsPeriodDialogOpen] = useState(false);
   const [isAddDaysDialogOpen, setIsAddDaysDialogOpen] = useState(false);
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [extraDays, setExtraDays] = useState<number>(0);
   const [extraDaysJustification, setExtraDaysJustification] = useState("");
   const [periodStartDate, setPeriodStartDate] = useState("");
@@ -867,14 +868,10 @@ export default function SubscriptionDetails() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => resetUsageMutation.mutate()}
+                        onClick={() => setIsResetDialogOpen(true)}
                         disabled={resetUsageMutation.isPending}
                       >
-                        {resetUsageMutation.isPending ? (
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        ) : (
-                          <RefreshCw className="w-4 h-4 mr-2" />
-                        )}
+                        <RefreshCw className="w-4 h-4 mr-2" />
                         Reiniciar
                       </Button>
                     </div>
@@ -1339,6 +1336,45 @@ export default function SubscriptionDetails() {
                 <Calendar className="w-4 h-4 mr-2" />
               )}
               Adicionar {extraDays} dia{extraDays !== 1 ? "s" : ""}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Usage Confirmation Dialog */}
+      <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500" />
+              Confirmar Reinicialização
+            </DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja reiniciar os contadores de uso desta assinatura?
+              Esta ação irá zerar todos os contadores (notificações, advertências e multas).
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsResetDialogOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                resetUsageMutation.mutate();
+                setIsResetDialogOpen(false);
+              }}
+              disabled={resetUsageMutation.isPending}
+            >
+              {resetUsageMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4 mr-2" />
+              )}
+              Reiniciar Contadores
             </Button>
           </DialogFooter>
         </DialogContent>
