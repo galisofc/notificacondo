@@ -566,7 +566,40 @@ export function CondominiumsManagement() {
           </DialogHeader>
           <div className="space-y-4 max-h-[60vh] overflow-y-auto py-4">
             <div className="grid gap-4 sm:grid-cols-2">
-              {/* CEP - Primeiro campo com busca automática */}
+              {/* CNPJ - Primeiro campo */}
+              <div className="sm:col-span-2 space-y-2">
+                <Label htmlFor="cnpj">CNPJ</Label>
+                <MaskedInput
+                  id="cnpj"
+                  mask="cnpj"
+                  value={editForm.cnpj}
+                  onChange={(value) => setEditForm(prev => ({ ...prev, cnpj: value }))}
+                  placeholder="00.000.000/0000-00"
+                />
+              </div>
+
+              <div className="sm:col-span-2 space-y-2">
+                <Label htmlFor="name">Nome do Condomínio *</Label>
+                <Input
+                  id="name"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Nome do condomínio"
+                />
+              </div>
+
+              <div className="sm:col-span-2 space-y-2">
+                <Label htmlFor="phone">Telefone</Label>
+                <MaskedInput
+                  id="phone"
+                  mask="phone"
+                  value={editForm.phone}
+                  onChange={(value) => setEditForm(prev => ({ ...prev, phone: value }))}
+                  placeholder="(00) 00000-0000"
+                />
+              </div>
+
+              {/* CEP com busca automática */}
               <div className="sm:col-span-2 space-y-2">
                 <Label htmlFor="zip_code">CEP (busca automática)</Label>
                 <div className="relative">
@@ -630,38 +663,6 @@ export function CondominiumsManagement() {
                   onChange={(e) => setEditForm(prev => ({ ...prev, state: e.target.value.toUpperCase().slice(0, 2) }))}
                   placeholder="UF"
                   maxLength={2}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cnpj">CNPJ</Label>
-                <MaskedInput
-                  id="cnpj"
-                  mask="cnpj"
-                  value={editForm.cnpj}
-                  onChange={(value) => setEditForm(prev => ({ ...prev, cnpj: value }))}
-                  placeholder="00.000.000/0000-00"
-                />
-              </div>
-
-              <div className="sm:col-span-2 space-y-2">
-                <Label htmlFor="name">Nome do Condomínio *</Label>
-                <Input
-                  id="name"
-                  value={editForm.name}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Nome do condomínio"
-                />
-              </div>
-
-              <div className="sm:col-span-2 space-y-2">
-                <Label htmlFor="phone">Telefone</Label>
-                <MaskedInput
-                  id="phone"
-                  mask="phone"
-                  value={editForm.phone}
-                  onChange={(value) => setEditForm(prev => ({ ...prev, phone: value }))}
-                  placeholder="(00) 00000-0000"
                 />
               </div>
             </div>
