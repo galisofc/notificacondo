@@ -631,6 +631,9 @@ export function SindicosManagement() {
                         {sindico.profile?.cpf && (
                           <p className="text-xs text-muted-foreground font-mono">CPF: {formatCPF(sindico.profile.cpf)}</p>
                         )}
+                        {sindico.profile?.phone && (
+                          <p className="text-xs text-muted-foreground">Tel: {formatPhone(sindico.profile.phone)}</p>
+                        )}
                       </div>
                       <div className="flex items-center gap-1">
                         <Button 
@@ -689,6 +692,7 @@ export function SindicosManagement() {
                     <TableRow>
                       <TableHead>Síndico</TableHead>
                       <TableHead>CPF</TableHead>
+                      <TableHead>Telefone</TableHead>
                       <TableHead>Condomínios</TableHead>
                       <TableHead>Qtd.</TableHead>
                       <TableHead>Status Assinaturas</TableHead>
@@ -708,6 +712,11 @@ export function SindicosManagement() {
                         <TableCell>
                           <p className="text-sm font-mono">
                             {sindico.profile?.cpf ? formatCPF(sindico.profile.cpf) : "—"}
+                          </p>
+                        </TableCell>
+                        <TableCell>
+                          <p className="text-sm">
+                            {sindico.profile?.phone ? formatPhone(sindico.profile.phone) : "—"}
                           </p>
                         </TableCell>
                         <TableCell>
