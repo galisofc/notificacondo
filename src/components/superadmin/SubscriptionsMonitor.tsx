@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, differenceInDays, isPast } from "date-fns";
+import { format, differenceInHours, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatCNPJ } from "@/components/ui/masked-input";
 import {
@@ -155,8 +155,9 @@ export function SubscriptionsMonitor() {
           
           // Check if trial is expiring in 2 days or less
           if (sub.trial_ends_at) {
-            const daysRemaining = differenceInDays(new Date(sub.trial_ends_at), new Date());
-            if (daysRemaining <= 2) {
+            const hoursRemaining = differenceInHours(new Date(sub.trial_ends_at), new Date());
+            const daysRemaining = Math.ceil(hoursRemaining / 24);
+            if (daysRemaining <= 2 && hoursRemaining > 0) {
               stats.trial.critical++;
             }
           }
@@ -185,11 +186,14 @@ export function SubscriptionsMonitor() {
   const getTrialStatus = (trialEndsAt: string | null) => {
     if (!trialEndsAt) return null;
     const endDate = new Date(trialEndsAt);
-    const daysRemaining = differenceInDays(endDate, new Date());
     
     if (isPast(endDate)) {
       return { status: "expired", daysRemaining: 0, label: "Expirado" };
     }
+    
+    const hoursRemaining = differenceInHours(endDate, new Date());
+    const daysRemaining = Math.ceil(hoursRemaining / 24);
+    
     if (daysRemaining <= 2) {
       return { status: "critical", daysRemaining, label: `${daysRemaining}d restante${daysRemaining !== 1 ? 's' : ''}` };
     }
