@@ -367,6 +367,21 @@ export function InvoicesManagement() {
     doc.setTextColor(textGray[0], textGray[1], textGray[2]);
     doc.text("DATA DE VENCIMENTO: " + formatDate(invoice.due_date), pageWidth - 20, 93, { align: "right" });
     
+    // ===== CALCULAR DESCONTO =====
+    // Extrair percentual de desconto da descrição (ex: "Desconto: 15%")
+    const discountMatch = invoice.description?.match(/Desconto:\s*(\d+)%/);
+    const discountPercent = discountMatch ? parseFloat(discountMatch[1]) : 0;
+    
+    // Se há desconto, calcular o valor original
+    // amount = originalAmount - (originalAmount * discountPercent / 100)
+    // amount = originalAmount * (1 - discountPercent/100)
+    // originalAmount = amount / (1 - discountPercent/100)
+    const hasDiscount = discountPercent > 0;
+    const originalAmount = hasDiscount 
+      ? Number(invoice.amount) / (1 - discountPercent / 100)
+      : Number(invoice.amount);
+    const discountValue = hasDiscount ? originalAmount - Number(invoice.amount) : 0;
+    
     // ===== TABELA DE ITENS =====
     yPos = 115;
     
@@ -390,8 +405,8 @@ export function InvoicesManagement() {
     const periodText = "Assinatura - Periodo: " + formatDate(invoice.period_start) + " a " + formatDate(invoice.period_end);
     doc.text(periodText, 25, yPos);
     doc.text("01", 120, yPos, { align: "center" });
-    doc.text(formatCurrency(Number(invoice.amount)), 150, yPos, { align: "center" });
-    doc.text(formatCurrency(Number(invoice.amount)), pageWidth - 25, yPos, { align: "right" });
+    doc.text(formatCurrency(originalAmount), 150, yPos, { align: "center" });
+    doc.text(formatCurrency(originalAmount), pageWidth - 25, yPos, { align: "right" });
     
     // Linha separadora
     yPos += 5;
@@ -406,11 +421,16 @@ export function InvoicesManagement() {
     doc.setTextColor(textGray[0], textGray[1], textGray[2]);
     
     doc.text("Subtotal", 140, yPos);
-    doc.text(formatCurrency(Number(invoice.amount)), pageWidth - 25, yPos, { align: "right" });
+    doc.text(formatCurrency(originalAmount), pageWidth - 25, yPos, { align: "right" });
     
-    yPos += 8;
-    doc.text("Desconto", 140, yPos);
-    doc.text(invoice.description?.includes("Desconto") ? invoice.description.match(/R\$[\d.,]+/)?.[0] || "R$ 0,00" : "R$ 0,00", pageWidth - 25, yPos, { align: "right" });
+    // Mostrar desconto apenas se houver
+    if (hasDiscount) {
+      yPos += 8;
+      doc.setTextColor(34, 139, 34); // Verde para desconto
+      doc.text("Desconto (" + discountPercent + "%)", 140, yPos);
+      doc.text("-" + formatCurrency(discountValue), pageWidth - 25, yPos, { align: "right" });
+      doc.setTextColor(textGray[0], textGray[1], textGray[2]);
+    }
     
     // Total com fundo azul
     yPos += 12;
