@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Mail, Lock, User, ArrowLeft, Loader2 } from "lucide-react";
+import { Shield, Mail, Lock, User, ArrowLeft, Loader2, Check } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -39,6 +40,35 @@ const Auth = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+
+  // Get selected plan from URL
+  const searchParams = new URLSearchParams(location.search);
+  const selectedPlanSlug = searchParams.get('plano');
+
+  // Fetch selected plan details
+  const { data: selectedPlan } = useQuery({
+    queryKey: ['selected-plan', selectedPlanSlug],
+    queryFn: async () => {
+      if (!selectedPlanSlug) return null;
+      const { data, error } = await supabase
+        .from('plans')
+        .select('*')
+        .eq('slug', selectedPlanSlug)
+        .eq('is_active', true)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedPlanSlug
+  });
+
+  // If plan is selected, default to signup
+  useEffect(() => {
+    if (selectedPlanSlug) {
+      setIsLogin(false);
+    }
+  }, [selectedPlanSlug]);
 
   // Redirect authenticated users based on their role
   useEffect(() => {
@@ -307,6 +337,52 @@ const Auth = () => {
                 : "Comece a gerenciar seu condomínio hoje"}
             </p>
           </div>
+
+          {/* Selected Plan Display */}
+          {!isLogin && selectedPlan && (
+            <div className="mb-6 p-4 rounded-xl bg-gradient-card border border-primary/30">
+              <div className="flex items-center gap-3">
+                <div 
+                  className="w-10 h-10 rounded-lg flex items-center justify-center"
+                  style={{ background: `linear-gradient(135deg, ${selectedPlan.color}, ${selectedPlan.color}dd)` }}
+                >
+                  <span className="font-display text-sm font-bold text-white">
+                    {selectedPlan.name[0]}
+                  </span>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm text-muted-foreground">Plano selecionado</p>
+                  <p className="font-semibold text-foreground">{selectedPlan.name}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-display text-lg font-bold text-foreground">
+                    R$ {selectedPlan.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-xs text-muted-foreground">/mês</p>
+                </div>
+              </div>
+              <div className="mt-3 pt-3 border-t border-border/50 flex flex-wrap gap-2">
+                {selectedPlan.notifications_limit === -1 ? (
+                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <Check className="w-3 h-3 text-primary" /> Notificações ilimitadas
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <Check className="w-3 h-3 text-primary" /> {selectedPlan.notifications_limit} notificações/mês
+                  </span>
+                )}
+                {selectedPlan.warnings_limit === -1 ? (
+                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <Check className="w-3 h-3 text-primary" /> Advertências ilimitadas
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <Check className="w-3 h-3 text-primary" /> {selectedPlan.warnings_limit} advertências/mês
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
