@@ -69,6 +69,12 @@ interface CronJobRun {
   end_time: string;
 }
 
+interface PauseStatus {
+  function_name: string;
+  paused: boolean;
+  paused_at: string | null;
+}
+
 export function CronJobsLogs() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -82,10 +88,22 @@ export function CronJobsLogs() {
       const { data, error } = await supabase.rpc("get_cron_jobs" as any);
       if (error) {
         console.error("Error fetching cron jobs:", error);
-        // Return empty array if function doesn't exist
         return [];
       }
       return (data || []) as CronJob[];
+    },
+  });
+
+  // Fetch pause statuses
+  const { data: pauseStatuses, isLoading: isLoadingPauseStatus } = useQuery({
+    queryKey: ["cron-job-pause-status"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_cron_job_pause_status" as any);
+      if (error) {
+        console.error("Error fetching pause statuses:", error);
+        return [];
+      }
+      return (data || []) as PauseStatus[];
     },
   });
 
@@ -125,21 +143,23 @@ export function CronJobsLogs() {
     },
   });
 
-  // Toggle cron job mutation
-  const toggleJobMutation = useMutation({
-    mutationFn: async (jobId: number) => {
-      const { data, error } = await supabase.rpc("toggle_cron_job" as any, { p_jobid: jobId });
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (newStatus: boolean) => {
-      toast({
-        title: newStatus ? "Cron job ativado!" : "Cron job pausado!",
-        description: newStatus 
-          ? "O job foi reativado e voltará a executar no próximo horário agendado."
-          : "O job foi pausado e não será executado até ser reativado.",
+  // Toggle pause mutation (uses new RPC that doesn't touch cron.job)
+  const togglePauseMutation = useMutation({
+    mutationFn: async (functionName: string) => {
+      const { data, error } = await supabase.rpc("toggle_cron_job_pause" as any, { 
+        p_function_name: functionName 
       });
-      queryClient.invalidateQueries({ queryKey: ["cron-jobs"] });
+      if (error) throw error;
+      return data as boolean;
+    },
+    onSuccess: (isPaused: boolean, functionName: string) => {
+      toast({
+        title: isPaused ? "Job pausado!" : "Job reativado!",
+        description: isPaused 
+          ? `O job "${functionName}" foi pausado e não executará ações até ser reativado.`
+          : `O job "${functionName}" foi reativado e voltará a executar normalmente.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["cron-job-pause-status"] });
     },
     onError: (error: any) => {
       toast({
@@ -155,8 +175,14 @@ export function CronJobsLogs() {
     triggerMutation.mutate(functionName);
   };
 
-  const handleToggleJob = (job: CronJob) => {
-    toggleJobMutation.mutate(job.jobid);
+  const handleTogglePause = (functionName: string) => {
+    togglePauseMutation.mutate(functionName);
+  };
+
+  // Get pause status for a function
+  const isPaused = (functionName: string): boolean => {
+    const status = pauseStatuses?.find(s => s.function_name === functionName);
+    return status?.paused || false;
   };
 
   const getStatusBadge = (status: string) => {
@@ -197,7 +223,6 @@ export function CronJobsLogs() {
   };
 
   const formatSchedule = (schedule: string) => {
-    // Parse cron expression to human readable
     const parts = schedule.split(" ");
     if (parts.length !== 5) return schedule;
     
@@ -277,7 +302,10 @@ export function CronJobsLogs() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => queryClient.invalidateQueries({ queryKey: ["cron-jobs"] })}
+              onClick={() => {
+                queryClient.invalidateQueries({ queryKey: ["cron-jobs"] });
+                queryClient.invalidateQueries({ queryKey: ["cron-job-pause-status"] });
+              }}
               className="gap-2"
             >
               <RefreshCw className="h-4 w-4" />
@@ -286,7 +314,7 @@ export function CronJobsLogs() {
           </div>
         </CardHeader>
         <CardContent>
-          {isLoadingJobs ? (
+          {isLoadingJobs || isLoadingPauseStatus ? (
             <div className="space-y-3">
               {[...Array(3)].map((_, i) => (
                 <Skeleton key={i} className="h-16 w-full" />
@@ -305,51 +333,64 @@ export function CronJobsLogs() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {cronJobs.map((job) => (
-                    <TableRow key={job.jobid}>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleToggleJob(job)}
-                          disabled={toggleJobMutation.isPending}
-                          title={job.active ? "Pausar job" : "Reativar job"}
-                        >
-                          {toggleJobMutation.isPending && toggleJobMutation.variables === job.jobid ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : job.active ? (
-                            <Pause className="h-4 w-4 text-amber-500" />
-                          ) : (
-                            <PlayCircle className="h-4 w-4 text-emerald-500" />
-                          )}
-                        </Button>
-                      </TableCell>
-                      <TableCell className="font-medium">{job.jobname}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm">{formatSchedule(job.schedule)}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <code className="text-xs bg-muted px-2 py-1 rounded">
-                          {getJobNameFromCommand(job.command)}
-                        </code>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={
-                            job.active
-                              ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-                              : "bg-muted text-muted-foreground"
-                          }
-                        >
-                          {job.active ? "Ativo" : "Inativo"}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {cronJobs.map((job) => {
+                    const functionName = getJobNameFromCommand(job.command);
+                    const paused = isPaused(functionName);
+                    const effectivelyActive = job.active && !paused;
+                    
+                    return (
+                      <TableRow key={job.jobid}>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleTogglePause(functionName)}
+                            disabled={togglePauseMutation.isPending}
+                            title={paused ? "Reativar job" : "Pausar job"}
+                          >
+                            {togglePauseMutation.isPending && togglePauseMutation.variables === functionName ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : paused ? (
+                              <PlayCircle className="h-4 w-4 text-emerald-500" />
+                            ) : (
+                              <Pause className="h-4 w-4 text-amber-500" />
+                            )}
+                          </Button>
+                        </TableCell>
+                        <TableCell className="font-medium">{job.jobname}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">{formatSchedule(job.schedule)}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <code className="text-xs bg-muted px-2 py-1 rounded">
+                            {functionName}
+                          </code>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              variant="outline"
+                              className={
+                                effectivelyActive
+                                  ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                                  : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                              }
+                            >
+                              {effectivelyActive ? "Ativo" : "Pausado"}
+                            </Badge>
+                            {paused && (
+                              <Badge variant="outline" className="bg-violet-500/10 text-violet-500 border-violet-500/20 text-xs">
+                                via painel
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>

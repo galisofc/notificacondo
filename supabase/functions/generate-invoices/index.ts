@@ -37,6 +37,25 @@ Deno.serve(async (req) => {
 
     console.log("Starting invoice generation process...");
 
+    // Check if this function is paused
+    const { data: pauseControl } = await supabase
+      .from("cron_job_controls")
+      .select("paused")
+      .eq("function_name", "generate-invoices")
+      .maybeSingle();
+
+    if (pauseControl?.paused) {
+      console.log("Function generate-invoices is PAUSED. Skipping execution.");
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          skipped: true, 
+          reason: "Function is paused via admin panel" 
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const now = new Date();
     const today = now.toISOString().split("T")[0];
 

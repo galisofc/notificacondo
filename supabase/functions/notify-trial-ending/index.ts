@@ -161,6 +161,25 @@ Deno.serve(async (req) => {
 
     console.log("Starting trial ending notification check...");
 
+    // Check if this function is paused
+    const { data: pauseControl } = await supabase
+      .from("cron_job_controls")
+      .select("paused")
+      .eq("function_name", "notify-trial-ending")
+      .maybeSingle();
+
+    if (pauseControl?.paused) {
+      console.log("Function notify-trial-ending is PAUSED. Skipping execution.");
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          skipped: true, 
+          reason: "Function is paused via admin panel" 
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Get current date
     const now = new Date();
     
