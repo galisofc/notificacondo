@@ -1118,7 +1118,7 @@ export default function SubscriptionDetails() {
                 </>
               )}
 
-              {subscription.current_period_end && (
+              {(subscription.current_period_end || (subscription.is_trial && subscription.trial_ends_at)) && (
                 <>
                   <Separator />
                   <div className="flex items-center justify-between">
@@ -1126,10 +1126,24 @@ export default function SubscriptionDetails() {
                       <Calendar className="w-4 h-4" />
                       <span>
                         Período: {" "}
-                        {subscription.current_period_start &&
-                          format(new Date(subscription.current_period_start), "dd/MM/yyyy", { locale: ptBR })}
-                        {" - "}
-                        {format(new Date(subscription.current_period_end), "dd/MM/yyyy", { locale: ptBR })}
+                        {(() => {
+                          // If in trial, use trial dates
+                          if (subscription.is_trial && subscription.trial_ends_at) {
+                            const trialStart = subscription.current_period_start 
+                              ? new Date(subscription.current_period_start)
+                              : new Date(new Date(subscription.trial_ends_at).getTime() - 14 * 24 * 60 * 60 * 1000);
+                            const trialEnd = new Date(subscription.trial_ends_at);
+                            return `${format(trialStart, "dd/MM/yyyy", { locale: ptBR })} - ${format(trialEnd, "dd/MM/yyyy", { locale: ptBR })}`;
+                          }
+                          // Otherwise use regular period
+                          const periodStart = subscription.current_period_start 
+                            ? format(new Date(subscription.current_period_start), "dd/MM/yyyy", { locale: ptBR })
+                            : "—";
+                          const periodEnd = subscription.current_period_end
+                            ? format(new Date(subscription.current_period_end), "dd/MM/yyyy", { locale: ptBR })
+                            : "—";
+                          return `${periodStart} - ${periodEnd}`;
+                        })()}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
