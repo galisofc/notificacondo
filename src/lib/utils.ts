@@ -87,3 +87,43 @@ export function isValidCNPJ(cnpj: string): boolean {
 
   return true;
 }
+
+/**
+ * Formats a CNPJ number with mask
+ * @param cnpj - CNPJ string (with or without formatting)
+ * @returns formatted CNPJ (00.000.000/0000-00)
+ */
+export function formatCNPJ(cnpj: string): string {
+  const cleanCNPJ = cnpj.replace(/\D/g, "");
+  if (cleanCNPJ.length !== 14) return cnpj;
+  return cleanCNPJ.replace(
+    /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,
+    "$1.$2.$3/$4-$5"
+  );
+}
+
+/**
+ * Formats a phone number with mask
+ * @param phone - Phone string (with or without formatting)
+ * @returns formatted phone ((00) 00000-0000 or (00) 0000-0000)
+ */
+export function formatPhone(phone: string): string {
+  const cleanPhone = phone.replace(/\D/g, "");
+  if (cleanPhone.length === 11) {
+    return cleanPhone.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
+  } else if (cleanPhone.length === 10) {
+    return cleanPhone.replace(/^(\d{2})(\d{4})(\d{4})$/, "($1) $2-$3");
+  }
+  return phone;
+}
+
+/**
+ * Formats a CEP with mask
+ * @param cep - CEP string (with or without formatting)
+ * @returns formatted CEP (00000-000)
+ */
+export function formatCEP(cep: string): string {
+  const cleanCEP = cep.replace(/\D/g, "");
+  if (cleanCEP.length !== 8) return cep;
+  return cleanCEP.replace(/^(\d{5})(\d{3})$/, "$1-$2");
+}
