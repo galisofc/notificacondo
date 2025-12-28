@@ -56,6 +56,9 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 
 interface InvoiceWithDetails {
@@ -84,6 +87,9 @@ interface InvoiceWithDetails {
   } | null;
 }
 
+type SortColumn = "invoice_number" | "due_date" | "amount" | "status";
+type SortDirection = "asc" | "desc";
+
 export function InvoicesManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -95,6 +101,8 @@ export function InvoicesManagement() {
   const [paymentMethod, setPaymentMethod] = useState("");
   const [paymentReference, setPaymentReference] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortColumn, setSortColumn] = useState<SortColumn>("invoice_number");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const itemsPerPage = 10;
 
   const { data: invoices, isLoading } = useQuery({
@@ -436,11 +444,75 @@ export function InvoicesManagement() {
     return matchesSearch;
   });
 
+  // Ordenação
+  const sortedInvoices = [...(filteredInvoices || [])].sort((a, b) => {
+    let comparison = 0;
+    
+    switch (sortColumn) {
+      case "invoice_number":
+        const numA = a.invoice_number || "";
+        const numB = b.invoice_number || "";
+        comparison = numA.localeCompare(numB);
+        break;
+      case "due_date":
+        comparison = new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+        break;
+      case "amount":
+        comparison = Number(a.amount) - Number(b.amount);
+        break;
+      case "status":
+        // Ordem: vencido > pendente > pago
+        const getStatusPriority = (invoice: InvoiceWithDetails) => {
+          const today = new Date();
+          const due = new Date(invoice.due_date);
+          if (invoice.status === "paid") return 3;
+          if (due < today && invoice.status === "pending") return 1; // vencido
+          return 2; // pendente
+        };
+        comparison = getStatusPriority(a) - getStatusPriority(b);
+        break;
+    }
+    
+    return sortDirection === "asc" ? comparison : -comparison;
+  });
+
   // Paginação
-  const totalItems = filteredInvoices?.length || 0;
+  const totalItems = sortedInvoices?.length || 0;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedInvoices = filteredInvoices?.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedInvoices = sortedInvoices?.slice(startIndex, startIndex + itemsPerPage);
+
+  // Função para alternar ordenação
+  const handleSort = (column: SortColumn) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("desc");
+    }
+    setCurrentPage(1);
+  };
+
+  // Componente de header ordenável
+  const SortableHeader = ({ column, children }: { column: SortColumn; children: React.ReactNode }) => (
+    <TableHead 
+      className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
+      onClick={() => handleSort(column)}
+    >
+      <div className="flex items-center gap-1">
+        {children}
+        {sortColumn === column ? (
+          sortDirection === "asc" ? (
+            <ArrowUp className="h-3 w-3" />
+          ) : (
+            <ArrowDown className="h-3 w-3" />
+          )
+        ) : (
+          <ArrowUpDown className="h-3 w-3 text-muted-foreground/50" />
+        )}
+      </div>
+    </TableHead>
+  );
 
   // Reset página quando filtros mudam
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -577,7 +649,7 @@ export function InvoicesManagement() {
                 <Skeleton key={i} className="h-16 w-full" />
               ))}
             </div>
-          ) : filteredInvoices?.length === 0 ? (
+          ) : sortedInvoices?.length === 0 ? (
             <div className="text-center py-12">
               <Receipt className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
               <p className="text-muted-foreground">Nenhuma fatura encontrada</p>
@@ -588,14 +660,14 @@ export function InvoicesManagement() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Nº Fatura</TableHead>
+                      <SortableHeader column="invoice_number">Nº Fatura</SortableHeader>
                       <TableHead>Condomínio</TableHead>
                       <TableHead>CNPJ</TableHead>
                       <TableHead>Síndico</TableHead>
                       <TableHead>Período</TableHead>
-                      <TableHead>Vencimento</TableHead>
-                      <TableHead>Valor</TableHead>
-                      <TableHead>Status</TableHead>
+                      <SortableHeader column="due_date">Vencimento</SortableHeader>
+                      <SortableHeader column="amount">Valor</SortableHeader>
+                      <SortableHeader column="status">Status</SortableHeader>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
