@@ -1,14 +1,19 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://esm.sh/zod@3.22.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface ValidateTokenRequest {
-  token: string;
-}
+// Input validation schema
+const ValidateTokenSchema = z.object({
+  token: z.string().uuid("Token deve ser um UUID válido"),
+});
+
+// Token expiration: 7 days
+const TOKEN_EXPIRATION_DAYS = 7;
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -22,14 +27,30 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { token }: ValidateTokenRequest = await req.json();
-
-    if (!token) {
+    // ========== INPUT VALIDATION ==========
+    let body;
+    try {
+      body = await req.json();
+    } catch {
       return new Response(
-        JSON.stringify({ error: "Token não fornecido" }),
+        JSON.stringify({ error: "JSON inválido" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const parsed = ValidateTokenSchema.safeParse(body);
+    if (!parsed.success) {
+      console.error("Validation error:", parsed.error.errors);
+      return new Response(
+        JSON.stringify({ error: "Token inválido" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { token } = parsed.data;
+
+    // Log access attempt for security monitoring
+    console.log(`Token validation attempt from IP: ${req.headers.get("x-forwarded-for") || "unknown"}`);
 
     // Find notification with this token
     const { data: notification, error: notifError } = await supabase
@@ -40,6 +61,7 @@ serve(async (req) => {
         occurrence_id,
         read_at,
         acknowledged_at,
+        sent_at,
         residents!inner (
           id,
           full_name,
@@ -67,6 +89,19 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "Link inválido ou expirado" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ========== TOKEN EXPIRATION CHECK ==========
+    const sentAt = new Date(notification.sent_at);
+    const expirationDate = new Date(sentAt.getTime() + TOKEN_EXPIRATION_DAYS * 24 * 60 * 60 * 1000);
+    const now = new Date();
+
+    if (now > expirationDate) {
+      console.log(`Token expired. Sent at: ${sentAt.toISOString()}, Expired at: ${expirationDate.toISOString()}`);
+      return new Response(
+        JSON.stringify({ error: "Link expirado. Solicite um novo link ao síndico." }),
+        { status: 410, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -101,6 +136,7 @@ serve(async (req) => {
     if (!userId) {
       // Create a new auth user for this resident
       const tempPassword = crypto.randomUUID();
+      // Use resident email if available, otherwise create a safe temp email
       const email = resident.email || `resident_${resident.id}@temp.condomaster.app`;
 
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -141,7 +177,6 @@ serve(async (req) => {
     }
 
     // Always ensure user role is "morador" (even for existing users)
-    // First try to update, then insert if not exists
     if (userId) {
       console.log(`Setting user role to morador for user: ${userId}`);
       
@@ -171,9 +206,11 @@ serve(async (req) => {
     
     console.log(`Generating magic link with redirect to: ${appBaseUrl}${redirectPath}`);
     
+    const residentEmail = resident.email || `resident_${resident.id}@temp.condomaster.app`;
+    
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: "magiclink",
-      email: resident.email || `resident_${resident.id}@temp.condomaster.app`,
+      email: residentEmail,
       options: {
         redirectTo: `${appBaseUrl}${redirectPath}`,
       },

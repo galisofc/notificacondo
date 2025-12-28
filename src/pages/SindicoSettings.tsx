@@ -257,12 +257,14 @@ const SindicoSettings = () => {
 
       if (uploadError) throw uploadError;
 
-      // Add cache-busting timestamp to URL
-      const { data: urlData } = supabase.storage
+      // Use signed URL instead of public URL for security
+      const { data: urlData, error: signedUrlError } = await supabase.storage
         .from("avatars")
-        .getPublicUrl(fileName);
+        .createSignedUrl(fileName, 60 * 60 * 24 * 30); // 30 days for avatars
 
-      const avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+      if (signedUrlError) throw signedUrlError;
+
+      const avatarUrl = urlData.signedUrl;
 
       const { error: updateError } = await supabase
         .from("profiles")

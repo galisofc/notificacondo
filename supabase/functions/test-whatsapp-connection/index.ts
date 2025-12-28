@@ -1,10 +1,19 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://esm.sh/zod@3.22.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// Input validation schema
+const TestConnectionSchema = z.object({
+  provider: z.enum(["zpro", "zapi", "evolution", "wppconnect"]).optional(),
+  api_url: z.string().url("URL inválida").max(500).optional(),
+  api_key: z.string().min(5).max(500).optional(),
+  instance_id: z.string().max(100).optional(),
+}).optional();
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -17,13 +26,68 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Optional: allow client to send config to test current (unsaved) form values
-    const body = await req.json().catch(() => null) as null | {
-      provider?: string;
-      api_url?: string;
-      api_key?: string;
-      instance_id?: string;
-    };
+    // ========== AUTHENTICATION ==========
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      console.error("No authorization header");
+      return new Response(
+        JSON.stringify({ success: false, error: "Não autorizado" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !user) {
+      console.error("Auth error:", authError);
+      return new Response(
+        JSON.stringify({ success: false, error: "Não autorizado" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ========== AUTHORIZATION: Only super_admin can test WhatsApp ==========
+    const { data: roleData } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "super_admin")
+      .maybeSingle();
+
+    if (!roleData) {
+      console.error(`User ${user.id} is not super_admin`);
+      return new Response(
+        JSON.stringify({ success: false, error: "Acesso negado. Apenas Super Admins podem testar a conexão" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Super admin ${user.id} testing WhatsApp connection`);
+
+    // ========== INPUT VALIDATION ==========
+    let body = null;
+    try {
+      body = await req.json().catch(() => null);
+    } catch {
+      body = null;
+    }
+
+    if (body) {
+      const parsed = TestConnectionSchema.safeParse(body);
+      if (!parsed.success) {
+        console.error("Validation error:", parsed.error.errors);
+        return new Response(
+          JSON.stringify({ 
+            success: false,
+            error: "Dados inválidos", 
+            details: parsed.error.errors.map(e => e.message) 
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      body = parsed.data;
+    }
 
     let provider: string;
     let api_url: string;
@@ -71,8 +135,6 @@ serve(async (req) => {
 
     switch (provider) {
       case "zpro": {
-        // Z-PRO: Test usando o mesmo endpoint /params/ do envio.
-        // Alguns tenants retornam 403/400 se faltarem parâmetros obrigatórios.
         const baseUrl = api_url.replace(/\/$/, "");
         const params = new URLSearchParams({
           body: "ping",
@@ -113,7 +175,6 @@ serve(async (req) => {
       
       // For Z-PRO, we need stricter validation
       if (provider === "zpro") {
-        // 401/403 means invalid credentials
         if (response.status === 401 || response.status === 403) {
           return new Response(
             JSON.stringify({ 
@@ -125,7 +186,6 @@ serve(async (req) => {
           );
         }
         
-        // 404 means the URL/endpoint is wrong
         if (response.status === 404) {
           return new Response(
             JSON.stringify({ 
@@ -137,7 +197,6 @@ serve(async (req) => {
           );
         }
         
-        // 500+ means server error
         if (response.status >= 500) {
           return new Response(
             JSON.stringify({ 
@@ -149,8 +208,6 @@ serve(async (req) => {
           );
         }
         
-        // For Z-PRO, 200/201/400 with valid JSON response means connection works
-        // 400 can happen when params are missing but credentials are valid
         if (response.status === 200 || response.status === 201 || response.status === 400) {
           return new Response(
             JSON.stringify({ 
@@ -162,7 +219,6 @@ serve(async (req) => {
           );
         }
         
-        // Any other status is considered a failure
         return new Response(
           JSON.stringify({ 
             success: false, 
