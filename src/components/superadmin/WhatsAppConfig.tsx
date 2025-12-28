@@ -386,6 +386,47 @@ export function WhatsAppConfig() {
       </TabsList>
 
       <TabsContent value="config" className="space-y-6">
+        {/* Status Card */}
+        <Card className={config.id ? "border-green-500/30 bg-green-500/5" : "border-amber-500/30 bg-amber-500/5"}>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {config.id ? (
+                  <div className="p-2 rounded-lg bg-green-500/10">
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                  </div>
+                ) : (
+                  <div className="p-2 rounded-lg bg-amber-500/10">
+                    <AlertCircle className="w-5 h-5 text-amber-500" />
+                  </div>
+                )}
+                <div>
+                  <p className="font-medium text-foreground">
+                    {config.id ? "Integração Configurada" : "Integração Não Configurada"}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {config.id 
+                      ? `Provedor: ${config.provider?.toUpperCase()} • Status: ${config.is_active ? "Ativo" : "Inativo"}`
+                      : "Configure as credenciais abaixo para ativar o envio de notificações"}
+                  </p>
+                </div>
+              </div>
+              {config.id && (
+                <Badge 
+                  variant="outline" 
+                  className={config.is_active 
+                    ? "bg-green-500/10 text-green-500 border-green-500/20 gap-1" 
+                    : "bg-muted text-muted-foreground border-border gap-1"
+                  }
+                >
+                  <div className={`w-2 h-2 rounded-full ${config.is_active ? "bg-green-500 animate-pulse" : "bg-muted-foreground"}`} />
+                  {config.is_active ? "Online" : "Offline"}
+                </Badge>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <div className="flex items-center gap-3">
