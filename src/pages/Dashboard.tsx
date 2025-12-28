@@ -209,7 +209,7 @@ const Dashboard = () => {
       action: () => navigate("/defenses"),
     },
     {
-      title: "Multas Pendentes",
+      title: "Multas Aplicadas",
       value: stats.pendingFines,
       icon: DollarSign,
       gradient: "from-rose-500 to-red-500",
