@@ -88,14 +88,50 @@ serve(async (req) => {
       });
 
       console.log(`Response status: ${response.status}`);
+      const responseText = await response.text();
+      console.log(`Response: ${responseText.substring(0, 200)}`);
       
-      // For Z-PRO, many status codes are acceptable (the API may not have a GET endpoint)
+      // For Z-PRO, we need stricter validation
       if (provider === "zpro") {
-        // If we don't get 401/403, credentials are likely valid
-        if (response.status !== 401 && response.status !== 403) {
-          const responseText = await response.text();
-          console.log(`Response: ${responseText.substring(0, 200)}`);
-          
+        // 401/403 means invalid credentials
+        if (response.status === 401 || response.status === 403) {
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: "Credenciais inválidas (token incorreto)",
+              status: response.status
+            }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        // 404 means the URL/endpoint is wrong
+        if (response.status === 404) {
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: "Endpoint não encontrado (URL incorreta)",
+              status: response.status
+            }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        // 500+ means server error
+        if (response.status >= 500) {
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: "Erro no servidor do provedor",
+              status: response.status
+            }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        // For Z-PRO, 200/201/400 with valid JSON response means connection works
+        // 400 can happen when params are missing but credentials are valid
+        if (response.status === 200 || response.status === 201 || response.status === 400) {
           return new Response(
             JSON.stringify({ 
               success: true, 
@@ -104,36 +140,46 @@ serve(async (req) => {
             }),
             { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
-        } else {
-          return new Response(
-            JSON.stringify({ 
-              success: false, 
-              error: "Credenciais inválidas",
-              status: response.status
-            }),
-            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
         }
+        
+        // Any other status is considered a failure
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: `Resposta inesperada: ${response.status}`,
+            status: response.status
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
 
       // For other providers, check for success status
       if (response.ok) {
-        const data = await response.json();
-        return new Response(
-          JSON.stringify({ 
-            success: true, 
-            message: "Conexão estabelecida",
-            data
-          }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        try {
+          const data = JSON.parse(responseText);
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              message: "Conexão estabelecida",
+              data
+            }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        } catch {
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              message: "Conexão estabelecida"
+            }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
       } else {
-        const errorText = await response.text();
         return new Response(
           JSON.stringify({ 
             success: false, 
             error: `Falha na conexão: ${response.status}`,
-            details: errorText
+            details: responseText
           }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
@@ -143,7 +189,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: `Erro de rede: ${fetchError.message}`
+          error: `Erro de conexão: ${fetchError.message}`
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
