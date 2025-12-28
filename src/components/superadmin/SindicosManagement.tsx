@@ -85,6 +85,14 @@ export function SindicosManagement() {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [sindicoToDelete, setSindicoToDelete] = useState<SindicoWithProfile | null>(null);
+  const [deletePreviewData, setDeletePreviewData] = useState<{
+    condominiums: number;
+    blocks: number;
+    apartments: number;
+    residents: number;
+    occurrences: number;
+    isLoading: boolean;
+  } | null>(null);
   const [editProfileData, setEditProfileData] = useState({
     full_name: "",
     phone: "",
@@ -428,9 +436,91 @@ export function SindicosManagement() {
     }
   };
 
-  const handleDeleteClick = (sindico: SindicoWithProfile) => {
+  const handleDeleteClick = async (sindico: SindicoWithProfile) => {
     setSindicoToDelete(sindico);
+    setDeletePreviewData({ condominiums: 0, blocks: 0, apartments: 0, residents: 0, occurrences: 0, isLoading: true });
     setIsDeleteDialogOpen(true);
+
+    try {
+      // Fetch condominiums owned by this sindico
+      const { data: condominiums } = await supabase
+        .from("condominiums")
+        .select("id")
+        .eq("owner_id", sindico.user_id);
+
+      const condoIds = condominiums?.map(c => c.id) || [];
+      let blocksCount = 0;
+      let apartmentsCount = 0;
+      let residentsCount = 0;
+      let occurrencesCount = 0;
+
+      if (condoIds.length > 0) {
+        // Count blocks
+        const { count: blocks } = await supabase
+          .from("blocks")
+          .select("*", { count: "exact", head: true })
+          .in("condominium_id", condoIds);
+        blocksCount = blocks || 0;
+
+        // Get block IDs
+        const { data: blocksData } = await supabase
+          .from("blocks")
+          .select("id")
+          .in("condominium_id", condoIds);
+        const blockIds = blocksData?.map(b => b.id) || [];
+
+        if (blockIds.length > 0) {
+          // Count apartments
+          const { count: apartments } = await supabase
+            .from("apartments")
+            .select("*", { count: "exact", head: true })
+            .in("block_id", blockIds);
+          apartmentsCount = apartments || 0;
+
+          // Get apartment IDs
+          const { data: apartmentsData } = await supabase
+            .from("apartments")
+            .select("id")
+            .in("block_id", blockIds);
+          const apartmentIds = apartmentsData?.map(a => a.id) || [];
+
+          if (apartmentIds.length > 0) {
+            // Count residents
+            const { count: residents } = await supabase
+              .from("residents")
+              .select("*", { count: "exact", head: true })
+              .in("apartment_id", apartmentIds);
+            residentsCount = residents || 0;
+          }
+        }
+
+        // Count occurrences
+        const { count: occurrences } = await supabase
+          .from("occurrences")
+          .select("*", { count: "exact", head: true })
+          .in("condominium_id", condoIds);
+        occurrencesCount = occurrences || 0;
+      }
+
+      setDeletePreviewData({
+        condominiums: condoIds.length,
+        blocks: blocksCount,
+        apartments: apartmentsCount,
+        residents: residentsCount,
+        occurrences: occurrencesCount,
+        isLoading: false,
+      });
+    } catch (error) {
+      console.error("Error fetching delete preview:", error);
+      setDeletePreviewData({
+        condominiums: sindico.condominiums_count || 0,
+        blocks: 0,
+        apartments: 0,
+        residents: 0,
+        occurrences: 0,
+        isLoading: false,
+      });
+    }
   };
 
   const handleConfirmDelete = () => {
@@ -1010,7 +1100,7 @@ export function SindicosManagement() {
             )}
             
             <DialogFooter className="flex-col sm:flex-row gap-2">
-              {selectedSindico && selectedSindico.condominiums_count === 0 && (
+              {selectedSindico && (
                 <Button 
                   variant="destructive" 
                   onClick={() => handleDeleteClick(selectedSindico)}
@@ -1028,32 +1118,83 @@ export function SindicosManagement() {
         </Dialog>
 
         {/* Delete Confirmation Dialog */}
-        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-          <AlertDialogContent>
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={(open) => {
+          setIsDeleteDialogOpen(open);
+          if (!open) {
+            setDeletePreviewData(null);
+          }
+        }}>
+          <AlertDialogContent className="max-w-lg">
             <AlertDialogHeader>
-              <AlertDialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-destructive" />
-                Confirmar Exclusão
+              <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+                Atenção: Exclusão Permanente
               </AlertDialogTitle>
-              <AlertDialogDescription>
-                Tem certeza que deseja excluir o síndico{" "}
-                <span className="font-semibold">{sindicoToDelete?.profile?.full_name}</span>?
-                <br /><br />
-                Esta ação é irreversível e removerá permanentemente:
-                <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>A conta do síndico</li>
-                  <li>Todas as informações do perfil</li>
-                  <li>Acesso ao sistema</li>
-                </ul>
-              </AlertDialogDescription>
+              <div className="space-y-4 text-left">
+                <p className="text-sm text-muted-foreground">
+                  Tem certeza que deseja excluir o síndico{" "}
+                  <span className="font-semibold text-foreground">{sindicoToDelete?.profile?.full_name}</span>?
+                </p>
+
+                {/* Data Preview */}
+                {deletePreviewData?.isLoading ? (
+                  <div className="flex items-center gap-2 p-4 bg-muted/50 rounded-lg">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-sm">Calculando dados a serem removidos...</span>
+                  </div>
+                ) : deletePreviewData && (deletePreviewData.condominiums > 0 || deletePreviewData.residents > 0) ? (
+                  <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg space-y-3">
+                    <p className="text-sm font-medium text-destructive">
+                      Os seguintes dados serão removidos permanentemente:
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                        <span><strong>{deletePreviewData.condominiums}</strong> condomínio(s)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                        <span><strong>{deletePreviewData.blocks}</strong> bloco(s)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                        <span><strong>{deletePreviewData.apartments}</strong> apartamento(s)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span><strong>{deletePreviewData.residents}</strong> morador(es)</span>
+                      </div>
+                      <div className="flex items-center gap-2 col-span-2">
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        <span><strong>{deletePreviewData.occurrences}</strong> ocorrência(s)</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-muted/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground">
+                      Este síndico não possui condomínios vinculados.
+                    </p>
+                  </div>
+                )}
+
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                  <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">
+                    ⚠️ Esta ação é irreversível!
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Todos os dados listados acima serão permanentemente removidos do sistema.
+                  </p>
+                </div>
+              </div>
             </AlertDialogHeader>
-            <AlertDialogFooter>
+            <AlertDialogFooter className="gap-2 sm:gap-0">
               <AlertDialogCancel disabled={deleteSindicoMutation.isPending}>
                 Cancelar
               </AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleConfirmDelete}
-                disabled={deleteSindicoMutation.isPending}
+                disabled={deleteSindicoMutation.isPending || deletePreviewData?.isLoading}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 {deleteSindicoMutation.isPending ? (
@@ -1064,7 +1205,7 @@ export function SindicosManagement() {
                 ) : (
                   <>
                     <Trash2 className="h-4 w-4 mr-2" />
-                    Excluir
+                    Confirmar Exclusão
                   </>
                 )}
               </AlertDialogAction>
