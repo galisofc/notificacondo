@@ -1,5 +1,6 @@
+import { useEffect } from "react";
 import { Helmet } from "react-helmet-async";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -113,6 +114,30 @@ const formatAuditAction = (tableName: string, action: string, newData: any): str
 
 export default function SuperAdminDashboard() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  // Realtime subscription para audit_logs
+  useEffect(() => {
+    const channel = supabase
+      .channel('audit-logs-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'audit_logs'
+        },
+        () => {
+          // Invalidar a query para buscar dados atualizados
+          queryClient.invalidateQueries({ queryKey: ["superadmin-recent-activity"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
   
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["superadmin-stats"],
