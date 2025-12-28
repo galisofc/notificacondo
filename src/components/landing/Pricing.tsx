@@ -1,69 +1,59 @@
 import { Button } from "@/components/ui/button";
-import { Check, Sparkles } from "lucide-react";
-
-const plans = [
-  {
-    name: "Start",
-    price: "49,90",
-    description: "Ideal para condomínios pequenos",
-    color: "from-emerald-500 to-emerald-600",
-    features: [
-      "10 notificações/mês",
-      "10 advertências/mês",
-      "Integração ZPRO",
-      "Registro de ciência",
-      "1 condomínio"
-    ],
-    popular: false
-  },
-  {
-    name: "Essencial",
-    price: "99,90",
-    description: "Para condomínios em crescimento",
-    color: "from-blue-500 to-blue-600",
-    features: [
-      "30 notificações/mês",
-      "30 advertências/mês",
-      "15 multas/mês",
-      "Defesa do morador",
-      "Relatórios PDF",
-      "2 condomínios"
-    ],
-    popular: false
-  },
-  {
-    name: "Profissional",
-    price: "199,90",
-    description: "Gestão completa e profissional",
-    color: "from-violet-500 to-purple-600",
-    features: [
-      "Notificações ilimitadas",
-      "Advertências ilimitadas",
-      "50 multas/mês",
-      "Dossiê jurídico completo",
-      "Suporte prioritário",
-      "5 condomínios"
-    ],
-    popular: true
-  },
-  {
-    name: "Enterprise",
-    price: "Consulte",
-    description: "Soluções personalizadas",
-    color: "from-orange-500 to-red-500",
-    features: [
-      "Tudo ilimitado",
-      "Multi-condomínios",
-      "API dedicada",
-      "SLA garantido",
-      "Onboarding assistido",
-      "Suporte 24/7"
-    ],
-    popular: false
-  }
-];
+import { Check, Sparkles, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const Pricing = () => {
+  const { data: plans, isLoading } = useQuery({
+    queryKey: ['landing-plans'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('plans')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const formatPrice = (price: number) => {
+    if (price === 0) return "Consulte";
+    return price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  const getFeatures = (plan: typeof plans extends (infer T)[] ? T : never) => {
+    const features: string[] = [];
+    
+    if (plan.notifications_limit === -1) {
+      features.push("Notificações ilimitadas");
+    } else if (plan.notifications_limit > 0) {
+      features.push(`${plan.notifications_limit} notificações/mês`);
+    }
+    
+    if (plan.warnings_limit === -1) {
+      features.push("Advertências ilimitadas");
+    } else if (plan.warnings_limit > 0) {
+      features.push(`${plan.warnings_limit} advertências/mês`);
+    }
+    
+    if (plan.fines_limit === -1) {
+      features.push("Multas ilimitadas");
+    } else if (plan.fines_limit > 0) {
+      features.push(`${plan.fines_limit} multas/mês`);
+    }
+    
+    // Add description as additional feature if exists
+    if (plan.description) {
+      features.push(plan.description);
+    }
+    
+    return features;
+  };
+
+  const isPopular = (slug: string) => slug === 'profissional';
+
   return (
     <section id="planos" className="py-24 relative">
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-secondary/20 to-transparent" />
@@ -81,75 +71,84 @@ const Pricing = () => {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
-          {plans.map((plan, index) => (
-            <div 
-              key={index}
-              className={`relative p-6 rounded-2xl bg-gradient-card border transition-all duration-300 hover:shadow-glow ${
-                plan.popular 
-                  ? 'border-primary/50 shadow-glow' 
-                  : 'border-border/50 hover:border-primary/30'
-              }`}
-            >
-              {plan.popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-primary text-xs font-semibold text-primary-foreground flex items-center gap-1">
-                  <Sparkles className="w-3 h-3" />
-                  Mais Popular
-                </div>
-              )}
-
-              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${plan.color} flex items-center justify-center mb-4`}>
-                <span className="font-display text-lg font-bold text-white">
-                  {plan.name[0]}
-                </span>
-              </div>
-
-              <h3 className="font-display text-xl font-bold text-foreground mb-1">
-                {plan.name}
-              </h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                {plan.description}
-              </p>
-
-              <div className="mb-6">
-                {plan.price === "Consulte" ? (
-                  <span className="font-display text-3xl font-bold text-foreground">
-                    Consulte
-                  </span>
-                ) : (
-                  <>
-                    <span className="text-muted-foreground text-sm">R$</span>
-                    <span className="font-display text-4xl font-bold text-foreground">
-                      {plan.price}
-                    </span>
-                    <span className="text-muted-foreground text-sm">/mês</span>
-                  </>
-                )}
-              </div>
-
-              <ul className="space-y-3 mb-6">
-                {plan.features.map((feature, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm">
-                    <Check className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                    <span className="text-muted-foreground">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <Button 
-                variant={plan.popular ? "hero" : "outline"} 
-                className="w-full"
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className={`grid md:grid-cols-2 ${plans && plans.length >= 4 ? 'lg:grid-cols-4' : plans && plans.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-6 max-w-7xl mx-auto`}>
+            {plans?.map((plan) => (
+              <div 
+                key={plan.id}
+                className={`relative p-6 rounded-2xl bg-gradient-card border transition-all duration-300 hover:shadow-glow ${
+                  isPopular(plan.slug) 
+                    ? 'border-primary/50 shadow-glow' 
+                    : 'border-border/50 hover:border-primary/30'
+                }`}
               >
-                {plan.price === "Consulte" ? "Fale Conosco" : "Começar Agora"}
-              </Button>
-            </div>
-          ))}
-        </div>
+                {isPopular(plan.slug) && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-primary text-xs font-semibold text-primary-foreground flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" />
+                    Mais Popular
+                  </div>
+                )}
+
+                <div 
+                  className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
+                  style={{ background: `linear-gradient(135deg, ${plan.color}, ${plan.color}dd)` }}
+                >
+                  <span className="font-display text-lg font-bold text-white">
+                    {plan.name[0]}
+                  </span>
+                </div>
+
+                <h3 className="font-display text-xl font-bold text-foreground mb-1">
+                  {plan.name}
+                </h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {plan.description || `Plano ${plan.name}`}
+                </p>
+
+                <div className="mb-6">
+                  {plan.price === 0 ? (
+                    <span className="font-display text-3xl font-bold text-foreground">
+                      Consulte
+                    </span>
+                  ) : (
+                    <>
+                      <span className="text-muted-foreground text-sm">R$</span>
+                      <span className="font-display text-4xl font-bold text-foreground">
+                        {formatPrice(plan.price)}
+                      </span>
+                      <span className="text-muted-foreground text-sm">/mês</span>
+                    </>
+                  )}
+                </div>
+
+                <ul className="space-y-3 mb-6">
+                  {getFeatures(plan).map((feature, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm">
+                      <Check className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                      <span className="text-muted-foreground">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <Button 
+                  variant={isPopular(plan.slug) ? "hero" : "outline"} 
+                  className="w-full"
+                >
+                  {plan.price === 0 ? "Fale Conosco" : "Começar Agora"}
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Payment Methods */}
         <div className="text-center mt-12">
           <p className="text-sm text-muted-foreground mb-4">Pagamento seguro via</p>
-          <div className="flex items-center justify-center gap-6">
+          <div className="flex items-center justify-center gap-6 flex-wrap">
             <div className="px-4 py-2 rounded-lg bg-secondary/50 text-sm text-muted-foreground">
               Mercado Pago
             </div>
