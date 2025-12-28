@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,6 +24,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
+import { ImageCropper } from "@/components/ui/image-cropper";
 import { z } from "zod";
 import { isValidCPF } from "@/lib/utils";
 
@@ -76,6 +77,7 @@ const SindicoSettings = () => {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
+  const [showCropper, setShowCropper] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -210,34 +212,46 @@ const SindicoSettings = () => {
       return;
     }
 
-    // Create preview
+    // Create preview and show cropper
     const reader = new FileReader();
     reader.onloadend = () => {
       setPreviewImage(reader.result as string);
       setSelectedFile(file);
+      setShowCropper(true);
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleCancelCrop = () => {
+    setPreviewImage(null);
+    setSelectedFile(null);
+    setShowCropper(false);
+    setImageError(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleCancelPreview = () => {
     setPreviewImage(null);
     setSelectedFile(null);
+    setShowCropper(false);
     setImageError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handleConfirmUpload = async () => {
-    if (!selectedFile || !user) return;
+  const handleCropComplete = useCallback(async (croppedBlob: Blob) => {
+    if (!user) return;
 
     try {
       setUploading(true);
 
-      const fileExt = selectedFile.name.split(".").pop()?.toLowerCase() || "jpg";
-      const fileName = `${user.id}/avatar.${fileExt}`;
+      const fileName = `${user.id}/avatar.jpg`;
 
       const { error: uploadError } = await supabase.storage
         .from("avatars")
-        .upload(fileName, selectedFile, { upsert: true });
+        .upload(fileName, croppedBlob, { 
+          upsert: true,
+          contentType: "image/jpeg"
+        });
 
       if (uploadError) throw uploadError;
 
@@ -258,6 +272,7 @@ const SindicoSettings = () => {
       setProfile((prev) => prev ? { ...prev, avatar_url: avatarUrl } : null);
       setPreviewImage(null);
       setSelectedFile(null);
+      setShowCropper(false);
 
       toast({
         title: "Sucesso",
@@ -276,7 +291,7 @@ const SindicoSettings = () => {
         fileInputRef.current.value = "";
       }
     }
-  };
+  }, [user, toast]);
 
   const getInitials = (name: string) => {
     return name
@@ -365,52 +380,16 @@ const SindicoSettings = () => {
         <Card className="bg-gradient-card border-border/50">
           <CardContent className="pt-6">
             <div className="flex flex-col items-center">
-              {/* Preview Mode */}
-              {previewImage ? (
-                <div className="space-y-4">
-                  <div className="relative">
-                    <img
-                      src={previewImage}
-                      alt="Preview"
-                      className="w-32 h-32 rounded-full object-cover border-4 border-primary shadow-lg"
-                    />
-                  </div>
-                  <div className="text-center space-y-2">
-                    <p className="text-sm font-medium text-foreground">
-                      {selectedFile?.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {selectedFile && formatFileSize(selectedFile.size)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleCancelPreview}
-                      disabled={uploading}
-                      className="flex-1"
-                    >
-                      <X className="w-4 h-4 mr-1" />
-                      Cancelar
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="hero"
-                      size="sm"
-                      onClick={handleConfirmUpload}
-                      disabled={uploading}
-                      className="flex-1"
-                    >
-                      {uploading ? (
-                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                      ) : (
-                        <Check className="w-4 h-4 mr-1" />
-                      )}
-                      Confirmar
-                    </Button>
-                  </div>
+              {/* Cropper Mode */}
+              {showCropper && previewImage ? (
+                <div className="w-full max-w-sm">
+                  <ImageCropper
+                    imageSrc={previewImage}
+                    onCropComplete={handleCropComplete}
+                    onCancel={handleCancelCrop}
+                    isUploading={uploading}
+                    aspectRatio={1}
+                  />
                 </div>
               ) : (
                 <>
