@@ -20,6 +20,7 @@ import {
   X,
   Check,
   ImageIcon,
+  Trash2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -78,6 +79,7 @@ const SindicoSettings = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [showCropper, setShowCropper] = useState(false);
+  const [removingAvatar, setRemovingAvatar] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -293,6 +295,42 @@ const SindicoSettings = () => {
     }
   }, [user, toast]);
 
+  const handleRemoveAvatar = async () => {
+    if (!user || !profile?.avatar_url) return;
+
+    try {
+      setRemovingAvatar(true);
+
+      // Try to delete from storage (ignore error if file doesn't exist)
+      const fileName = `${user.id}/avatar.jpg`;
+      await supabase.storage.from("avatars").remove([fileName]);
+
+      // Update profile to remove avatar_url
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ avatar_url: null })
+        .eq("user_id", user.id);
+
+      if (updateError) throw updateError;
+
+      setProfile((prev) => prev ? { ...prev, avatar_url: null } : null);
+
+      toast({
+        title: "Sucesso",
+        description: "Foto de perfil removida!",
+      });
+    } catch (error: any) {
+      console.error("Error removing avatar:", error);
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível remover a foto.",
+        variant: "destructive",
+      });
+    } finally {
+      setRemovingAvatar(false);
+    }
+  };
+
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -403,7 +441,7 @@ const SindicoSettings = () => {
                     <button
                       type="button"
                       onClick={handleAvatarClick}
-                      disabled={uploading}
+                      disabled={uploading || removingAvatar}
                       className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer disabled:cursor-not-allowed"
                     >
                       <Camera className="w-6 h-6 text-white" />
@@ -422,6 +460,25 @@ const SindicoSettings = () => {
                   <p className="text-xs text-muted-foreground">
                     JPG, PNG, WebP ou GIF • Máximo 5MB
                   </p>
+                  
+                  {/* Remove Avatar Button */}
+                  {profile?.avatar_url && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleRemoveAvatar}
+                      disabled={removingAvatar || uploading}
+                      className="mt-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      {removingAvatar ? (
+                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4 mr-1" />
+                      )}
+                      Remover foto
+                    </Button>
+                  )}
                 </>
               )}
               
