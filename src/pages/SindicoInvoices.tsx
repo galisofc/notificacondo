@@ -251,7 +251,7 @@ const SindicoInvoices = () => {
           condominium:condominiums(id, name),
           subscription:subscriptions(id, plan)
         `)
-        .order("due_date", { ascending: false });
+        .order("created_at", { ascending: false });
 
       if (statusFilter !== "all") {
         query = query.eq("status", statusFilter);
