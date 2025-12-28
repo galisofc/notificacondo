@@ -86,6 +86,14 @@ const formatAuditAction = (tableName: string, action: string, newData: any): str
     residents: "Morador",
     blocks: "Bloco",
     apartments: "Apartamento",
+    plans: "Plano",
+    fines: "Multa",
+    defenses: "Defesa",
+    decisions: "Decisão",
+    whatsapp_config: "Config WhatsApp",
+    whatsapp_templates: "Template WhatsApp",
+    mercadopago_config: "Config MercadoPago",
+    audit_logs: "Log de Auditoria",
   };
 
   const actionNames: Record<string, string> = {
