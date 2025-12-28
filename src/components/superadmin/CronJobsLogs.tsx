@@ -32,6 +32,8 @@ import {
   Calendar,
   Zap,
   AlertTriangle,
+  Pause,
+  PlayCircle,
 } from "lucide-react";
 import {
   Dialog,
@@ -123,9 +125,38 @@ export function CronJobsLogs() {
     },
   });
 
+  // Toggle cron job mutation
+  const toggleJobMutation = useMutation({
+    mutationFn: async (jobId: number) => {
+      const { data, error } = await supabase.rpc("toggle_cron_job" as any, { p_jobid: jobId });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (newStatus: boolean) => {
+      toast({
+        title: newStatus ? "Cron job ativado!" : "Cron job pausado!",
+        description: newStatus 
+          ? "O job foi reativado e voltará a executar no próximo horário agendado."
+          : "O job foi pausado e não será executado até ser reativado.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["cron-jobs"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao alterar status do job",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleManualTrigger = (functionName: string) => {
     setIsRunDialogOpen(false);
     triggerMutation.mutate(functionName);
+  };
+
+  const handleToggleJob = (job: CronJob) => {
+    toggleJobMutation.mutate(job.jobid);
   };
 
   const getStatusBadge = (status: string) => {
@@ -266,6 +297,7 @@ export function CronJobsLogs() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[50px]">Ação</TableHead>
                     <TableHead>Nome</TableHead>
                     <TableHead>Agendamento</TableHead>
                     <TableHead>Função</TableHead>
@@ -275,6 +307,23 @@ export function CronJobsLogs() {
                 <TableBody>
                   {cronJobs.map((job) => (
                     <TableRow key={job.jobid}>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleToggleJob(job)}
+                          disabled={toggleJobMutation.isPending}
+                          title={job.active ? "Pausar job" : "Reativar job"}
+                        >
+                          {toggleJobMutation.isPending && toggleJobMutation.variables === job.jobid ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : job.active ? (
+                            <Pause className="h-4 w-4 text-amber-500" />
+                          ) : (
+                            <PlayCircle className="h-4 w-4 text-emerald-500" />
+                          )}
+                        </Button>
+                      </TableCell>
                       <TableCell className="font-medium">{job.jobname}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
