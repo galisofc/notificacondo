@@ -29,6 +29,14 @@ import {
   Edit,
   Trash2,
   PlusCircle,
+  Tag,
+  Banknote,
+  ShieldCheck,
+  Gavel,
+  MessageSquare,
+  LayoutTemplate,
+  Wallet,
+  ScrollText,
   type LucideIcon,
 } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -52,6 +60,14 @@ const getActionIcon = (tableName: string, action: string, newData: any): LucideI
     residents: Home,
     blocks: Building2,
     apartments: DoorOpen,
+    plans: Tag,
+    fines: Banknote,
+    defenses: ShieldCheck,
+    decisions: Gavel,
+    whatsapp_config: MessageSquare,
+    whatsapp_templates: LayoutTemplate,
+    mercadopago_config: Wallet,
+    audit_logs: ScrollText,
   };
 
   return tableIcons[tableName] || Activity;
