@@ -1069,6 +1069,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_rls_status: {
+        Args: never
+        Returns: {
+          policy_count: number
+          rls_enabled: boolean
+          table_name: string
+        }[]
+      }
       get_user_condominium_ids: {
         Args: { _user_id: string }
         Returns: string[]
