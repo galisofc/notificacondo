@@ -34,12 +34,32 @@ export default function SuperAdminDashboard() {
       const activeSubscriptions = subscriptions.data?.filter((s) => s.active) || [];
       const paidPlans = activeSubscriptions.filter((s) => s.plan !== "start");
 
+      // Calcular distribuição de planos
+      const allSubscriptions = subscriptions.data || [];
+      const totalSubs = allSubscriptions.length;
+      
+      const planCounts = {
+        start: allSubscriptions.filter((s) => s.plan === "start").length,
+        essencial: allSubscriptions.filter((s) => s.plan === "essencial").length,
+        profissional: allSubscriptions.filter((s) => s.plan === "profissional").length,
+        enterprise: allSubscriptions.filter((s) => s.plan === "enterprise").length,
+      };
+
+      const planDistribution = {
+        start: totalSubs > 0 ? Math.round((planCounts.start / totalSubs) * 100) : 0,
+        essencial: totalSubs > 0 ? Math.round((planCounts.essencial / totalSubs) * 100) : 0,
+        profissional: totalSubs > 0 ? Math.round((planCounts.profissional / totalSubs) * 100) : 0,
+        enterprise: totalSubs > 0 ? Math.round((planCounts.enterprise / totalSubs) * 100) : 0,
+      };
+
       return {
         totalSindicos: sindicos.count || 0,
         totalCondominiums: condominiums.count || 0,
         activeSubscriptions: activeSubscriptions.length,
         paidSubscriptions: paidPlans.length,
         totalNotifications: notifications.count || 0,
+        planDistribution,
+        planCounts,
       };
     },
   });
@@ -238,25 +258,58 @@ export default function SuperAdminDashboard() {
                 </div>
               </div>
               <div className="space-y-4">
-                {[
-                  { plan: "Start (Grátis)", percentage: 45, color: "bg-muted" },
-                  { plan: "Essencial", percentage: 30, color: "bg-blue-500" },
-                  { plan: "Profissional", percentage: 20, color: "bg-violet-500" },
-                  { plan: "Enterprise", percentage: 5, color: "bg-primary" },
-                ].map((item, i) => (
-                  <div key={i} className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-foreground">{item.plan}</span>
-                      <span className="text-muted-foreground">{item.percentage}%</span>
-                    </div>
-                    <div className="h-2 bg-muted/50 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full ${item.color} rounded-full transition-all duration-500`}
-                        style={{ width: `${item.percentage}%` }}
-                      />
-                    </div>
+                {statsLoading ? (
+                  <div className="space-y-4">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="space-y-2">
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-2 w-full" />
+                      </div>
+                    ))}
                   </div>
-                ))}
+                ) : (
+                  [
+                    { 
+                      plan: "Start (Grátis)", 
+                      percentage: stats?.planDistribution?.start ?? 0, 
+                      count: stats?.planCounts?.start ?? 0,
+                      color: "bg-muted" 
+                    },
+                    { 
+                      plan: "Essencial", 
+                      percentage: stats?.planDistribution?.essencial ?? 0, 
+                      count: stats?.planCounts?.essencial ?? 0,
+                      color: "bg-blue-500" 
+                    },
+                    { 
+                      plan: "Profissional", 
+                      percentage: stats?.planDistribution?.profissional ?? 0, 
+                      count: stats?.planCounts?.profissional ?? 0,
+                      color: "bg-violet-500" 
+                    },
+                    { 
+                      plan: "Enterprise", 
+                      percentage: stats?.planDistribution?.enterprise ?? 0, 
+                      count: stats?.planCounts?.enterprise ?? 0,
+                      color: "bg-primary" 
+                    },
+                  ].map((item, i) => (
+                    <div key={i} className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-foreground">{item.plan}</span>
+                        <span className="text-muted-foreground">
+                          {item.count} ({item.percentage}%)
+                        </span>
+                      </div>
+                      <div className="h-2 bg-muted/50 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full ${item.color} rounded-full transition-all duration-500`}
+                          style={{ width: `${item.percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
