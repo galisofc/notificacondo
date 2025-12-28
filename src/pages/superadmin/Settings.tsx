@@ -129,18 +129,18 @@ export default function SuperAdminSettings() {
         .from("app_settings")
         .select("*");
       if (error) throw error;
+      
+      // Update sindicoDiscount state when data loads
+      const discountSetting = data?.find(s => s.key === "sindico_early_trial_discount");
+      if (discountSetting) {
+        const value = typeof discountSetting.value === 'string' 
+          ? Number(discountSetting.value) 
+          : Number(discountSetting.value);
+        setSindicoDiscount(isNaN(value) ? 15 : value);
+      }
+      
       return data;
     },
-  });
-
-  // Update sindico discount when settings load
-  useState(() => {
-    if (appSettings) {
-      const discountSetting = appSettings.find(s => s.key === "sindico_early_trial_discount");
-      if (discountSetting) {
-        setSindicoDiscount(Number(discountSetting.value) || 15);
-      }
-    }
   });
 
   // Update app setting mutation
@@ -614,14 +614,15 @@ export default function SuperAdminSettings() {
                       <div className="flex items-center gap-2">
                         <Input
                           id="sindico-discount"
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={(() => {
-                            const setting = appSettings?.find(s => s.key === "sindico_early_trial_discount");
-                            return setting ? Number(setting.value) : 15;
-                          })()}
-                          onChange={(e) => setSindicoDiscount(Number(e.target.value))}
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={sindicoDiscount}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '');
+                            const num = val === '' ? 0 : Math.min(100, Math.max(0, parseInt(val, 10)));
+                            setSindicoDiscount(num);
+                          }}
                           className="w-20 text-center"
                         />
                         <span className="text-muted-foreground">%</span>
