@@ -5,6 +5,12 @@ import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { InvoicesManagement } from "@/components/superadmin/InvoicesManagement";
 import SuperAdminBreadcrumbs from "@/components/superadmin/SuperAdminBreadcrumbs";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function Invoices() {
   const [createInvoiceOpen, setCreateInvoiceOpen] = useState(false);
@@ -23,10 +29,19 @@ export default function Invoices() {
               Gerencie todas as faturas e pagamentos dos condomínios
             </p>
           </div>
-          <Button onClick={() => setCreateInvoiceOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Fatura Avulsa
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button onClick={() => setCreateInvoiceOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nova Fatura Avulsa
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Criar fatura avulsa para compra de limites extras ou outros serviços</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
         <InvoicesManagement 
           createInvoiceOpen={createInvoiceOpen}
