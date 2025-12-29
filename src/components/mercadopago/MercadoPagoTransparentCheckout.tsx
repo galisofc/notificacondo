@@ -367,8 +367,9 @@ export function MercadoPagoTransparentCheckout({
 
             {/* Payment Brick */}
             {paymentStatus === "idle" && sdkInitialized && (
-              <div className="min-h-[450px]">
+              <div className="min-h-[450px]" id={`payment-brick-container-${invoiceId}`}>
                 <Payment
+                  key={`payment-${invoiceId}`}
                   initialization={{
                     amount: amount,
                     payer: {
