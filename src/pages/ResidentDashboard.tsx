@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { formatDate } from "@/lib/dateUtils";
+import { useDateFormatter } from "@/hooks/useFormattedDate";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -49,6 +49,7 @@ const ResidentDashboard = () => {
   const { residentInfo, loading: roleLoading } = useUserRole();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { date: formatDate } = useDateFormatter();
 
   const [stats, setStats] = useState<ResidentStats>({
     totalOccurrences: 0,

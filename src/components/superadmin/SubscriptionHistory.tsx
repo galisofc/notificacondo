@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { formatDateTime } from "@/lib/dateUtils";
+import { useDateFormatter } from "@/hooks/useFormattedDate";
 import {
   Card,
   CardContent,
@@ -160,6 +160,7 @@ const getActionInfo = (log: AuditLog) => {
 };
 
 export function SubscriptionHistory({ subscriptionId, condominiumId }: SubscriptionHistoryProps) {
+  const { dateTime: formatDateTime } = useDateFormatter();
   const { data: logs, isLoading } = useQuery({
     queryKey: ["subscription-history", subscriptionId, condominiumId],
     queryFn: async () => {

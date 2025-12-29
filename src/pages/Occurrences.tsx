@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { formatDate } from "@/lib/dateUtils";
+import { useDateFormatter } from "@/hooks/useFormattedDate";
 import { useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
@@ -89,6 +89,7 @@ const Occurrences = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { date: formatDate } = useDateFormatter();
 
   // Data states
   const [condominiums, setCondominiums] = useState<Condominium[]>([]);
