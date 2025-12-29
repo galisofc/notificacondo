@@ -814,10 +814,10 @@ export function InvoicesManagement({
     doc.setTextColor(200, 200, 200);
     doc.text("Gerado em: " + format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR }), pageWidth / 2, pageHeight - 4, { align: "center" });
     
-    // Save
-    const fileName = pixData ? (invoice.invoice_number || "fatura") + "-pix.pdf" : (invoice.invoice_number || "fatura") + ".pdf";
+    // Save (sempre o mesmo arquivo, apenas com/sem PIX dentro)
+    const fileName = (invoice.invoice_number || "fatura") + ".pdf";
     doc.save(fileName);
-    
+
     toast({
       title: "PDF gerado",
       description: "Fatura " + (invoice.invoice_number || "") + " exportada com sucesso.",
