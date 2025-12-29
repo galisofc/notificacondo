@@ -335,52 +335,6 @@ const SindicoInvoices = () => {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            {/* MercadoPago Status Indicator */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm ${
-                    mpConfig?.is_active
-                      ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                      : "bg-muted text-muted-foreground border-border"
-                  }`}
-                >
-                  {mpConfig?.is_active ? (
-                    <ShieldCheck className="h-4 w-4" />
-                  ) : (
-                    <ShieldX className="h-4 w-4" />
-                  )}
-                  <span className="hidden sm:inline">
-                    {mpConfig?.is_active ? "Pagamentos Ativos" : "Pagamentos Inativos"}
-                  </span>
-                  {mpConfig?.is_sandbox && (
-                    <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/20">
-                      Sandbox
-                    </Badge>
-                  )}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-xs">
-                <div className="space-y-1">
-                  <p className="font-medium">
-                    {mpConfig?.is_active
-                      ? "Mercado Pago configurado"
-                      : "Mercado Pago não configurado"}
-                  </p>
-                  {mpConfig?.public_key && (
-                    <p className="text-xs text-muted-foreground">
-                      Public Key: {maskPublicKey(mpConfig.public_key)}
-                    </p>
-                  )}
-                  {!mpConfig?.is_active && (
-                    <p className="text-xs text-muted-foreground">
-                      Entre em contato com o administrador para ativar pagamentos.
-                    </p>
-                  )}
-                </div>
-              </TooltipContent>
-            </Tooltip>
-
             <Button onClick={handleGenerateInvoices} disabled={isGenerating}>
               {isGenerating ? (
                 <>
