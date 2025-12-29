@@ -360,6 +360,24 @@ const Occurrences = () => {
         return;
       }
 
+      // Validate legal basis for fines
+      if (formData.type === "multa") {
+        const hasLegalBasis = formData.civil_code_article || 
+                              formData.convention_article || 
+                              formData.internal_rules_article || 
+                              formData.legal_basis;
+        
+        if (!hasLegalBasis) {
+          toast({
+            title: "Base legal obrigatória",
+            description: "Para registrar uma multa, é necessário preencher pelo menos um campo de base legal (Código Civil, Convenção, Regimento Interno ou Fundamentação Adicional).",
+            variant: "destructive",
+          });
+          setSaving(false);
+          return;
+        }
+      }
+
       // Create occurrence
       const { data: occurrenceData, error: occurrenceError } = await supabase
         .from("occurrences")
