@@ -111,7 +111,16 @@ const translatePaymentMethod = (method: string | null): string => {
   return translations[method] || method;
 };
 
-export function InvoicesManagement() {
+interface InvoicesManagementProps {
+  onOpenCreateInvoice?: () => void;
+  createInvoiceOpen?: boolean;
+  onCreateInvoiceOpenChange?: (open: boolean) => void;
+}
+
+export function InvoicesManagement({
+  createInvoiceOpen,
+  onCreateInvoiceOpenChange,
+}: InvoicesManagementProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -139,7 +148,11 @@ export function InvoicesManagement() {
   const itemsPerPage = 10;
 
   // Estados para criar fatura avulsa
-  const [showCreateInvoiceDialog, setShowCreateInvoiceDialog] = useState(false);
+  const [showCreateInvoiceDialogInternal, setShowCreateInvoiceDialogInternal] = useState(false);
+  
+  // Use controlled state if props are provided, otherwise use internal state
+  const showCreateInvoiceDialog = createInvoiceOpen !== undefined ? createInvoiceOpen : showCreateInvoiceDialogInternal;
+  const setShowCreateInvoiceDialog = onCreateInvoiceOpenChange || setShowCreateInvoiceDialogInternal;
   const [newInvoiceData, setNewInvoiceData] = useState({
     condominium_id: "",
     amount: "",
@@ -1175,13 +1188,6 @@ export function InvoicesManagement() {
         </Card>
       </div>
 
-      {/* Button to create standalone invoice */}
-      <div className="flex justify-end">
-        <Button onClick={() => setShowCreateInvoiceDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Fatura Avulsa
-        </Button>
-      </div>
 
       {/* Invoices Table */}
       <Card>
