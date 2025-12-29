@@ -25,6 +25,8 @@ import {
   CheckCircle2,
   Gavel,
   XCircle,
+  Building2,
+  Home,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -409,6 +411,36 @@ const ResidentOccurrenceDetails = () => {
             Visualize os detalhes e envie sua defesa se necessário.
           </p>
         </div>
+
+        {/* Condominium and Unit Info */}
+        {residentInfo && (
+          <Card className="bg-gradient-card border-border/50">
+            <CardContent className="pt-6">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Building2 className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Condomínio</p>
+                    <p className="text-sm font-medium text-foreground">{residentInfo.condominium_name}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Home className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Unidade</p>
+                    <p className="text-sm font-medium text-foreground">
+                      {residentInfo.block_name} - Apt {residentInfo.apartment_number}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Data da Ocorrência - Card no topo */}
         <Card className="bg-gradient-card border-border/50">
