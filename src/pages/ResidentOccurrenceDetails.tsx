@@ -144,13 +144,18 @@ const ResidentOccurrenceDetails = () => {
         setEvidences(evidencesData || []);
 
         // Fetch decisions
-        const { data: decisionsData } = await supabase
+        const { data: decisionsData, error: decisionsError } = await supabase
           .from("decisions")
           .select("*")
           .eq("occurrence_id", id)
           .order("decided_at", { ascending: false });
 
-        setDecisions(decisionsData || []);
+        if (decisionsError) {
+          console.error("Error fetching decisions:", decisionsError);
+        } else {
+          console.log("Decisions found:", decisionsData);
+          setDecisions(decisionsData || []);
+        }
       } catch (error) {
         console.error("Error fetching occurrence:", error);
         toast({
