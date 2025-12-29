@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { differenceInDays, startOfMonth, endOfMonth } from "date-fns";
+import { differenceInDays, startOfMonth, endOfMonth, startOfDay, parseISO } from "date-fns";
 import { useDateFormatter } from "@/hooks/useFormattedDate";
 import jsPDF from "jspdf";
 import {
@@ -879,8 +879,8 @@ export function InvoicesManagement({
   };
 
   const getStatusBadge = (status: string, dueDate: string) => {
-    const today = new Date();
-    const due = new Date(dueDate);
+    const today = startOfDay(new Date());
+    const due = startOfDay(parseISO(dueDate));
     const isPastDue = due < today && status === "pending";
 
     if (status === "paid") {
