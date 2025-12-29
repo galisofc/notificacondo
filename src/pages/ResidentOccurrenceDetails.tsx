@@ -410,6 +410,23 @@ const ResidentOccurrenceDetails = () => {
           </p>
         </div>
 
+        {/* Data da Ocorrência - Card no topo */}
+        <Card className="bg-gradient-card border-border/50">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-blue-500/5 border border-blue-500/20">
+              <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-blue-500" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Data da Ocorrência</p>
+                <p className="text-sm font-medium text-foreground">
+                  {formatDateTime(occurrence.occurred_at)}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Occurrence Details */}
         <Card className="bg-gradient-card border-border/50">
           <CardHeader>
@@ -436,23 +453,6 @@ const ResidentOccurrenceDetails = () => {
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Data da Ocorrência - Card separado como no modelo */}
-        <Card className="bg-gradient-card border-border/50">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3 p-4 rounded-xl bg-blue-500/5 border border-blue-500/20">
-              <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-blue-500" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Data da Ocorrência</p>
-                <p className="text-sm font-medium text-foreground">
-                  {formatDateTime(occurrence.occurred_at)}
-                </p>
-              </div>
-            </div>
           </CardContent>
         </Card>
 
