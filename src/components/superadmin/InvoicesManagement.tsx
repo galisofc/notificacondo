@@ -498,12 +498,13 @@ export function InvoicesManagement({
         throw new Error("Subscription não encontrada para este condomínio");
       }
 
-      const today = new Date();
       const dueDate = new Date(data.due_date);
       
-      // Define o período como o mês atual
-      const periodStart = today.toISOString().split("T")[0];
-      const periodEnd = new Date(today.getFullYear(), today.getMonth() + 1, today.getDate()).toISOString().split("T")[0];
+      // Para faturas avulsas, period_start e period_end são iguais à data de vencimento
+      // Isso indica que é uma cobrança pontual e não afeta o período da assinatura
+      const dueDateStr = dueDate.toISOString().split("T")[0];
+      const periodStart = dueDateStr;
+      const periodEnd = dueDateStr;
 
       const typeLabel = INVOICE_TYPES.find(t => t.value === data.invoice_type)?.label || "Fatura Avulsa";
       const description = data.description 
