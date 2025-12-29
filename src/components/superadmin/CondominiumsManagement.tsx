@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatDate, formatDateTime } from "@/lib/dateUtils";
 import { isValidCNPJ } from "@/lib/utils";
 import {
   Card,
@@ -420,7 +419,7 @@ export function CondominiumsManagement() {
                           )}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {format(new Date(condo.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                          {formatDate(condo.created_at)}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
@@ -594,13 +593,13 @@ export function CondominiumsManagement() {
                 <div>
                   <p className="text-muted-foreground">Cadastrado em</p>
                   <p className="font-medium">
-                    {format(new Date(selectedCondominium.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    {formatDateTime(selectedCondominium.created_at)}
                   </p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Última atualização</p>
                   <p className="font-medium">
-                    {format(new Date(selectedCondominium.updated_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    {formatDateTime(selectedCondominium.updated_at)}
                   </p>
                 </div>
               </div>

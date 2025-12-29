@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { isWithinInterval, startOfDay, endOfDay, format } from "date-fns";
+import { formatDate, formatDateTime, formatCustom } from "@/lib/dateUtils";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import {
   Card,
@@ -236,7 +236,7 @@ export default function Transfers() {
                 <div>
                   <p className="text-2xl font-bold">
                     {transfers?.[0]
-                      ? format(new Date(transfers[0].transferred_at), "dd/MM/yyyy")
+                      ? formatDate(transfers[0].transferred_at)
                       : "—"}
                   </p>
                   <p className="text-sm text-muted-foreground">Última Transferência</p>
@@ -370,14 +370,10 @@ export default function Transfers() {
                             <Calendar className="h-4 w-4 text-muted-foreground" />
                             <div>
                               <p className="font-medium">
-                                {format(new Date(transfer.transferred_at), "dd/MM/yyyy", {
-                                  locale: ptBR,
-                                })}
+                                {formatDate(transfer.transferred_at)}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                {format(new Date(transfer.transferred_at), "HH:mm", {
-                                  locale: ptBR,
-                                })}
+                                {formatCustom(transfer.transferred_at, "HH:mm")}
                               </p>
                             </div>
                           </div>

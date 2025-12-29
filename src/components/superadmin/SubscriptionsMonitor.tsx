@@ -2,8 +2,8 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, differenceInHours, isPast } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { differenceInHours, isPast } from "date-fns";
+import { formatDate, formatDateTime } from "@/lib/dateUtils";
 import { formatCNPJ } from "@/components/ui/masked-input";
 import {
   Card,

@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatDate, formatDateTime, formatCustom } from "@/lib/dateUtils";
 import {
   Card,
   CardContent,
@@ -395,10 +394,10 @@ export function AuditLogs() {
                             <TableCell>
                               <div>
                                 <p className="text-sm font-medium">
-                                  {format(new Date(log.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                                  {formatDate(log.created_at)}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                  {format(new Date(log.created_at), "HH:mm:ss", { locale: ptBR })}
+                                  {formatCustom(log.created_at, "HH:mm:ss")}
                                 </p>
                               </div>
                             </TableCell>
@@ -522,7 +521,7 @@ export function AuditLogs() {
               </code>
             </DialogTitle>
             <DialogDescription>
-              {selectedLog && format(new Date(selectedLog.created_at), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}
+              {selectedLog && formatCustom(selectedLog.created_at, "dd/MM/yyyy 'às' HH:mm:ss")}
               {selectedLog?.record_id && (
                 <span className="ml-2">• ID: {selectedLog.record_id}</span>
               )}

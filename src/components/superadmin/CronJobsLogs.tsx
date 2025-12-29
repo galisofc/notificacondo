@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatDateTime, formatCustom } from "@/lib/dateUtils";
 import {
   Card,
   CardContent,
@@ -532,7 +531,7 @@ export function CronJobsLogs() {
                           <TableCell>{getTriggerTypeBadge(log.trigger_type)}</TableCell>
                           <TableCell className="text-sm">
                             {log.started_at
-                              ? format(new Date(log.started_at), "dd/MM/yyyy HH:mm:ss", { locale: ptBR })
+                              ? formatCustom(log.started_at, "dd/MM/yyyy HH:mm:ss")
                               : "—"}
                           </TableCell>
                           <TableCell className="text-sm">
@@ -590,12 +589,12 @@ export function CronJobsLogs() {
                           </TableCell>
                           <TableCell className="text-sm">
                             {run.start_time
-                              ? format(new Date(run.start_time), "dd/MM/yyyy HH:mm:ss", { locale: ptBR })
+                              ? formatCustom(run.start_time, "dd/MM/yyyy HH:mm:ss")
                               : "—"}
                           </TableCell>
                           <TableCell className="text-sm">
                             {run.end_time
-                              ? format(new Date(run.end_time), "dd/MM/yyyy HH:mm:ss", { locale: ptBR })
+                              ? formatCustom(run.end_time, "dd/MM/yyyy HH:mm:ss")
                               : "—"}
                           </TableCell>
                           <TableCell>{getStatusBadge(run.status)}</TableCell>

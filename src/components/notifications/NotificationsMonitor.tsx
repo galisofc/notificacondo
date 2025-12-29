@@ -3,7 +3,7 @@ import { formatPhone } from "@/components/ui/masked-input";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, subDays, startOfDay, eachDayOfInterval } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatDate, formatDateTime, formatCustom } from "@/lib/dateUtils";
 import {
   Card,
   CardContent,
@@ -313,7 +313,7 @@ export function NotificationsMonitor() {
 
       return Array.from(dayMap.entries()).map(([date, counts]) => ({
         date,
-        displayDate: format(new Date(date), "dd/MM", { locale: ptBR }),
+        displayDate: formatCustom(date, "dd/MM"),
         ...counts,
       }));
     },
@@ -602,10 +602,10 @@ export function NotificationsMonitor() {
                         </TableCell>
                         <TableCell>
                           <p className="text-sm">
-                            {format(new Date(notification.sent_at), "dd/MM/yyyy", { locale: ptBR })}
+                            {formatDate(notification.sent_at)}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {format(new Date(notification.sent_at), "HH:mm", { locale: ptBR })}
+                            {formatCustom(notification.sent_at, "HH:mm")}
                           </p>
                         </TableCell>
                         <TableCell>
@@ -617,7 +617,7 @@ export function NotificationsMonitor() {
                         <TableCell>
                           {notification.delivered_at ? (
                             <p className="text-sm">
-                              {format(new Date(notification.delivered_at), "dd/MM HH:mm", { locale: ptBR })}
+                              {formatCustom(notification.delivered_at, "dd/MM HH:mm")}
                             </p>
                           ) : (
                             <span className="text-muted-foreground">—</span>
@@ -626,7 +626,7 @@ export function NotificationsMonitor() {
                         <TableCell>
                           {notification.read_at ? (
                             <p className="text-sm">
-                              {format(new Date(notification.read_at), "dd/MM HH:mm", { locale: ptBR })}
+                              {formatCustom(notification.read_at, "dd/MM HH:mm")}
                             </p>
                           ) : (
                             <span className="text-muted-foreground">—</span>
