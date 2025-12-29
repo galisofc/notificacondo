@@ -61,7 +61,9 @@ import {
   ArrowDown,
   QrCode,
   Loader2,
+  Plus,
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 interface InvoiceWithDetails {
   id: string;
@@ -135,6 +137,23 @@ export function InvoicesManagement() {
   const [pixDocumentType, setPixDocumentType] = useState<"CPF" | "CNPJ">("CPF");
   const [pixDocumentError, setPixDocumentError] = useState("");
   const itemsPerPage = 10;
+
+  // Estados para criar fatura avulsa
+  const [showCreateInvoiceDialog, setShowCreateInvoiceDialog] = useState(false);
+  const [newInvoiceData, setNewInvoiceData] = useState({
+    condominium_id: "",
+    amount: "",
+    due_date: "",
+    description: "",
+    invoice_type: "limites_notificacao" as "limites_notificacao" | "limites_advertencia" | "limites_multa" | "outros",
+  });
+
+  const INVOICE_TYPES = [
+    { value: "limites_notificacao", label: "Compra de Limites de Notificação" },
+    { value: "limites_advertencia", label: "Compra de Limites de Advertência" },
+    { value: "limites_multa", label: "Compra de Limites de Multa" },
+    { value: "outros", label: "Outros" },
+  ];
 
   // Validação de CPF
   const validateCPF = (cpf: string): boolean => {
@@ -320,6 +339,34 @@ export function InvoicesManagement() {
     },
   });
 
+  // Query para buscar condomínios para criar fatura avulsa
+  const { data: condominiums } = useQuery({
+    queryKey: ["superadmin-condominiums-for-invoice"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("condominiums")
+        .select("id, name")
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Query para buscar subscription do condomínio selecionado
+  const { data: selectedCondoSubscription } = useQuery({
+    queryKey: ["subscription-for-invoice", newInvoiceData.condominium_id],
+    enabled: !!newInvoiceData.condominium_id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("subscriptions")
+        .select("id")
+        .eq("condominium_id", newInvoiceData.condominium_id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const { data: stats } = useQuery({
     queryKey: ["superadmin-invoice-stats"],
     queryFn: async () => {
@@ -402,6 +449,63 @@ export function InvoicesManagement() {
       toast({
         title: "Erro",
         description: "Não foi possível registrar o pagamento.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation para criar fatura avulsa
+  const createInvoiceMutation = useMutation({
+    mutationFn: async (data: typeof newInvoiceData) => {
+      if (!selectedCondoSubscription) {
+        throw new Error("Subscription não encontrada para este condomínio");
+      }
+
+      const today = new Date();
+      const dueDate = new Date(data.due_date);
+      
+      // Define o período como o mês atual
+      const periodStart = today.toISOString().split("T")[0];
+      const periodEnd = new Date(today.getFullYear(), today.getMonth() + 1, today.getDate()).toISOString().split("T")[0];
+
+      const typeLabel = INVOICE_TYPES.find(t => t.value === data.invoice_type)?.label || "Fatura Avulsa";
+      const description = data.description 
+        ? `${typeLabel} - ${data.description}`
+        : typeLabel;
+
+      const { error } = await supabase.from("invoices").insert({
+        subscription_id: selectedCondoSubscription.id,
+        condominium_id: data.condominium_id,
+        amount: parseFloat(data.amount.replace(",", ".")),
+        status: "pending",
+        due_date: dueDate.toISOString().split("T")[0],
+        period_start: periodStart,
+        period_end: periodEnd,
+        description,
+      });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["superadmin-invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["superadmin-invoice-stats"] });
+      toast({
+        title: "Fatura criada",
+        description: "A fatura avulsa foi criada com sucesso.",
+      });
+      setShowCreateInvoiceDialog(false);
+      setNewInvoiceData({
+        condominium_id: "",
+        amount: "",
+        due_date: "",
+        description: "",
+        invoice_type: "limites_notificacao",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao criar fatura",
+        description: error.message || "Tente novamente.",
         variant: "destructive",
       });
     },
@@ -1066,6 +1170,10 @@ export function InvoicesManagement() {
               </CardDescription>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
+              <Button onClick={() => setShowCreateInvoiceDialog(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Fatura Avulsa
+              </Button>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -1526,6 +1634,132 @@ export function InvoicesManagement() {
             >
               <QrCode className="h-4 w-4 mr-2" />
               Gerar QR Code PIX
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para criar fatura avulsa */}
+      <Dialog open={showCreateInvoiceDialog} onOpenChange={setShowCreateInvoiceDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5 text-primary" />
+              Nova Fatura Avulsa
+            </DialogTitle>
+            <DialogDescription>
+              Crie uma fatura avulsa para compra de limites adicionais ou outros serviços.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="condo-select">Condomínio *</Label>
+              <Select
+                value={newInvoiceData.condominium_id}
+                onValueChange={(value) =>
+                  setNewInvoiceData({ ...newInvoiceData, condominium_id: value })
+                }
+              >
+                <SelectTrigger id="condo-select">
+                  <SelectValue placeholder="Selecione o condomínio" />
+                </SelectTrigger>
+                <SelectContent>
+                  {condominiums?.map((condo) => (
+                    <SelectItem key={condo.id} value={condo.id}>
+                      {condo.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="invoice-type">Tipo de Fatura *</Label>
+              <Select
+                value={newInvoiceData.invoice_type}
+                onValueChange={(value: typeof newInvoiceData.invoice_type) =>
+                  setNewInvoiceData({ ...newInvoiceData, invoice_type: value })
+                }
+              >
+                <SelectTrigger id="invoice-type">
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {INVOICE_TYPES.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="amount">Valor (R$) *</Label>
+              <Input
+                id="amount"
+                placeholder="0,00"
+                value={newInvoiceData.amount}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^\d,]/g, "");
+                  setNewInvoiceData({ ...newInvoiceData, amount: value });
+                }}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="due-date">Data de Vencimento *</Label>
+              <Input
+                id="due-date"
+                type="date"
+                value={newInvoiceData.due_date}
+                onChange={(e) =>
+                  setNewInvoiceData({ ...newInvoiceData, due_date: e.target.value })
+                }
+                min={new Date().toISOString().split("T")[0]}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="description">Descrição Adicional</Label>
+              <Textarea
+                id="description"
+                placeholder="Detalhes adicionais sobre esta fatura..."
+                value={newInvoiceData.description}
+                onChange={(e) =>
+                  setNewInvoiceData({ ...newInvoiceData, description: e.target.value })
+                }
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowCreateInvoiceDialog(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => createInvoiceMutation.mutate(newInvoiceData)}
+              disabled={
+                createInvoiceMutation.isPending ||
+                !newInvoiceData.condominium_id ||
+                !newInvoiceData.amount ||
+                !newInvoiceData.due_date
+              }
+            >
+              {createInvoiceMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Criando...
+                </>
+              ) : (
+                <>
+                  <Receipt className="h-4 w-4 mr-2" />
+                  Criar Fatura
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
