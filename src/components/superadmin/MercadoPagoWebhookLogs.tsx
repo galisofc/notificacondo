@@ -38,8 +38,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatDateTime, formatCustom, formatDateTimeLong } from "@/lib/dateUtils";
 
 const ITEMS_PER_PAGE = 5;
 
@@ -205,7 +204,7 @@ export function MercadoPagoWebhookLogs() {
                   {paginatedLogs.map((log) => (
                     <TableRow key={log.id} className="hover:bg-muted/20">
                       <TableCell className="font-mono text-xs">
-                        {format(new Date(log.received_at), "dd/MM HH:mm:ss", { locale: ptBR })}
+                        {formatCustom(log.received_at, "dd/MM HH:mm:ss")}
                       </TableCell>
                       <TableCell>
                         {getEventTypeBadge(log.event_type)}
@@ -274,7 +273,7 @@ export function MercadoPagoWebhookLogs() {
                 Detalhes do Webhook
               </DialogTitle>
               <DialogDescription>
-                {selectedLog && format(new Date(selectedLog.received_at), "PPpp", { locale: ptBR })}
+                {selectedLog && formatDateTimeLong(selectedLog.received_at)}
               </DialogDescription>
             </DialogHeader>
 

@@ -35,7 +35,7 @@ import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
 import { format, startOfMonth, endOfMonth, subMonths, parseISO, isWithinInterval, eachMonthOfInterval, startOfDay, endOfDay } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatDate, formatDateTime, formatCustom, formatMonthYear } from "@/lib/dateUtils";
 import {
   BarChart,
   Bar,
@@ -262,7 +262,7 @@ const Reports = () => {
       const finesAmount = monthFines.reduce((sum, f) => sum + Number(f.amount), 0);
 
       return {
-        month: format(month, "MMM/yy", { locale: ptBR }),
+        month: formatCustom(month.toISOString(), "MMM/yy"),
         ocorrencias: monthOccurrences.length,
         advertencias: monthOccurrences.filter((o) => o.type === "advertencia").length,
         notificacoes: monthOccurrences.filter((o) => o.type === "notificacao").length,
@@ -299,12 +299,12 @@ const Reports = () => {
     doc.text(`Condomínio: ${selectedCondoName}`, pageWidth / 2, yPos, { align: "center" });
     
     yPos += 6;
-    doc.text(`Período: ${format(parseISO(dateFrom), "dd/MM/yyyy", { locale: ptBR })} a ${format(parseISO(dateTo), "dd/MM/yyyy", { locale: ptBR })}`, pageWidth / 2, yPos, { align: "center" });
+    doc.text(`Período: ${formatDate(dateFrom)} a ${formatDate(dateTo)}`, pageWidth / 2, yPos, { align: "center" });
     
     yPos += 6;
     doc.setFontSize(8);
     doc.setTextColor(100);
-    doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, pageWidth / 2, yPos, { align: "center" });
+    doc.text(`Gerado em: ${formatDateTime(new Date().toISOString())}`, pageWidth / 2, yPos, { align: "center" });
     doc.setTextColor(0);
 
     // Summary Section
@@ -427,7 +427,7 @@ const Reports = () => {
     }
 
     // Save the PDF
-    const fileName = `relatorio_${format(new Date(), "yyyy-MM-dd_HH-mm")}.pdf`;
+    const fileName = `relatorio_${formatCustom(new Date().toISOString(), "yyyy-MM-dd_HH-mm")}.pdf`;
     doc.save(fileName);
   };
 

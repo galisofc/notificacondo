@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatDateTime } from "@/lib/dateUtils";
 import {
   Card,
   CardContent,
@@ -283,7 +282,7 @@ export function SubscriptionHistory({ subscriptionId, condominiumId }: Subscript
                           {info.label}
                         </Badge>
                         <span className="text-xs text-muted-foreground">
-                          {format(new Date(log.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          {formatDateTime(log.created_at)}
                         </span>
                       </div>
                       <p className="text-sm text-foreground mt-1">
