@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatDate } from "@/lib/dateUtils";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -365,7 +366,7 @@ const ResidentDashboard = () => {
                         <h4 className="font-medium text-sm md:text-base text-foreground mb-1">{occurrence.title}</h4>
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
-                          {new Date(occurrence.occurred_at).toLocaleDateString("pt-BR")}
+                          {formatDate(occurrence.occurred_at)}
                         </p>
                       </div>
                       <ChevronRight className="w-5 h-5 text-muted-foreground" />
@@ -399,7 +400,7 @@ const ResidentDashboard = () => {
                           {formatCurrency(fine.amount)}
                         </p>
                         <p className="text-xs md:text-sm text-muted-foreground">
-                          Vencimento: {new Date(fine.due_date).toLocaleDateString("pt-BR")}
+                          Vencimento: {formatDate(fine.due_date)}
                         </p>
                       </div>
                       <span

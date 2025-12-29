@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { formatTime } from "@/lib/dateUtils";
 import {
   Card,
   CardContent,
@@ -505,7 +506,7 @@ export function WhatsAppConfig() {
                       : "Configure as credenciais abaixo para ativar o envio de notificações"}
                     {lastChecked && connectionStatus !== "checking" && (
                       <span className="ml-2 text-xs">
-                        (verificado às {lastChecked.toLocaleTimeString("pt-BR")})
+                        (verificado às {formatTime(lastChecked)})
                       </span>
                     )}
                   </p>

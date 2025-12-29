@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { formatTime } from "@/lib/dateUtils";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import {
@@ -232,7 +233,7 @@ export function WhatsAppStatusCard() {
           Gerencie as configurações de integração com WhatsApp
           {lastChecked && (
             <span className="text-xs ml-2">
-              (última verificação: {lastChecked.toLocaleTimeString("pt-BR")})
+              (última verificação: {formatTime(lastChecked)})
             </span>
           )}
         </CardDescription>

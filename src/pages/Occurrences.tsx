@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { formatDate } from "@/lib/dateUtils";
 import { useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
@@ -637,7 +638,7 @@ const Occurrences = () => {
                       )}
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
-                        {new Date(occurrence.occurred_at).toLocaleDateString("pt-BR")}
+                        {formatDate(occurrence.occurred_at)}
                       </span>
                     </div>
                   </div>
