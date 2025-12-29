@@ -4,8 +4,8 @@ import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { format, differenceInDays, differenceInHours, addDays, isPast } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { differenceInDays, differenceInHours, addDays, isPast } from "date-fns";
+import { formatDate } from "@/lib/dateUtils";
 import { addBusinessDays } from "@/lib/utils";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
@@ -244,8 +244,8 @@ const SindicoSubscriptions = () => {
     }).format(value);
   };
 
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), "dd/MM/yyyy", { locale: ptBR });
+  const formatDateLocal = (dateString: string) => {
+    return formatDate(dateString);
   };
 
   const getPlanColor = (planSlug: string) => {
@@ -1042,7 +1042,7 @@ const SindicoSubscriptions = () => {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Vencimento da fatura:</span>
-                      <span className="font-medium">{format(addBusinessDays(new Date(), 3), "dd/MM/yyyy", { locale: ptBR })}</span>
+                      <span className="font-medium">{formatDate(addBusinessDays(new Date(), 3).toISOString())}</span>
                     </div>
                   </div>
                 );

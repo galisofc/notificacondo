@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, differenceInDays, startOfMonth, endOfMonth } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { differenceInDays, startOfMonth, endOfMonth } from "date-fns";
+import { formatDate, formatMonthYear, formatDateTime } from "@/lib/dateUtils";
 import jsPDF from "jspdf";
 import {
   Card,
@@ -554,8 +554,8 @@ export function InvoicesManagement({
     }).format(value);
   };
 
-  const formatDate = (date: string) => {
-    return format(new Date(date), "dd/MM/yyyy", { locale: ptBR });
+  const formatDateLocal = (date: string) => {
+    return formatDate(date);
   };
 
   const formatCNPJ = (cnpj: string | null) => {
@@ -823,7 +823,7 @@ export function InvoicesManagement({
     // Gerado em
     doc.setFontSize(7);
     doc.setTextColor(200, 200, 200);
-    doc.text("Gerado em: " + format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR }), pageWidth / 2, pageHeight - 4, { align: "center" });
+    doc.text("Gerado em: " + formatDateTime(new Date().toISOString()), pageWidth / 2, pageHeight - 4, { align: "center" });
     
     // Save (sempre o mesmo arquivo, apenas com/sem PIX dentro)
     const fileName = (invoice.invoice_number || "fatura") + ".pdf";

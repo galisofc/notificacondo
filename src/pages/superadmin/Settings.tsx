@@ -57,6 +57,7 @@ import {
   Lock,
   Eye,
   EyeOff,
+  Clock,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { MercadoPagoSettings } from "@/components/superadmin/MercadoPagoSettings";
@@ -601,6 +602,44 @@ export default function SuperAdminSettings() {
 
           {/* General Settings Tab */}
           <TabsContent value="general" className="space-y-6">
+            {/* Configurações de Data e Hora */}
+            <Card className="bg-gradient-card border-border/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-primary" />
+                  Configurações de Data e Hora
+                </CardTitle>
+                <CardDescription>
+                  Padrões de data e hora utilizados em todo o sistema
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
+                    <p className="text-sm text-muted-foreground mb-1">Formato de Data</p>
+                    <p className="font-medium text-foreground text-lg">dd/mm/yyyy</p>
+                    <p className="text-xs text-muted-foreground mt-1">Exemplo: 29/12/2025</p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
+                    <p className="text-sm text-muted-foreground mb-1">Formato de Hora</p>
+                    <p className="font-medium text-foreground text-lg">24 horas</p>
+                    <p className="text-xs text-muted-foreground mt-1">Exemplo: 14:30</p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
+                    <p className="text-sm text-muted-foreground mb-1">Fuso Horário</p>
+                    <p className="font-medium text-foreground text-lg">Brasília (GMT-3)</p>
+                    <p className="text-xs text-muted-foreground mt-1">America/Sao_Paulo</p>
+                  </div>
+                </div>
+                <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Nota:</strong> Todas as datas e horários exibidos no sistema utilizam o horário de Brasília (São Paulo). 
+                    Isso garante consistência independente da localização do usuário.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+            
             <Card className="bg-gradient-card border-border/50">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">

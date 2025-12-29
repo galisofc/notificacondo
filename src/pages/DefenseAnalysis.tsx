@@ -43,8 +43,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatDateTime, formatDate } from "@/lib/dateUtils";
 
 interface DefenseWithDetails {
   id: string;
@@ -308,8 +307,8 @@ const DefenseAnalysis = () => {
     return <File className="w-4 h-4" />;
   };
 
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+  const formatDateLocal = (dateString: string) => {
+    return formatDateTime(dateString);
   };
 
   if (loading) {
@@ -373,7 +372,7 @@ const DefenseAnalysis = () => {
                       <div className="flex items-center gap-2">
                         {getTypeBadge(defense.occurrences.type)}
                         <span className="text-xs text-muted-foreground">
-                          {formatDate(defense.submitted_at)}
+                          {formatDateLocal(defense.submitted_at)}
                         </span>
                       </div>
                       {defense.defense_attachments.length > 0 && (
@@ -431,7 +430,7 @@ const DefenseAnalysis = () => {
                       <div className="flex flex-wrap gap-4 text-sm">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-4 h-4 text-muted-foreground" />
-                          {format(new Date(selectedDefense.occurrences.occurred_at), "dd/MM/yyyy", { locale: ptBR })}
+                          {formatDate(selectedDefense.occurrences.occurred_at)}
                         </span>
                         {selectedDefense.occurrences.location && (
                           <span className="text-muted-foreground">
@@ -519,7 +518,7 @@ const DefenseAnalysis = () => {
                         <User className="w-4 h-4" />
                         <span>{selectedDefense.residents?.full_name}</span>
                         <span>•</span>
-                        <span>{formatDate(selectedDefense.submitted_at)}</span>
+                        <span>{formatDateLocal(selectedDefense.submitted_at)}</span>
                       </div>
                       <div className="bg-muted/50 p-4 rounded-lg">
                         <p className="text-sm whitespace-pre-wrap">{selectedDefense.content}</p>

@@ -4,8 +4,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, differenceInHours, isPast } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { differenceInHours, isPast, format } from "date-fns";
+import { formatDate, formatDateTime, formatCustom } from "@/lib/dateUtils";
 
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import {
@@ -1202,7 +1202,7 @@ export default function SubscriptionDetails() {
                                 </Badge>
                               </div>
                               <p className="text-sm text-muted-foreground">
-                                {isExpired ? "Expirou em" : "Expira em"}: {format(endDate, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                {isExpired ? "Expirou em" : "Expira em"}: {formatDateTime(endDate.toISOString())}
                               </p>
                             </div>
                           </>
@@ -1277,14 +1277,14 @@ export default function SubscriptionDetails() {
                               ? new Date(subscription.current_period_start)
                               : new Date(new Date(subscription.trial_ends_at).getTime() - 14 * 24 * 60 * 60 * 1000);
                             const trialEnd = new Date(subscription.trial_ends_at);
-                            return `${format(trialStart, "dd/MM/yyyy", { locale: ptBR })} - ${format(trialEnd, "dd/MM/yyyy", { locale: ptBR })}`;
+                            return `${formatDate(trialStart.toISOString())} - ${formatDate(trialEnd.toISOString())}`;
                           }
                           // Otherwise use regular period
                           const periodStart = subscription.current_period_start 
-                            ? format(new Date(subscription.current_period_start), "dd/MM/yyyy", { locale: ptBR })
+                            ? formatDate(subscription.current_period_start)
                             : "—";
                           const periodEnd = subscription.current_period_end
-                            ? format(new Date(subscription.current_period_end), "dd/MM/yyyy", { locale: ptBR })
+                            ? formatDate(subscription.current_period_end)
                             : "—";
                           return `${periodStart} - ${periodEnd}`;
                         })()}
@@ -1618,12 +1618,12 @@ export default function SubscriptionDetails() {
                     {invoices.map((invoice: any) => (
                       <TableRow key={invoice.id}>
                         <TableCell className="font-medium">
-                          {format(new Date(invoice.period_start), "dd/MM/yy", { locale: ptBR })}
+                          {formatCustom(invoice.period_start, "dd/MM/yy")}
                           {" - "}
-                          {format(new Date(invoice.period_end), "dd/MM/yy", { locale: ptBR })}
+                          {formatCustom(invoice.period_end, "dd/MM/yy")}
                         </TableCell>
                         <TableCell>
-                          {format(new Date(invoice.due_date), "dd/MM/yyyy", { locale: ptBR })}
+                          {formatDate(invoice.due_date)}
                         </TableCell>
                         <TableCell className="font-semibold">
                           {formatCurrency(invoice.amount)}
@@ -1633,7 +1633,7 @@ export default function SubscriptionDetails() {
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {invoice.paid_at 
-                            ? format(new Date(invoice.paid_at), "dd/MM/yyyy", { locale: ptBR })
+                            ? formatDate(invoice.paid_at)
                             : "—"
                           }
                         </TableCell>
@@ -1666,13 +1666,13 @@ export default function SubscriptionDetails() {
               <div>
                 <p className="text-sm text-muted-foreground">Criado em</p>
                 <p className="font-medium">
-                  {format(new Date(subscription.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                  {formatDateTime(subscription.created_at)}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Última atualização</p>
                 <p className="font-medium">
-                  {format(new Date(subscription.updated_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                  {formatDateTime(subscription.updated_at)}
                 </p>
               </div>
             </div>
@@ -1757,10 +1757,8 @@ export default function SubscriptionDetails() {
               <div className="p-3 bg-muted rounded-lg">
                 <p className="text-sm text-muted-foreground">
                   <span className="font-medium">Novo fim do período:</span>{" "}
-                  {format(
-                    new Date(new Date(data.subscription.current_period_end).getTime() + extraDays * 24 * 60 * 60 * 1000),
-                    "dd/MM/yyyy",
-                    { locale: ptBR }
+                  {formatDate(
+                    new Date(new Date(data.subscription.current_period_end).getTime() + extraDays * 24 * 60 * 60 * 1000).toISOString()
                   )}
                 </p>
               </div>
@@ -1884,10 +1882,8 @@ export default function SubscriptionDetails() {
               <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
                 <p className="text-sm text-amber-700 dark:text-amber-400">
                   <span className="font-medium">Nova data de expiração:</span>{" "}
-                  {format(
-                    new Date(new Date(data.subscription.trial_ends_at).getTime() + trialExtensionDays * 24 * 60 * 60 * 1000),
-                    "dd/MM/yyyy 'às' HH:mm",
-                    { locale: ptBR }
+                  {formatDateTime(
+                    new Date(new Date(data.subscription.trial_ends_at).getTime() + trialExtensionDays * 24 * 60 * 60 * 1000).toISOString()
                   )}
                 </p>
               </div>
@@ -1975,10 +1971,8 @@ export default function SubscriptionDetails() {
               <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
                 <p className="text-sm text-amber-700 dark:text-amber-400">
                   <span className="font-medium">Trial expira em:</span>{" "}
-                  {format(
-                    new Date(Date.now() + trialActivationDays * 24 * 60 * 60 * 1000),
-                    "dd/MM/yyyy 'às' HH:mm",
-                    { locale: ptBR }
+                  {formatDateTime(
+                    new Date(Date.now() + trialActivationDays * 24 * 60 * 60 * 1000).toISOString()
                   )}
                 </p>
               </div>
@@ -2164,7 +2158,7 @@ export default function SubscriptionDetails() {
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Vencimento da fatura:</span>
                     <span className="font-medium">
-                      {format(addBusinessDays(new Date(), 3), "dd/MM/yyyy", { locale: ptBR })}
+                      {formatDate(addBusinessDays(new Date(), 3).toISOString())}
                     </span>
                   </div>
                 </div>
