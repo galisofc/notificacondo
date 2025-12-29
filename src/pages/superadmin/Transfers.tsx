@@ -3,7 +3,7 @@ import { Helmet } from "react-helmet-async";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { isWithinInterval, startOfDay, endOfDay, format } from "date-fns";
-import { formatDate, formatDateTime, formatCustom } from "@/lib/dateUtils";
+import { useDateFormatter } from "@/hooks/useFormattedDate";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import {
   Card,
@@ -82,6 +82,7 @@ export default function Transfers() {
   const [searchQuery, setSearchQuery] = useState("");
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const { date: formatDate, dateTime: formatDateTime, custom: formatCustom } = useDateFormatter();
 
   const { data: transfers, isLoading } = useQuery({
     queryKey: ["superadmin-transfers"],

@@ -44,7 +44,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
-import { formatDateTimeLong, formatDateTime } from "@/lib/dateUtils";
+import { useDateFormatter } from "@/hooks/useFormattedDate";
 
 interface Occurrence {
   id: string;
@@ -113,6 +113,7 @@ const OccurrenceDetails = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { dateTime: formatDateTime, dateTimeLong: formatDateTimeLong } = useDateFormatter();
 
   const [occurrence, setOccurrence] = useState<Occurrence | null>(null);
   const [evidences, setEvidences] = useState<Evidence[]>([]);

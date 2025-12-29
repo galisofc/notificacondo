@@ -35,7 +35,7 @@ import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
 import { format, startOfMonth, endOfMonth, subMonths, parseISO, isWithinInterval, eachMonthOfInterval, startOfDay, endOfDay } from "date-fns";
-import { formatDate, formatDateTime, formatCustom, formatMonthYear } from "@/lib/dateUtils";
+import { useDateFormatter } from "@/hooks/useFormattedDate";
 import {
   BarChart,
   Bar,
@@ -93,6 +93,7 @@ const Reports = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { date: formatDate, dateTime: formatDateTime, custom: formatCustom, monthYear: formatMonthYear } = useDateFormatter();
 
   const [loading, setLoading] = useState(true);
   const [occurrences, setOccurrences] = useState<Occurrence[]>([]);

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { formatDate, formatDateTime, formatCustom } from "@/lib/dateUtils";
+import { useDateFormatter } from "@/hooks/useFormattedDate";
 import {
   Card,
   CardContent,
@@ -132,6 +132,7 @@ export function AuditLogs() {
   const [currentPage, setCurrentPage] = useState(1);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+  const { date: formatDate, dateTime: formatDateTime, custom: formatCustom } = useDateFormatter();
 
   // Query para contar total de registros
   const { data: totalCount } = useQuery({

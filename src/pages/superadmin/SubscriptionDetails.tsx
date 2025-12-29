@@ -5,7 +5,7 @@ import { Helmet } from "react-helmet-async";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { differenceInHours, isPast, format } from "date-fns";
-import { formatDate, formatDateTime, formatCustom } from "@/lib/dateUtils";
+import { useDateFormatter } from "@/hooks/useFormattedDate";
 
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import {
@@ -101,6 +101,7 @@ export default function SubscriptionDetails() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { date: formatDate, dateTime: formatDateTime, custom: formatCustom } = useDateFormatter();
 
   const [isEditing, setIsEditing] = useState(false);
   const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);

@@ -3,7 +3,7 @@ import { formatPhone } from "@/components/ui/masked-input";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, subDays, startOfDay, eachDayOfInterval } from "date-fns";
-import { formatDate, formatDateTime, formatCustom } from "@/lib/dateUtils";
+import { useDateFormatter } from "@/hooks/useFormattedDate";
 import {
   Card,
   CardContent,
@@ -103,6 +103,7 @@ export function NotificationsMonitor() {
   const [isLive, setIsLive] = useState(true);
   const [chartPeriod, setChartPeriod] = useState<"7" | "14" | "30">("7");
   const [isSyncing, setIsSyncing] = useState(false);
+  const { date: formatDate, dateTime: formatDateTime, custom: formatCustom } = useDateFormatter();
 
   const handleSyncStatus = async () => {
     setIsSyncing(true);

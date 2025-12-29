@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { formatTime } from "@/lib/dateUtils";
+import { useDateFormatter } from "@/hooks/useFormattedDate";
 import {
   Card,
   CardContent,
@@ -90,6 +90,7 @@ export function WhatsAppConfig() {
     "checking" | "connected" | "disconnected" | "not_configured"
   >("checking");
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
+  const { time: formatTime } = useDateFormatter();
 
   const [config, setConfig] = useState<WhatsAppConfigData>({
     provider: "zpro",

@@ -43,7 +43,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
-import { formatDateTime, formatDate } from "@/lib/dateUtils";
+import { useDateFormatter } from "@/hooks/useFormattedDate";
 
 interface DefenseWithDetails {
   id: string;
@@ -92,6 +92,7 @@ const DefenseAnalysis = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { date: formatDate, dateTime: formatDateTime } = useDateFormatter();
 
   const [defenses, setDefenses] = useState<DefenseWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
