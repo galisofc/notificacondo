@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatDate } from "@/lib/dateUtils";
 import {
   Card,
   CardContent,
@@ -781,7 +780,7 @@ export function SindicosManagement() {
                       <Building2 className="h-3 w-3" />
                       {sindico.condominiums_count} condomínio{sindico.condominiums_count !== 1 ? "s" : ""}
                     </div>
-                    <span>{format(new Date(sindico.created_at), "dd/MM/yyyy", { locale: ptBR })}</span>
+                    <span>{formatDate(sindico.created_at)}</span>
                   </div>
                 </div>
               ))}
@@ -865,7 +864,7 @@ export function SindicosManagement() {
                         </TableCell>
                         <TableCell>
                           <p className="text-sm">
-                            {format(new Date(sindico.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                            {formatDate(sindico.created_at)}
                           </p>
                         </TableCell>
                         <TableCell>
@@ -1035,7 +1034,7 @@ export function SindicosManagement() {
                           <div>
                             <p className="text-xs text-muted-foreground">Cadastrado em</p>
                             <p className="font-medium">
-                              {format(new Date(selectedSindico.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                              {formatDate(selectedSindico.created_at)}
                             </p>
                           </div>
                         </div>

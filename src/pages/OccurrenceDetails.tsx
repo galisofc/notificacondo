@@ -44,8 +44,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatDateTimeLong, formatDateTime } from "@/lib/dateUtils";
 
 interface Occurrence {
   id: string;
@@ -384,12 +383,8 @@ const OccurrenceDetails = () => {
     }
   };
 
-  const formatDate = (dateStr: string) => {
-    try {
-      return format(new Date(dateStr), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR });
-    } catch {
-      return dateStr;
-    }
+  const formatDateLocal = (dateStr: string) => {
+    return formatDateTimeLong(dateStr);
   };
 
   const handleSendWhatsApp = async () => {
@@ -545,7 +540,7 @@ const OccurrenceDetails = () => {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Data da Ocorrência</p>
-                      <p className="font-medium text-foreground">{formatDate(occurrence.occurred_at)}</p>
+                      <p className="font-medium text-foreground">{formatDateLocal(occurrence.occurred_at)}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -698,7 +693,7 @@ const OccurrenceDetails = () => {
                             {def.residents?.full_name || "Morador"}
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            {formatDate(def.submitted_at)}
+                            {formatDateLocal(def.submitted_at)}
                           </span>
                         </div>
                         <p className="text-foreground whitespace-pre-wrap mb-3">{def.content}</p>
@@ -759,7 +754,7 @@ const OccurrenceDetails = () => {
                               {decisionLabels[dec.decision] || dec.decision}
                             </span>
                             <span className="text-xs text-muted-foreground">
-                              {formatDate(dec.decided_at)}
+                              {formatDateLocal(dec.decided_at)}
                             </span>
                           </div>
                           <p className="text-foreground whitespace-pre-wrap">{dec.justification}</p>
@@ -844,7 +839,7 @@ const OccurrenceDetails = () => {
                             <p className="font-medium text-foreground text-sm">{item.title}</p>
                             <p className="text-xs text-muted-foreground mb-1">{item.description}</p>
                             <p className="text-xs text-muted-foreground/70">
-                              {formatDate(item.date)}
+                              {formatDateLocal(item.date)}
                             </p>
                           </div>
                         </div>
@@ -871,7 +866,7 @@ const OccurrenceDetails = () => {
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-medium capitalize">{notif.sent_via}</span>
                           <span className="text-xs text-muted-foreground">
-                            {format(new Date(notif.sent_at), "dd/MM/yyyy HH:mm")}
+                            {formatDateTime(notif.sent_at)}
                           </span>
                         </div>
                         <div className="flex flex-wrap gap-2">
