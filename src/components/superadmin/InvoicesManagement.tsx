@@ -1162,16 +1162,9 @@ export function InvoicesManagement({
                     {paginatedInvoices?.map((invoice) => (
                       <TableRow key={invoice.id}>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-sm font-medium text-primary">
-                              {(invoice as any).invoice_number || "—"}
-                            </span>
-                            {invoice.description && !invoice.description.startsWith("Assinatura") && (
-                              <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
-                                Avulsa
-                              </Badge>
-                            )}
-                          </div>
+                          <span className="font-mono text-sm font-medium text-primary">
+                            {(invoice as any).invoice_number || "—"}
+                          </span>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
