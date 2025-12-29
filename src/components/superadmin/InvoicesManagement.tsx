@@ -165,6 +165,8 @@ export function InvoicesManagement({
     condominium_id: "",
     amount: "",
     due_date: "",
+    period_start: "",
+    period_end: "",
     description: "",
     invoice_type: "limites_notificacao" as "limites_notificacao" | "limites_advertencia" | "limites_multa" | "outros",
   });
@@ -498,12 +500,11 @@ export function InvoicesManagement({
         throw new Error("Subscription não encontrada para este condomínio");
       }
 
-      const today = new Date();
       const dueDate = new Date(data.due_date);
       
-      // Define o período como o mês atual
-      const periodStart = today.toISOString().split("T")[0];
-      const periodEnd = new Date(today.getFullYear(), today.getMonth() + 1, today.getDate()).toISOString().split("T")[0];
+      // Usa as datas de período informadas pelo usuário
+      const periodStart = data.period_start;
+      const periodEnd = data.period_end;
 
       const typeLabel = INVOICE_TYPES.find(t => t.value === data.invoice_type)?.label || "Fatura Avulsa";
       const description = data.description 
@@ -535,6 +536,8 @@ export function InvoicesManagement({
         condominium_id: "",
         amount: "",
         due_date: "",
+        period_start: "",
+        period_end: "",
         description: "",
         invoice_type: "limites_notificacao",
       });
@@ -1689,6 +1692,32 @@ export function InvoicesManagement({
               />
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="period-start">Período Início *</Label>
+                <Input
+                  id="period-start"
+                  type="date"
+                  value={newInvoiceData.period_start}
+                  onChange={(e) =>
+                    setNewInvoiceData({ ...newInvoiceData, period_start: e.target.value })
+                  }
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="period-end">Período Fim *</Label>
+                <Input
+                  id="period-end"
+                  type="date"
+                  value={newInvoiceData.period_end}
+                  onChange={(e) =>
+                    setNewInvoiceData({ ...newInvoiceData, period_end: e.target.value })
+                  }
+                  min={newInvoiceData.period_start}
+                />
+              </div>
+            </div>
+
             <div className="grid gap-2">
               <Label htmlFor="description">Descrição Adicional</Label>
               <Textarea
@@ -1715,7 +1744,9 @@ export function InvoicesManagement({
                 createInvoiceMutation.isPending ||
                 !newInvoiceData.condominium_id ||
                 !newInvoiceData.amount ||
-                !newInvoiceData.due_date
+                !newInvoiceData.due_date ||
+                !newInvoiceData.period_start ||
+                !newInvoiceData.period_end
               }
             >
               {createInvoiceMutation.isPending ? (
