@@ -102,9 +102,14 @@ const ResidentOccurrenceDetails = () => {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [accessError, setAccessError] = useState<string | null>(null);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
   // Filter only image evidences for navigation
   const imageEvidences = evidences.filter(e => e.file_type === "image");
+
+  // Minimum swipe distance threshold (in px)
+  const minSwipeDistance = 50;
 
   const handlePrevImage = () => {
     if (selectedImageIndex !== null && selectedImageIndex > 0) {
@@ -121,6 +126,28 @@ const ResidentOccurrenceDetails = () => {
   const openImageModal = (imageUrl: string) => {
     const index = imageEvidences.findIndex(e => e.file_url === imageUrl);
     setSelectedImageIndex(index >= 0 ? index : 0);
+  };
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+    
+    if (isLeftSwipe) {
+      handleNextImage();
+    } else if (isRightSwipe) {
+      handlePrevImage();
+    }
   };
   useEffect(() => {
     const fetchData = async () => {
@@ -611,11 +638,17 @@ const ResidentOccurrenceDetails = () => {
           <DialogContent className="max-w-4xl p-2 bg-background/95 backdrop-blur border-border">
             <DialogTitle className="sr-only">Visualizar Evidência</DialogTitle>
             {selectedImageIndex !== null && imageEvidences[selectedImageIndex] && (
-              <div className="relative">
+              <div 
+                className="relative"
+                onTouchStart={onTouchStart}
+                onTouchMove={onTouchMove}
+                onTouchEnd={onTouchEnd}
+              >
                 <img
                   src={imageEvidences[selectedImageIndex].file_url}
                   alt="Evidência ampliada"
-                  className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+                  className="w-full h-auto max-h-[80vh] object-contain rounded-lg select-none"
+                  draggable={false}
                 />
                 
                 {/* Navigation Buttons */}
