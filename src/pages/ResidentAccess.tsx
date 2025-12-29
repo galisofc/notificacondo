@@ -30,6 +30,7 @@ const ResidentAccess = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [resident, setResident] = useState<ResidentData | null>(null);
+  const [occurrenceId, setOccurrenceId] = useState<string | null>(null);
   const [redirecting, setRedirecting] = useState(false);
 
   useEffect(() => {
@@ -55,8 +56,9 @@ const ResidentAccess = () => {
         }
 
         setResident(data.resident);
+        setOccurrenceId(data.occurrence_id);
 
-        // Redirect to magic link to authenticate
+        // Redirect to magic link to authenticate (will redirect to occurrence details)
         if (data.magicLink) {
           setRedirecting(true);
           window.location.href = data.magicLink;
@@ -157,9 +159,9 @@ const ResidentAccess = () => {
               <Button
                 variant="hero"
                 className="w-full mt-4"
-                onClick={() => navigate("/resident")}
+                onClick={() => navigate(occurrenceId ? `/resident/occurrences/${occurrenceId}` : "/resident")}
               >
-                Acessar Painel
+                {occurrenceId ? "Ver Ocorrência" : "Acessar Painel"}
               </Button>
             </div>
           </CardContent>
