@@ -372,6 +372,17 @@ const Occurrences = () => {
         return;
       }
 
+      // Validate location field
+      if (!formData.location.trim()) {
+        toast({
+          title: "Local obrigatório",
+          description: "É necessário informar o local da ocorrência.",
+          variant: "destructive",
+        });
+        setSaving(false);
+        return;
+      }
+
       // Validate legal basis for fines
       if (formData.type === "multa") {
         const hasLegalBasis = formData.civil_code_article || 
@@ -954,12 +965,13 @@ const Occurrences = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Local Específico</Label>
+                  <Label>Local da Ocorrência <span className="text-destructive">*</span></Label>
                   <Input
                     value={formData.location}
                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    placeholder="Ex: Área da piscina, Salão de festas..."
+                    placeholder="Ex: Área da piscina, Salão de festas, Estacionamento..."
                     className="bg-secondary/50"
+                    required
                   />
                 </div>
               </div>
