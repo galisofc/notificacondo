@@ -446,261 +446,338 @@ const OccurrenceDetails = () => {
 
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
-    let yPos = 20;
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 20;
+    const contentWidth = pageWidth - margin * 2;
+    let yPos = margin;
 
-    // Type and status labels
+    // Type labels
     const typeLabels: Record<string, string> = {
       advertencia: "Advertência",
       notificacao: "Notificação",
       multa: "Multa",
     };
-    const statusLabels: Record<string, string> = {
-      registrada: "Registrada",
-      notificado: "Notificado",
-      em_defesa: "Em Defesa",
-      arquivada: "Arquivada",
-      advertido: "Advertido",
-      multado: "Multado",
+
+    const refLabels: Record<string, string> = {
+      advertencia: "Aplicação de Advertência",
+      notificacao: "Notificação",
+      multa: "Aplicação de Multa",
     };
 
-    // Header
-    doc.setFontSize(18);
+    // Format date for header (e.g., "Guarulhos, 04 de dezembro de 2025")
+    const formatFullDate = (dateStr: string) => {
+      const date = new Date(dateStr);
+      const months = [
+        "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+        "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"
+      ];
+      const day = date.getDate().toString().padStart(2, "0");
+      const month = months[date.getMonth()];
+      const year = date.getFullYear();
+      return `${day} de ${month} de ${year}`;
+    };
+
+    const formatShortDate = (dateStr: string) => {
+      const date = new Date(dateStr);
+      const day = date.getDate().toString().padStart(2, "0");
+      const month = (date.getMonth() + 1).toString().padStart(2, "0");
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    };
+
+    const formatTime = (dateStr: string) => {
+      const date = new Date(dateStr);
+      return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    };
+
+    // Get condominium city (if available from address) or default
+    const condominiumName = occurrence.condominiums?.name || "Condomínio";
+    const today = new Date().toISOString();
+
+    // ===== PAGE 1: FORMAL LETTER =====
+
+    // Header - Date aligned right
+    doc.setFontSize(11);
     doc.setTextColor(33, 33, 33);
-    doc.text("Relatório de Ocorrência", pageWidth / 2, yPos, { align: "center" });
+    doc.text(`São Paulo, ${formatFullDate(today)}`, pageWidth - margin, yPos, { align: "right" });
+    yPos += 15;
+
+    // Condominium Name - Centered, bold
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text(condominiumName.toUpperCase(), pageWidth / 2, yPos, { align: "center" });
+    yPos += 15;
+
+    // Recipient info
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Ao Senhor(a): ${occurrence.residents?.full_name || "Não identificado"}`, margin, yPos);
+    yPos += 8;
+
+    // Block and Apartment
+    const blockName = occurrence.blocks?.name || "-";
+    const aptNumber = occurrence.apartments?.number || "-";
+    doc.text(`Bloco: ${blockName}       APTO: ${aptNumber}`, margin, yPos);
+    yPos += 8;
+
+    // Condominium address (full name again)
+    doc.setFontSize(10);
+    doc.setTextColor(80, 80, 80);
+    doc.text(condominiumName.toUpperCase(), margin, yPos);
+    yPos += 20;
+
+    // Reference line
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(33, 33, 33);
+    doc.text(`REF: ${refLabels[occurrence.type] || "Ocorrência"}`, margin, yPos);
+    yPos += 12;
+
+    // Greeting
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.text("Prezado(a) Condômino(a),", margin, yPos);
     yPos += 10;
 
-    // Type and Status
-    doc.setFontSize(12);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Tipo: ${typeLabels[occurrence.type] || occurrence.type} | Status: ${statusLabels[occurrence.status] || occurrence.status}`, pageWidth / 2, yPos, { align: "center" });
-    yPos += 15;
+    // Intro paragraph
+    const introParagraph = "Na qualidade de síndico(a) deste Condomínio, no uso de minhas atribuições legais e atendendo a determinação do corpo diretivo, utilizo-me da presente para notificá-lo(a) por desrespeito às normas do Regimento Interno.";
+    const introLines = doc.splitTextToSize(introParagraph, contentWidth);
+    doc.text(introLines, margin, yPos);
+    yPos += introLines.length * 5 + 8;
 
-    // Title
-    doc.setFontSize(14);
-    doc.setTextColor(33, 33, 33);
-    doc.text(occurrence.title, pageWidth / 2, yPos, { align: "center" });
-    yPos += 15;
-
-    // Occurrence Info Table
-    doc.setFontSize(11);
-    doc.setTextColor(33, 33, 33);
-    doc.text("Informações da Ocorrência", 14, yPos);
-    yPos += 5;
-
-    const occurrenceInfo = [
-      ["Data da Ocorrência", formatDateTimeLong(occurrence.occurred_at)],
-      ["Data de Registro", formatDateTimeLong(occurrence.created_at)],
-      ["Local", occurrence.location || "Não informado"],
-      ["Condomínio", occurrence.condominiums?.name || "Não informado"],
-      ["Bloco", occurrence.blocks?.name || "-"],
-      ["Apartamento", occurrence.apartments?.number || "-"],
-      ["Morador", occurrence.residents?.full_name || "Não identificado"],
-      ["E-mail do Morador", occurrence.residents?.email || "-"],
-    ];
-
-    autoTable(doc, {
-      startY: yPos,
-      head: [["Campo", "Valor"]],
-      body: occurrenceInfo,
-      theme: "striped",
-      headStyles: { fillColor: [59, 130, 246] },
-      margin: { left: 14, right: 14 },
-    });
-
-    yPos = (doc as any).lastAutoTable.finalY + 10;
-
-    // Description
-    doc.setFontSize(11);
-    doc.text("Descrição", 14, yPos);
-    yPos += 5;
-
-    const descriptionLines = doc.splitTextToSize(occurrence.description, pageWidth - 28);
-    doc.setFontSize(10);
-    doc.setTextColor(60, 60, 60);
-    doc.text(descriptionLines, 14, yPos);
-    yPos += descriptionLines.length * 5 + 10;
-
-    // Check if we need a new page
-    if (yPos > 250) {
-      doc.addPage();
-      yPos = 20;
+    // Legal basis paragraph (if exists)
+    const legalReferences: string[] = [];
+    if (occurrence.internal_rules_article) {
+      legalReferences.push(`Art. ${occurrence.internal_rules_article} do Regimento Interno`);
+    }
+    if (occurrence.convention_article) {
+      legalReferences.push(`Art. ${occurrence.convention_article} da Convenção`);
+    }
+    if (occurrence.civil_code_article) {
+      legalReferences.push(`Art. ${occurrence.civil_code_article} do Código Civil`);
     }
 
-    // Legal Basis
-    const hasLegalBasis = occurrence.civil_code_article || occurrence.convention_article || occurrence.internal_rules_article || occurrence.legal_basis;
-    if (hasLegalBasis) {
-      doc.setFontSize(11);
-      doc.setTextColor(33, 33, 33);
-      doc.text("Fundamentação Legal", 14, yPos);
-      yPos += 5;
-
-      const legalInfo: string[][] = [];
-      if (occurrence.civil_code_article) legalInfo.push(["Artigo do Código Civil", occurrence.civil_code_article]);
-      if (occurrence.convention_article) legalInfo.push(["Artigo da Convenção", occurrence.convention_article]);
-      if (occurrence.internal_rules_article) legalInfo.push(["Artigo do Regimento Interno", occurrence.internal_rules_article]);
-      if (occurrence.legal_basis) legalInfo.push(["Observações Legais", occurrence.legal_basis]);
-
-      autoTable(doc, {
-        startY: yPos,
-        head: [["Campo", "Valor"]],
-        body: legalInfo,
-        theme: "striped",
-        headStyles: { fillColor: [59, 130, 246] },
-        margin: { left: 14, right: 14 },
-      });
-
-      yPos = (doc as any).lastAutoTable.finalY + 10;
-    }
-
-    // Evidences
-    if (evidences.length > 0) {
-      if (yPos > 250) {
-        doc.addPage();
-        yPos = 20;
+    if (legalReferences.length > 0 || occurrence.legal_basis) {
+      let legalText = "Conforme ";
+      if (legalReferences.length > 0) {
+        legalText += legalReferences.join(", ");
+      }
+      if (occurrence.legal_basis) {
+        legalText += legalReferences.length > 0 ? `: ${occurrence.legal_basis}` : occurrence.legal_basis;
       }
       
-      doc.setFontSize(11);
-      doc.setTextColor(33, 33, 33);
-      doc.text(`Provas (${evidences.length})`, 14, yPos);
-      yPos += 5;
-
-      const evidenceRows = evidences.map((e, i) => [
-        `${i + 1}`,
-        e.file_type,
-        e.description || "-",
-        formatDateTime(e.created_at),
-      ]);
-
-      autoTable(doc, {
-        startY: yPos,
-        head: [["#", "Tipo", "Descrição", "Data"]],
-        body: evidenceRows,
-        theme: "striped",
-        headStyles: { fillColor: [59, 130, 246] },
-        margin: { left: 14, right: 14 },
-      });
-
-      yPos = (doc as any).lastAutoTable.finalY + 10;
+      const legalLines = doc.splitTextToSize(legalText, contentWidth);
+      doc.text(legalLines, margin, yPos);
+      yPos += legalLines.length * 5 + 8;
     }
 
-    // Defenses
-    if (defenses.length > 0) {
-      if (yPos > 250) {
-        doc.addPage();
-        yPos = 20;
-      }
+    // Occurrence description paragraph
+    const occurrenceDate = formatShortDate(occurrence.occurred_at);
+    const occurrenceTime = formatTime(occurrence.occurred_at);
+    
+    let descriptionParagraph = `No dia ${occurrenceDate}, por volta das ${occurrenceTime}`;
+    if (occurrence.location) {
+      descriptionParagraph += `, no local: ${occurrence.location}`;
+    }
+    descriptionParagraph += `, foi verificado que: ${occurrence.description}`;
+    descriptionParagraph += " Informamos que tal conduta caracteriza descumprimento do Regimento Interno, estando sujeita à aplicação das penalidades previstas nas normas condominiais.";
 
+    const descLines = doc.splitTextToSize(descriptionParagraph, contentWidth);
+    doc.text(descLines, margin, yPos);
+    yPos += descLines.length * 5 + 8;
+
+    // Penalty paragraph (based on type)
+    let penaltyParagraph = "";
+    if (occurrence.type === "multa") {
+      penaltyParagraph = "Diante do ocorrido, torna-se necessária a aplicação da penalidade prevista no Regimento Interno deste Condomínio, a qual será lançada juntamente com sua quota condominial.";
+    } else if (occurrence.type === "advertencia") {
+      penaltyParagraph = "Diante do ocorrido, esta serve como ADVERTÊNCIA FORMAL, ficando registrado o descumprimento das normas condominiais. Reincidências poderão acarretar penalidades mais severas, incluindo aplicação de multa.";
+    } else {
+      penaltyParagraph = "Diante do ocorrido, serve a presente como NOTIFICAÇÃO FORMAL sobre o descumprimento das normas condominiais.";
+    }
+    const penaltyLines = doc.splitTextToSize(penaltyParagraph, contentWidth);
+    doc.text(penaltyLines, margin, yPos);
+    yPos += penaltyLines.length * 5 + 8;
+
+    // Defense deadline paragraph
+    const defenseParagraph = "Outrossim, a partir desta data, fica estipulado o prazo de 10 (dez) dias para que V. Sa. apresente, se assim desejar, suas razões mediante defesa por escrito, a qual será submetida à análise perante o Conselho Consultivo.";
+    const defenseLines = doc.splitTextToSize(defenseParagraph, contentWidth);
+    doc.text(defenseLines, margin, yPos);
+    yPos += defenseLines.length * 5 + 20;
+
+    // Closing
+    doc.text("Atenciosamente,", margin, yPos);
+    yPos += 25;
+
+    // Signature area
+    doc.setFont("helvetica", "bold");
+    doc.text(condominiumName.toUpperCase(), pageWidth / 2, yPos, { align: "center" });
+    yPos += 8;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text("Síndico(a)", pageWidth / 2, yPos, { align: "center" });
+
+    // ===== PAGE 2: AUTO DE INFRAÇÃO (Evidence) =====
+    if (evidences.length > 0) {
+      doc.addPage();
+      yPos = margin;
+
+      // Header
       doc.setFontSize(11);
       doc.setTextColor(33, 33, 33);
-      doc.text(`Defesas (${defenses.length})`, 14, yPos);
-      yPos += 5;
+      doc.text(`São Paulo, ${formatFullDate(today)}`, pageWidth - margin, yPos, { align: "right" });
+      yPos += 15;
+
+      // Condominium Name
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text(condominiumName.toUpperCase(), pageWidth / 2, yPos, { align: "center" });
+      yPos += 15;
+
+      // Section title
+      doc.setFontSize(14);
+      doc.text("AUTO DE INFRAÇÃO:", margin, yPos);
+      yPos += 15;
+
+      // Evidence info box
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "normal");
+      doc.text(`DATA: ${occurrenceDate}`, margin, yPos);
+      yPos += 8;
+      doc.text(`HORÁRIO: ${occurrenceTime}`, margin, yPos);
+      yPos += 8;
+      if (occurrence.location) {
+        doc.text(`LOCAL: ${occurrence.location}`, margin, yPos);
+        yPos += 8;
+      }
+      yPos += 10;
+
+      // List evidences
+      doc.setFontSize(10);
+      doc.text("Provas anexadas:", margin, yPos);
+      yPos += 8;
+
+      evidences.forEach((evidence, index) => {
+        const evidenceText = `${index + 1}. ${evidence.file_type.toUpperCase()}${evidence.description ? ` - ${evidence.description}` : ""} (${formatShortDate(evidence.created_at)})`;
+        const evidenceLines = doc.splitTextToSize(evidenceText, contentWidth);
+        doc.text(evidenceLines, margin + 5, yPos);
+        yPos += evidenceLines.length * 5 + 3;
+      });
+    }
+
+    // ===== PAGE 3: DEFENSES (if any) =====
+    if (defenses.length > 0) {
+      doc.addPage();
+      yPos = margin;
+
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(33, 33, 33);
+      doc.text("DEFESA(S) APRESENTADA(S)", pageWidth / 2, yPos, { align: "center" });
+      yPos += 15;
 
       defenses.forEach((defense, index) => {
-        if (yPos > 250) {
+        if (yPos > pageHeight - 50) {
           doc.addPage();
-          yPos = 20;
+          yPos = margin;
         }
+
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.text(`Defesa ${index + 1} - ${defense.residents?.full_name || "Morador"}`, margin, yPos);
+        yPos += 6;
+        
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Prazo: ${formatShortDate(defense.deadline)} | Enviada em: ${formatShortDate(defense.submitted_at)}`, margin, yPos);
+        yPos += 8;
 
         doc.setFontSize(10);
         doc.setTextColor(33, 33, 33);
-        doc.text(`Defesa ${index + 1} - ${defense.residents?.full_name || "Morador"}`, 14, yPos);
-        yPos += 5;
-        doc.setFontSize(9);
-        doc.setTextColor(100, 100, 100);
-        doc.text(`Enviada em: ${formatDateTime(defense.submitted_at)}`, 14, yPos);
-        yPos += 5;
-        
-        const defenseLines = doc.splitTextToSize(defense.content, pageWidth - 28);
-        doc.setFontSize(9);
-        doc.setTextColor(60, 60, 60);
-        doc.text(defenseLines, 14, yPos);
-        yPos += defenseLines.length * 4 + 8;
+        const defenseLines = doc.splitTextToSize(defense.content, contentWidth);
+        doc.text(defenseLines, margin, yPos);
+        yPos += defenseLines.length * 5 + 15;
       });
     }
 
-    // Decisions
+    // ===== PAGE 4: DECISIONS (if any) =====
     if (decisions.length > 0) {
-      if (yPos > 250) {
-        doc.addPage();
-        yPos = 20;
-      }
+      doc.addPage();
+      yPos = margin;
 
-      doc.setFontSize(11);
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
       doc.setTextColor(33, 33, 33);
-      doc.text(`Decisões (${decisions.length})`, 14, yPos);
-      yPos += 5;
+      doc.text("DECISÃO", pageWidth / 2, yPos, { align: "center" });
+      yPos += 15;
 
-      const decisionRows = decisions.map((d) => [
-        statusLabels[d.decision] || d.decision,
-        d.justification,
-        formatDateTime(d.decided_at),
-      ]);
+      const statusLabels: Record<string, string> = {
+        arquivada: "ARQUIVADA",
+        advertido: "ADVERTÊNCIA MANTIDA",
+        multado: "MULTA APLICADA",
+      };
 
-      autoTable(doc, {
-        startY: yPos,
-        head: [["Decisão", "Justificativa", "Data"]],
-        body: decisionRows,
-        theme: "striped",
-        headStyles: { fillColor: [59, 130, 246] },
-        margin: { left: 14, right: 14 },
-        columnStyles: {
-          1: { cellWidth: 80 },
-        },
-      });
+      decisions.forEach((decision, index) => {
+        if (yPos > pageHeight - 50) {
+          doc.addPage();
+          yPos = margin;
+        }
 
-      yPos = (doc as any).lastAutoTable.finalY + 10;
-    }
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text(`Resultado: ${statusLabels[decision.decision] || decision.decision}`, margin, yPos);
+        yPos += 8;
 
-    // Notifications
-    if (notifications.length > 0) {
-      if (yPos > 250) {
-        doc.addPage();
-        yPos = 20;
-      }
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Data da decisão: ${formatShortDate(decision.decided_at)}`, margin, yPos);
+        yPos += 10;
 
-      doc.setFontSize(11);
-      doc.setTextColor(33, 33, 33);
-      doc.text(`Notificações Enviadas (${notifications.length})`, 14, yPos);
-      yPos += 5;
+        doc.setFontSize(10);
+        doc.setTextColor(33, 33, 33);
+        doc.text("Justificativa:", margin, yPos);
+        yPos += 6;
 
-      const notificationRows = notifications.map((n) => [
-        n.sent_via.replace("whatsapp_", "WhatsApp ").toUpperCase(),
-        formatDateTime(n.sent_at),
-        n.delivered_at ? formatDateTime(n.delivered_at) : "-",
-        n.read_at ? formatDateTime(n.read_at) : "-",
-      ]);
-
-      autoTable(doc, {
-        startY: yPos,
-        head: [["Canal", "Enviada", "Entregue", "Lida"]],
-        body: notificationRows,
-        theme: "striped",
-        headStyles: { fillColor: [59, 130, 246] },
-        margin: { left: 14, right: 14 },
+        const justificationLines = doc.splitTextToSize(decision.justification, contentWidth);
+        doc.text(justificationLines, margin, yPos);
+        yPos += justificationLines.length * 5 + 15;
       });
     }
 
-    // Footer with generation date
+    // Footer on all pages
     const totalPages = doc.getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i);
+      
+      // Bottom line
+      doc.setDrawColor(200, 200, 200);
+      doc.line(margin, pageHeight - 25, pageWidth - margin, pageHeight - 25);
+      
+      // Condominium info footer
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(33, 33, 33);
+      doc.text(condominiumName.toUpperCase(), pageWidth / 2, pageHeight - 18, { align: "center" });
+      
       doc.setFontSize(8);
-      doc.setTextColor(150, 150, 150);
-      doc.text(
-        `Gerado em ${formatDateTime(new Date().toISOString())} | Página ${i} de ${totalPages}`,
-        pageWidth / 2,
-        doc.internal.pageSize.getHeight() - 10,
-        { align: "center" }
-      );
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Página ${i} de ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: "center" });
     }
 
-    // Download
-    const fileName = `ocorrencia_${occurrence.title.replace(/[^a-zA-Z0-9]/g, "_").substring(0, 30)}_${new Date().toISOString().split("T")[0]}.pdf`;
+    // Generate filename
+    const residentName = occurrence.residents?.full_name?.replace(/[^a-zA-Z0-9]/g, "_").substring(0, 20) || "morador";
+    const blockApt = `BL_${blockName}_APTO_${aptNumber}`;
+    const typeLabel = typeLabels[occurrence.type]?.toUpperCase() || "OCORRENCIA";
+    const fileName = `${typeLabel}_-_${blockApt}_-_${residentName}.pdf`;
+
     doc.save(fileName);
 
     toast({
       title: "PDF gerado com sucesso!",
-      description: "O download do relatório foi iniciado.",
+      description: "O download do documento foi iniciado.",
     });
   };
 
