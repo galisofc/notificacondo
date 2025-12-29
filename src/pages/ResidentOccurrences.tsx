@@ -125,7 +125,6 @@ const ResidentOccurrences = () => {
       registrada: "bg-blue-500/10 text-blue-500",
       notificado: "bg-amber-500/10 text-amber-500",
       em_defesa: "bg-purple-500/10 text-purple-500",
-      analisando: "bg-cyan-500/10 text-cyan-500",
       arquivada: "bg-muted text-muted-foreground",
       advertido: "bg-orange-500/10 text-orange-500",
       multado: "bg-red-500/10 text-red-500",
@@ -134,7 +133,6 @@ const ResidentOccurrences = () => {
       registrada: "Registrada",
       notificado: "Notificado",
       em_defesa: "Em Defesa",
-      analisando: "Defesa em Análise",
       arquivada: "Arquivada",
       advertido: "Advertido",
       multado: "Multado",
@@ -302,7 +300,6 @@ const ResidentOccurrences = () => {
                   <SelectItem value="registrada">Registrada</SelectItem>
                   <SelectItem value="notificado">Notificado</SelectItem>
                   <SelectItem value="em_defesa">Em Defesa</SelectItem>
-                  <SelectItem value="analisando">Defesa em Análise</SelectItem>
                   <SelectItem value="arquivada">Arquivada</SelectItem>
                   <SelectItem value="advertido">Advertido</SelectItem>
                   <SelectItem value="multado">Multado</SelectItem>
