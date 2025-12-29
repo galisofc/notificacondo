@@ -100,6 +100,7 @@ export function MercadoPagoTransparentCheckout({
     if (!showDialog) {
       setPaymentStatus("idle");
       setPaymentResult(null);
+      setSdkInitialized(false);
       if (typeof window !== "undefined" && (window as any).paymentBrickController) {
         try {
           (window as any).paymentBrickController.unmount();
@@ -214,9 +215,8 @@ export function MercadoPagoTransparentCheckout({
     setShowDialog(true);
   };
 
-  const handleCloseDialog = () => {
-    setShowDialog(false);
-    setSdkInitialized(false);
+  const handleDialogOpenChange = (open: boolean) => {
+    setShowDialog(open);
   };
 
   const handleCopyPixCode = async () => {
@@ -247,7 +247,7 @@ export function MercadoPagoTransparentCheckout({
         {buttonText}
       </Button>
 
-      <Dialog open={showDialog} onOpenChange={handleCloseDialog}>
+      <Dialog open={showDialog} onOpenChange={handleDialogOpenChange}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -273,7 +273,7 @@ export function MercadoPagoTransparentCheckout({
               <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-center">
                 <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto mb-2" />
                 <p className="font-medium text-emerald-600">Pagamento realizado com sucesso!</p>
-                <Button className="mt-4" onClick={handleCloseDialog}>
+                <Button className="mt-4" onClick={() => setShowDialog(false)}>
                   Fechar
                 </Button>
               </div>
@@ -308,7 +308,7 @@ export function MercadoPagoTransparentCheckout({
                   Após o pagamento, a confirmação pode levar alguns minutos.
                 </p>
                 
-                <Button variant="ghost" onClick={handleCloseDialog}>
+                <Button variant="ghost" onClick={() => setShowDialog(false)}>
                   Fechar
                 </Button>
               </div>
@@ -333,7 +333,7 @@ export function MercadoPagoTransparentCheckout({
                   O boleto pode levar até 3 dias úteis para ser compensado.
                 </p>
                 
-                <Button variant="ghost" onClick={handleCloseDialog}>
+                <Button variant="ghost" onClick={() => setShowDialog(false)}>
                   Fechar
                 </Button>
               </div>
