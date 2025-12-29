@@ -837,35 +837,65 @@ export function InvoicesManagement({
       doc.setTextColor(255, 255, 255);
       doc.text("NOTIFICACONDO", pageWidth / 2, 15, { align: "center" });
       
-      // ===== INFO ABAIXO DO HEADER =====
-      let yPos = 35;
-      doc.setFontSize(9);
+      // ===== PIX SECTION - NO TOPO =====
+      let yPos = 32;
+      doc.setFillColor(240, 248, 255);
+      doc.roundedRect(20, yPos, pageWidth - 40, 75, 3, 3, "F");
+      
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
+      doc.text("Pagamento via PIX", pageWidth / 2, yPos + 10, { align: "center" });
+      
+      // QR Code centralizado
+      if (pixData.qr_code_base64) {
+        const qrCodeImg = "data:image/png;base64," + pixData.qr_code_base64;
+        doc.addImage(qrCodeImg, "PNG", pageWidth / 2 - 22, yPos + 14, 44, 44);
+      }
+      
+      // Código Copia e Cola
+      doc.setFontSize(7);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(textGray[0], textGray[1], textGray[2]);
-      doc.text("Sistema de Gestao de Ocorrencias Condominiais", 20, yPos);
-      doc.text("notificacondo.com.br", pageWidth - 20, yPos, { align: "right" });
+      doc.text("Codigo Copia e Cola:", pageWidth / 2, yPos + 62, { align: "center" });
+      
+      // Quebrar o código em linhas menores
+      const pixCode = pixData.qr_code || "";
+      const maxCharsPerLine = 70;
+      const lines = [];
+      for (let i = 0; i < pixCode.length; i += maxCharsPerLine) {
+        lines.push(pixCode.substring(i, i + maxCharsPerLine));
+      }
+      
+      doc.setFontSize(5);
+      lines.slice(0, 2).forEach((line, index) => {
+        doc.text(line, pageWidth / 2, yPos + 67 + (index * 3), { align: "center" });
+      });
+      if (lines.length > 2) {
+        doc.text("...", pageWidth / 2, yPos + 73, { align: "center" });
+      }
       
       // ===== TITULO FATURA =====
-      yPos = 55;
-      doc.setFontSize(28);
+      yPos = 115;
+      doc.setFontSize(24);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(textDark[0], textDark[1], textDark[2]);
-      doc.text("Fatura.", 20, yPos);
+      doc.text("Fatura", 20, yPos);
       
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(textGray[0], textGray[1], textGray[2]);
-      doc.text("Fatura  : " + (invoice.invoice_number || "—"), pageWidth - 20, yPos - 10, { align: "right" });
-      doc.text("Data    : " + formatDate(invoice.created_at), pageWidth - 20, yPos - 2, { align: "right" });
+      doc.text("Fatura  : " + (invoice.invoice_number || "—"), pageWidth - 20, yPos - 8, { align: "right" });
+      doc.text("Data    : " + formatDate(invoice.created_at), pageWidth - 20, yPos, { align: "right" });
       
       // ===== EMITIDO PARA =====
-      yPos = 70;
-      doc.setFontSize(11);
+      yPos = 130;
+      doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(textDark[0], textDark[1], textDark[2]);
       doc.text("Emitido Para", 20, yPos);
       
-      yPos += 7;
+      yPos += 6;
       doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(textGray[0], textGray[1], textGray[2]);
@@ -874,17 +904,17 @@ export function InvoicesManagement({
       doc.text(invoice.owner_profile?.full_name || "—", 20, yPos + 10);
       
       // ===== VALOR =====
-      doc.setFontSize(24);
+      doc.setFontSize(20);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(textDark[0], textDark[1], textDark[2]);
-      doc.text(formatCurrency(Number(invoice.amount)), pageWidth - 20, 75, { align: "right" });
+      doc.text(formatCurrency(Number(invoice.amount)), pageWidth - 20, 135, { align: "right" });
       
       doc.setFontSize(9);
       doc.setTextColor(textGray[0], textGray[1], textGray[2]);
-      doc.text("VENCIMENTO: " + formatDate(invoice.due_date), pageWidth - 20, 83, { align: "right" });
+      doc.text("VENCIMENTO: " + formatDate(invoice.due_date), pageWidth - 20, 143, { align: "right" });
       
       // ===== DESCRICAO =====
-      yPos = 105;
+      yPos = 160;
       doc.setFillColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
       doc.rect(20, yPos, pageWidth - 40, 8, "F");
       
@@ -899,45 +929,6 @@ export function InvoicesManagement({
       doc.setTextColor(textDark[0], textDark[1], textDark[2]);
       doc.text("Assinatura - Periodo: " + formatDate(invoice.period_start) + " a " + formatDate(invoice.period_end), 25, yPos);
       doc.text(formatCurrency(Number(invoice.amount)), pageWidth - 25, yPos, { align: "right" });
-      
-      // ===== PIX SECTION =====
-      yPos = 135;
-      doc.setFillColor(240, 248, 255);
-      doc.roundedRect(20, yPos, pageWidth - 40, 100, 3, 3, "F");
-      
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
-      doc.text("Pagamento via PIX", pageWidth / 2, yPos + 12, { align: "center" });
-      
-      // QR Code
-      if (pixData.qr_code_base64) {
-        const qrCodeImg = "data:image/png;base64," + pixData.qr_code_base64;
-        doc.addImage(qrCodeImg, "PNG", pageWidth / 2 - 25, yPos + 18, 50, 50);
-      }
-      
-      // Código Copia e Cola
-      yPos += 75;
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(textGray[0], textGray[1], textGray[2]);
-      doc.text("Codigo Copia e Cola:", pageWidth / 2, yPos, { align: "center" });
-      
-      // Quebrar o código em linhas menores
-      const pixCode = pixData.qr_code || "";
-      const maxCharsPerLine = 60;
-      const lines = [];
-      for (let i = 0; i < pixCode.length; i += maxCharsPerLine) {
-        lines.push(pixCode.substring(i, i + maxCharsPerLine));
-      }
-      
-      doc.setFontSize(6);
-      lines.slice(0, 3).forEach((line, index) => {
-        doc.text(line, pageWidth / 2, yPos + 5 + (index * 4), { align: "center" });
-      });
-      if (lines.length > 3) {
-        doc.text("...", pageWidth / 2, yPos + 17, { align: "center" });
-      }
       
       // ===== FOOTER =====
       doc.setFillColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
