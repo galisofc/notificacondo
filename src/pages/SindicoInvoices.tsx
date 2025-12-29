@@ -506,8 +506,8 @@ const SindicoInvoices = () => {
                       <TableRow>
                         <TableHead>Nº Fatura</TableHead>
                         <TableHead>Condomínio</TableHead>
-                        <TableHead>Plano</TableHead>
-                        <TableHead>Período</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Descrição</TableHead>
                         <TableHead>Vencimento</TableHead>
                         <TableHead>Valor</TableHead>
                         <TableHead>Status</TableHead>
@@ -517,6 +517,9 @@ const SindicoInvoices = () => {
                     <TableBody>
                       {paginatedInvoices.map((invoice) => {
                         const statusConfig = STATUS_CONFIG[invoice.status] || STATUS_CONFIG.pending;
+                        // Detecta se é fatura avulsa: period_start === period_end ou descrição não começa com "Assinatura"
+                        const isAvulsa = invoice.period_start === invoice.period_end || 
+                          (invoice.description && !invoice.description.startsWith("Assinatura"));
 
                         return (
                           <TableRow key={invoice.id}>
@@ -532,12 +535,26 @@ const SindicoInvoices = () => {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Badge variant="outline">
-                                {PLAN_NAMES[invoice.subscription?.plan] || invoice.subscription?.plan}
-                              </Badge>
+                              {isAvulsa ? (
+                                <Badge variant="secondary" className="bg-violet-500/10 text-violet-600 border-violet-500/20">
+                                  Avulsa
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline">
+                                  {PLAN_NAMES[invoice.subscription?.plan] || invoice.subscription?.plan}
+                                </Badge>
+                              )}
                             </TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {formatDate(invoice.period_start)} - {formatDate(invoice.period_end)}
+                            <TableCell className="text-muted-foreground max-w-[200px]">
+                              {isAvulsa ? (
+                                <span className="truncate block" title={invoice.description || "Fatura Avulsa"}>
+                                  {invoice.description || "Fatura Avulsa"}
+                                </span>
+                              ) : (
+                                <span>
+                                  {formatDate(invoice.period_start)} - {formatDate(invoice.period_end)}
+                                </span>
+                              )}
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-1.5">
