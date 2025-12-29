@@ -11,6 +11,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Calendar,
   MapPin,
   FileText,
@@ -93,6 +98,7 @@ const ResidentOccurrenceDetails = () => {
   const [submitting, setSubmitting] = useState(false);
   const [defenseContent, setDefenseContent] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [accessError, setAccessError] = useState<string | null>(null);
   useEffect(() => {
     const fetchData = async () => {
@@ -545,30 +551,52 @@ const ResidentOccurrenceDetails = () => {
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {evidences.map((evidence) => (
-                  <a
-                    key={evidence.id}
-                    href={evidence.file_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="aspect-square rounded-lg bg-background/50 border border-border/30 flex items-center justify-center hover:border-primary/50 transition-colors overflow-hidden"
-                  >
-                    {evidence.file_type === "image" ? (
+                  evidence.file_type === "image" ? (
+                    <button
+                      key={evidence.id}
+                      onClick={() => setSelectedImage(evidence.file_url)}
+                      className="aspect-square rounded-lg bg-background/50 border border-border/30 flex items-center justify-center hover:border-primary/50 transition-colors overflow-hidden cursor-pointer"
+                    >
                       <img
                         src={evidence.file_url}
                         alt={evidence.description || "Evidência"}
                         className="w-full h-full object-cover"
                       />
-                    ) : evidence.file_type === "video" ? (
-                      <Video className="w-8 h-8 text-muted-foreground" />
-                    ) : (
-                      <FileText className="w-8 h-8 text-muted-foreground" />
-                    )}
-                  </a>
+                    </button>
+                  ) : (
+                    <a
+                      key={evidence.id}
+                      href={evidence.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="aspect-square rounded-lg bg-background/50 border border-border/30 flex items-center justify-center hover:border-primary/50 transition-colors overflow-hidden"
+                    >
+                      {evidence.file_type === "video" ? (
+                        <Video className="w-8 h-8 text-muted-foreground" />
+                      ) : (
+                        <FileText className="w-8 h-8 text-muted-foreground" />
+                      )}
+                    </a>
+                  )
                 ))}
               </div>
             </CardContent>
           </Card>
         )}
+
+        {/* Image Lightbox Dialog */}
+        <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+          <DialogContent className="max-w-4xl p-0 bg-transparent border-none">
+            <DialogTitle className="sr-only">Visualizar Evidência</DialogTitle>
+            {selectedImage && (
+              <img
+                src={selectedImage}
+                alt="Evidência ampliada"
+                className="w-full h-auto max-h-[90vh] object-contain rounded-lg"
+              />
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* Defense Section */}
         {canSubmitDefense && (
