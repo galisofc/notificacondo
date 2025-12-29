@@ -98,6 +98,15 @@ export function nowInSaoPaulo(): Date {
 }
 
 /**
+ * Retorna a data/hora atual no timezone de Brasília formatada para input datetime-local
+ * Formato: yyyy-MM-ddTHH:mm
+ */
+export function nowInSaoPauloForInput(): string {
+  const zonedDate = toSaoPauloTime(new Date());
+  return format(zonedDate, "yyyy-MM-dd'T'HH:mm");
+}
+
+/**
  * Formata apenas o mês e ano (MMMM 'de' yyyy)
  */
 export function formatMonthYear(date: Date | string): string {

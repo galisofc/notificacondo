@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useDateFormatter } from "@/hooks/useFormattedDate";
+import { nowInSaoPauloForInput } from "@/lib/dateUtils";
 import { useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
@@ -115,7 +116,7 @@ const Occurrences = () => {
     title: "",
     description: "",
     location: "",
-    occurred_at: new Date().toISOString().slice(0, 16),
+    occurred_at: nowInSaoPauloForInput(),
     convention_article: "",
     internal_rules_article: "",
     civil_code_article: "",
@@ -415,7 +416,7 @@ const Occurrences = () => {
         title: "",
         description: "",
         location: "",
-        occurred_at: new Date().toISOString().slice(0, 16),
+        occurred_at: nowInSaoPauloForInput(),
         convention_article: "",
         internal_rules_article: "",
         civil_code_article: "",
