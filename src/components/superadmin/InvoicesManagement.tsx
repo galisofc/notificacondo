@@ -62,7 +62,14 @@ import {
   QrCode,
   Loader2,
   Plus,
+  ChevronDown,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 
 interface InvoiceWithDetails {
@@ -1202,30 +1209,34 @@ export function InvoicesManagement({
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => generateInvoicePDF(invoice)}
-                              title="Baixar PDF"
-                            >
-                              <Download className="h-4 w-4" />
-                            </Button>
-                            {invoice.status === "pending" && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleOpenPixDialog(invoice)}
-                                title="Baixar PDF com PIX"
-                                disabled={generatingPix === invoice.id}
-                                className="text-primary hover:text-primary hover:bg-primary/10"
-                              >
-                                {generatingPix === invoice.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <QrCode className="h-4 w-4" />
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  disabled={generatingPix === invoice.id}
+                                  title="Baixar PDF"
+                                >
+                                  {generatingPix === invoice.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Download className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => generateInvoicePDF(invoice)}>
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Baixar PDF
+                                </DropdownMenuItem>
+                                {invoice.status === "pending" && (
+                                  <DropdownMenuItem onClick={() => handleOpenPixDialog(invoice)}>
+                                    <QrCode className="h-4 w-4 mr-2" />
+                                    Baixar PDF com PIX
+                                  </DropdownMenuItem>
                                 )}
-                              </Button>
-                            )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                             <Button
                               variant="ghost"
                               size="icon"
