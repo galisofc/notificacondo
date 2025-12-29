@@ -7,7 +7,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   FileText,
-  DollarSign,
   Home,
   Calendar,
   ChevronRight,
@@ -23,8 +22,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface ResidentStats {
   totalOccurrences: number;
   pendingDefenses: number;
-  totalFines: number;
-  pendingFines: number;
 }
 
 interface Occurrence {
@@ -36,13 +33,6 @@ interface Occurrence {
   created_at: string;
 }
 
-interface Fine {
-  id: string;
-  amount: number;
-  status: string;
-  due_date: string;
-  occurrence_id: string;
-}
 
 const ResidentDashboard = () => {
   const { user } = useAuth();
@@ -54,11 +44,8 @@ const ResidentDashboard = () => {
   const [stats, setStats] = useState<ResidentStats>({
     totalOccurrences: 0,
     pendingDefenses: 0,
-    totalFines: 0,
-    pendingFines: 0,
   });
   const [recentOccurrences, setRecentOccurrences] = useState<Occurrence[]>([]);
-  const [pendingFines, setPendingFines] = useState<Fine[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -81,24 +68,9 @@ const ResidentDashboard = () => {
           (o) => o.status === "notificado"
         ).length;
 
-        const { data: finesData, error: finesError } = await supabase
-          .from("fines")
-          .select("*")
-          .eq("resident_id", residentInfo.id);
-
-        if (finesError) throw finesError;
-
-        const fines = finesData || [];
-        const pendingFinesList = fines.filter(
-          (f) => f.status === "em_aberto" || f.status === "vencido"
-        );
-        setPendingFines(pendingFinesList);
-
         setStats({
           totalOccurrences: occurrences.length,
           pendingDefenses: pendingDefenseCount,
-          totalFines: fines.length,
-          pendingFines: pendingFinesList.length,
         });
       } catch (error) {
         console.error("Error fetching resident data:", error);
@@ -161,12 +133,6 @@ const ResidentDashboard = () => {
     );
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
 
   if (loading || roleLoading) {
     return (
@@ -209,12 +175,6 @@ const ResidentDashboard = () => {
       value: stats.pendingDefenses,
       icon: Shield,
       gradient: "from-violet-500 to-purple-600",
-    },
-    {
-      title: "Multas Pendentes",
-      value: stats.pendingFines,
-      icon: DollarSign,
-      gradient: "from-rose-500 to-red-500",
     },
   ];
 
@@ -377,47 +337,6 @@ const ResidentDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Pending Fines */}
-        {pendingFines.length > 0 && (
-          <Card className="bg-card border-border shadow-card">
-            <CardHeader>
-              <CardTitle className="text-base md:text-lg flex items-center gap-2">
-                <DollarSign className="w-4 h-4 md:w-5 md:h-5 text-red-500" />
-                Multas Pendentes
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 md:space-y-3">
-                {pendingFines.map((fine) => (
-                  <div
-                    key={fine.id}
-                    className="p-3 md:p-4 rounded-xl bg-red-500/5 border border-red-500/20"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-semibold text-sm md:text-base text-foreground">
-                          {formatCurrency(fine.amount)}
-                        </p>
-                        <p className="text-xs md:text-sm text-muted-foreground">
-                          Vencimento: {formatDate(fine.due_date)}
-                        </p>
-                      </div>
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          fine.status === "vencido"
-                            ? "bg-red-500/10 text-red-500"
-                            : "bg-amber-500/10 text-amber-500"
-                        }`}
-                      >
-                        {fine.status === "vencido" ? "Vencida" : "Em Aberto"}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </DashboardLayout>
   );
