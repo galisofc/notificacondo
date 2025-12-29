@@ -401,54 +401,81 @@ const ResidentOccurrenceDetails = () => {
               <p className="text-foreground">{occurrence.description}</p>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-muted-foreground" />
+            {occurrence.location && (
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-secondary/30 border border-border/30">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <MapPin className="w-5 h-5 text-primary" />
+                </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Data</p>
-                  <p className="text-sm font-medium">
-                    {formatDate(occurrence.occurred_at)}
-                  </p>
-                </div>
-              </div>
-              {occurrence.location && (
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Local</p>
-                    <p className="text-sm font-medium">{occurrence.location}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Legal Basis */}
-            {(occurrence.convention_article || occurrence.internal_rules_article || occurrence.civil_code_article || occurrence.legal_basis) && (
-              <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
-                  <Scale className="w-4 h-4" />
-                  Fundamentação Legal
-                </h4>
-                <div className="space-y-2 text-sm">
-                  {occurrence.civil_code_article && (
-                    <p><span className="text-muted-foreground">Código Civil:</span> Art. {occurrence.civil_code_article}</p>
-                  )}
-                  {occurrence.convention_article && (
-                    <p><span className="text-muted-foreground">Convenção:</span> Art. {occurrence.convention_article}</p>
-                  )}
-                  {occurrence.internal_rules_article && (
-                    <p><span className="text-muted-foreground">Regimento Interno:</span> Art. {occurrence.internal_rules_article}</p>
-                  )}
-                  {occurrence.legal_basis && (
-                    <div className="mt-3 p-3 bg-muted/50 rounded-lg">
-                      <p className="text-foreground whitespace-pre-wrap">{occurrence.legal_basis}</p>
-                    </div>
-                  )}
+                  <p className="text-xs text-muted-foreground">Local da Ocorrência</p>
+                  <p className="text-sm font-medium text-foreground">{occurrence.location}</p>
                 </div>
               </div>
             )}
           </CardContent>
         </Card>
+
+        {/* Data da Ocorrência - Card separado como no modelo */}
+        <Card className="bg-gradient-card border-border/50">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-blue-500/5 border border-blue-500/20">
+              <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-blue-500" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Data da Ocorrência</p>
+                <p className="text-sm font-medium text-foreground">
+                  {formatDateTime(occurrence.occurred_at)}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Fundamentação Legal - Card separado como no modelo */}
+        {(occurrence.convention_article || occurrence.internal_rules_article || occurrence.civil_code_article || occurrence.legal_basis) && (
+          <Card className="bg-gradient-card border-border/50">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Scale className="w-5 h-5 text-primary" />
+                Fundamentação Legal
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Artigos */}
+              <div className="space-y-4">
+                {occurrence.civil_code_article && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Artigo do Código Civil</p>
+                    <p className="text-sm font-medium text-foreground">Art° {occurrence.civil_code_article}</p>
+                  </div>
+                )}
+                {occurrence.convention_article && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Artigo da Convenção</p>
+                    <p className="text-sm font-medium text-foreground">Art° {occurrence.convention_article}</p>
+                  </div>
+                )}
+                {occurrence.internal_rules_article && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Artigo do Regimento Interno</p>
+                    <p className="text-sm font-medium text-foreground">Art° {occurrence.internal_rules_article}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Observações Legais */}
+              {occurrence.legal_basis && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">Observações Legais</p>
+                  <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                    {occurrence.legal_basis}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Evidences */}
         {evidences.length > 0 && (
