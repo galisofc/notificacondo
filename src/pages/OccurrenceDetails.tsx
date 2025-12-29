@@ -545,30 +545,47 @@ const OccurrenceDetails = () => {
     doc.text(introLines, margin, yPos);
     yPos += introLines.length * 5 + 8;
 
-    // Legal basis paragraph (if exists)
-    const legalReferences: string[] = [];
-    if (occurrence.internal_rules_article) {
-      legalReferences.push(`Art. ${occurrence.internal_rules_article} do Regimento Interno`);
-    }
-    if (occurrence.convention_article) {
-      legalReferences.push(`Art. ${occurrence.convention_article} da Convenção`);
-    }
-    if (occurrence.civil_code_article) {
-      legalReferences.push(`Art. ${occurrence.civil_code_article} do Código Civil`);
-    }
+    // Legal basis section (FUNDAMENTAÇÃO LEGAL)
+    const hasLegalBasis = occurrence.internal_rules_article || occurrence.convention_article || occurrence.civil_code_article || occurrence.legal_basis;
+    
+    if (hasLegalBasis) {
+      // Section header
+      doc.setFont("helvetica", "bold");
+      doc.text("FUNDAMENTAÇÃO LEGAL:", margin, yPos);
+      yPos += 8;
+      doc.setFont("helvetica", "normal");
 
-    if (legalReferences.length > 0 || occurrence.legal_basis) {
-      let legalText = "Conforme ";
-      if (legalReferences.length > 0) {
-        legalText += legalReferences.join(", ");
+      // List each legal reference with its description
+      if (occurrence.civil_code_article) {
+        const civilCodeText = `• Código Civil - Art. ${occurrence.civil_code_article}`;
+        const civilLines = doc.splitTextToSize(civilCodeText, contentWidth);
+        doc.text(civilLines, margin, yPos);
+        yPos += civilLines.length * 5 + 3;
       }
+
+      if (occurrence.convention_article) {
+        const conventionText = `• Convenção do Condomínio - Art. ${occurrence.convention_article}`;
+        const conventionLines = doc.splitTextToSize(conventionText, contentWidth);
+        doc.text(conventionLines, margin, yPos);
+        yPos += conventionLines.length * 5 + 3;
+      }
+
+      if (occurrence.internal_rules_article) {
+        const rulesText = `• Regimento Interno - Art. ${occurrence.internal_rules_article}`;
+        const rulesLines = doc.splitTextToSize(rulesText, contentWidth);
+        doc.text(rulesLines, margin, yPos);
+        yPos += rulesLines.length * 5 + 3;
+      }
+
+      // Additional legal basis description
       if (occurrence.legal_basis) {
-        legalText += legalReferences.length > 0 ? `: ${occurrence.legal_basis}` : occurrence.legal_basis;
+        yPos += 3;
+        const legalBasisLines = doc.splitTextToSize(occurrence.legal_basis, contentWidth);
+        doc.text(legalBasisLines, margin, yPos);
+        yPos += legalBasisLines.length * 5 + 5;
       }
-      
-      const legalLines = doc.splitTextToSize(legalText, contentWidth);
-      doc.text(legalLines, margin, yPos);
-      yPos += legalLines.length * 5 + 8;
+
+      yPos += 5;
     }
 
     // Occurrence description paragraph
