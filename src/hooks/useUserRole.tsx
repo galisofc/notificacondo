@@ -33,15 +33,20 @@ interface UseUserRoleReturn {
   isSindico: boolean;
   isSuperAdmin: boolean;
   residentInfo: ResidentInfo | null;
+  allResidentProfiles: ResidentInfo[];
+  switchApartment: (residentId: string) => void;
   profileInfo: ProfileInfo | null;
   refetchProfile: () => Promise<void>;
 }
+
+const SELECTED_RESIDENT_KEY = "selected_resident_id";
 
 export const useUserRole = (): UseUserRoleReturn => {
   const { user } = useAuth();
   const [role, setRole] = useState<UserRole>(null);
   const [loading, setLoading] = useState(true);
   const [residentInfo, setResidentInfo] = useState<ResidentInfo | null>(null);
+  const [allResidentProfiles, setAllResidentProfiles] = useState<ResidentInfo[]>([]);
   const [profileInfo, setProfileInfo] = useState<ProfileInfo | null>(null);
 
   const fetchProfileInfo = useCallback(async (userId: string) => {
@@ -73,11 +78,21 @@ export const useUserRole = (): UseUserRoleReturn => {
     }
   }, [user, role, fetchProfileInfo]);
 
+  const switchApartment = useCallback((residentId: string) => {
+    const selected = allResidentProfiles.find(r => r.id === residentId);
+    if (selected) {
+      setResidentInfo(selected);
+      localStorage.setItem(SELECTED_RESIDENT_KEY, residentId);
+    }
+  }, [allResidentProfiles]);
+
   useEffect(() => {
     const fetchUserRole = async () => {
       if (!user) {
         setRole(null);
         setProfileInfo(null);
+        setResidentInfo(null);
+        setAllResidentProfiles([]);
         setLoading(false);
         return;
       }
@@ -102,7 +117,7 @@ export const useUserRole = (): UseUserRoleReturn => {
           await fetchProfileInfo(user.id);
         }
 
-        // If user is a resident, fetch their resident info
+        // If user is a resident, fetch all their resident records
         if (userRole === "morador") {
           const { data: residentData, error: residentError } = await supabase
             .from("residents")
@@ -126,30 +141,41 @@ export const useUserRole = (): UseUserRoleReturn => {
               )
             `)
             .eq("user_id", user.id)
-            .order("created_at", { ascending: false })
-            .limit(1);
+            .order("created_at", { ascending: false });
 
           if (residentError) {
             console.error("Error fetching resident info:", residentError);
           }
 
-          const firstResident = residentData?.[0];
-
-          if (firstResident) {
-            const apt = firstResident.apartments as any;
-            setResidentInfo({
-              id: firstResident.id,
-              full_name: firstResident.full_name,
-              email: firstResident.email,
-              phone: firstResident.phone,
-              apartment_id: firstResident.apartment_id,
-              apartment_number: apt.number,
-              block_name: apt.blocks.name,
-              condominium_name: apt.blocks.condominiums.name,
-              condominium_id: apt.blocks.condominiums.id,
-              is_owner: firstResident.is_owner,
-              is_responsible: firstResident.is_responsible,
+          if (residentData && residentData.length > 0) {
+            // Map all resident records
+            const allProfiles: ResidentInfo[] = residentData.map((resident) => {
+              const apt = resident.apartments as any;
+              return {
+                id: resident.id,
+                full_name: resident.full_name,
+                email: resident.email,
+                phone: resident.phone,
+                apartment_id: resident.apartment_id,
+                apartment_number: apt.number,
+                block_name: apt.blocks.name,
+                condominium_name: apt.blocks.condominiums.name,
+                condominium_id: apt.blocks.condominiums.id,
+                is_owner: resident.is_owner,
+                is_responsible: resident.is_responsible,
+              };
             });
+
+            setAllResidentProfiles(allProfiles);
+
+            // Check if there's a saved preference
+            const savedResidentId = localStorage.getItem(SELECTED_RESIDENT_KEY);
+            const savedResident = savedResidentId 
+              ? allProfiles.find(r => r.id === savedResidentId) 
+              : null;
+
+            // Use saved preference or default to first
+            setResidentInfo(savedResident || allProfiles[0]);
           }
         }
       } catch (error) {
@@ -203,6 +229,8 @@ export const useUserRole = (): UseUserRoleReturn => {
     isSindico: role === "sindico",
     isSuperAdmin: role === "super_admin",
     residentInfo,
+    allResidentProfiles,
+    switchApartment,
     profileInfo,
     refetchProfile,
   };

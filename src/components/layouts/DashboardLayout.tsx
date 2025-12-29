@@ -22,6 +22,7 @@ import { NavLink } from "@/components/NavLink";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import ApartmentSwitcher from "@/components/resident/ApartmentSwitcher";
 import {
   Building2,
   LayoutDashboard,
@@ -303,6 +304,9 @@ function SidebarNavigation() {
           )}
         </div>
       </SidebarHeader>
+
+      {/* Apartment Switcher for Residents */}
+      {role === "morador" && !collapsed && <ApartmentSwitcher />}
 
       {/* Navigation */}
       <SidebarContent className="px-3">
