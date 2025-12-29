@@ -4,7 +4,7 @@ import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { differenceInDays, differenceInHours, addDays, isPast } from "date-fns";
+import { differenceInDays, differenceInHours, addDays, isPast, startOfDay, parseISO } from "date-fns";
 import { useDateFormatter } from "@/hooks/useFormattedDate";
 import { addBusinessDays } from "@/lib/utils";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -280,9 +280,9 @@ const SindicoSubscriptions = () => {
       let proratedDescription = "";
 
       if (isUpgrade && sub.current_period_start && sub.current_period_end) {
-        const periodStart = new Date(sub.current_period_start);
-        const periodEnd = new Date(sub.current_period_end);
-        const today = new Date();
+        const periodStart = startOfDay(parseISO(sub.current_period_start));
+        const periodEnd = startOfDay(parseISO(sub.current_period_end));
+        const today = startOfDay(new Date());
 
         const totalDays = differenceInDays(periodEnd, periodStart);
         const daysUsed = differenceInDays(today, periodStart);
@@ -379,9 +379,9 @@ const SindicoSubscriptions = () => {
 
     if (!sub.current_period_start || !sub.current_period_end) return null;
 
-    const periodStart = new Date(sub.current_period_start);
-    const periodEnd = new Date(sub.current_period_end);
-    const today = new Date();
+    const periodStart = startOfDay(parseISO(sub.current_period_start));
+    const periodEnd = startOfDay(parseISO(sub.current_period_end));
+    const today = startOfDay(new Date());
 
     const totalDays = differenceInDays(periodEnd, periodStart);
     const daysUsed = differenceInDays(today, periodStart);
@@ -726,7 +726,7 @@ const SindicoSubscriptions = () => {
                             <span>Renovação: {formatDate(sub.current_period_end)}</span>
                           </div>
                           {(() => {
-                            const daysRemaining = differenceInDays(new Date(sub.current_period_end), new Date());
+                            const daysRemaining = differenceInDays(startOfDay(parseISO(sub.current_period_end)), startOfDay(new Date()));
                             const isUrgent = daysRemaining <= 7;
                             const isWarning = daysRemaining <= 15;
                             return (
