@@ -32,6 +32,8 @@ import {
   XCircle,
   Building2,
   Home,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -98,8 +100,28 @@ const ResidentOccurrenceDetails = () => {
   const [submitting, setSubmitting] = useState(false);
   const [defenseContent, setDefenseContent] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [accessError, setAccessError] = useState<string | null>(null);
+
+  // Filter only image evidences for navigation
+  const imageEvidences = evidences.filter(e => e.file_type === "image");
+
+  const handlePrevImage = () => {
+    if (selectedImageIndex !== null && selectedImageIndex > 0) {
+      setSelectedImageIndex(selectedImageIndex - 1);
+    }
+  };
+
+  const handleNextImage = () => {
+    if (selectedImageIndex !== null && selectedImageIndex < imageEvidences.length - 1) {
+      setSelectedImageIndex(selectedImageIndex + 1);
+    }
+  };
+
+  const openImageModal = (imageUrl: string) => {
+    const index = imageEvidences.findIndex(e => e.file_url === imageUrl);
+    setSelectedImageIndex(index >= 0 ? index : 0);
+  };
   useEffect(() => {
     const fetchData = async () => {
       if (!id || !residentInfo) return;
@@ -554,7 +576,7 @@ const ResidentOccurrenceDetails = () => {
                   evidence.file_type === "image" ? (
                     <button
                       key={evidence.id}
-                      onClick={() => setSelectedImage(evidence.file_url)}
+                      onClick={() => openImageModal(evidence.file_url)}
                       className="aspect-square rounded-lg bg-background/50 border border-border/30 flex items-center justify-center hover:border-primary/50 transition-colors overflow-hidden cursor-pointer"
                     >
                       <img
@@ -584,16 +606,47 @@ const ResidentOccurrenceDetails = () => {
           </Card>
         )}
 
-        {/* Image Lightbox Dialog */}
-        <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
-          <DialogContent className="max-w-4xl p-0 bg-transparent border-none">
+        {/* Image Lightbox Dialog with Navigation */}
+        <Dialog open={selectedImageIndex !== null} onOpenChange={() => setSelectedImageIndex(null)}>
+          <DialogContent className="max-w-4xl p-2 bg-background/95 backdrop-blur border-border">
             <DialogTitle className="sr-only">Visualizar Evidência</DialogTitle>
-            {selectedImage && (
-              <img
-                src={selectedImage}
-                alt="Evidência ampliada"
-                className="w-full h-auto max-h-[90vh] object-contain rounded-lg"
-              />
+            {selectedImageIndex !== null && imageEvidences[selectedImageIndex] && (
+              <div className="relative">
+                <img
+                  src={imageEvidences[selectedImageIndex].file_url}
+                  alt="Evidência ampliada"
+                  className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+                />
+                
+                {/* Navigation Buttons */}
+                {imageEvidences.length > 1 && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background disabled:opacity-30"
+                      onClick={handlePrevImage}
+                      disabled={selectedImageIndex === 0}
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background disabled:opacity-30"
+                      onClick={handleNextImage}
+                      disabled={selectedImageIndex === imageEvidences.length - 1}
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </Button>
+                    
+                    {/* Image Counter */}
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-background/80 px-3 py-1 rounded-full text-sm text-foreground">
+                      {selectedImageIndex + 1} / {imageEvidences.length}
+                    </div>
+                  </>
+                )}
+              </div>
             )}
           </DialogContent>
         </Dialog>
