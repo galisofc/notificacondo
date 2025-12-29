@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { formatDate } from "@/lib/dateUtils";
+import { useDateFormatter } from "@/hooks/useFormattedDate";
 import { Helmet } from "react-helmet-async";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,6 +44,7 @@ const ResidentOccurrences = () => {
   const { residentInfo, loading: roleLoading } = useUserRole();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { date: formatDate } = useDateFormatter();
 
   const [occurrences, setOccurrences] = useState<Occurrence[]>([]);
   const [loading, setLoading] = useState(true);

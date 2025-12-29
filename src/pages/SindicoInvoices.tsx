@@ -4,7 +4,7 @@ import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { formatDate } from "@/lib/dateUtils";
+import { useDateFormatter } from "@/hooks/useFormattedDate";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
 import { MercadoPagoTransparentCheckout } from "@/components/mercadopago/MercadoPagoTransparentCheckout";
@@ -111,6 +111,7 @@ const SindicoInvoices = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { date: formatDate } = useDateFormatter();
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus>("all");
   const [condominiumFilter, setCondominiumFilter] = useState<string>("all");
   const [isGenerating, setIsGenerating] = useState(false);

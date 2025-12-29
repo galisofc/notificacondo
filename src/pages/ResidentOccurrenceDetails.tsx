@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { formatDate, formatDateTime } from "@/lib/dateUtils";
+import { useDateFormatter } from "@/hooks/useFormattedDate";
 import { useParams, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
@@ -72,6 +72,7 @@ const ResidentOccurrenceDetails = () => {
   const { residentInfo, loading: roleLoading } = useUserRole();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { date: formatDate, dateTime: formatDateTime } = useDateFormatter();
 
   const [occurrence, setOccurrence] = useState<OccurrenceDetails | null>(null);
   const [defenses, setDefenses] = useState<Defense[]>([]);
