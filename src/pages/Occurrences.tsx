@@ -833,7 +833,7 @@ const Occurrences = () => {
               <div className="space-y-4">
                 <h3 className="font-semibold text-foreground flex items-center gap-2">
                   <Scale className="w-4 h-4 text-primary" />
-                  Base Legal (Obrigatório para multas)
+                  Base Legal
                 </h3>
                 <div className="space-y-4">
                   <div className="space-y-2">
