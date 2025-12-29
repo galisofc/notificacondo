@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { differenceInDays, startOfMonth, endOfMonth } from "date-fns";
-import { formatDate, formatMonthYear, formatDateTime } from "@/lib/dateUtils";
+import { useDateFormatter } from "@/hooks/useFormattedDate";
 import jsPDF from "jspdf";
 import {
   Card,
@@ -130,6 +130,7 @@ export function InvoicesManagement({
 }: InvoicesManagementProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { date: formatDate, dateTime: formatDateTime, monthYear: formatMonthYear } = useDateFormatter();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceWithDetails | null>(null);

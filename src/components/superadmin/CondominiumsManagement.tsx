@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { formatDate, formatDateTime } from "@/lib/dateUtils";
+import { useDateFormatter } from "@/hooks/useFormattedDate";
 import { isValidCNPJ } from "@/lib/utils";
 import {
   Card,
@@ -74,6 +74,7 @@ interface CondominiumWithOwner extends Condominium {
 export function CondominiumsManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { date: formatDate, dateTime: formatDateTime } = useDateFormatter();
   
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);

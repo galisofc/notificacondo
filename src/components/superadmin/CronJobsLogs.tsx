@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { formatDateTime, formatCustom } from "@/lib/dateUtils";
+import { useDateFormatter } from "@/hooks/useFormattedDate";
 import {
   Card,
   CardContent,
@@ -93,6 +93,7 @@ export function CronJobsLogs() {
   const queryClient = useQueryClient();
   const [selectedJob, setSelectedJob] = useState<CronJob | null>(null);
   const [isRunDialogOpen, setIsRunDialogOpen] = useState(false);
+  const { dateTime: formatDateTime, custom: formatCustom } = useDateFormatter();
 
   // Fetch cron jobs
   const { data: cronJobs, isLoading: isLoadingJobs } = useQuery({

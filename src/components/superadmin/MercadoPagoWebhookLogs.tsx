@@ -38,7 +38,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { formatDateTime, formatCustom, formatDateTimeLong } from "@/lib/dateUtils";
+import { useDateFormatter } from "@/hooks/useFormattedDate";
 
 const ITEMS_PER_PAGE = 5;
 
@@ -63,6 +63,7 @@ export function MercadoPagoWebhookLogs() {
   const [selectedLog, setSelectedLog] = useState<WebhookLog | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const { dateTime: formatDateTime, custom: formatCustom, dateTimeLong: formatDateTimeLong } = useDateFormatter();
 
   const { data: logs, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["mercadopago-webhook-logs"],

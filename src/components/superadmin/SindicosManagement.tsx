@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { formatDate } from "@/lib/dateUtils";
+import { useDateFormatter } from "@/hooks/useFormattedDate";
 import {
   Card,
   CardContent,
@@ -77,6 +77,7 @@ interface SindicoWithProfile {
 }
 
 export function SindicosManagement() {
+  const { date: formatDate } = useDateFormatter();
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedSindico, setSelectedSindico] = useState<SindicoWithProfile | null>(null);

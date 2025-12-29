@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { formatDate, formatDateTime } from "@/lib/dateUtils";
+import { useDateFormatter } from "@/hooks/useFormattedDate";
 import {
   Users,
   Building2,
@@ -161,6 +161,7 @@ const formatAuditAction = (tableName: string, action: string, newData: any): str
 export default function SuperAdminDashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { date: formatDate, dateTime: formatDateTime } = useDateFormatter();
 
   // Realtime subscription para audit_logs
   useEffect(() => {

@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { differenceInDays, differenceInHours, addDays, isPast } from "date-fns";
-import { formatDate } from "@/lib/dateUtils";
+import { useDateFormatter } from "@/hooks/useFormattedDate";
 import { addBusinessDays } from "@/lib/utils";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
@@ -99,6 +99,7 @@ const SindicoSubscriptions = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { date: formatDate } = useDateFormatter();
   const [changePlanDialog, setChangePlanDialog] = useState<{ open: boolean; subscription: Subscription | null }>({
     open: false,
     subscription: null,

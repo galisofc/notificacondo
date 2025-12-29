@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { differenceInHours, isPast } from "date-fns";
-import { formatDate, formatDateTime } from "@/lib/dateUtils";
+import { useDateFormatter } from "@/hooks/useFormattedDate";
 import { formatCNPJ } from "@/components/ui/masked-input";
 import {
   Card,
@@ -78,6 +78,7 @@ export function SubscriptionsMonitor() {
   const navigate = useNavigate();
   const [planFilter, setPlanFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const { date: formatDate, dateTime: formatDateTime } = useDateFormatter();
 
   const { data: subscriptions, isLoading } = useQuery({
     queryKey: ["superadmin-subscriptions", planFilter],

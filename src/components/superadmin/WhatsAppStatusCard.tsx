@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { formatTime } from "@/lib/dateUtils";
+import { useDateFormatter } from "@/hooks/useFormattedDate";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import {
@@ -34,6 +34,7 @@ export function WhatsAppStatusCard() {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("checking");
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
+  const { time: formatTime } = useDateFormatter();
 
   // Fetch WhatsApp config
   const { data: whatsappConfig, isLoading: isLoadingConfig } = useQuery({

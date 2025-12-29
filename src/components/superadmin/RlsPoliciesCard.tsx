@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { formatTime } from "@/lib/dateUtils";
+import { useDateFormatter } from "@/hooks/useFormattedDate";
 import { useQuery } from "@tanstack/react-query";
 import {
   Card,
@@ -30,6 +30,7 @@ interface RlsTableStatus {
 export function RlsPoliciesCard() {
   const { toast } = useToast();
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
+  const { time: formatTime } = useDateFormatter();
 
   const { data: rlsStatus, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["rls-policies-status"],
