@@ -23,6 +23,8 @@ import {
   Image as ImageIcon,
   Video,
   CheckCircle2,
+  Gavel,
+  XCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -66,6 +68,13 @@ interface UploadedFile {
   type: string;
 }
 
+interface Decision {
+  id: string;
+  decision: string;
+  justification: string;
+  decided_at: string;
+}
+
 const ResidentOccurrenceDetails = () => {
   const { id } = useParams();
   const { user } = useAuth();
@@ -77,6 +86,7 @@ const ResidentOccurrenceDetails = () => {
   const [occurrence, setOccurrence] = useState<OccurrenceDetails | null>(null);
   const [defenses, setDefenses] = useState<Defense[]>([]);
   const [evidences, setEvidences] = useState<Evidence[]>([]);
+  const [decisions, setDecisions] = useState<Decision[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [defenseContent, setDefenseContent] = useState("");
@@ -132,6 +142,15 @@ const ResidentOccurrenceDetails = () => {
           .eq("occurrence_id", id);
 
         setEvidences(evidencesData || []);
+
+        // Fetch decisions
+        const { data: decisionsData } = await supabase
+          .from("decisions")
+          .select("*")
+          .eq("occurrence_id", id)
+          .order("decided_at", { ascending: false });
+
+        setDecisions(decisionsData || []);
       } catch (error) {
         console.error("Error fetching occurrence:", error);
         toast({
@@ -612,6 +631,73 @@ const ResidentOccurrenceDetails = () => {
                   <p className="text-foreground whitespace-pre-wrap">{defense.content}</p>
                 </div>
               ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Decision Section - Shown when occurrence has been judged */}
+        {decisions.length > 0 && (
+          <Card className="bg-gradient-card border-border/50">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Gavel className="w-5 h-5 text-primary" />
+                Decisão do Síndico
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {decisions.map((decision) => {
+                const isPositive = decision.decision === "arquivada";
+                const decisionLabels: Record<string, string> = {
+                  arquivada: "Arquivada",
+                  advertido: "Advertido",
+                  multado: "Multado",
+                };
+                const decisionStyles: Record<string, string> = {
+                  arquivada: "bg-green-500/10 border-green-500/30 text-green-600",
+                  advertido: "bg-orange-500/10 border-orange-500/30 text-orange-600",
+                  multado: "bg-red-500/10 border-red-500/30 text-red-600",
+                };
+
+                return (
+                  <div
+                    key={decision.id}
+                    className={`p-5 rounded-xl border ${decisionStyles[decision.decision] || "bg-muted/50 border-border"}`}
+                  >
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                        isPositive ? "bg-green-500/20" : "bg-destructive/20"
+                      }`}>
+                        {isPositive ? (
+                          <CheckCircle2 className="w-5 h-5 text-green-600" />
+                        ) : (
+                          <XCircle className="w-5 h-5 text-destructive" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Resultado</p>
+                        <p className="font-semibold text-foreground">
+                          {decisionLabels[decision.decision] || decision.decision}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Justificativa</p>
+                        <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                          {decision.justification}
+                        </p>
+                      </div>
+
+                      <div className="pt-3 border-t border-border/30">
+                        <p className="text-xs text-muted-foreground">
+                          Decidido em {formatDateTime(decision.decided_at)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </CardContent>
           </Card>
         )}
