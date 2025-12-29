@@ -65,12 +65,20 @@ Deno.serve(async (req) => {
     console.log("Selected payment method:", form_data.selectedPaymentMethod);
     console.log("Amount:", amount);
 
-    // Get invoice details to validate
+    // Get invoice details to validate - include condominium address for boleto
     const { data: invoice, error: invoiceError } = await supabase
       .from("invoices")
       .select(`
         *,
-        condominium:condominiums(name)
+        condominium:condominiums(
+          name,
+          address,
+          address_number,
+          neighborhood,
+          city,
+          state,
+          zip_code
+        )
       `)
       .eq("id", invoice_id)
       .single();
@@ -132,8 +140,19 @@ Deno.serve(async (req) => {
 
     // Ticket (Boleto) specific fields - requires address
     if (paymentType === "ticket") {
-      // Boleto requires payer address information
-      if (formData.payer.address) {
+      // Try to use address from form_data first, then from condominium
+      const condo = invoice.condominium as {
+        name?: string;
+        address?: string;
+        address_number?: string;
+        neighborhood?: string;
+        city?: string;
+        state?: string;
+        zip_code?: string;
+      } | null;
+
+      if (formData.payer.address?.zip_code) {
+        // Use address from form data
         paymentPayload.payer.address = {
           zip_code: formData.payer.address.zip_code,
           street_name: formData.payer.address.street_name,
@@ -142,10 +161,21 @@ Deno.serve(async (req) => {
           city: formData.payer.address.city,
           federal_unit: formData.payer.address.federal_unit,
         };
+        console.log("Using address from form data");
+      } else if (condo?.zip_code && condo?.address) {
+        // Use condominium address
+        paymentPayload.payer.address = {
+          zip_code: condo.zip_code.replace(/\D/g, ''),
+          street_name: condo.address,
+          street_number: condo.address_number || "S/N",
+          neighborhood: condo.neighborhood || "Centro",
+          city: condo.city || "São Paulo",
+          federal_unit: condo.state || "SP",
+        };
+        console.log("Using condominium address:", paymentPayload.payer.address);
       } else {
-        // If no address provided, use default placeholder address (required by MercadoPago)
-        // This allows the boleto to be generated - user should update their address in profile
-        console.log("No address provided for boleto, using placeholder address");
+        // Fallback to default placeholder address
+        console.log("No address available, using placeholder address");
         paymentPayload.payer.address = {
           zip_code: "01310100",
           street_name: "Av Paulista",
