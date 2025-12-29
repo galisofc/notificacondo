@@ -126,26 +126,29 @@ export const useUserRole = (): UseUserRoleReturn => {
               )
             `)
             .eq("user_id", user.id)
-            .maybeSingle();
+            .order("created_at", { ascending: false })
+            .limit(1);
 
           if (residentError) {
             console.error("Error fetching resident info:", residentError);
           }
 
-          if (residentData) {
-            const apt = residentData.apartments as any;
+          const firstResident = residentData?.[0];
+
+          if (firstResident) {
+            const apt = firstResident.apartments as any;
             setResidentInfo({
-              id: residentData.id,
-              full_name: residentData.full_name,
-              email: residentData.email,
-              phone: residentData.phone,
-              apartment_id: residentData.apartment_id,
+              id: firstResident.id,
+              full_name: firstResident.full_name,
+              email: firstResident.email,
+              phone: firstResident.phone,
+              apartment_id: firstResident.apartment_id,
               apartment_number: apt.number,
               block_name: apt.blocks.name,
               condominium_name: apt.blocks.condominiums.name,
               condominium_id: apt.blocks.condominiums.id,
-              is_owner: residentData.is_owner,
-              is_responsible: residentData.is_responsible,
+              is_owner: firstResident.is_owner,
+              is_responsible: firstResident.is_responsible,
             });
           }
         }
