@@ -345,11 +345,27 @@ export function InvoicesManagement() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("condominiums")
-        .select("id, name")
+        .select("id, name, cnpj")
         .order("name");
       if (error) throw error;
       return data;
     },
+  });
+
+  // Estado para pesquisa de condomínio
+  const [condoSearchQuery, setCondoSearchQuery] = useState("");
+
+  // Filtrar condomínios por nome ou CNPJ
+  const filteredCondominiums = condominiums?.filter((condo) => {
+    if (!condoSearchQuery) return true;
+    const query = condoSearchQuery.toLowerCase().trim();
+    const queryDigits = condoSearchQuery.replace(/\D/g, "");
+    
+    const matchesName = condo.name.toLowerCase().includes(query);
+    const cnpjDigits = condo.cnpj?.replace(/\D/g, "") || "";
+    const matchesCnpj = queryDigits.length > 0 && cnpjDigits.includes(queryDigits);
+    
+    return matchesName || matchesCnpj;
   });
 
   // Query para buscar subscription do condomínio selecionado
@@ -1653,7 +1669,17 @@ export function InvoicesManagement() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="condo-select">Condomínio *</Label>
+              <Label htmlFor="condo-search">Condomínio *</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="condo-search"
+                  placeholder="Pesquisar por nome ou CNPJ..."
+                  value={condoSearchQuery}
+                  onChange={(e) => setCondoSearchQuery(e.target.value)}
+                  className="pl-9 mb-2"
+                />
+              </div>
               <Select
                 value={newInvoiceData.condominium_id}
                 onValueChange={(value) =>
@@ -1663,12 +1689,25 @@ export function InvoicesManagement() {
                 <SelectTrigger id="condo-select">
                   <SelectValue placeholder="Selecione o condomínio" />
                 </SelectTrigger>
-                <SelectContent>
-                  {condominiums?.map((condo) => (
-                    <SelectItem key={condo.id} value={condo.id}>
-                      {condo.name}
-                    </SelectItem>
-                  ))}
+                <SelectContent className="max-h-[200px]">
+                  {filteredCondominiums?.length === 0 ? (
+                    <div className="py-2 px-3 text-sm text-muted-foreground text-center">
+                      Nenhum condomínio encontrado
+                    </div>
+                  ) : (
+                    filteredCondominiums?.map((condo) => (
+                      <SelectItem key={condo.id} value={condo.id}>
+                        <div className="flex flex-col">
+                          <span>{condo.name}</span>
+                          {condo.cnpj && (
+                            <span className="text-xs text-muted-foreground font-mono">
+                              {formatCNPJ(condo.cnpj)}
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
