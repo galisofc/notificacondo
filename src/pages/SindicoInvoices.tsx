@@ -547,9 +547,23 @@ const SindicoInvoices = () => {
                             </TableCell>
                             <TableCell className="text-muted-foreground max-w-[200px]">
                               {isAvulsa ? (
-                                <span className="truncate block" title={invoice.description || "Fatura Avulsa"}>
-                                  {invoice.description || "Fatura Avulsa"}
-                                </span>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="truncate block cursor-help">
+                                      {invoice.description || "Fatura Avulsa"}
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="max-w-xs">
+                                    <div className="space-y-1.5">
+                                      <p className="font-medium text-foreground">Fatura Avulsa</p>
+                                      <p className="text-sm">{invoice.description || "Sem descrição"}</p>
+                                      <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1 border-t">
+                                        <Calendar className="h-3 w-3" />
+                                        <span>Criada em {formatDate(invoice.created_at)}</span>
+                                      </div>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
                               ) : (
                                 <span>
                                   {formatDate(invoice.period_start)} - {formatDate(invoice.period_end)}
