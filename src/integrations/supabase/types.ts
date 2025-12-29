@@ -1264,7 +1264,6 @@ export type Database = {
         | "registrada"
         | "notificado"
         | "em_defesa"
-        | "analisando"
         | "arquivada"
         | "advertido"
         | "multado"
@@ -1403,7 +1402,6 @@ export const Constants = {
         "registrada",
         "notificado",
         "em_defesa",
-        "analisando",
         "arquivada",
         "advertido",
         "multado",
