@@ -423,21 +423,26 @@ const ResidentOccurrenceDetails = () => {
             </div>
 
             {/* Legal Basis */}
-            {(occurrence.convention_article || occurrence.internal_rules_article || occurrence.civil_code_article) && (
+            {(occurrence.convention_article || occurrence.internal_rules_article || occurrence.civil_code_article || occurrence.legal_basis) && (
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
                   <Scale className="w-4 h-4" />
                   Fundamentação Legal
                 </h4>
                 <div className="space-y-2 text-sm">
+                  {occurrence.civil_code_article && (
+                    <p><span className="text-muted-foreground">Código Civil:</span> Art. {occurrence.civil_code_article}</p>
+                  )}
                   {occurrence.convention_article && (
-                    <p><span className="text-muted-foreground">Convenção:</span> {occurrence.convention_article}</p>
+                    <p><span className="text-muted-foreground">Convenção:</span> Art. {occurrence.convention_article}</p>
                   )}
                   {occurrence.internal_rules_article && (
-                    <p><span className="text-muted-foreground">Regimento Interno:</span> {occurrence.internal_rules_article}</p>
+                    <p><span className="text-muted-foreground">Regimento Interno:</span> Art. {occurrence.internal_rules_article}</p>
                   )}
-                  {occurrence.civil_code_article && (
-                    <p><span className="text-muted-foreground">Código Civil:</span> {occurrence.civil_code_article}</p>
+                  {occurrence.legal_basis && (
+                    <div className="mt-3 p-3 bg-muted/50 rounded-lg">
+                      <p className="text-foreground whitespace-pre-wrap">{occurrence.legal_basis}</p>
+                    </div>
                   )}
                 </div>
               </div>
