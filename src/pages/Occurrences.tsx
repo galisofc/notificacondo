@@ -23,6 +23,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   AlertTriangle,
   Plus,
   Loader2,
@@ -107,6 +117,7 @@ const Occurrences = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [sendingNotification, setSendingNotification] = useState<string | null>(null);
+  const [confirmNotifyDialog, setConfirmNotifyDialog] = useState<{ open: boolean; occurrence: any | null }>({ open: false, occurrence: null });
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [formData, setFormData] = useState({
     condominium_id: "",
@@ -724,7 +735,7 @@ const Occurrences = () => {
                         variant="hero" 
                         size="sm" 
                         className="text-xs"
-                        onClick={() => handleNotify(occurrence)}
+                        onClick={() => setConfirmNotifyDialog({ open: true, occurrence })}
                         disabled={sendingNotification === occurrence.id}
                       >
                         {sendingNotification === occurrence.id ? (
@@ -741,6 +752,47 @@ const Occurrences = () => {
             ))}
           </div>
         )}
+
+        {/* Confirmation Dialog for Notification */}
+        <AlertDialog 
+          open={confirmNotifyDialog.open} 
+          onOpenChange={(open) => setConfirmNotifyDialog({ open, occurrence: open ? confirmNotifyDialog.occurrence : null })}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <Send className="w-5 h-5 text-primary" />
+                Confirmar Notificação
+              </AlertDialogTitle>
+              <AlertDialogDescription className="space-y-2">
+                <p>Você está prestes a enviar uma notificação via WhatsApp para o morador sobre:</p>
+                <p className="font-medium text-foreground">
+                  {confirmNotifyDialog.occurrence?.title}
+                </p>
+                <p className="text-sm">
+                  Morador: <span className="font-medium">{confirmNotifyDialog.occurrence?.residents?.full_name || "Não identificado"}</span>
+                </p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Esta ação enviará uma mensagem via WhatsApp e alterará o status da ocorrência para "Notificado".
+                </p>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (confirmNotifyDialog.occurrence) {
+                    handleNotify(confirmNotifyDialog.occurrence);
+                  }
+                  setConfirmNotifyDialog({ open: false, occurrence: null });
+                }}
+              >
+                <Send className="w-4 h-4 mr-2" />
+                Confirmar e Enviar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
