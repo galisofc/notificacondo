@@ -902,6 +902,14 @@ export function InvoicesManagement({
     }
 
     const daysUntilDue = differenceInDays(due, today);
+    if (daysUntilDue === 0) {
+      return (
+        <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20">
+          <Clock className="h-3 w-3 mr-1" />
+          Vence hoje
+        </Badge>
+      );
+    }
     if (daysUntilDue <= 7) {
       return (
         <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20">
