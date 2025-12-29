@@ -906,7 +906,7 @@ export function InvoicesManagement({
       return (
         <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20">
           <Clock className="h-3 w-3 mr-1" />
-          Vence em {daysUntilDue} dias
+          Vence em {daysUntilDue} {daysUntilDue === 1 ? "dia" : "dias"}
         </Badge>
       );
     }
