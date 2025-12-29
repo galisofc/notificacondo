@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatDate, formatDateTime } from "@/lib/dateUtils";
 import { useParams, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
@@ -407,7 +408,7 @@ const ResidentOccurrenceDetails = () => {
                 <div>
                   <p className="text-xs text-muted-foreground">Data</p>
                   <p className="text-sm font-medium">
-                    {new Date(occurrence.occurred_at).toLocaleDateString("pt-BR")}
+                    {formatDate(occurrence.occurred_at)}
                   </p>
                 </div>
               </div>
@@ -575,8 +576,7 @@ const ResidentOccurrenceDetails = () => {
               {defenses.map((defense) => (
                 <div key={defense.id} className="p-4 rounded-xl bg-green-500/5 border border-green-500/20">
                   <p className="text-sm text-muted-foreground mb-2">
-                    Enviada em {new Date(defense.submitted_at).toLocaleDateString("pt-BR")} às{" "}
-                    {new Date(defense.submitted_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                    Enviada em {formatDateTime(defense.submitted_at)}
                   </p>
                   <p className="text-foreground whitespace-pre-wrap">{defense.content}</p>
                 </div>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatTime } from "@/lib/dateUtils";
 import { useQuery } from "@tanstack/react-query";
 import {
   Card,
@@ -158,7 +159,7 @@ export function RlsPoliciesCard() {
                 </p>
                 {lastChecked && (
                   <span className="text-xs text-muted-foreground">
-                    Última verificação: {lastChecked.toLocaleTimeString("pt-BR")}
+                    Última verificação: {formatTime(lastChecked)}
                   </span>
                 )}
               </div>

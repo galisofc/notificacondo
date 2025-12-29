@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { formatDate } from "@/lib/dateUtils";
 import { Helmet } from "react-helmet-async";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
@@ -364,12 +365,12 @@ const ResidentOccurrences = () => {
                             <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
                               <span className="flex items-center gap-1">
                                 <Calendar className="w-3 h-3" />
-                                Ocorrência: {new Date(occurrence.occurred_at).toLocaleDateString("pt-BR")}
+                                Ocorrência: {formatDate(occurrence.occurred_at)}
                               </span>
                               {deadlineInfo && (
                                 <span className="flex items-center gap-1">
                                   <Clock className="w-3 h-3" />
-                                  Prazo: {deadlineInfo.deadline.toLocaleDateString("pt-BR")}
+                                  Prazo: {formatDate(deadlineInfo.deadline)}
                                 </span>
                               )}
                             </div>
