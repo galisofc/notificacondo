@@ -733,8 +733,12 @@ export function InvoicesManagement({
     doc.setFont("helvetica", "normal");
     doc.setTextColor(textDark[0], textDark[1], textDark[2]);
     
-    const periodText = "Assinatura - Periodo: " + formatDate(invoice.period_start) + " a " + formatDate(invoice.period_end);
-    doc.text(periodText, 25, yPos);
+    // Verificar se é fatura avulsa (tem descrição personalizada)
+    const isAvulsa = invoice.description && !invoice.description.startsWith("Assinatura");
+    const itemDescription = isAvulsa 
+      ? invoice.description.replace(/Desconto:\s*\d+%\s*/g, "").trim() || "Fatura Avulsa"
+      : "Assinatura - Periodo: " + formatDate(invoice.period_start) + " a " + formatDate(invoice.period_end);
+    doc.text(itemDescription, 25, yPos);
     doc.text("01", 120, yPos, { align: "center" });
     doc.text(formatCurrency(originalAmount), 150, yPos, { align: "center" });
     doc.text(formatCurrency(originalAmount), pageWidth - 25, yPos, { align: "right" });
