@@ -106,6 +106,7 @@ const Occurrences = () => {
   // Form states
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [sendingNotification, setSendingNotification] = useState<string | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [formData, setFormData] = useState({
     condominium_id: "",
@@ -454,6 +455,60 @@ const Occurrences = () => {
     }
   };
 
+  const handleNotify = async (occurrence: any) => {
+    if (!occurrence.resident_id) {
+      toast({
+        title: "Erro",
+        description: "Esta ocorrência não possui um morador associado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSendingNotification(occurrence.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-whatsapp-notification", {
+        body: {
+          occurrence_id: occurrence.id,
+          resident_id: occurrence.resident_id,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      // Update occurrence status to 'notificado'
+      const { error: updateError } = await supabase
+        .from("occurrences")
+        .update({ status: "notificado" })
+        .eq("id", occurrence.id);
+
+      if (updateError) {
+        console.error("Error updating status:", updateError);
+      }
+
+      toast({
+        title: "Notificação enviada!",
+        description: "O morador foi notificado via WhatsApp com sucesso.",
+      });
+
+      // Refresh the list
+      fetchData();
+    } catch (error: any) {
+      console.error("Error sending notification:", error);
+      toast({
+        title: "Erro ao enviar notificação",
+        description: error.message || "Não foi possível enviar a notificação. Verifique a configuração do WhatsApp.",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingNotification(null);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
       registrada: "bg-blue-500/10 text-blue-500",
@@ -665,9 +720,19 @@ const Occurrences = () => {
                       Ver
                     </Button>
                     {occurrence.status === "registrada" && occurrence.resident_id && (
-                      <Button variant="hero" size="sm" className="text-xs">
-                        <Send className="w-3 h-3 md:w-4 md:h-4 mr-1" />
-                        Notificar
+                      <Button 
+                        variant="hero" 
+                        size="sm" 
+                        className="text-xs"
+                        onClick={() => handleNotify(occurrence)}
+                        disabled={sendingNotification === occurrence.id}
+                      >
+                        {sendingNotification === occurrence.id ? (
+                          <Loader2 className="w-3 h-3 md:w-4 md:h-4 mr-1 animate-spin" />
+                        ) : (
+                          <Send className="w-3 h-3 md:w-4 md:h-4 mr-1" />
+                        )}
+                        {sendingNotification === occurrence.id ? "Enviando..." : "Notificar"}
                       </Button>
                     )}
                   </div>
