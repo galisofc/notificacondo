@@ -4,7 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { differenceInHours, isPast, format } from "date-fns";
+import { differenceInHours, isPast, format, startOfDay, parseISO } from "date-fns";
 import { useDateFormatter } from "@/hooks/useFormattedDate";
 
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -935,7 +935,10 @@ export default function SubscriptionDetails() {
   const planInfo = PLAN_INFO[subscription.plan as PlanType];
 
   const getInvoiceStatusBadge = (status: string, dueDate: string) => {
-    const isOverdue = new Date(dueDate) < new Date() && status === "pending";
+    // Usa startOfDay para comparar apenas as datas, ignorando horário
+    const today = startOfDay(new Date());
+    const dueDateParsed = startOfDay(parseISO(dueDate));
+    const isOverdue = dueDateParsed < today && status === "pending";
     
     if (status === "paid") {
       return (
