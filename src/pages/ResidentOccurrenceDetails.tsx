@@ -52,7 +52,7 @@ interface OccurrenceDetails {
   civil_code_article: string | null;
   legal_basis: string | null;
   created_at: string;
-  condominiums: { name: string } | null;
+  condominiums: { name: string; defense_deadline_days: number } | null;
   blocks: { name: string } | null;
   apartments: { number: string } | null;
 }
@@ -159,7 +159,7 @@ const ResidentOccurrenceDetails = () => {
           .from("occurrences")
           .select(`
             *,
-            condominiums(name),
+            condominiums(name, defense_deadline_days),
             blocks(name),
             apartments(number)
           `)

@@ -62,7 +62,7 @@ interface Occurrence {
   internal_rules_article: string | null;
   civil_code_article: string | null;
   legal_basis: string | null;
-  condominiums: { name: string } | null;
+  condominiums: { name: string; defense_deadline_days: number } | null;
   blocks: { name: string } | null;
   apartments: { number: string } | null;
   residents: { id: string; full_name: string; email: string } | null;
@@ -153,7 +153,7 @@ const OccurrenceDetails = () => {
         .from("occurrences")
         .select(`
           *,
-          condominiums(name),
+          condominiums(name, defense_deadline_days),
           blocks(name),
           apartments(number),
           residents(id, full_name, email)
@@ -477,6 +477,21 @@ const OccurrenceDetails = () => {
       return `${day} de ${month} de ${year}`;
     };
 
+    const numberToPortugueseWords = (num: number): string => {
+      const units = ["", "um", "dois", "três", "quatro", "cinco", "seis", "sete", "oito", "nove"];
+      const teens = ["dez", "onze", "doze", "treze", "quatorze", "quinze", "dezesseis", "dezessete", "dezoito", "dezenove"];
+      const tens = ["", "", "vinte", "trinta", "quarenta", "cinquenta", "sessenta", "setenta", "oitenta", "noventa"];
+      
+      if (num < 10) return units[num];
+      if (num < 20) return teens[num - 10];
+      if (num < 100) {
+        const ten = Math.floor(num / 10);
+        const unit = num % 10;
+        return unit === 0 ? tens[ten] : `${tens[ten]} e ${units[unit]}`;
+      }
+      return String(num);
+    };
+
     const formatShortDate = (dateStr: string) => {
       const date = new Date(dateStr);
       const day = date.getDate().toString().padStart(2, "0");
@@ -617,7 +632,9 @@ const OccurrenceDetails = () => {
     yPos += penaltyLines.length * 5 + 8;
 
     // Defense deadline paragraph
-    const defenseParagraph = "Outrossim, a partir desta data, fica estipulado o prazo de 10 (dez) dias para que V. Sa. apresente, se assim desejar, suas razões mediante defesa por escrito, a qual será submetida à análise perante o Conselho Consultivo.";
+    const deadlineDays = occurrence.condominiums?.defense_deadline_days || 10;
+    const deadlineWritten = deadlineDays === 10 ? "10 (dez)" : `${deadlineDays} (${numberToPortugueseWords(deadlineDays)})`;
+    const defenseParagraph = `Outrossim, a partir desta data, fica estipulado o prazo de ${deadlineWritten} dias para que V. Sa. apresente, se assim desejar, suas razões mediante defesa por escrito, a qual será submetida à análise perante o Conselho Consultivo.`;
     const defenseLines = doc.splitTextToSize(defenseParagraph, contentWidth);
     doc.text(defenseLines, margin, yPos);
     yPos += defenseLines.length * 5 + 20;

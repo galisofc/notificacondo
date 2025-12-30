@@ -61,6 +61,7 @@ interface Condominium {
   state: string | null;
   zip_code: string | null;
   created_at: string;
+  defense_deadline_days: number;
   subscription?: {
     plan: string;
   } | null;
@@ -86,6 +87,7 @@ const Condominiums = () => {
     city: "",
     state: "",
     plan_slug: "start",
+    defense_deadline_days: "10",
   });
   const [saving, setSaving] = useState(false);
   const [fetchingCNPJ, setFetchingCNPJ] = useState(false);
@@ -259,6 +261,7 @@ const Condominiums = () => {
             neighborhood: formData.neighborhood || null,
             city: formData.city || null,
             state: formData.state || null,
+            defense_deadline_days: parseInt(formData.defense_deadline_days) || 10,
           })
           .eq("id", editingCondo.id);
 
@@ -296,6 +299,7 @@ const Condominiums = () => {
             neighborhood: formData.neighborhood || null,
             city: formData.city || null,
             state: formData.state || null,
+            defense_deadline_days: parseInt(formData.defense_deadline_days) || 10,
           })
           .select()
           .single();
@@ -338,7 +342,8 @@ const Condominiums = () => {
         neighborhood: "",
         city: "", 
         state: "", 
-        plan_slug: "start" 
+        plan_slug: "start",
+        defense_deadline_days: "10",
       });
       fetchCondominiums();
     } catch (error: any) {
@@ -366,6 +371,7 @@ const Condominiums = () => {
       city: condo.city || "",
       state: condo.state || "",
       plan_slug: condo.subscription?.plan || "start",
+      defense_deadline_days: String(condo.defense_deadline_days || 10),
     });
     setIsDialogOpen(true);
   };
@@ -406,7 +412,8 @@ const Condominiums = () => {
       neighborhood: "",
       city: "", 
       state: "", 
-      plan_slug: "start" 
+      plan_slug: "start",
+      defense_deadline_days: "10",
     });
     setIsDialogOpen(true);
   };
@@ -632,6 +639,25 @@ const Condominiums = () => {
                     </p>
                   </div>
                 )}
+
+                {/* Prazo para defesa */}
+                <div className="space-y-2">
+                  <Label htmlFor="defense_deadline_days">Prazo para Defesa (dias) *</Label>
+                  <Input
+                    id="defense_deadline_days"
+                    type="number"
+                    min="1"
+                    max="90"
+                    value={formData.defense_deadline_days}
+                    onChange={(e) => setFormData({ ...formData, defense_deadline_days: e.target.value })}
+                    className="bg-secondary/50"
+                    placeholder="10"
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Prazo em dias para o morador apresentar defesa após receber uma notificação
+                  </p>
+                </div>
 
                 <div className="flex justify-end gap-3 pt-4 border-t border-border">
                   <Button
