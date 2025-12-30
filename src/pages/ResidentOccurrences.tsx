@@ -36,6 +36,7 @@ interface Occurrence {
   occurred_at: string;
   created_at: string;
   description: string;
+  condominium_id: string;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -47,6 +48,7 @@ const ResidentOccurrences = () => {
   const { date: formatDate } = useDateFormatter();
 
   const [occurrences, setOccurrences] = useState<Occurrence[]>([]);
+  const [defenseDeadlineDays, setDefenseDeadlineDays] = useState<number>(10);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -60,11 +62,15 @@ const ResidentOccurrences = () => {
       try {
         const { data, error } = await supabase
           .from("occurrences")
-          .select("*")
+          .select("*, condominiums(defense_deadline_days)")
           .eq("resident_id", residentInfo.id)
           .order("created_at", { ascending: false });
 
         if (error) throw error;
+
+        if (data && data.length > 0 && data[0].condominiums) {
+          setDefenseDeadlineDays((data[0].condominiums as any).defense_deadline_days || 10);
+        }
 
         setOccurrences(data || []);
       } catch (error) {
@@ -170,7 +176,7 @@ const ResidentOccurrences = () => {
 
     const createdAt = new Date(occurrence.created_at);
     const deadline = new Date(createdAt);
-    deadline.setDate(deadline.getDate() + 10);
+    deadline.setDate(deadline.getDate() + defenseDeadlineDays);
 
     const now = new Date();
     const diffTime = deadline.getTime() - now.getTime();

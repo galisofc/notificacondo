@@ -208,6 +208,7 @@ export type Database = {
           cnpj: string | null
           convention_url: string | null
           created_at: string
+          defense_deadline_days: number
           id: string
           internal_rules_url: string | null
           name: string
@@ -225,6 +226,7 @@ export type Database = {
           cnpj?: string | null
           convention_url?: string | null
           created_at?: string
+          defense_deadline_days?: number
           id?: string
           internal_rules_url?: string | null
           name: string
@@ -242,6 +244,7 @@ export type Database = {
           cnpj?: string | null
           convention_url?: string | null
           created_at?: string
+          defense_deadline_days?: number
           id?: string
           internal_rules_url?: string | null
           name?: string
