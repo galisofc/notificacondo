@@ -42,13 +42,11 @@ interface SubscriptionWithCondominium {
   is_trial: boolean;
   trial_ends_at: string | null;
   notifications_limit: number;
-  notifications_used: number;
   warnings_limit: number;
-  warnings_used: number;
   fines_limit: number;
-  fines_used: number;
-  created_at: string;
+  current_period_start: string | null;
   current_period_end: string | null;
+  created_at: string;
   condominium: {
     name: string;
     owner_id: string;
@@ -58,6 +56,11 @@ interface SubscriptionWithCondominium {
     full_name: string;
     email: string;
   } | null;
+  realUsage: {
+    notifications: number;
+    warnings: number;
+    fines: number;
+  };
 }
 
 // Formata CNPJ: XX.XXX.XXX/XXXX-XX
@@ -115,10 +118,48 @@ export function SubscriptionsMonitor() {
             ownerProfile = profile;
           }
 
+          // Calculate real usage based on occurrences in current period
+          const periodStart = sub.current_period_start;
+          const periodEnd = sub.current_period_end;
+
+          let occurrencesQuery = supabase
+            .from("occurrences")
+            .select("type, status")
+            .eq("condominium_id", sub.condominium_id)
+            .in("status", ["notificado", "arquivada", "advertido", "multado"]);
+
+          if (periodStart) {
+            occurrencesQuery = occurrencesQuery.gte("created_at", periodStart);
+          }
+          if (periodEnd) {
+            occurrencesQuery = occurrencesQuery.lte("created_at", periodEnd);
+          }
+
+          const { data: occurrences } = await occurrencesQuery;
+
+          const realUsage = {
+            notifications: 0,
+            warnings: 0,
+            fines: 0,
+          };
+
+          if (occurrences) {
+            occurrences.forEach((occ) => {
+              if (occ.type === "notificacao") {
+                realUsage.notifications++;
+              } else if (occ.type === "advertencia") {
+                realUsage.warnings++;
+              } else if (occ.type === "multa") {
+                realUsage.fines++;
+              }
+            });
+          }
+
           return { 
             ...sub, 
             condominium: condo,
-            owner_profile: ownerProfile 
+            owner_profile: ownerProfile,
+            realUsage 
           } as SubscriptionWithCondominium;
         })
       );
@@ -427,13 +468,13 @@ export function SubscriptionsMonitor() {
                       <TableCell>
                         <div className="space-y-1">
                           <div className="flex items-center justify-between text-xs">
-                            <span>{sub.notifications_used}/{sub.notifications_limit}</span>
-                            {getUsagePercentage(sub.notifications_used, sub.notifications_limit) >= 90 && (
+                            <span>{sub.realUsage.notifications}/{sub.notifications_limit}</span>
+                            {getUsagePercentage(sub.realUsage.notifications, sub.notifications_limit) >= 90 && (
                               <AlertCircle className="h-3 w-3 text-amber-500" />
                             )}
                           </div>
                           <Progress 
-                            value={getUsagePercentage(sub.notifications_used, sub.notifications_limit)} 
+                            value={getUsagePercentage(sub.realUsage.notifications, sub.notifications_limit)} 
                             className="h-1.5"
                           />
                         </div>
@@ -441,10 +482,10 @@ export function SubscriptionsMonitor() {
                       <TableCell>
                         <div className="space-y-1">
                           <div className="flex items-center justify-between text-xs">
-                            <span>{sub.warnings_used}/{sub.warnings_limit}</span>
+                            <span>{sub.realUsage.warnings}/{sub.warnings_limit}</span>
                           </div>
                           <Progress 
-                            value={getUsagePercentage(sub.warnings_used, sub.warnings_limit)} 
+                            value={getUsagePercentage(sub.realUsage.warnings, sub.warnings_limit)} 
                             className="h-1.5"
                           />
                         </div>
@@ -452,10 +493,10 @@ export function SubscriptionsMonitor() {
                       <TableCell>
                         <div className="space-y-1">
                           <div className="flex items-center justify-between text-xs">
-                            <span>{sub.fines_used}/{sub.fines_limit}</span>
+                            <span>{sub.realUsage.fines}/{sub.fines_limit}</span>
                           </div>
                           <Progress 
-                            value={getUsagePercentage(sub.fines_used, sub.fines_limit)} 
+                            value={getUsagePercentage(sub.realUsage.fines, sub.fines_limit)} 
                             className="h-1.5"
                           />
                         </div>
