@@ -394,6 +394,7 @@ export function SubscriptionsMonitor() {
                     <TableHead>Síndico</TableHead>
                     <TableHead>Plano</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Período Atual</TableHead>
                     <TableHead>Notificações</TableHead>
                     <TableHead>Advertências</TableHead>
                     <TableHead>Multas</TableHead>
@@ -463,6 +464,18 @@ export function SubscriptionsMonitor() {
                               </Badge>
                             );
                           })()}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-xs">
+                          {sub.current_period_start && sub.current_period_end ? (
+                            <>
+                              <p>{formatDate(sub.current_period_start)}</p>
+                              <p className="text-muted-foreground">até {formatDate(sub.current_period_end)}</p>
+                            </>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
