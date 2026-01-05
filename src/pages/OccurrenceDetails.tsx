@@ -1253,7 +1253,7 @@ const OccurrenceDetails = () => {
                       <p className="text-sm text-muted-foreground">Bloco / Apto</p>
                       <p className="font-medium text-foreground">
                         {occurrence.blocks.name}
-                        {occurrence.apartments?.number && ` - Apto ${occurrence.apartments.number}`}
+                        {occurrence.apartments?.number && ` - APTO ${occurrence.apartments.number}`}
                       </p>
                     </div>
                   </div>
