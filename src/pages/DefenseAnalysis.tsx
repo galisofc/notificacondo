@@ -64,6 +64,7 @@ interface DefenseWithDetails {
     internal_rules_article: string | null;
     civil_code_article: string | null;
     legal_basis: string | null;
+    condominium_id: string;
     condominiums: { name: string } | null;
     blocks: { name: string } | null;
     apartments: { number: string } | null;
@@ -100,6 +101,10 @@ const DefenseAnalysis = () => {
   const [evidences, setEvidences] = useState<OccurrenceEvidence[]>([]);
   const [loadingEvidences, setLoadingEvidences] = useState(false);
 
+  // Filter
+  const [condominiums, setCondominiums] = useState<{ id: string; name: string }[]>([]);
+  const [selectedCondominiumId, setSelectedCondominiumId] = useState<string>("all");
+
   // Decision dialog
   const [isDecisionDialogOpen, setIsDecisionDialogOpen] = useState(false);
   const [decisionType, setDecisionType] = useState<"arquivada" | "advertido" | "multado" | "">("");
@@ -110,8 +115,23 @@ const DefenseAnalysis = () => {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   useEffect(() => {
+    fetchCondominiums();
     fetchPendingDefenses();
   }, []);
+
+  const fetchCondominiums = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("condominiums")
+        .select("id, name")
+        .order("name");
+
+      if (error) throw error;
+      setCondominiums(data || []);
+    } catch (error: any) {
+      console.error("Error fetching condominiums:", error);
+    }
+  };
 
   const fetchPendingDefenses = async () => {
     try {
@@ -134,6 +154,7 @@ const DefenseAnalysis = () => {
             internal_rules_article,
             civil_code_article,
             legal_basis,
+            condominium_id,
             condominiums (name),
             blocks (name),
             apartments (number)
@@ -312,6 +333,11 @@ const DefenseAnalysis = () => {
     return formatDateTime(dateString);
   };
 
+  // Filter defenses by condominium
+  const filteredDefenses = selectedCondominiumId === "all"
+    ? defenses
+    : defenses.filter((defense) => defense.occurrences.condominium_id === selectedCondominiumId);
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -334,22 +360,39 @@ const DefenseAnalysis = () => {
         <SindicoBreadcrumbs items={[{ label: "Análise de Defesas" }]} />
 
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Análise de Defesas</h1>
             <p className="text-muted-foreground">
-              {defenses.length} {defenses.length === 1 ? "defesa pendente" : "defesas pendentes"} de análise
+              {filteredDefenses.length} {filteredDefenses.length === 1 ? "defesa pendente" : "defesas pendentes"} de análise
             </p>
+          </div>
+          <div className="w-full sm:w-64">
+            <Select value={selectedCondominiumId} onValueChange={setSelectedCondominiumId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filtrar por condomínio" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os condomínios</SelectItem>
+                {condominiums.map((condo) => (
+                  <SelectItem key={condo.id} value={condo.id}>
+                    {condo.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
-        {defenses.length === 0 ? (
+        {filteredDefenses.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <CheckCircle2 className="w-16 h-16 text-green-500 mb-4" />
               <h3 className="text-xl font-semibold mb-2">Nenhuma defesa pendente</h3>
               <p className="text-muted-foreground text-center">
-                Todas as defesas foram analisadas. Novas defesas aparecerão aqui automaticamente.
+                {selectedCondominiumId !== "all" 
+                  ? "Nenhuma defesa pendente para este condomínio."
+                  : "Todas as defesas foram analisadas. Novas defesas aparecerão aqui automaticamente."}
               </p>
             </CardContent>
           </Card>
@@ -358,7 +401,7 @@ const DefenseAnalysis = () => {
             {/* Defense List */}
             <div className="space-y-4">
               <h2 className="text-lg font-semibold">Defesas Pendentes</h2>
-              {defenses.map((defense) => (
+              {filteredDefenses.map((defense) => (
                 <Card
                   key={defense.id}
                   className={`cursor-pointer transition-all hover:shadow-md ${
