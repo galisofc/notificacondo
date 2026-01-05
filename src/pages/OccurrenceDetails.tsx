@@ -1382,15 +1382,31 @@ const OccurrenceDetails = () => {
                                 
                                 {/* IP */}
                                 {notif.ip_address && (
-                                  <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-muted/30">
-                                    <div className="w-8 h-8 rounded-full bg-slate-500/10 flex items-center justify-center shrink-0">
-                                      <Globe className="w-4 h-4 text-slate-500" />
-                                    </div>
-                                    <div className="min-w-0">
-                                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Endereço IP</p>
-                                      <p className="text-xs font-medium font-mono truncate">{formatIp(notif.ip_address)}</p>
-                                    </div>
-                                  </div>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-muted/30 cursor-help">
+                                          <div className="w-8 h-8 rounded-full bg-slate-500/10 flex items-center justify-center shrink-0">
+                                            <Globe className="w-4 h-4 text-slate-500" />
+                                          </div>
+                                          <div className="min-w-0">
+                                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Endereço IP</p>
+                                            <p className="text-xs font-medium font-mono truncate">{formatIp(notif.ip_address)}</p>
+                                          </div>
+                                        </div>
+                                      </TooltipTrigger>
+                                      {notif.ip_address.includes(',') && (
+                                        <TooltipContent side="top" className="max-w-xs">
+                                          <p className="text-xs font-medium mb-1">Todos os IPs:</p>
+                                          <div className="space-y-0.5">
+                                            {notif.ip_address.split(',').map((ip, i) => (
+                                              <p key={i} className="font-mono text-xs">{ip.trim()}</p>
+                                            ))}
+                                          </div>
+                                        </TooltipContent>
+                                      )}
+                                    </Tooltip>
+                                  </TooltipProvider>
                                 )}
                               </div>
                             </div>
