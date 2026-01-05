@@ -386,150 +386,155 @@ export function SubscriptionsMonitor() {
               </p>
             </div>
           ) : (
-            <div className="rounded-md border overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Condomínio</TableHead>
-                    <TableHead>Síndico</TableHead>
-                    <TableHead>Plano</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Período Atual</TableHead>
-                    <TableHead>Notificações</TableHead>
-                    <TableHead>Advertências</TableHead>
-                    <TableHead>Multas</TableHead>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredSubscriptions?.map((sub) => (
-                    <TableRow key={sub.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/superadmin/subscriptions/${sub.id}`)}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{sub.condominium?.name || "—"}</p>
-                        {sub.condominium?.cnpj && (
-                            <p className="text-xs text-muted-foreground">{formatCNPJ(sub.condominium.cnpj)}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {filteredSubscriptions?.map((sub) => {
+                const trialStatus = sub.is_trial ? getTrialStatus(sub.trial_ends_at) : null;
+                const isCritical = trialStatus?.status === "critical";
+                const isExpired = trialStatus?.status === "expired";
+                
+                return (
+                  <Card 
+                    key={sub.id} 
+                    className={`cursor-pointer hover:border-primary/50 transition-colors ${
+                      isExpired 
+                        ? "border-destructive/50 bg-destructive/5" 
+                        : isCritical 
+                          ? "border-orange-500/50 bg-orange-500/5" 
+                          : ""
+                    }`}
+                    onClick={() => navigate(`/superadmin/subscriptions/${sub.id}`)}
+                  >
+                    <CardContent className="p-4 space-y-4">
+                      {/* Header: Condominium + Plan Badge */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-foreground truncate">
+                            {sub.condominium?.name || "—"}
+                          </h4>
+                          {sub.condominium?.cnpj && (
+                            <p className="text-xs text-muted-foreground">
+                              {formatCNPJ(sub.condominium.cnpj)}
+                            </p>
                           )}
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{sub.owner_profile?.full_name || "—"}</p>
-                          <p className="text-sm text-muted-foreground">{sub.owner_profile?.email}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
                         <Badge variant="outline" className={getPlanBadge(sub.plan)}>
                           {sub.plan.toUpperCase()}
                         </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Badge
-                            variant="outline"
-                            className={
-                              sub.active
-                                ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-                                : "bg-destructive/10 text-destructive border-destructive/20"
-                            }
+                      </div>
+
+                      {/* Síndico Info */}
+                      <div className="flex items-center gap-2 text-sm">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <span className="text-xs font-medium text-primary">
+                            {sub.owner_profile?.full_name?.charAt(0)?.toUpperCase() || "?"}
+                          </span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium truncate">{sub.owner_profile?.full_name || "—"}</p>
+                          <p className="text-xs text-muted-foreground truncate">{sub.owner_profile?.email}</p>
+                        </div>
+                      </div>
+
+                      {/* Status Badges */}
+                      <div className="flex flex-wrap gap-2">
+                        <Badge
+                          variant="outline"
+                          className={
+                            sub.active
+                              ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                              : "bg-destructive/10 text-destructive border-destructive/20"
+                          }
+                        >
+                          {sub.active ? "Ativo" : "Inativo"}
+                        </Badge>
+                        {sub.is_trial && trialStatus && (
+                          <Badge 
+                            variant="outline" 
+                            className={`gap-1 ${
+                              isExpired 
+                                ? "bg-destructive/10 text-destructive border-destructive/20 animate-pulse" 
+                                : isCritical 
+                                  ? "bg-orange-500/10 text-orange-600 border-orange-500/20 animate-pulse" 
+                                  : "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                            }`}
                           >
-                            {sub.active ? "Ativo" : "Inativo"}
+                            {isExpired || isCritical ? (
+                              <AlertTriangle className="h-3 w-3" />
+                            ) : (
+                              <Clock className="h-3 w-3" />
+                            )}
+                            Trial ({trialStatus.label})
                           </Badge>
-                          {sub.is_trial && (() => {
-                            const trialStatus = getTrialStatus(sub.trial_ends_at);
-                            const isCritical = trialStatus?.status === "critical";
-                            const isExpired = trialStatus?.status === "expired";
-                            return (
-                              <Badge 
-                                variant="outline" 
-                                className={`gap-1 ${
-                                  isExpired 
-                                    ? "bg-destructive/10 text-destructive border-destructive/20 animate-pulse" 
-                                    : isCritical 
-                                      ? "bg-orange-500/10 text-orange-600 border-orange-500/20 animate-pulse" 
-                                      : "bg-amber-500/10 text-amber-600 border-amber-500/20"
-                                }`}
-                              >
-                                {isExpired || isCritical ? (
-                                  <AlertTriangle className="h-3 w-3" />
-                                ) : (
-                                  <Clock className="h-3 w-3" />
-                                )}
-                                Trial
-                                {trialStatus && (
-                                  <span className="text-xs font-medium">
-                                    ({trialStatus.label})
-                                  </span>
-                                )}
-                              </Badge>
-                            );
-                          })()}
+                        )}
+                      </div>
+
+                      {/* Period */}
+                      {sub.current_period_start && sub.current_period_end && (
+                        <div className="text-xs text-muted-foreground bg-secondary/50 rounded-md px-3 py-2">
+                          <span className="font-medium text-foreground">{formatDate(sub.current_period_start)}</span>
+                          <span> até </span>
+                          <span className="font-medium text-foreground">{formatDate(sub.current_period_end)}</span>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-xs">
-                          {sub.current_period_start && sub.current_period_end ? (
-                            <>
-                              <p>{formatDate(sub.current_period_start)}</p>
-                              <p className="text-muted-foreground">até {formatDate(sub.current_period_end)}</p>
-                            </>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
+                      )}
+
+                      {/* Usage Progress Bars */}
+                      <div className="space-y-3 pt-2 border-t border-border/50">
                         <div className="space-y-1">
                           <div className="flex items-center justify-between text-xs">
-                            <span>{sub.realUsage.notifications}/{sub.notifications_limit}</span>
-                            {getUsagePercentage(sub.realUsage.notifications, sub.notifications_limit) >= 90 && (
-                              <AlertCircle className="h-3 w-3 text-amber-500" />
-                            )}
+                            <span className="text-muted-foreground">Notificações</span>
+                            <span className="font-medium">
+                              {sub.realUsage.notifications}/{sub.notifications_limit}
+                              {getUsagePercentage(sub.realUsage.notifications, sub.notifications_limit) >= 90 && (
+                                <AlertCircle className="inline-block h-3 w-3 text-amber-500 ml-1" />
+                              )}
+                            </span>
                           </div>
                           <Progress 
                             value={getUsagePercentage(sub.realUsage.notifications, sub.notifications_limit)} 
                             className="h-1.5"
                           />
                         </div>
-                      </TableCell>
-                      <TableCell>
                         <div className="space-y-1">
                           <div className="flex items-center justify-between text-xs">
-                            <span>{sub.realUsage.warnings}/{sub.warnings_limit}</span>
+                            <span className="text-muted-foreground">Advertências</span>
+                            <span className="font-medium">{sub.realUsage.warnings}/{sub.warnings_limit}</span>
                           </div>
                           <Progress 
                             value={getUsagePercentage(sub.realUsage.warnings, sub.warnings_limit)} 
                             className="h-1.5"
                           />
                         </div>
-                      </TableCell>
-                      <TableCell>
                         <div className="space-y-1">
                           <div className="flex items-center justify-between text-xs">
-                            <span>{sub.realUsage.fines}/{sub.fines_limit}</span>
+                            <span className="text-muted-foreground">Multas</span>
+                            <span className="font-medium">{sub.realUsage.fines}/{sub.fines_limit}</span>
                           </div>
                           <Progress 
                             value={getUsagePercentage(sub.realUsage.fines, sub.fines_limit)} 
                             className="h-1.5"
                           />
                         </div>
-                      </TableCell>
-                      <TableCell>
+                      </div>
+
+                      {/* Action Button */}
+                      <div className="pt-2">
                         <Button 
-                          variant="ghost" 
-                          size="icon"
+                          variant="outline" 
+                          size="sm"
+                          className="w-full"
                           onClick={(e) => {
                             e.stopPropagation();
                             navigate(`/superadmin/subscriptions/${sub.id}`);
                           }}
                         >
-                          <Eye className="h-4 w-4" />
+                          <Eye className="h-4 w-4 mr-2" />
+                          Ver Detalhes
                         </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </CardContent>
