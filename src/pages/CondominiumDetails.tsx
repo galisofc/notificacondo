@@ -884,7 +884,7 @@ const CondominiumDetails = () => {
             </DialogHeader>
             <form onSubmit={handleApartmentSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label>Bloco *</Label>
+                <Label>BLOCO *</Label>
                 <select
                   value={apartmentForm.block_id}
                   onChange={(e) => setApartmentForm({ ...apartmentForm, block_id: e.target.value, floor: "" })}

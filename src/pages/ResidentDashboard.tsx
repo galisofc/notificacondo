@@ -233,7 +233,7 @@ const ResidentDashboard = () => {
                 <p className="font-semibold text-sm md:text-base text-foreground">{residentInfo.condominium_name}</p>
               </div>
               <div>
-                <p className="text-xs md:text-sm text-muted-foreground">Bloco</p>
+                <p className="text-xs md:text-sm text-muted-foreground">BLOCO</p>
                 <p className="font-semibold text-sm md:text-base text-foreground">{residentInfo.block_name}</p>
               </div>
               <div>
