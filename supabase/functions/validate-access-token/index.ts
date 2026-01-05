@@ -84,8 +84,24 @@ serve(async (req) => {
       .eq("secure_link_token", token)
       .maybeSingle();
 
+    const clientIpForLog = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "unknown";
+    const clientUserAgentForLog = req.headers.get("user-agent") || "unknown";
+
     if (notifError || !notification) {
       console.error("Token lookup error:", notifError);
+      
+      // Log failed access attempt (invalid token)
+      await supabase
+        .from("magic_link_access_logs")
+        .insert({
+          token_id: token, // Use the token UUID directly
+          ip_address: clientIpForLog,
+          user_agent: clientUserAgentForLog,
+          success: false,
+          is_new_user: false,
+          error_message: "Token inválido ou não encontrado",
+        });
+
       return new Response(
         JSON.stringify({ error: "Link inválido ou expirado" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -99,6 +115,21 @@ serve(async (req) => {
 
     if (now > expirationDate) {
       console.log(`Token expired. Sent at: ${sentAt.toISOString()}, Expired at: ${expirationDate.toISOString()}`);
+      
+      // Log failed access attempt (expired token)
+      await supabase
+        .from("magic_link_access_logs")
+        .insert({
+          token_id: notification.id,
+          resident_id: (notification.residents as any)?.id,
+          occurrence_id: notification.occurrence_id,
+          ip_address: clientIpForLog,
+          user_agent: clientUserAgentForLog,
+          success: false,
+          is_new_user: false,
+          error_message: "Token expirado",
+        });
+
       return new Response(
         JSON.stringify({ error: "Link expirado. Solicite um novo link ao síndico." }),
         { status: 410, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -119,13 +150,16 @@ serve(async (req) => {
     const resident = notification.residents as any;
     const apt = resident.apartments;
 
+    const clientIp = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "unknown";
+    const clientUserAgent = req.headers.get("user-agent") || "unknown";
+
     // Update notification as read
     await supabase
       .from("notifications_sent")
       .update({
         read_at: new Date().toISOString(),
-        ip_address: req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip"),
-        user_agent: req.headers.get("user-agent"),
+        ip_address: clientIp,
+        user_agent: clientUserAgent,
       })
       .eq("id", notification.id);
 
@@ -223,6 +257,25 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const redirectUrl = `${appBaseUrl}${redirectPath}`;
+
+    // Log magic link access for audit
+    await supabase
+      .from("magic_link_access_logs")
+      .insert({
+        token_id: notification.id,
+        resident_id: resident.id,
+        occurrence_id: notification.occurrence_id,
+        user_id: userId,
+        ip_address: clientIp,
+        user_agent: clientUserAgent,
+        success: true,
+        is_new_user: isNewUser,
+        redirect_url: redirectUrl,
+      });
+
+    console.log(`Magic link access logged for resident ${resident.id}, occurrence ${notification.occurrence_id}`);
 
     return new Response(
       JSON.stringify({
