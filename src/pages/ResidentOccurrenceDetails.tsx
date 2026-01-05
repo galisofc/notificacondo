@@ -501,10 +501,14 @@ const ResidentOccurrenceDetails = () => {
                 </div>
               )}
             </div>
+          </CardContent>
+        </Card>
 
-            {/* Condominium and Unit Info - before description */}
-            {residentInfo && (
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl bg-secondary/30 border border-border/30">
+        {/* Condominium and Unit Info - before description */}
+        {residentInfo && (
+          <Card className="bg-gradient-card border-border/50">
+            <CardContent className="pt-6">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                 <div className="flex items-center gap-3 flex-1">
                   <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                     <Building2 className="w-5 h-5 text-primary" />
@@ -526,9 +530,13 @@ const ResidentOccurrenceDetails = () => {
                   </div>
                 </div>
               </div>
-            )}
+            </CardContent>
+          </Card>
+        )}
 
-            {/* Description */}
+        {/* Description */}
+        <Card className="bg-gradient-card border-border/50">
+          <CardContent className="pt-6">
             <div>
               <h4 className="text-sm font-medium text-muted-foreground mb-2">Descrição</h4>
               <p className="text-foreground">{occurrence.description}</p>
