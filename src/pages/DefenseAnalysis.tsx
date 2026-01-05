@@ -492,7 +492,8 @@ const DefenseAnalysis = () => {
                       {/* Legal Basis */}
                       {(selectedDefense.occurrences.convention_article ||
                         selectedDefense.occurrences.internal_rules_article ||
-                        selectedDefense.occurrences.civil_code_article) && (
+                        selectedDefense.occurrences.civil_code_article ||
+                        selectedDefense.occurrences.legal_basis) && (
                         <div className="pt-2 border-t">
                           <div className="flex items-center gap-2 mb-2">
                             <Scale className="w-4 h-4 text-muted-foreground" />
@@ -507,6 +508,12 @@ const DefenseAnalysis = () => {
                             )}
                             {selectedDefense.occurrences.civil_code_article && (
                               <p>Código Civil: Art. {selectedDefense.occurrences.civil_code_article}</p>
+                            )}
+                            {selectedDefense.occurrences.legal_basis && (
+                              <p className="mt-2 pt-2 border-t border-border/50">
+                                <span className="font-medium text-foreground">Observações:</span>{" "}
+                                {selectedDefense.occurrences.legal_basis}
+                              </p>
                             )}
                           </div>
                         </div>
