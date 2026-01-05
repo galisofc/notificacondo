@@ -499,7 +499,7 @@ const ResidentOccurrenceDetails = () => {
                     <Home className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Bloco / APTO</p>
+                    <p className="text-sm text-muted-foreground">BLOCO / APTO</p>
                     <p className="font-medium text-foreground">
                       {residentInfo?.block_name || occurrence.blocks?.name}
                       {(residentInfo?.apartment_number || occurrence.apartments?.number) && ` - APTO ${residentInfo?.apartment_number || occurrence.apartments?.number}`}

@@ -178,7 +178,7 @@ const ResidentProfile = () => {
                 <p className="font-medium text-foreground">{residentInfo.condominium_name}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Bloco</p>
+                <p className="text-sm text-muted-foreground">BLOCO</p>
                 <p className="font-medium text-foreground">{residentInfo.block_name}</p>
               </div>
               <div>

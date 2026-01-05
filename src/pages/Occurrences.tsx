@@ -844,7 +844,7 @@ const Occurrences = () => {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Bloco</Label>
+                    <Label>BLOCO</Label>
                     <Select
                       value={formData.block_id}
                       onValueChange={(v) =>

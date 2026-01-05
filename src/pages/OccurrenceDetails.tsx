@@ -607,7 +607,7 @@ const OccurrenceDetails = () => {
     // Block and Apartment
     const blockName = occurrence.blocks?.name || "-";
     const aptNumber = occurrence.apartments?.number || "-";
-    doc.text(`Bloco: ${blockName}       APTO: ${aptNumber}`, margin, yPos);
+    doc.text(`BLOCO: ${blockName}       APTO: ${aptNumber}`, margin, yPos);
     yPos += 8;
 
     // Condominium address (full name again)
@@ -1250,7 +1250,7 @@ const OccurrenceDetails = () => {
                       <Home className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Bloco / APTO</p>
+                      <p className="text-sm text-muted-foreground">BLOCO / APTO</p>
                       <p className="font-medium text-foreground">
                         {occurrence.blocks.name}
                         {occurrence.apartments?.number && ` - APTO ${occurrence.apartments.number}`}

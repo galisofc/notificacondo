@@ -5,7 +5,7 @@ const steps = [
     number: "01",
     title: "Registro da Ocorrência",
     description: "Síndico registra infração com data, hora, local, descrição e upload de provas.",
-    details: ["Condomínio/Bloco/APTO", "Tipo de infração", "Fotos e vídeos"]
+    details: ["Condomínio/BLOCO/APTO", "Tipo de infração", "Fotos e vídeos"]
   },
   {
     number: "02",
