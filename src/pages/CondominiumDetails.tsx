@@ -386,7 +386,7 @@ const CondominiumDetails = () => {
     const apt = apartments.find((a) => a.id === aptId);
     if (!apt) return "";
     const block = blocks.find((b) => b.id === apt.block_id);
-    return `${block?.name || ""} - Apto ${apt.number}`;
+    return `${block?.name || ""} - APTO ${apt.number}`;
   };
 
   if (loading) {
@@ -636,7 +636,7 @@ const CondominiumDetails = () => {
                         </Button>
                       </div>
                     </div>
-                    <h4 className="font-semibold text-foreground">Apto {apt.number}</h4>
+                    <h4 className="font-semibold text-foreground">APTO {apt.number}</h4>
                     <p className="text-sm text-muted-foreground">{getBlockName(apt.block_id)}</p>
                     {apt.floor !== null && (
                       <p className="text-xs text-muted-foreground">
@@ -677,7 +677,7 @@ const CondominiumDetails = () => {
                     <option value="">Todos os apartamentos</option>
                     {apartments.map((apt) => (
                       <option key={apt.id} value={apt.id}>
-                        {getBlockName(apt.block_id)} - Apto {apt.number}
+                        {getBlockName(apt.block_id)} - APTO {apt.number}
                       </option>
                     ))}
                   </select>
@@ -971,7 +971,7 @@ const CondominiumDetails = () => {
                 >
                   {apartments.map((a) => (
                     <option key={a.id} value={a.id}>
-                      {getBlockName(a.block_id)} - Apto {a.number}
+                      {getBlockName(a.block_id)} - APTO {a.number}
                     </option>
                   ))}
                 </select>

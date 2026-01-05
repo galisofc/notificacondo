@@ -728,7 +728,7 @@ const Occurrences = () => {
                         <span>{occurrence.blocks.name}</span>
                       )}
                       {occurrence.apartments?.number && (
-                        <span>Apto {occurrence.apartments.number}</span>
+                        <span>APTO {occurrence.apartments.number}</span>
                       )}
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
@@ -879,7 +879,7 @@ const Occurrences = () => {
                       <SelectContent>
                         {filteredApartments.map((a) => (
                           <SelectItem key={a.id} value={a.id}>
-                            Apto {a.number}
+                            APTO {a.number}
                           </SelectItem>
                         ))}
                       </SelectContent>

@@ -1250,7 +1250,7 @@ const OccurrenceDetails = () => {
                       <Home className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Bloco / Apto</p>
+                      <p className="text-sm text-muted-foreground">Bloco / APTO</p>
                       <p className="font-medium text-foreground">
                         {occurrence.blocks.name}
                         {occurrence.apartments?.number && ` - APTO ${occurrence.apartments.number}`}
