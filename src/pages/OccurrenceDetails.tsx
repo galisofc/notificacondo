@@ -1275,39 +1275,51 @@ const OccurrenceDetails = () => {
             </Card>
 
             {/* Timeline */}
-            <Card className="bg-gradient-card border-border/50">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-primary" />
-                  Timeline
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {timeline.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">Sem eventos.</p>
-                ) : (
-                  <div className="relative">
-                    <div className="absolute left-[17px] top-0 bottom-0 w-0.5 bg-border" />
-                    <div className="space-y-6">
-                      {timeline.map((item, index) => (
-                        <div key={item.id} className="relative flex gap-4">
-                          <div className={`w-9 h-9 rounded-full ${item.color} flex items-center justify-center text-white z-10`}>
-                            {item.icon}
-                          </div>
-                          <div className="flex-1 pt-1">
-                            <p className="font-medium text-foreground text-sm">{item.title}</p>
-                            <p className="text-xs text-muted-foreground mb-1">{item.description}</p>
-                            <p className="text-xs text-muted-foreground/70">
-                              {formatDateLocal(item.date)}
-                            </p>
-                          </div>
+            <Collapsible defaultOpen>
+              <Card className="bg-gradient-card border-border/50">
+                <CardHeader className="pb-3">
+                  <CollapsibleTrigger asChild>
+                    <button className="w-full flex items-center justify-between text-left hover:bg-muted/20 -m-2 p-2 rounded-md transition-colors">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Clock className="w-5 h-5 text-primary" />
+                        Timeline
+                        <Badge variant="secondary" className="text-xs font-semibold ml-2">
+                          {timeline.length} {timeline.length === 1 ? 'evento' : 'eventos'}
+                        </Badge>
+                      </CardTitle>
+                      <ChevronDown className="w-5 h-5 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+                    </button>
+                  </CollapsibleTrigger>
+                </CardHeader>
+                <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
+                  <CardContent>
+                    {timeline.length === 0 ? (
+                      <p className="text-muted-foreground text-sm">Sem eventos.</p>
+                    ) : (
+                      <div className="relative">
+                        <div className="absolute left-[17px] top-0 bottom-0 w-0.5 bg-border" />
+                        <div className="space-y-6">
+                          {timeline.map((item, index) => (
+                            <div key={item.id} className="relative flex gap-4">
+                              <div className={`w-9 h-9 rounded-full ${item.color} flex items-center justify-center text-white z-10`}>
+                                {item.icon}
+                              </div>
+                              <div className="flex-1 pt-1">
+                                <p className="font-medium text-foreground text-sm">{item.title}</p>
+                                <p className="text-xs text-muted-foreground mb-1">{item.description}</p>
+                                <p className="text-xs text-muted-foreground/70">
+                                  {formatDateLocal(item.date)}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                      </div>
+                    )}
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
 
           </div>
         </div>
