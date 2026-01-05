@@ -33,6 +33,7 @@ import Subscriptions from "./pages/superadmin/Subscriptions";
 import SubscriptionDetails from "./pages/superadmin/SubscriptionDetails";
 import SuperAdminInvoices from "./pages/superadmin/Invoices";
 import Logs from "./pages/superadmin/Logs";
+import MagicLinkLogs from "./pages/superadmin/MagicLinkLogs";
 import CronJobs from "./pages/superadmin/CronJobs";
 import Transfers from "./pages/superadmin/Transfers";
 import WhatsApp from "./pages/superadmin/WhatsApp";
@@ -254,6 +255,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole="super_admin">
                     <Logs />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/superadmin/logs/magic-link"
+                element={
+                  <ProtectedRoute requiredRole="super_admin">
+                    <MagicLinkLogs />
                   </ProtectedRoute>
                 }
               />
