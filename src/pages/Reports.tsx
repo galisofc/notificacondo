@@ -444,34 +444,34 @@ const Reports = () => {
       <Helmet>
         <title>Relatórios | CondoManager</title>
       </Helmet>
-      <div className="space-y-6 animate-fade-up">
+      <div className="space-y-4 md:space-y-6 animate-fade-up">
         <SindicoBreadcrumbs items={[{ label: "Relatórios" }]} />
         {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex flex-col gap-3 md:gap-4">
           <div>
-            <h1 className="font-display text-3xl font-bold text-foreground">Relatórios</h1>
-            <p className="text-muted-foreground mt-1">
+            <h1 className="font-display text-xl md:text-3xl font-bold text-foreground">Relatórios</h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-1">
               Estatísticas de ocorrências, multas e inadimplência
             </p>
           </div>
-          <Button onClick={exportToPDF} className="gap-2">
+          <Button onClick={exportToPDF} className="gap-2 w-full sm:w-auto">
             <Download className="w-4 h-4" />
             Exportar PDF
           </Button>
         </div>
 
         {/* Filters */}
-        <Card className="bg-gradient-card border-border/50 mb-8">
+        <Card className="bg-gradient-card border-border/50 mb-4 md:mb-8">
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-primary" />
+            <CardTitle className="text-base md:text-lg flex items-center gap-2">
+              <Calendar className="w-4 h-4 md:w-5 md:h-5 text-primary" />
               Filtros
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
               <div className="space-y-2">
-                <Label>Condomínio</Label>
+                <Label className="text-sm">Condomínio</Label>
                 <Select value={selectedCondominium} onValueChange={setSelectedCondominium}>
                   <SelectTrigger className="bg-secondary/50">
                     <SelectValue placeholder="Todos" />
@@ -487,7 +487,7 @@ const Reports = () => {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Data Inicial</Label>
+                <Label className="text-sm">Data Inicial</Label>
                 <Input
                   type="date"
                   value={dateFrom}
@@ -496,7 +496,7 @@ const Reports = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Data Final</Label>
+                <Label className="text-sm">Data Final</Label>
                 <Input
                   type="date"
                   value={dateTo}
@@ -507,6 +507,7 @@ const Reports = () => {
               <div className="flex items-end">
                 <Button
                   variant="outline"
+                  className="w-full sm:w-auto"
                   onClick={() => {
                     setSelectedCondominium("all");
                     setDateFrom(format(subMonths(new Date(), 6), "yyyy-MM-dd"));

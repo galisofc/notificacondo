@@ -373,7 +373,73 @@ export function CondominiumsManagement() {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto">
+              {/* Mobile Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:hidden">
+                {paginatedCondominiums.map((condo) => (
+                  <Card
+                    key={condo.id}
+                    className="bg-card border-border/50 hover:shadow-md transition-all cursor-pointer"
+                    onClick={() => handleOpenView(condo)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                            <Building2 className="w-5 h-5 text-primary" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-semibold text-foreground truncate">{condo.name}</h3>
+                            {condo.cnpj && (
+                              <p className="text-xs text-muted-foreground font-mono">
+                                {formatCNPJ(condo.cnpj)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEdit(condo);
+                            }}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {(condo.city || condo.state) && (
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
+                          <MapPin className="w-3 h-3" />
+                          <span>
+                            {condo.city && condo.state
+                              ? `${condo.city}/${condo.state}`
+                              : condo.city || condo.state}
+                          </span>
+                        </div>
+                      )}
+
+                      {condo.owner && (
+                        <div className="pt-2 border-t border-border/50">
+                          <div className="flex items-center gap-2">
+                            <User className="w-3 h-3 text-muted-foreground" />
+                            <span className="text-sm font-medium truncate">{condo.owner.full_name}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate ml-5">
+                            {condo.owner.email}
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Desktop Table */}
+              <div className="hidden md:block overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -448,7 +514,7 @@ export function CondominiumsManagement() {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 pt-4 border-t border-border">
                   <p className="text-sm text-muted-foreground">
                     Página {currentPage} de {totalPages}
                   </p>
@@ -461,29 +527,34 @@ export function CondominiumsManagement() {
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </Button>
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNum: number;
-                      if (totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (currentPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (currentPage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
-                      } else {
-                        pageNum = currentPage - 2 + i;
-                      }
-                      return (
-                        <Button
-                          key={pageNum}
-                          variant={currentPage === pageNum ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setCurrentPage(pageNum)}
-                          className="w-8 h-8 p-0"
-                        >
-                          {pageNum}
-                        </Button>
-                      );
-                    })}
+                    <div className="hidden sm:flex items-center gap-1">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum: number;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = currentPage - 2 + i;
+                        }
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={currentPage === pageNum ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setCurrentPage(pageNum)}
+                            className="w-8 h-8 p-0"
+                          >
+                            {pageNum}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    <span className="sm:hidden text-sm font-medium">
+                      {currentPage}/{totalPages}
+                    </span>
                     <Button
                       variant="outline"
                       size="sm"

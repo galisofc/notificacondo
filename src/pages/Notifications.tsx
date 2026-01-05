@@ -14,14 +14,14 @@ export default function Notifications() {
         />
       </Helmet>
 
-      <div className="space-y-6 animate-fade-up">
+      <div className="space-y-4 md:space-y-6 animate-fade-up">
         <SindicoBreadcrumbs items={[{ label: "Notificações WhatsApp" }]} />
         
         <div>
-          <h1 className="font-display text-3xl font-bold text-foreground">
+          <h1 className="font-display text-xl md:text-3xl font-bold text-foreground">
             Notificações WhatsApp
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm md:text-base text-muted-foreground mt-1">
             Acompanhe o status de entrega das mensagens enviadas
           </p>
         </div>

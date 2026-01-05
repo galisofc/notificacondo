@@ -1153,7 +1153,108 @@ export function InvoicesManagement({
             </div>
           ) : (
             <>
-              <div className="rounded-md border overflow-hidden">
+              {/* Mobile Cards */}
+              <div className="grid grid-cols-1 gap-3 md:hidden">
+                {paginatedInvoices?.map((invoice) => (
+                  <Card
+                    key={invoice.id}
+                    className="bg-card border-border/50 hover:shadow-md transition-all"
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-mono text-sm font-medium text-primary">
+                              #{invoice.invoice_number || "—"}
+                            </span>
+                            {getStatusBadge(invoice.status, invoice.due_date)}
+                          </div>
+                          <h3 className="font-semibold text-foreground truncate">
+                            {invoice.condominium?.name || "—"}
+                          </h3>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {invoice.owner_profile?.full_name}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="font-bold text-lg text-foreground">
+                            {formatCurrency(Number(invoice.amount))}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Venc: {formatDateLocal(invoice.due_date)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-3 border-t border-border/50">
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Calendar className="h-3 w-3" />
+                          <span>
+                            {formatDateLocal(invoice.period_start)} - {formatDateLocal(invoice.period_end)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                disabled={generatingPix === invoice.id}
+                              >
+                                {generatingPix === invoice.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Download className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => generateInvoicePDF(invoice)}>
+                                <Download className="h-4 w-4 mr-2" />
+                                Baixar PDF
+                              </DropdownMenuItem>
+                              {invoice.status === "pending" && (
+                                <DropdownMenuItem onClick={() => handleOpenPixDialog(invoice)}>
+                                  <QrCode className="h-4 w-4 mr-2" />
+                                  PDF com PIX
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => {
+                              setSelectedInvoice(invoice);
+                              setShowDetailsDialog(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          {invoice.status === "pending" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10"
+                              onClick={() => {
+                                setSelectedInvoice(invoice);
+                                setShowPaymentDialog(true);
+                              }}
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Desktop Table */}
+              <div className="hidden md:block rounded-md border overflow-hidden">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1284,8 +1385,8 @@ export function InvoicesManagement({
               
               {/* Paginação */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4 pt-4 border-t">
-                  <p className="text-sm text-muted-foreground">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 pt-4 border-t">
+                  <p className="text-sm text-muted-foreground text-center sm:text-left">
                     Mostrando {startIndex + 1} a {Math.min(startIndex + itemsPerPage, totalItems)} de {totalItems} faturas
                   </p>
                   <div className="flex items-center gap-2">
@@ -1295,10 +1396,10 @@ export function InvoicesManagement({
                       onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                       disabled={currentPage === 1}
                     >
-                      <ChevronLeft className="h-4 w-4 mr-1" />
-                      Anterior
+                      <ChevronLeft className="h-4 w-4" />
+                      <span className="hidden sm:inline ml-1">Anterior</span>
                     </Button>
-                    <div className="flex items-center gap-1">
+                    <div className="hidden sm:flex items-center gap-1">
                       {Array.from({ length: totalPages }, (_, i) => i + 1)
                         .filter((page) => {
                           if (totalPages <= 5) return true;
@@ -1322,14 +1423,17 @@ export function InvoicesManagement({
                           </span>
                         ))}
                     </div>
+                    <span className="sm:hidden text-sm font-medium">
+                      {currentPage}/{totalPages}
+                    </span>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                       disabled={currentPage === totalPages}
                     >
-                      Próximo
-                      <ChevronRight className="h-4 w-4 ml-1" />
+                      <span className="hidden sm:inline mr-1">Próximo</span>
+                      <ChevronRight className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>

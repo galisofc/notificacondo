@@ -402,7 +402,7 @@ const CondominiumDetails = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-4 md:space-y-6">
         <SindicoBreadcrumbs 
           items={[
             { label: "Condomínios", href: "/condominiums" },
@@ -410,33 +410,39 @@ const CondominiumDetails = () => {
           ]} 
         />
         
-        <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/condominiums")}>
+        <div className="flex items-center gap-3 md:gap-4 mb-4 md:mb-8">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/condominiums")} className="shrink-0">
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <div>
-            <h1 className="font-display text-3xl font-bold text-foreground">
+          <div className="min-w-0 flex-1">
+            <h1 className="font-display text-xl md:text-3xl font-bold text-foreground truncate">
               {condominium?.name}
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm md:text-base text-muted-foreground">
               Gerencie blocos, apartamentos e moradores
             </p>
           </div>
         </div>
 
         <Tabs defaultValue="blocks" className="w-full">
-          <TabsList className="mb-6 bg-secondary/50">
-            <TabsTrigger value="blocks" className="gap-2">
-              <Building className="w-4 h-4" />
-              Blocos ({blocks.length})
+          <TabsList className="mb-4 md:mb-6 bg-secondary/50 w-full grid grid-cols-3 h-auto p-1">
+            <TabsTrigger value="blocks" className="gap-1 md:gap-2 text-xs md:text-sm py-2">
+              <Building className="w-3 h-3 md:w-4 md:h-4" />
+              <span className="hidden sm:inline">Blocos</span>
+              <span className="sm:hidden">Blocos</span>
+              <span className="ml-1">({blocks.length})</span>
             </TabsTrigger>
-            <TabsTrigger value="apartments" className="gap-2">
-              <Home className="w-4 h-4" />
-              Apartamentos ({apartments.length})
+            <TabsTrigger value="apartments" className="gap-1 md:gap-2 text-xs md:text-sm py-2">
+              <Home className="w-3 h-3 md:w-4 md:h-4" />
+              <span className="hidden sm:inline">Apartamentos</span>
+              <span className="sm:hidden">Aptos</span>
+              <span className="ml-1">({apartments.length})</span>
             </TabsTrigger>
-            <TabsTrigger value="residents" className="gap-2">
-              <Users className="w-4 h-4" />
-              Moradores ({residents.length})
+            <TabsTrigger value="residents" className="gap-1 md:gap-2 text-xs md:text-sm py-2">
+              <Users className="w-3 h-3 md:w-4 md:h-4" />
+              <span className="hidden sm:inline">Moradores</span>
+              <span className="sm:hidden">Morad.</span>
+              <span className="ml-1">({residents.length})</span>
             </TabsTrigger>
           </TabsList>
 
@@ -515,34 +521,31 @@ const CondominiumDetails = () => {
           {/* APARTMENTS TAB */}
           <TabsContent value="apartments">
             {/* Filters */}
-            <div className="flex flex-col md:flex-row gap-4 mb-6">
-              <div className="flex-1 flex gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Buscar por número do apartamento..."
-                      value={apartmentFilterNumber}
-                      onChange={(e) => setApartmentFilterNumber(e.target.value)}
-                      className="pl-10 bg-secondary/50"
-                    />
-                  </div>
+            <div className="flex flex-col gap-3 mb-4 md:mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por número..."
+                    value={apartmentFilterNumber}
+                    onChange={(e) => setApartmentFilterNumber(e.target.value)}
+                    className="pl-10 bg-secondary/50"
+                  />
                 </div>
-                <div className="w-48">
-                  <select
-                    value={apartmentFilterBlock}
-                    onChange={(e) => setApartmentFilterBlock(e.target.value)}
-                    className="w-full h-10 px-3 rounded-lg bg-secondary/50 border border-border text-foreground"
-                  >
-                    <option value="">Todos os blocos</option>
-                    {blocks.map((b) => (
-                      <option key={b.id} value={b.id}>{b.name}</option>
-                    ))}
-                  </select>
-                </div>
+                <select
+                  value={apartmentFilterBlock}
+                  onChange={(e) => setApartmentFilterBlock(e.target.value)}
+                  className="h-10 px-3 rounded-lg bg-secondary/50 border border-border text-foreground text-sm"
+                >
+                  <option value="">Todos os blocos</option>
+                  {blocks.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
               </div>
               <Button
                 variant="hero"
+                className="w-full sm:w-auto sm:self-end"
                 onClick={() => {
                   if (blocks.length === 0) {
                     toast({ title: "Atenção", description: "Cadastre um bloco primeiro.", variant: "destructive" });
@@ -659,36 +662,33 @@ const CondominiumDetails = () => {
           {/* RESIDENTS TAB */}
           <TabsContent value="residents">
             {/* Filters */}
-            <div className="flex flex-col md:flex-row gap-4 mb-6">
-              <div className="flex-1 flex gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Buscar por nome ou email..."
-                      value={residentFilterSearch}
-                      onChange={(e) => setResidentFilterSearch(e.target.value)}
-                      className="pl-10 bg-secondary/50"
-                    />
-                  </div>
+            <div className="flex flex-col gap-3 mb-4 md:mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por nome ou email..."
+                    value={residentFilterSearch}
+                    onChange={(e) => setResidentFilterSearch(e.target.value)}
+                    className="pl-10 bg-secondary/50"
+                  />
                 </div>
-                <div className="w-56">
-                  <select
-                    value={residentFilterApartment}
-                    onChange={(e) => setResidentFilterApartment(e.target.value)}
-                    className="w-full h-10 px-3 rounded-lg bg-secondary/50 border border-border text-foreground"
-                  >
-                    <option value="">Todos os apartamentos</option>
-                    {apartments.map((apt) => (
-                      <option key={apt.id} value={apt.id}>
-                        {getBlockName(apt.block_id)} - APTO {apt.number}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <select
+                  value={residentFilterApartment}
+                  onChange={(e) => setResidentFilterApartment(e.target.value)}
+                  className="h-10 px-3 rounded-lg bg-secondary/50 border border-border text-foreground text-sm"
+                >
+                  <option value="">Todos os apartamentos</option>
+                  {apartments.map((apt) => (
+                    <option key={apt.id} value={apt.id}>
+                      {getBlockName(apt.block_id)} - APTO {apt.number}
+                    </option>
+                  ))}
+                </select>
               </div>
               <Button
                 variant="hero"
+                className="w-full sm:w-auto sm:self-end"
                 onClick={() => {
                   if (apartments.length === 0) {
                     toast({ title: "Atenção", description: "Cadastre um apartamento primeiro.", variant: "destructive" });

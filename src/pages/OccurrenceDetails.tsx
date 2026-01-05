@@ -919,7 +919,7 @@ const OccurrenceDetails = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 animate-fade-up">
+      <div className="space-y-4 md:space-y-6 animate-fade-up">
         <SindicoBreadcrumbs 
           items={[
             { label: "Ocorrências", href: "/occurrences" },
@@ -928,26 +928,27 @@ const OccurrenceDetails = () => {
         />
 
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/occurrences")}>
+        <div className="flex flex-col sm:flex-row sm:items-start gap-4 mb-4 md:mb-8">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/occurrences")} className="self-start shrink-0">
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
               {getTypeBadge(occurrence.type)}
               {getStatusBadge(occurrence.status)}
             </div>
-            <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground">
+            <h1 className="font-display text-xl md:text-2xl lg:text-3xl font-bold text-foreground break-words">
               {occurrence.title}
             </h1>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap shrink-0">
             <Button 
               variant="outline" 
               onClick={generatePDF}
-              className="border-primary/50 text-primary hover:bg-primary/10"
+              className="border-primary/50 text-primary hover:bg-primary/10 text-xs md:text-sm"
+              size="sm"
             >
-              <FileDown className="w-4 h-4 mr-2" />
+              <FileDown className="w-4 h-4 mr-1 md:mr-2" />
               Baixar PDF
             </Button>
             {occurrence.residents && !["arquivada", "advertido", "multado"].includes(occurrence.status) && (

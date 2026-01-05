@@ -355,15 +355,15 @@ const DefenseAnalysis = () => {
         <meta name="description" content="Analise as defesas apresentadas pelos moradores" />
       </Helmet>
 
-      <div className="space-y-6">
+      <div className="space-y-4 md:space-y-6">
         {/* Breadcrumbs */}
         <SindicoBreadcrumbs items={[{ label: "Análise de Defesas" }]} />
 
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col gap-3 md:gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Análise de Defesas</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-xl md:text-2xl font-bold text-foreground">Análise de Defesas</h1>
+            <p className="text-sm md:text-base text-muted-foreground">
               {filteredDefenses.length} {filteredDefenses.length === 1 ? "defesa pendente" : "defesas pendentes"} de análise
             </p>
           </div>
@@ -397,9 +397,9 @@ const DefenseAnalysis = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
             {/* Defense List */}
-            <div className="space-y-4">
+            <div className="space-y-3 md:space-y-4">
               <h2 className="text-lg font-semibold">Defesas Pendentes</h2>
               {filteredDefenses.map((defense) => (
                 <Card

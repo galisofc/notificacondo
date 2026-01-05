@@ -259,16 +259,16 @@ const ResidentOccurrences = () => {
         <meta name="description" content="Lista de ocorrências do morador" />
       </Helmet>
 
-      <div className="space-y-6 animate-fade-up">
+      <div className="space-y-4 md:space-y-6 animate-fade-up">
         {/* Breadcrumbs */}
         <ResidentBreadcrumbs items={[{ label: "Minhas Ocorrências" }]} />
 
         {/* Header */}
         <div>
-          <h1 className="font-display text-3xl font-bold text-foreground">
+          <h1 className="font-display text-xl md:text-3xl font-bold text-foreground">
             Minhas Ocorrências
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm md:text-base text-muted-foreground mt-1">
             Acompanhe todas as suas ocorrências registradas.
           </p>
         </div>

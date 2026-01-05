@@ -285,6 +285,7 @@ function SidebarNavigation() {
         collapsed ? "w-[70px]" : "w-[260px]"
       )}
       collapsible="icon"
+      variant="sidebar"
     >
       {/* Header with Logo */}
       <SidebarHeader className="p-4 pb-6">
@@ -476,15 +477,15 @@ function SidebarNavigation() {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
-    <SidebarProvider defaultOpen={true}>
+    <SidebarProvider defaultOpen={false}>
       <div className="min-h-screen flex w-full bg-background">
         <SidebarNavigation />
-        <main className="flex-1 flex flex-col min-h-screen overflow-hidden">
-          <header className="sticky top-0 z-40 h-14 border-b border-border bg-card/80 backdrop-blur-lg flex items-center justify-between px-4">
+        <main className="flex-1 flex flex-col min-h-screen overflow-hidden w-full">
+          <header className="sticky top-0 z-40 h-14 border-b border-border bg-card/80 backdrop-blur-lg flex items-center justify-between px-3 md:px-4">
             <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
             <ThemeToggle />
           </header>
-          <div className="flex-1 overflow-auto p-4 md:p-6">{children}</div>
+          <div className="flex-1 overflow-auto p-3 md:p-6">{children}</div>
         </main>
       </div>
     </SidebarProvider>
