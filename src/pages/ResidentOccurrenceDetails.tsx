@@ -551,7 +551,7 @@ const ResidentOccurrenceDetails = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-foreground whitespace-pre-wrap">{occurrence.description}</p>
+                <p className="text-foreground whitespace-pre-wrap text-justify">{occurrence.description}</p>
               </CardContent>
             </Card>
 
@@ -841,7 +841,7 @@ const ResidentOccurrenceDetails = () => {
                       <p className="text-sm text-muted-foreground mb-2">
                         Enviada em {formatDateTime(defense.submitted_at)}
                       </p>
-                      <p className="text-foreground whitespace-pre-wrap">{defense.content}</p>
+                      <p className="text-foreground whitespace-pre-wrap text-justify">{defense.content}</p>
                     </div>
                   ))}
                 </CardContent>
@@ -897,7 +897,7 @@ const ResidentOccurrenceDetails = () => {
                         <div className="space-y-3">
                           <div>
                             <p className="text-xs text-muted-foreground mb-1">Justificativa</p>
-                            <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                            <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap text-justify">
                               {decision.justification}
                             </p>
                           </div>
