@@ -78,17 +78,23 @@ const AuthCallback = () => {
         if (params.next) {
           try {
             decodedNextFromParam = base64UrlDecode(params.next);
-          } catch {
+            console.log("[AuthCallback] Decoded path param next:", decodedNextFromParam);
+          } catch (e) {
+            console.warn("[AuthCallback] Failed to decode path param:", params.next, e);
             decodedNextFromParam = null;
           }
+        } else {
+          console.log("[AuthCallback] No path param 'next' found");
         }
 
         // 2) Then query string
         const nextParam = new URLSearchParams(window.location.search).get("next");
         const safeQueryNext = nextParam && nextParam.startsWith("/") ? nextParam : null;
+        console.log("[AuthCallback] Query string next:", nextParam, "-> safe:", safeQueryNext);
 
         // 3) Fallback localStorage
         const pendingRedirect = localStorage.getItem("post_magiclink_redirect");
+        console.log("[AuthCallback] localStorage redirect:", pendingRedirect);
         if (pendingRedirect) localStorage.removeItem("post_magiclink_redirect");
 
         const safeParamNext = decodedNextFromParam && decodedNextFromParam.startsWith("/")
@@ -96,6 +102,13 @@ const AuthCallback = () => {
           : null;
 
         const targetPath = safeParamNext || safeQueryNext || pendingRedirect || "/resident";
+
+        console.log("[AuthCallback] Final redirect decision:", {
+          safeParamNext,
+          safeQueryNext,
+          pendingRedirect,
+          targetPath,
+        });
 
         setTimeout(() => {
           navigate(targetPath, { replace: true });
