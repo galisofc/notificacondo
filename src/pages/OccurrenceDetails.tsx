@@ -99,6 +99,10 @@ interface Notification {
   delivered_at: string | null;
   read_at: string | null;
   acknowledged_at: string | null;
+  device_info: unknown;
+  location_info: unknown;
+  ip_address: string | null;
+  user_agent: string | null;
 }
 
 interface TimelineItem {
@@ -1245,33 +1249,88 @@ const OccurrenceDetails = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {notifications.map((notif) => (
-                      <div key={notif.id} className="p-3 rounded-lg bg-muted/30 text-sm">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-medium capitalize">{notif.sent_via}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {formatDateTime(notif.sent_at)}
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {notif.delivered_at && (
-                            <span className="flex items-center gap-1 text-xs text-green-500">
-                              <CheckCircle2 className="w-3 h-3" /> Entregue
+                    {notifications.map((notif) => {
+                      const deviceInfo = notif.device_info as { browser?: string; os?: string; device?: string } | null;
+                      const locationInfo = notif.location_info as { city?: string; region?: string; country?: string } | null;
+                      
+                      return (
+                        <div key={notif.id} className="p-4 rounded-lg bg-muted/30 text-sm space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium capitalize">{notif.sent_via}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {formatDateTime(notif.sent_at)}
                             </span>
-                          )}
+                          </div>
+                          
+                          {/* Status badges */}
+                          <div className="flex flex-wrap gap-2">
+                            {notif.delivered_at && (
+                              <span className="flex items-center gap-1 text-xs text-green-500">
+                                <CheckCircle2 className="w-3 h-3" /> Entregue
+                              </span>
+                            )}
+                            {notif.read_at && (
+                              <span className="flex items-center gap-1 text-xs text-blue-500">
+                                <CheckCircle2 className="w-3 h-3" /> Lida
+                              </span>
+                            )}
+                            {notif.acknowledged_at && (
+                              <span className="flex items-center gap-1 text-xs text-primary">
+                                <CheckCircle2 className="w-3 h-3" /> Confirmada
+                              </span>
+                            )}
+                          </div>
+                          
+                          {/* Read details */}
                           {notif.read_at && (
-                            <span className="flex items-center gap-1 text-xs text-blue-500">
-                              <CheckCircle2 className="w-3 h-3" /> Lida
-                            </span>
-                          )}
-                          {notif.acknowledged_at && (
-                            <span className="flex items-center gap-1 text-xs text-primary">
-                              <CheckCircle2 className="w-3 h-3" /> Confirmada
-                            </span>
+                            <div className="pt-2 border-t border-border/30 space-y-2 text-xs text-muted-foreground">
+                              <p className="font-medium text-foreground text-sm">Detalhes da Leitura</p>
+                              
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {/* Date */}
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="w-3 h-3" />
+                                  <span>Data: {formatDateTime(notif.read_at)}</span>
+                                </div>
+                                
+                                {/* Device */}
+                                {(deviceInfo?.browser || deviceInfo?.os || deviceInfo?.device || notif.user_agent) && (
+                                  <div className="flex items-start gap-2">
+                                    <MessageCircle className="w-3 h-3 mt-0.5" />
+                                    <span>
+                                      Dispositivo: {deviceInfo?.device || deviceInfo?.browser || deviceInfo?.os || 
+                                        (notif.user_agent?.includes('Mobile') ? 'Celular' : 
+                                         notif.user_agent?.includes('Windows') ? 'Windows' :
+                                         notif.user_agent?.includes('Mac') ? 'Mac' :
+                                         notif.user_agent?.includes('Linux') ? 'Linux' : 'Desconhecido')}
+                                    </span>
+                                  </div>
+                                )}
+                                
+                                {/* Location */}
+                                {(locationInfo?.city || locationInfo?.region || locationInfo?.country) && (
+                                  <div className="flex items-center gap-2">
+                                    <MapPin className="w-3 h-3" />
+                                    <span>
+                                      Local: {[locationInfo?.city, locationInfo?.region, locationInfo?.country]
+                                        .filter(Boolean).join(', ')}
+                                    </span>
+                                  </div>
+                                )}
+                                
+                                {/* IP */}
+                                {notif.ip_address && (
+                                  <div className="flex items-center gap-2">
+                                    <FileText className="w-3 h-3" />
+                                    <span>IP: {notif.ip_address}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           )}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>
