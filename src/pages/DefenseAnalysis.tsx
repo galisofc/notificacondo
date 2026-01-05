@@ -412,6 +412,12 @@ const DefenseAnalysis = () => {
                   onClick={() => handleSelectDefense(defense)}
                 >
                   <CardContent className="p-4">
+                    {defense.occurrences.condominiums?.name && (
+                      <div className="flex items-center gap-1 text-sm font-medium text-primary mb-2">
+                        <Building2 className="w-3 h-3" />
+                        {defense.occurrences.condominiums.name}
+                      </div>
+                    )}
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
                         {getTypeBadge(defense.occurrences.type)}
@@ -433,12 +439,6 @@ const DefenseAnalysis = () => {
                         <User className="w-3 h-3" />
                         {defense.residents?.full_name}
                       </span>
-                      {defense.occurrences.condominiums?.name && (
-                        <span className="flex items-center gap-1 font-medium text-primary">
-                          <Building2 className="w-3 h-3" />
-                          {defense.occurrences.condominiums.name}
-                        </span>
-                      )}
                       <span className="flex items-center gap-1">
                         <Building2 className="w-3 h-3" />
                         {defense.occurrences.blocks?.name}
