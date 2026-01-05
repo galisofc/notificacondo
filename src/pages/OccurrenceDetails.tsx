@@ -53,6 +53,7 @@ import {
   Eye,
   Globe,
   ChevronDown,
+  ChevronsUpDown,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -155,6 +156,30 @@ const OccurrenceDetails = () => {
 
   // WhatsApp notification
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
+  
+  // Notifications collapse state
+  const [expandedNotifications, setExpandedNotifications] = useState<Set<string>>(new Set());
+  const [allExpanded, setAllExpanded] = useState(false);
+
+  const toggleAllNotifications = () => {
+    if (allExpanded) {
+      setExpandedNotifications(new Set());
+    } else {
+      setExpandedNotifications(new Set(notifications.map(n => n.id)));
+    }
+    setAllExpanded(!allExpanded);
+  };
+
+  const toggleNotification = (id: string) => {
+    const newSet = new Set(expandedNotifications);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setExpandedNotifications(newSet);
+    setAllExpanded(newSet.size === notifications.length);
+  };
 
   useEffect(() => {
     if (id) fetchData();
@@ -1295,9 +1320,29 @@ const OccurrenceDetails = () => {
                       </div>
                       Histórico de Notificações
                     </CardTitle>
-                    <Badge variant="secondary" className="text-xs font-semibold">
-                      {notifications.length} {notifications.length === 1 ? 'envio' : 'envios'}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={toggleAllNotifications}
+                        className="text-xs h-7 px-2"
+                      >
+                        {allExpanded ? (
+                          <>
+                            <ChevronsUpDown className="w-3.5 h-3.5 mr-1" />
+                            Recolher
+                          </>
+                        ) : (
+                          <>
+                            <ChevronsUpDown className="w-3.5 h-3.5 mr-1" />
+                            Expandir
+                          </>
+                        )}
+                      </Button>
+                      <Badge variant="secondary" className="text-xs font-semibold">
+                        {notifications.length} {notifications.length === 1 ? 'envio' : 'envios'}
+                      </Badge>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -1342,7 +1387,8 @@ const OccurrenceDetails = () => {
                       return (
                         <Collapsible 
                           key={notif.id}
-                          defaultOpen={index === 0}
+                          open={expandedNotifications.has(notif.id)}
+                          onOpenChange={() => toggleNotification(notif.id)}
                         >
                           <div 
                             className="relative group animate-fade-in"
