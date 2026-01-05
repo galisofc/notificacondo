@@ -119,7 +119,7 @@ interface Notification {
 
 interface TimelineItem {
   id: string;
-  type: "created" | "notification" | "defense" | "decision" | "evidence" | "read";
+  type: "created" | "notification" | "defense" | "decision" | "evidence" | "read" | "acknowledged";
   title: string;
   description: string;
   date: string;
@@ -300,6 +300,19 @@ const OccurrenceDetails = () => {
           date: notif.read_at,
           icon: <Eye className="w-4 h-4" />,
           color: "bg-blue-500",
+        });
+      }
+
+      // Add acknowledged event if notification was confirmed
+      if (notif.acknowledged_at) {
+        items.push({
+          id: `ack-${notif.id}`,
+          type: "acknowledged",
+          title: "Notificação Confirmada",
+          description: "Morador confirmou ciência da notificação",
+          date: notif.acknowledged_at,
+          icon: <CheckCircle2 className="w-4 h-4" />,
+          color: "bg-primary",
         });
       }
     });
