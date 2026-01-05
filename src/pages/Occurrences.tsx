@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import BlockApartmentDisplay from "@/components/common/BlockApartmentDisplay";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -724,12 +725,11 @@ const Occurrences = () => {
                     </p>
                     <div className="flex flex-wrap gap-2 md:gap-4 text-xs text-muted-foreground">
                       <span className="truncate max-w-[120px]">{occurrence.condominiums?.name}</span>
-                      {occurrence.blocks?.name && (
-                        <span>{occurrence.blocks.name}</span>
-                      )}
-                      {occurrence.apartments?.number && (
-                        <span>APTO {occurrence.apartments.number}</span>
-                      )}
+                      <BlockApartmentDisplay
+                        blockName={occurrence.blocks?.name}
+                        apartmentNumber={occurrence.apartments?.number}
+                        variant="inline"
+                      />
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
                         {formatDate(occurrence.occurred_at)}

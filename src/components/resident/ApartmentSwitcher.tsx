@@ -7,6 +7,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Building2, Home } from "lucide-react";
+import BlockApartmentDisplay from "@/components/common/BlockApartmentDisplay";
 
 const ApartmentSwitcher = () => {
   const { residentInfo, allResidentProfiles, switchApartment } = useUserRole();
@@ -32,9 +33,12 @@ const ApartmentSwitcher = () => {
               <div className="flex items-center gap-2 text-left">
                 <Home className="w-4 h-4 text-primary flex-shrink-0" />
                 <div className="flex flex-col items-start">
-                  <span className="text-sm font-medium">
-                    {residentInfo.block_name} - APTO {residentInfo.apartment_number}
-                  </span>
+                  <BlockApartmentDisplay
+                    blockName={residentInfo.block_name}
+                    apartmentNumber={residentInfo.apartment_number}
+                    variant="inline"
+                    valueClassName="text-sm font-medium"
+                  />
                   <span className="text-xs text-muted-foreground">
                     {residentInfo.condominium_name}
                   </span>
@@ -53,9 +57,12 @@ const ApartmentSwitcher = () => {
               <div className="flex items-center gap-2">
                 <Home className="w-4 h-4 text-primary flex-shrink-0" />
                 <div className="flex flex-col">
-                  <span className="text-sm font-medium">
-                    {profile.block_name} - APTO {profile.apartment_number}
-                  </span>
+                  <BlockApartmentDisplay
+                    blockName={profile.block_name}
+                    apartmentNumber={profile.apartment_number}
+                    variant="inline"
+                    valueClassName="text-sm font-medium"
+                  />
                   <span className="text-xs text-muted-foreground">
                     {profile.condominium_name}
                   </span>

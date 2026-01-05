@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import BlockApartmentDisplay from "@/components/common/BlockApartmentDisplay";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MaskedInput, formatPhone, formatCPF } from "@/components/ui/masked-input";
@@ -636,8 +637,11 @@ const CondominiumDetails = () => {
                         </Button>
                       </div>
                     </div>
-                    <h4 className="font-semibold text-foreground">APTO {apt.number}</h4>
-                    <p className="text-sm text-muted-foreground">{getBlockName(apt.block_id)}</p>
+                    <BlockApartmentDisplay
+                      blockName={getBlockName(apt.block_id)}
+                      apartmentNumber={apt.number}
+                      variant="compact"
+                    />
                     {apt.floor !== null && (
                       <p className="text-xs text-muted-foreground">
                         {apt.floor === 0 ? "Térreo" : `${apt.floor}º Andar`}
