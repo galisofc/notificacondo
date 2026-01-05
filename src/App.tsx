@@ -56,6 +56,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/auth/callback/next/:next" element={<AuthCallback />} />
               
               {/* Síndico Routes */}
               <Route

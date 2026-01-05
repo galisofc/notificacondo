@@ -236,9 +236,13 @@ serve(async (req) => {
     }
 
     // Generate a magic link for the user - use callback page to handle auth properly
-    // Include the desired post-login path as a query param to make redirects robust (no localStorage reliance)
+    // Use a path param (base64url) so redirects keep the target even if query strings are stripped
     const nextPath = `/resident/occurrences/${notification.occurrence_id}`;
-    const callbackUrl = `${appBaseUrl}/auth/callback?next=${encodeURIComponent(nextPath)}`;
+    const nextB64Url = btoa(nextPath)
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/g, "");
+    const callbackUrl = `${appBaseUrl}/auth/callback/next/${nextB64Url}`;
 
     console.log(`Generating magic link with callback: ${callbackUrl}`);
     console.log(`Target occurrence: ${nextPath}`);
