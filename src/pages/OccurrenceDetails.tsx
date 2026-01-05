@@ -947,7 +947,7 @@ const OccurrenceDetails = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-foreground whitespace-pre-wrap text-justify">{occurrence.description}</p>
+                <p className="text-foreground whitespace-pre-line text-justify">{occurrence.description}</p>
               </CardContent>
             </Card>
 
@@ -1084,7 +1084,7 @@ const OccurrenceDetails = () => {
                             {formatDateLocal(def.submitted_at)}
                           </span>
                         </div>
-                        <p className="text-foreground whitespace-pre-wrap text-justify mb-3">{def.content}</p>
+                        <p className="text-foreground whitespace-pre-line text-justify mb-3">{def.content}</p>
                         {def.defense_attachments && def.defense_attachments.length > 0 && (
                           <div className="flex flex-wrap gap-2">
                             {def.defense_attachments.map((att) => (
@@ -1145,7 +1145,7 @@ const OccurrenceDetails = () => {
                               {formatDateLocal(dec.decided_at)}
                             </span>
                           </div>
-                          <p className="text-foreground whitespace-pre-wrap text-justify">{dec.justification}</p>
+                          <p className="text-foreground whitespace-pre-line text-justify">{dec.justification}</p>
                         </div>
                       );
                     })}
