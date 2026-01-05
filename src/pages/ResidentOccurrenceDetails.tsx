@@ -5,6 +5,7 @@ import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
+import BlockApartmentDisplay from "@/components/common/BlockApartmentDisplay";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -499,11 +500,11 @@ const ResidentOccurrenceDetails = () => {
                     <Home className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">BLOCO / APTO</p>
-                    <p className="font-medium text-foreground">
-                      {residentInfo?.block_name || occurrence.blocks?.name}
-                      {(residentInfo?.apartment_number || occurrence.apartments?.number) && ` - APTO ${residentInfo?.apartment_number || occurrence.apartments?.number}`}
-                    </p>
+                    <BlockApartmentDisplay
+                      blockName={residentInfo?.block_name || occurrence.blocks?.name}
+                      apartmentNumber={residentInfo?.apartment_number || occurrence.apartments?.number}
+                      variant="label"
+                    />
                   </div>
                 </div>
               </CardContent>

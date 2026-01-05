@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import BlockApartmentDisplay from "@/components/common/BlockApartmentDisplay";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1250,11 +1251,11 @@ const OccurrenceDetails = () => {
                       <Home className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">BLOCO / APTO</p>
-                      <p className="font-medium text-foreground">
-                        {occurrence.blocks.name}
-                        {occurrence.apartments?.number && ` - APTO ${occurrence.apartments.number}`}
-                      </p>
+                      <BlockApartmentDisplay
+                        blockName={occurrence.blocks.name}
+                        apartmentNumber={occurrence.apartments?.number}
+                        variant="label"
+                      />
                     </div>
                   </div>
                 )}
