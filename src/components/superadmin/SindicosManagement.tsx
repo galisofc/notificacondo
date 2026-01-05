@@ -722,183 +722,155 @@ export function SindicosManagement() {
             <p className="text-sm md:text-base text-muted-foreground">Nenhum síndico encontrado</p>
           </div>
         ) : (
-          <>
-            {/* Mobile Cards */}
-            <div className="block md:hidden space-y-3">
-              {filteredSindicos?.map((sindico) => (
-                <div key={sindico.id} className="p-4 rounded-xl bg-secondary/50 border border-border">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <p className="font-medium text-foreground">{sindico.profile?.full_name || "—"}</p>
-                        <p className="text-xs text-muted-foreground">{sindico.profile?.email}</p>
-                        {sindico.profile?.cpf && (
-                          <p className="text-xs text-muted-foreground font-mono">CPF: {formatCPF(sindico.profile.cpf)}</p>
-                        )}
-                        {sindico.profile?.phone && (
-                          <p className="text-xs text-muted-foreground">Tel: {formatPhone(sindico.profile.phone)}</p>
-                        )}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {filteredSindicos?.map((sindico) => {
+                const allActive = sindico.condominiums.length > 0 && sindico.condominiums.every((c) => c.subscription?.active);
+                const someActive = sindico.condominiums.some((c) => c.subscription?.active);
+                
+                return (
+                  <Card 
+                    key={sindico.id} 
+                    className="cursor-pointer hover:border-primary/50 transition-colors"
+                    onClick={() => handleViewSindico(sindico)}
+                  >
+                    <CardContent className="p-4 space-y-4">
+                      {/* Header: Avatar + Name + Actions */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <span className="text-sm font-semibold text-primary">
+                              {sindico.profile?.full_name?.charAt(0)?.toUpperCase() || "?"}
+                            </span>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-semibold text-foreground truncate">
+                              {sindico.profile?.full_name || "—"}
+                            </h4>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {sindico.profile?.email}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewSindico(sindico);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>
+                                <Mail className="h-4 w-4 mr-2" />
+                                Enviar email
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => handleViewSindico(sindico)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
-                              <Mail className="h-4 w-4 mr-2" />
-                              Enviar email
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {sindico.condominiums.length > 0 ? (
-                      sindico.condominiums.slice(0, 2).map((c) => (
-                        <Badge key={c.id} variant="outline" className="bg-secondary text-foreground border-border">
-                          <Building2 className="h-3 w-3 mr-1" />
-                          {c.name.length > 15 ? c.name.substring(0, 15) + "..." : c.name}
-                        </Badge>
-                      ))
-                    ) : (
-                      <span className="text-muted-foreground text-xs">Sem condomínios</span>
-                    )}
-                    {sindico.condominiums.length > 2 && (
-                      <Badge variant="outline">+{sindico.condominiums.length - 2}</Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Building2 className="h-3 w-3" />
-                      {sindico.condominiums_count} condomínio{sindico.condominiums_count !== 1 ? "s" : ""}
-                    </div>
-                    <span>{formatDate(sindico.created_at)}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
 
-            {/* Desktop Table */}
-            <div className="hidden md:block rounded-md border overflow-hidden">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Síndico</TableHead>
-                      <TableHead>CPF</TableHead>
-                      <TableHead>Telefone</TableHead>
-                      <TableHead>Condomínios</TableHead>
-                      <TableHead>Qtd.</TableHead>
-                      <TableHead>Status Assinaturas</TableHead>
-                      <TableHead>Cadastro</TableHead>
-                      <TableHead className="w-[50px]"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredSindicos?.map((sindico) => (
-                      <TableRow key={sindico.id}>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{sindico.profile?.full_name || "—"}</p>
-                            <p className="text-sm text-muted-foreground">{sindico.profile?.email}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <p className="text-sm font-mono">
+                      {/* Contact Info */}
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <FileText className="h-3 w-3 flex-shrink-0" />
+                          <span className="font-mono truncate">
                             {sindico.profile?.cpf ? formatCPF(sindico.profile.cpf) : "—"}
-                          </p>
-                        </TableCell>
-                        <TableCell>
-                          <p className="text-sm">
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Phone className="h-3 w-3 flex-shrink-0" />
+                          <span className="truncate">
                             {sindico.profile?.phone ? formatPhone(sindico.profile.phone) : "—"}
-                          </p>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {sindico.condominiums.length > 0 ? (
-                              sindico.condominiums.slice(0, 2).map((c) => (
-                                <Badge key={c.id} variant="outline" className="bg-secondary text-foreground border-border">
-                                  <Building2 className="h-3 w-3 mr-1" />
-                                  {c.name.length > 20 ? c.name.substring(0, 20) + "..." : c.name}
-                                </Badge>
-                              ))
-                            ) : (
-                              <span className="text-muted-foreground text-sm">Sem condomínios</span>
-                            )}
-                            {sindico.condominiums.length > 2 && (
-                              <Badge variant="outline">+{sindico.condominiums.length - 2}</Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-medium">{sindico.condominiums_count}</span>
-                        </TableCell>
-                        <TableCell>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Condominiums */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Condomínios</span>
+                          <Badge variant="outline" className="text-xs">
+                            {sindico.condominiums_count}
+                          </Badge>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
                           {sindico.condominiums.length > 0 ? (
-                            sindico.condominiums.every((c) => c.subscription?.active) ? (
-                              <Badge
-                                variant="outline"
-                                className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-                              >
-                                Todos Ativos
-                              </Badge>
-                            ) : (
-                              <Badge
-                                variant="outline"
-                                className="bg-amber-500/10 text-amber-500 border-amber-500/20"
-                              >
-                                Parcial
-                              </Badge>
-                            )
+                            <>
+                              {sindico.condominiums.slice(0, 2).map((c) => (
+                                <Badge 
+                                  key={c.id} 
+                                  variant="outline" 
+                                  className="bg-secondary/50 text-foreground border-border text-xs"
+                                >
+                                  <Building2 className="h-3 w-3 mr-1" />
+                                  {c.name.length > 18 ? c.name.substring(0, 18) + "..." : c.name}
+                                </Badge>
+                              ))}
+                              {sindico.condominiums.length > 2 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{sindico.condominiums.length - 2}
+                                </Badge>
+                              )}
+                            </>
                           ) : (
-                            <span className="text-muted-foreground text-sm">—</span>
+                            <span className="text-xs text-muted-foreground">Sem condomínios cadastrados</span>
                           )}
-                        </TableCell>
-                        <TableCell>
-                          <p className="text-sm">
-                            {formatDate(sindico.created_at)}
-                          </p>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              onClick={() => handleViewSindico(sindico)}
+                        </div>
+                      </div>
+
+                      {/* Footer: Status + Date */}
+                      <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                        {sindico.condominiums.length > 0 ? (
+                          allActive ? (
+                            <Badge
+                              variant="outline"
+                              className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-xs"
                             >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem>
-                                  <Mail className="h-4 w-4 mr-2" />
-                                  Enviar email
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Todos Ativos
+                            </Badge>
+                          ) : someActive ? (
+                            <Badge
+                              variant="outline"
+                              className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-xs"
+                            >
+                              Parcial
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="bg-destructive/10 text-destructive border-destructive/20 text-xs"
+                            >
+                              <XCircle className="h-3 w-3 mr-1" />
+                              Inativos
+                            </Badge>
+                          )
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Calendar className="h-3 w-3" />
+                          {formatDate(sindico.created_at)}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
-          </>
         )}
 
         {/* View Sindico Dialog */}
