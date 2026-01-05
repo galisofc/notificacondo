@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -1343,15 +1344,26 @@ const OccurrenceDetails = () => {
                                 </div>
                                 
                                 {/* Device */}
-                                <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-muted/30">
-                                  <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
-                                    {getDeviceIcon()}
-                                  </div>
-                                  <div className="min-w-0">
-                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Dispositivo</p>
-                                    <p className="text-xs font-medium truncate">{getDeviceName()}</p>
-                                  </div>
-                                </div>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-muted/30 cursor-help">
+                                        <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+                                          {getDeviceIcon()}
+                                        </div>
+                                        <div className="min-w-0">
+                                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Dispositivo</p>
+                                          <p className="text-xs font-medium truncate">{getDeviceName()}</p>
+                                        </div>
+                                      </div>
+                                    </TooltipTrigger>
+                                    {notif.user_agent && (
+                                      <TooltipContent side="top" className="max-w-xs break-all text-xs">
+                                        <p className="font-mono">{notif.user_agent}</p>
+                                      </TooltipContent>
+                                    )}
+                                  </Tooltip>
+                                </TooltipProvider>
                                 
                                 {/* Location */}
                                 {(locationInfo?.city || locationInfo?.region || locationInfo?.country) && (
