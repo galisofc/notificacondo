@@ -816,45 +816,6 @@ const ResidentOccurrenceDetails = () => {
               </CardContent>
             </Card>
 
-            {/* Defense Status */}
-            <Card className="bg-gradient-card border-border/50">
-              <CardHeader>
-                <CardTitle className="text-lg">Status da Defesa</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {defenses.length > 0 ? (
-                  <div className="flex items-center gap-3 p-4 rounded-xl bg-green-500/10 border border-green-500/20">
-                    <CheckCircle2 className="w-6 h-6 text-green-500" />
-                    <div>
-                      <p className="font-medium text-green-600">Defesa Enviada</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDateTime(defenses[0].submitted_at)}
-                      </p>
-                    </div>
-                  </div>
-                ) : canSubmitDefense ? (
-                  <div className="flex items-center gap-3 p-4 rounded-xl bg-orange-500/10 border border-orange-500/20">
-                    <AlertTriangle className="w-6 h-6 text-orange-500" />
-                    <div>
-                      <p className="font-medium text-orange-600">Prazo Aberto</p>
-                      <p className="text-xs text-muted-foreground">
-                        Você pode enviar sua defesa
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/50 border border-border/30">
-                    <XCircle className="w-6 h-6 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium text-muted-foreground">Prazo Encerrado</p>
-                      <p className="text-xs text-muted-foreground">
-                        Não é mais possível enviar defesa
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
           </div>
         </div>
 
