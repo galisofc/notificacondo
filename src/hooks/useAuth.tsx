@@ -25,7 +25,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const pending = localStorage.getItem("post_magiclink_redirect");
     if (pending) {
       localStorage.removeItem("post_magiclink_redirect");
-      navigate(pending, { replace: true });
+      // Use setTimeout to ensure navigation happens after React rendering
+      setTimeout(() => {
+        navigate(pending, { replace: true });
+      }, 100);
     }
   };
 
