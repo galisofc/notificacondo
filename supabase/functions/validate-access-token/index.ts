@@ -235,10 +235,12 @@ serve(async (req) => {
       }
     }
 
-    // Generate a magic link for the user - redirect directly to the occurrence details
-    const redirectPath = `/resident/occurrences/${notification.occurrence_id}`;
+    // Generate a magic link for the user - use callback page to handle auth properly
+    // Store the target path in localStorage via ResidentAccess page
+    const callbackUrl = `${appBaseUrl}/auth/callback`;
     
-    console.log(`Generating magic link with redirect to: ${appBaseUrl}${redirectPath}`);
+    console.log(`Generating magic link with callback: ${callbackUrl}`);
+    console.log(`Target occurrence: /resident/occurrences/${notification.occurrence_id}`);
     
     const residentEmail = resident.email || `resident_${resident.id}@temp.condomaster.app`;
     
@@ -246,7 +248,7 @@ serve(async (req) => {
       type: "magiclink",
       email: residentEmail,
       options: {
-        redirectTo: `${appBaseUrl}${redirectPath}`,
+        redirectTo: callbackUrl,
       },
     });
 
@@ -258,7 +260,7 @@ serve(async (req) => {
       );
     }
 
-    const redirectUrl = `${appBaseUrl}${redirectPath}`;
+    const redirectUrl = `${appBaseUrl}/resident/occurrences/${notification.occurrence_id}`;
 
     // Log magic link access for audit
     await supabase

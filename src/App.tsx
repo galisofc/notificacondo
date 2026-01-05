@@ -26,6 +26,7 @@ import SindicoInvoices from "./pages/SindicoInvoices";
 import SindicoSubscriptions from "./pages/SindicoSubscriptions";
 import { Navigate } from "react-router-dom";
 import ResidentAccess from "./pages/ResidentAccess";
+import AuthCallback from "./pages/AuthCallback";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import Sindicos from "./pages/superadmin/Sindicos";
 import SuperAdminCondominiums from "./pages/superadmin/Condominiums";
@@ -54,6 +55,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
               
               {/* Síndico Routes */}
               <Route
