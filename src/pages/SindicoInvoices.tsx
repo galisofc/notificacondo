@@ -466,7 +466,99 @@ const SindicoInvoices = () => {
 
             {invoices && invoices.length > 0 ? (
               <>
-                <div className="rounded-md border overflow-hidden">
+                {/* Mobile Cards View */}
+                <div className="md:hidden space-y-3">
+                  {paginatedInvoices.map((invoice) => {
+                    const statusConfig = STATUS_CONFIG[invoice.status] || STATUS_CONFIG.pending;
+                    const isAvulsa = invoice.period_start === invoice.period_end || 
+                      (invoice.description && !invoice.description.startsWith("Assinatura"));
+
+                    return (
+                      <Card key={invoice.id} className="border shadow-sm">
+                        <CardContent className="p-4 space-y-3">
+                          {/* Header: Número e Status */}
+                          <div className="flex items-center justify-between">
+                            <span className="font-mono text-sm font-medium text-primary">
+                              {invoice.invoice_number || "—"}
+                            </span>
+                            <Badge className={`${statusConfig.color} flex items-center gap-1`}>
+                              {statusConfig.icon}
+                              {statusConfig.label}
+                            </Badge>
+                          </div>
+
+                          {/* Condomínio */}
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium text-sm">{invoice.condominium?.name}</span>
+                          </div>
+
+                          {/* Tipo e Descrição */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {isAvulsa ? (
+                              <Badge variant="secondary" className="bg-violet-500/10 text-violet-600 border-violet-500/20">
+                                Avulsa
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline">
+                                {PLAN_NAMES[invoice.subscription?.plan] || invoice.subscription?.plan}
+                              </Badge>
+                            )}
+                            {isAvulsa ? (
+                              <span className="text-xs text-muted-foreground truncate max-w-[180px]">
+                                {invoice.description || "Fatura Avulsa"}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">
+                                {formatDate(invoice.period_start)} - {formatDate(invoice.period_end)}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Valor e Vencimento */}
+                          <div className="flex items-center justify-between pt-2 border-t">
+                            <div>
+                              <p className="text-lg font-bold">{formatCurrency(invoice.amount)}</p>
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <Calendar className="h-3 w-3" />
+                                <span>Vence em {formatDate(invoice.due_date)}</span>
+                              </div>
+                            </div>
+                            
+                            {/* Ação */}
+                            <div>
+                              {invoice.status === "pending" || invoice.status === "overdue" ? (
+                                userProfile?.email ? (
+                                  <MercadoPagoTransparentCheckout
+                                    invoiceId={invoice.id}
+                                    payerEmail={userProfile.email}
+                                    amount={invoice.amount}
+                                    buttonText="Pagar"
+                                    onPaymentSuccess={() => {
+                                      queryClient.invalidateQueries({ queryKey: ["sindico-invoices"] });
+                                    }}
+                                  />
+                                ) : (
+                                  <Button size="sm" variant="outline" disabled>
+                                    <CreditCard className="h-4 w-4 mr-1" />
+                                    Pagar
+                                  </Button>
+                                )
+                              ) : invoice.status === "paid" ? (
+                                <span className="text-xs text-muted-foreground">
+                                  Pago em {invoice.paid_at && formatDate(invoice.paid_at)}
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block rounded-md border overflow-hidden">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -483,7 +575,6 @@ const SindicoInvoices = () => {
                     <TableBody>
                       {paginatedInvoices.map((invoice) => {
                         const statusConfig = STATUS_CONFIG[invoice.status] || STATUS_CONFIG.pending;
-                        // Detecta se é fatura avulsa: period_start === period_end ou descrição não começa com "Assinatura"
                         const isAvulsa = invoice.period_start === invoice.period_end || 
                           (invoice.description && !invoice.description.startsWith("Assinatura"));
 
@@ -585,7 +676,7 @@ const SindicoInvoices = () => {
                 {/* Pagination Controls */}
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 border-t">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span>Exibindo</span>
+                    <span className="hidden sm:inline">Exibindo</span>
                     <Select
                       value={itemsPerPage.toString()}
                       onValueChange={(value) => {
@@ -603,7 +694,7 @@ const SindicoInvoices = () => {
                         <SelectItem value="50">50</SelectItem>
                       </SelectContent>
                     </Select>
-                    <span>de {totalItems} faturas</span>
+                    <span>de {totalItems}</span>
                   </div>
 
                   <div className="flex items-center gap-1">
@@ -628,7 +719,7 @@ const SindicoInvoices = () => {
                     
                     <div className="flex items-center gap-1 px-2">
                       <span className="text-sm font-medium">{currentPage}</span>
-                      <span className="text-sm text-muted-foreground">de</span>
+                      <span className="text-sm text-muted-foreground">/</span>
                       <span className="text-sm font-medium">{totalPages || 1}</span>
                     </div>
 
