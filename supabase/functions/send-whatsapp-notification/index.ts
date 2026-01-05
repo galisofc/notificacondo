@@ -367,7 +367,7 @@ serve(async (req) => {
 
     // Generate secure token for the link
     const secureToken = crypto.randomUUID();
-    const secureLink = `${appBaseUrl}/resident/access?token=${secureToken}`;
+    const secureLink = `${appBaseUrl}/acesso/${secureToken}`;
 
     const apt = resident.apartments as any;
     const condoName = apt.blocks.condominiums.name;
