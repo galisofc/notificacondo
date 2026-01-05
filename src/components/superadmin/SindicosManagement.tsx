@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useDateFormatter } from "@/hooks/useFormattedDate";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Card,
   CardContent,
@@ -78,6 +80,7 @@ interface SindicoWithProfile {
 
 export function SindicosManagement() {
   const { date: formatDate } = useDateFormatter();
+  const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedSindico, setSelectedSindico] = useState<SindicoWithProfile | null>(null);
@@ -558,6 +561,13 @@ export function SindicosManagement() {
     createSindicoMutation.mutate(formData);
   };
 
+  const { containerRef, PullIndicator } = usePullToRefresh({
+    onRefresh: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["superadmin-sindicos"] });
+    },
+    isEnabled: isMobile,
+  });
+
   return (
     <Card className="bg-card border-border shadow-card">
       <CardHeader className="p-4 md:p-6">
@@ -695,7 +705,8 @@ export function SindicosManagement() {
           </Dialog>
         </div>
       </CardHeader>
-      <CardContent className="p-4 md:p-6 pt-0 md:pt-0">
+      <CardContent ref={containerRef} className="p-4 md:p-6 pt-0 md:pt-0 overflow-auto">
+        <PullIndicator />
         <div className="mb-4 md:mb-6">
           <div className="relative w-full sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

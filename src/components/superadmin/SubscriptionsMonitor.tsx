@@ -1,10 +1,12 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { differenceInHours, isPast } from "date-fns";
 import { useDateFormatter } from "@/hooks/useFormattedDate";
 import { formatCNPJ } from "@/components/ui/masked-input";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Card,
   CardContent,
@@ -79,6 +81,8 @@ const formatCnpj = (value: string): string => {
 
 export function SubscriptionsMonitor() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const [planFilter, setPlanFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -290,8 +294,17 @@ export function SubscriptionsMonitor() {
     return filtered;
   }, [subscriptions, searchTerm, statusFilter]);
 
+  const { containerRef, PullIndicator, isRefreshing } = usePullToRefresh({
+    onRefresh: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["superadmin-subscriptions"] });
+      await queryClient.invalidateQueries({ queryKey: ["superadmin-plan-stats"] });
+    },
+    isEnabled: isMobile,
+  });
+
   return (
-    <div className="space-y-6">
+    <div ref={containerRef} className="space-y-6 overflow-auto">
+      <PullIndicator />
       {/* Plan Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {Object.entries(planStats || {}).map(([plan, stats]) => {

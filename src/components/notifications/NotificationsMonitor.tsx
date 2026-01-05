@@ -4,6 +4,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, subDays, startOfDay, eachDayOfInterval } from "date-fns";
 import { useDateFormatter } from "@/hooks/useFormattedDate";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Card,
   CardContent,
@@ -98,12 +100,22 @@ const chartConfig = {
 
 export function NotificationsMonitor() {
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const [statusFilter, setStatusFilter] = useState<NotificationStatus>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [isLive, setIsLive] = useState(true);
   const [chartPeriod, setChartPeriod] = useState<"7" | "14" | "30">("7");
   const [isSyncing, setIsSyncing] = useState(false);
   const { date: formatDate, dateTime: formatDateTime, custom: formatCustom } = useDateFormatter();
+
+  const { containerRef, PullIndicator } = usePullToRefresh({
+    onRefresh: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["notifications-monitor"] });
+      await queryClient.invalidateQueries({ queryKey: ["notifications-stats"] });
+      await queryClient.invalidateQueries({ queryKey: ["notifications-chart"] });
+    },
+    isEnabled: isMobile,
+  });
 
   const handleSyncStatus = async () => {
     setIsSyncing(true);
@@ -338,7 +350,8 @@ export function NotificationsMonitor() {
   };
 
   return (
-    <div className="space-y-6">
+    <div ref={containerRef} className="space-y-6 overflow-auto">
+      <PullIndicator />
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setStatusFilter("all")}>
