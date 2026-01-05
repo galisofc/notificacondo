@@ -458,181 +458,405 @@ const ResidentOccurrenceDetails = () => {
         />
 
         {/* Header */}
-        <div>
-          <h1 className="font-display text-3xl font-bold text-foreground">
-            Detalhes da Ocorrência
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Visualize os detalhes e envie sua defesa se necessário.
-          </p>
-        </div>
-
-        {/* Occurrence Details */}
-        <Card className="bg-gradient-card border-border/50">
-          <CardHeader>
+        <div className="flex items-center gap-4 mb-8">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/resident/occurrences")}>
+            <ChevronLeft className="w-5 h-5" />
+          </Button>
+          <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
               {getTypeBadge(occurrence.type)}
               {getStatusBadge(occurrence.status)}
             </div>
-            <CardTitle className="text-xl">{occurrence.title}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Location & Date first */}
+            <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground">
+              {occurrence.title}
+            </h1>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - Main Info */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Location & Date */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center gap-3 p-4 rounded-xl bg-secondary/30 border border-border/30">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Data da Ocorrência</p>
-                  <p className="text-sm font-medium text-foreground">{formatDateTime(occurrence.occurred_at)}</p>
-                </div>
-              </div>
+              <Card className="bg-gradient-card border-border/50">
+                <CardContent className="pt-6">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <Calendar className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Data da Ocorrência</p>
+                      <p className="font-medium text-foreground">{formatDateTime(occurrence.occurred_at)}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
               {occurrence.location && (
-                <div className="flex items-center gap-3 p-4 rounded-xl bg-secondary/30 border border-border/30">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <MapPin className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Local da Ocorrência</p>
-                    <p className="text-sm font-medium text-foreground">{occurrence.location}</p>
-                  </div>
-                </div>
+                <Card className="bg-gradient-card border-border/50">
+                  <CardContent className="pt-6">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <MapPin className="w-5 h-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Local</p>
+                        <p className="font-medium text-foreground">{occurrence.location}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               )}
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Condominium and Unit Info - before description */}
-        {residentInfo && (
-          <Card className="bg-gradient-card border-border/50">
-            <CardContent className="pt-6">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+            {/* Description */}
+            <Card className="bg-gradient-card border-border/50">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-primary" />
+                  Descrição
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-foreground whitespace-pre-wrap">{occurrence.description}</p>
+              </CardContent>
+            </Card>
+
+            {/* Legal Basis */}
+            {(occurrence.convention_article || occurrence.internal_rules_article || occurrence.civil_code_article || occurrence.legal_basis) && (
+              <Card className="bg-gradient-card border-border/50">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Scale className="w-5 h-5 text-primary" />
+                    Fundamentação Legal
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {occurrence.convention_article && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Artigo da Convenção</p>
+                      <p className="font-medium text-foreground">{occurrence.convention_article}</p>
+                    </div>
+                  )}
+                  {occurrence.internal_rules_article && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Artigo do Regimento Interno</p>
+                      <p className="font-medium text-foreground">{occurrence.internal_rules_article}</p>
+                    </div>
+                  )}
+                  {occurrence.civil_code_article && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Artigo do Código Civil</p>
+                      <p className="font-medium text-foreground">{occurrence.civil_code_article}</p>
+                    </div>
+                  )}
+                  {occurrence.legal_basis && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Observações Legais</p>
+                      <p className="font-medium text-foreground">{occurrence.legal_basis}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Evidences */}
+            <Card className="bg-gradient-card border-border/50">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-primary" />
+                  Provas ({evidences.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {evidences.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">Nenhuma prova anexada.</p>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {evidences.map((evidence) => (
+                      <div
+                        key={evidence.id}
+                        className="relative group rounded-xl overflow-hidden border border-border/50 bg-muted/30"
+                      >
+                        {evidence.file_type === "image" ? (
+                          <img
+                            src={evidence.file_url}
+                            alt={evidence.description || "Prova"}
+                            className="w-full h-32 object-cover cursor-pointer"
+                            onClick={() => openImageModal(evidence.file_url)}
+                          />
+                        ) : evidence.file_type === "video" ? (
+                          <video
+                            src={evidence.file_url}
+                            className="w-full h-32 object-cover"
+                            controls
+                          />
+                        ) : (
+                          <a
+                            href={evidence.file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center w-full h-32 bg-muted"
+                          >
+                            <FileText className="w-8 h-8 text-muted-foreground" />
+                          </a>
+                        )}
+                        {evidence.description && (
+                          <p className="p-2 text-xs text-muted-foreground truncate">
+                            {evidence.description}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Defense Section */}
+            {canSubmitDefense && (
+              <Card className="bg-gradient-card border-border/50">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Send className="w-5 h-5 text-primary" />
+                    Enviar Defesa
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="defense">Sua Defesa</Label>
+                    <Textarea
+                      id="defense"
+                      value={defenseContent}
+                      onChange={(e) => setDefenseContent(e.target.value)}
+                      placeholder="Escreva sua defesa aqui..."
+                      rows={6}
+                    />
+                  </div>
+
+                  {/* File Upload */}
+                  <div className="space-y-2">
+                    <Label>Anexos (opcional)</Label>
+                    <div className="flex flex-wrap gap-4">
+                      {uploadedFiles.map((file, index) => (
+                        <div
+                          key={index}
+                          className="relative w-24 h-24 rounded-lg border border-border/30 overflow-hidden"
+                        >
+                          {file.type === "image" ? (
+                            <img src={file.preview} alt="Preview" className="w-full h-full object-cover" />
+                          ) : file.type === "video" ? (
+                            <div className="w-full h-full flex items-center justify-center bg-muted">
+                              <Video className="w-8 h-8 text-muted-foreground" />
+                            </div>
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-muted">
+                              <FileText className="w-8 h-8 text-muted-foreground" />
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeFile(index)}
+                            className="absolute top-1 right-1 w-6 h-6 bg-destructive text-white rounded-full flex items-center justify-center"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                      <label className="w-24 h-24 rounded-lg border-2 border-dashed border-border/50 flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 transition-colors">
+                        <Upload className="w-6 h-6 text-muted-foreground mb-1" />
+                        <span className="text-xs text-muted-foreground">Adicionar</span>
+                        <Input
+                          type="file"
+                          className="hidden"
+                          accept="image/*,video/*,.pdf,.doc,.docx"
+                          multiple
+                          onChange={handleFileUpload}
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={handleSubmitDefense}
+                    disabled={submitting || !defenseContent.trim()}
+                    className="w-full"
+                  >
+                    {submitting ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4 mr-2" />
+                    )}
+                    Enviar Defesa
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Submitted Defenses */}
+            {defenses.length > 0 && (
+              <Card className="bg-gradient-card border-border/50">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5 text-green-500" />
+                    Defesa Enviada
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {defenses.map((defense) => (
+                    <div key={defense.id} className="p-4 rounded-xl bg-green-500/5 border border-green-500/20">
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Enviada em {formatDateTime(defense.submitted_at)}
+                      </p>
+                      <p className="text-foreground whitespace-pre-wrap">{defense.content}</p>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Decision Section */}
+            {decisions.length > 0 && (
+              <Card className="bg-gradient-card border-border/50">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Gavel className="w-5 h-5 text-primary" />
+                    Decisão do Síndico
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {decisions.map((decision) => {
+                    const isPositive = decision.decision === "arquivada";
+                    const decisionLabels: Record<string, string> = {
+                      arquivada: "Arquivada",
+                      advertido: "Advertido",
+                      multado: "Multado",
+                    };
+                    const decisionStyles: Record<string, string> = {
+                      arquivada: "bg-green-500/10 border-green-500/30 text-green-600",
+                      advertido: "bg-orange-500/10 border-orange-500/30 text-orange-600",
+                      multado: "bg-red-500/10 border-red-500/30 text-red-600",
+                    };
+
+                    return (
+                      <div
+                        key={decision.id}
+                        className={`p-5 rounded-xl border ${decisionStyles[decision.decision] || "bg-muted/50 border-border"}`}
+                      >
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                            isPositive ? "bg-green-500/20" : "bg-destructive/20"
+                          }`}>
+                            {isPositive ? (
+                              <CheckCircle2 className="w-5 h-5 text-green-600" />
+                            ) : (
+                              <XCircle className="w-5 h-5 text-destructive" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Resultado</p>
+                            <p className="font-semibold text-foreground">
+                              {decisionLabels[decision.decision] || decision.decision}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Justificativa</p>
+                            <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                              {decision.justification}
+                            </p>
+                          </div>
+
+                          <div className="pt-3 border-t border-border/30">
+                            <p className="text-xs text-muted-foreground">
+                              Decidido em {formatDateTime(decision.decided_at)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Right Column - Info */}
+          <div className="space-y-6">
+            {/* Envolvidos */}
+            <Card className="bg-gradient-card border-border/50">
+              <CardHeader>
+                <CardTitle className="text-lg">Envolvidos</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                     <Building2 className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Condomínio</p>
-                    <p className="text-sm font-medium text-foreground">{residentInfo.condominium_name}</p>
+                    <p className="text-sm text-muted-foreground">Condomínio</p>
+                    <p className="font-medium text-foreground">{residentInfo?.condominium_name || occurrence.condominiums?.name}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                     <Home className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Unidade</p>
-                    <p className="text-sm font-medium text-foreground">
-                      {residentInfo.block_name} - Apt {residentInfo.apartment_number}
+                    <p className="text-sm text-muted-foreground">Bloco / Apto</p>
+                    <p className="font-medium text-foreground">
+                      {residentInfo?.block_name || occurrence.blocks?.name}
+                      {(residentInfo?.apartment_number || occurrence.apartments?.number) && ` - Apto ${residentInfo?.apartment_number || occurrence.apartments?.number}`}
                     </p>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              </CardContent>
+            </Card>
 
-        {/* Description */}
-        <Card className="bg-gradient-card border-border/50">
-          <CardContent className="pt-6">
-            <div>
-              <h4 className="text-sm font-medium text-muted-foreground mb-2">Descrição</h4>
-              <p className="text-foreground">{occurrence.description}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Fundamentação Legal - Card separado como no modelo */}
-        {(occurrence.convention_article || occurrence.internal_rules_article || occurrence.civil_code_article || occurrence.legal_basis) && (
-          <Card className="bg-gradient-card border-border/50">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Scale className="w-5 h-5 text-primary" />
-                Fundamentação Legal
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Artigos */}
-              <div className="space-y-4">
-                {occurrence.civil_code_article && (
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Artigo do Código Civil</p>
-                    <p className="text-sm font-medium text-foreground">Art° {occurrence.civil_code_article}</p>
+            {/* Defense Status */}
+            <Card className="bg-gradient-card border-border/50">
+              <CardHeader>
+                <CardTitle className="text-lg">Status da Defesa</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {defenses.length > 0 ? (
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-green-500/10 border border-green-500/20">
+                    <CheckCircle2 className="w-6 h-6 text-green-500" />
+                    <div>
+                      <p className="font-medium text-green-600">Defesa Enviada</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDateTime(defenses[0].submitted_at)}
+                      </p>
+                    </div>
+                  </div>
+                ) : canSubmitDefense ? (
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-orange-500/10 border border-orange-500/20">
+                    <AlertTriangle className="w-6 h-6 text-orange-500" />
+                    <div>
+                      <p className="font-medium text-orange-600">Prazo Aberto</p>
+                      <p className="text-xs text-muted-foreground">
+                        Você pode enviar sua defesa
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/50 border border-border/30">
+                    <XCircle className="w-6 h-6 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium text-muted-foreground">Prazo Encerrado</p>
+                      <p className="text-xs text-muted-foreground">
+                        Não é mais possível enviar defesa
+                      </p>
+                    </div>
                   </div>
                 )}
-                {occurrence.convention_article && (
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Artigo da Convenção</p>
-                    <p className="text-sm font-medium text-foreground">Art° {occurrence.convention_article}</p>
-                  </div>
-                )}
-                {occurrence.internal_rules_article && (
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Artigo do Regimento Interno</p>
-                    <p className="text-sm font-medium text-foreground">Art° {occurrence.internal_rules_article}</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Observações Legais */}
-              {occurrence.legal_basis && (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-2">Observações Legais</p>
-                  <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-                    {occurrence.legal_basis}
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Evidences */}
-        {evidences.length > 0 && (
-          <Card className="bg-gradient-card border-border/50">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <FileText className="w-5 h-5 text-primary" />
-                Evidências
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {evidences.map((evidence) => (
-                  evidence.file_type === "image" ? (
-                    <button
-                      key={evidence.id}
-                      onClick={() => openImageModal(evidence.file_url)}
-                      className="aspect-square rounded-lg bg-background/50 border border-border/30 flex items-center justify-center hover:border-primary/50 transition-colors overflow-hidden cursor-pointer"
-                    >
-                      <img
-                        src={evidence.file_url}
-                        alt={evidence.description || "Evidência"}
-                        className="w-full h-full object-cover"
-                      />
-                    </button>
-                  ) : (
-                    <a
-                      key={evidence.id}
-                      href={evidence.file_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="aspect-square rounded-lg bg-background/50 border border-border/30 flex items-center justify-center hover:border-primary/50 transition-colors overflow-hidden"
-                    >
-                      {evidence.file_type === "video" ? (
-                        <Video className="w-8 h-8 text-muted-foreground" />
-                      ) : (
-                        <FileText className="w-8 h-8 text-muted-foreground" />
-                      )}
-                    </a>
-                  )
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
 
         {/* Image Lightbox Dialog with Navigation */}
         <Dialog open={selectedImageIndex !== null} onOpenChange={() => setSelectedImageIndex(null)}>
@@ -684,175 +908,6 @@ const ResidentOccurrenceDetails = () => {
             )}
           </DialogContent>
         </Dialog>
-
-        {/* Defense Section */}
-        {canSubmitDefense && (
-          <Card className="bg-gradient-card border-border/50">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Scale className="w-5 h-5 text-primary" />
-                Enviar Defesa
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="defense">Sua Defesa</Label>
-                <Textarea
-                  id="defense"
-                  value={defenseContent}
-                  onChange={(e) => setDefenseContent(e.target.value)}
-                  placeholder="Escreva sua defesa aqui..."
-                  rows={6}
-                />
-              </div>
-
-              {/* File Upload */}
-              <div className="space-y-2">
-                <Label>Anexos (opcional)</Label>
-                <div className="flex flex-wrap gap-4">
-                  {uploadedFiles.map((file, index) => (
-                    <div
-                      key={index}
-                      className="relative w-24 h-24 rounded-lg border border-border/30 overflow-hidden"
-                    >
-                      {file.type === "image" ? (
-                        <img src={file.preview} alt="Preview" className="w-full h-full object-cover" />
-                      ) : file.type === "video" ? (
-                        <div className="w-full h-full flex items-center justify-center bg-muted">
-                          <Video className="w-8 h-8 text-muted-foreground" />
-                        </div>
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-muted">
-                          <FileText className="w-8 h-8 text-muted-foreground" />
-                        </div>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => removeFile(index)}
-                        className="absolute top-1 right-1 w-6 h-6 bg-destructive text-white rounded-full flex items-center justify-center"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                  <label className="w-24 h-24 rounded-lg border-2 border-dashed border-border/50 flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 transition-colors">
-                    <Upload className="w-6 h-6 text-muted-foreground mb-1" />
-                    <span className="text-xs text-muted-foreground">Adicionar</span>
-                    <Input
-                      type="file"
-                      className="hidden"
-                      accept="image/*,video/*,.pdf,.doc,.docx"
-                      multiple
-                      onChange={handleFileUpload}
-                    />
-                  </label>
-                </div>
-              </div>
-
-              <Button
-                onClick={handleSubmitDefense}
-                disabled={submitting || !defenseContent.trim()}
-                className="w-full"
-              >
-                {submitting ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4 mr-2" />
-                )}
-                Enviar Defesa
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Submitted Defenses */}
-        {defenses.length > 0 && (
-          <Card className="bg-gradient-card border-border/50">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-green-500" />
-                Defesa Enviada
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {defenses.map((defense) => (
-                <div key={defense.id} className="p-4 rounded-xl bg-green-500/5 border border-green-500/20">
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Enviada em {formatDateTime(defense.submitted_at)}
-                  </p>
-                  <p className="text-foreground whitespace-pre-wrap">{defense.content}</p>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Decision Section - Shown when occurrence has been judged */}
-        {decisions.length > 0 && (
-          <Card className="bg-gradient-card border-border/50">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Gavel className="w-5 h-5 text-primary" />
-                Decisão do Síndico
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {decisions.map((decision) => {
-                const isPositive = decision.decision === "arquivada";
-                const decisionLabels: Record<string, string> = {
-                  arquivada: "Arquivada",
-                  advertido: "Advertido",
-                  multado: "Multado",
-                };
-                const decisionStyles: Record<string, string> = {
-                  arquivada: "bg-green-500/10 border-green-500/30 text-green-600",
-                  advertido: "bg-orange-500/10 border-orange-500/30 text-orange-600",
-                  multado: "bg-red-500/10 border-red-500/30 text-red-600",
-                };
-
-                return (
-                  <div
-                    key={decision.id}
-                    className={`p-5 rounded-xl border ${decisionStyles[decision.decision] || "bg-muted/50 border-border"}`}
-                  >
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        isPositive ? "bg-green-500/20" : "bg-destructive/20"
-                      }`}>
-                        {isPositive ? (
-                          <CheckCircle2 className="w-5 h-5 text-green-600" />
-                        ) : (
-                          <XCircle className="w-5 h-5 text-destructive" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Resultado</p>
-                        <p className="font-semibold text-foreground">
-                          {decisionLabels[decision.decision] || decision.decision}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">Justificativa</p>
-                        <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-                          {decision.justification}
-                        </p>
-                      </div>
-
-                      <div className="pt-3 border-t border-border/30">
-                        <p className="text-xs text-muted-foreground">
-                          Decidido em {formatDateTime(decision.decided_at)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-        )}
       </div>
     </DashboardLayout>
   );
