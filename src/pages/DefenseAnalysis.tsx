@@ -385,11 +385,17 @@ const DefenseAnalysis = () => {
                     <h3 className="font-semibold text-foreground mb-1">
                       {defense.occurrences.title}
                     </h3>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mb-2">
                       <span className="flex items-center gap-1">
                         <User className="w-3 h-3" />
                         {defense.residents?.full_name}
                       </span>
+                      {defense.occurrences.condominiums?.name && (
+                        <span className="flex items-center gap-1 font-medium text-primary">
+                          <Building2 className="w-3 h-3" />
+                          {defense.occurrences.condominiums.name}
+                        </span>
+                      )}
                       <span className="flex items-center gap-1">
                         <Building2 className="w-3 h-3" />
                         {defense.occurrences.blocks?.name}
