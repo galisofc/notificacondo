@@ -578,7 +578,7 @@ const DefenseAnalysis = () => {
                         <span>{formatDateLocal(selectedDefense.submitted_at)}</span>
                       </div>
                       <div className="bg-muted/50 p-4 rounded-lg">
-                        <p className="text-sm whitespace-pre-wrap">{selectedDefense.content}</p>
+                        <p className="text-sm whitespace-pre-wrap text-justify">{selectedDefense.content}</p>
                       </div>
                       
                       {/* Defense Attachments */}
