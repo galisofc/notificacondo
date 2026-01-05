@@ -236,11 +236,12 @@ serve(async (req) => {
     }
 
     // Generate a magic link for the user - use callback page to handle auth properly
-    // Store the target path in localStorage via ResidentAccess page
-    const callbackUrl = `${appBaseUrl}/auth/callback`;
-    
+    // Include the desired post-login path as a query param to make redirects robust (no localStorage reliance)
+    const nextPath = `/resident/occurrences/${notification.occurrence_id}`;
+    const callbackUrl = `${appBaseUrl}/auth/callback?next=${encodeURIComponent(nextPath)}`;
+
     console.log(`Generating magic link with callback: ${callbackUrl}`);
-    console.log(`Target occurrence: /resident/occurrences/${notification.occurrence_id}`);
+    console.log(`Target occurrence: ${nextPath}`);
     
     const residentEmail = resident.email || `resident_${resident.id}@temp.condomaster.app`;
     

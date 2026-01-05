@@ -67,16 +67,20 @@ const AuthCallback = () => {
         if (finalSession) {
           setStatus("success");
 
-          // Get pending redirect from localStorage
+          // Prefer explicit redirect from query string (more reliable across devices/browsers)
+          const nextParam = new URLSearchParams(window.location.search).get("next");
+          const safeNext = nextParam && nextParam.startsWith("/") ? nextParam : null;
+
+          // Fallback: get pending redirect from localStorage
           const pendingRedirect = localStorage.getItem("post_magiclink_redirect");
-          
+
           // Clear the pending redirect
           if (pendingRedirect) {
             localStorage.removeItem("post_magiclink_redirect");
           }
 
           // Determine where to redirect
-          const targetPath = pendingRedirect || "/resident";
+          const targetPath = safeNext || pendingRedirect || "/resident";
 
           // Small delay to show success state
           setTimeout(() => {
