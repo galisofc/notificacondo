@@ -84,7 +84,11 @@ serve(async (req) => {
       .eq("secure_link_token", token)
       .maybeSingle();
 
-    const clientIpForLog = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "unknown";
+    // Extract only the first IP (user's real IP) from X-Forwarded-For header
+    const xForwardedFor = req.headers.get("x-forwarded-for");
+    const clientIpForLog = xForwardedFor 
+      ? xForwardedFor.split(",")[0].trim() 
+      : (req.headers.get("cf-connecting-ip") || "unknown");
     const clientUserAgentForLog = req.headers.get("user-agent") || "unknown";
 
     if (notifError || !notification) {
@@ -150,7 +154,11 @@ serve(async (req) => {
     const resident = notification.residents as any;
     const apt = resident.apartments;
 
-    const clientIp = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "unknown";
+    // Extract only the first IP (user's real IP) from X-Forwarded-For header
+    const xForwardedForRead = req.headers.get("x-forwarded-for");
+    const clientIp = xForwardedForRead 
+      ? xForwardedForRead.split(",")[0].trim() 
+      : (req.headers.get("cf-connecting-ip") || "unknown");
     const clientUserAgent = req.headers.get("user-agent") || "unknown";
 
     // Update notification as read
