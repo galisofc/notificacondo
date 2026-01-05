@@ -579,6 +579,69 @@ export type Database = {
           },
         ]
       }
+      magic_link_access_logs: {
+        Row: {
+          access_at: string
+          created_at: string
+          error_message: string | null
+          id: string
+          ip_address: string | null
+          is_new_user: boolean
+          occurrence_id: string | null
+          redirect_url: string | null
+          resident_id: string | null
+          success: boolean
+          token_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          access_at?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          ip_address?: string | null
+          is_new_user?: boolean
+          occurrence_id?: string | null
+          redirect_url?: string | null
+          resident_id?: string | null
+          success?: boolean
+          token_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          access_at?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          ip_address?: string | null
+          is_new_user?: boolean
+          occurrence_id?: string | null
+          redirect_url?: string | null
+          resident_id?: string | null
+          success?: boolean
+          token_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "magic_link_access_logs_occurrence_id_fkey"
+            columns: ["occurrence_id"]
+            isOneToOne: false
+            referencedRelation: "occurrences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "magic_link_access_logs_resident_id_fkey"
+            columns: ["resident_id"]
+            isOneToOne: false
+            referencedRelation: "residents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mercadopago_config: {
         Row: {
           access_token_encrypted: string
