@@ -532,22 +532,22 @@ export function NotificationsMonitor() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row gap-3 mb-4 md:mb-6">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por morador, telefone ou ocorrência..."
+                placeholder="Buscar por morador, telefone..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
               />
             </div>
             <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as NotificationStatus)}>
-              <SelectTrigger className="w-full md:w-[180px]">
-                <SelectValue placeholder="Filtrar por status" />
+              <SelectTrigger className="w-full sm:w-[150px]">
+                <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos os status</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="pending">Pendente</SelectItem>
                 <SelectItem value="sent">Enviado</SelectItem>
                 <SelectItem value="delivered">Entregue</SelectItem>
@@ -569,76 +569,117 @@ export function NotificationsMonitor() {
               <p className="text-muted-foreground">Nenhuma notificação encontrada</p>
             </div>
           ) : (
-            <div className="rounded-md border overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Morador</TableHead>
-                    <TableHead>Ocorrência</TableHead>
-                    <TableHead>Enviado em</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Entregue</TableHead>
-                    <TableHead>Lido</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredNotifications?.map((notification) => {
-                    const status = getDisplayStatus(notification);
-                    const config = statusConfig[status] || statusConfig.pending;
+            <>
+              {/* Mobile Cards */}
+              <div className="grid grid-cols-1 gap-3 md:hidden">
+                {filteredNotifications?.map((notification) => {
+                  const status = getDisplayStatus(notification);
+                  const config = statusConfig[status] || statusConfig.pending;
 
-                    return (
-                      <TableRow key={notification.id}>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{notification.resident?.full_name || "—"}</p>
-                            <p className="text-sm text-muted-foreground">
+                  return (
+                    <Card key={notification.id} className="bg-card border-border/50">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-semibold text-foreground truncate">
+                              {notification.resident?.full_name || "—"}
+                            </h3>
+                            <p className="text-xs text-muted-foreground">
                               {notification.resident?.phone ? formatPhone(notification.resident.phone) : "Sem telefone"}
                             </p>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <p className="max-w-[200px] truncate">
-                            {notification.occurrence?.title || "—"}
-                          </p>
-                        </TableCell>
-                        <TableCell>
-                          <p className="text-sm">
-                            {formatDate(notification.sent_at)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatCustom(notification.sent_at, "HH:mm")}
-                          </p>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={`${config.color} gap-1`}>
+                          <Badge variant="outline" className={`${config.color} gap-1 shrink-0`}>
                             {config.icon}
                             {config.label}
                           </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {notification.delivered_at ? (
-                            <p className="text-sm">
-                              {formatCustom(notification.delivered_at, "dd/MM HH:mm")}
-                            </p>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground truncate mb-2">
+                          {notification.occurrence?.title || "—"}
+                        </p>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/50">
+                          <span>Enviado: {formatCustom(notification.sent_at, "dd/MM HH:mm")}</span>
+                          {notification.delivered_at && (
+                            <span>Entregue: {formatCustom(notification.delivered_at, "dd/MM HH:mm")}</span>
                           )}
-                        </TableCell>
-                        <TableCell>
-                          {notification.read_at ? (
-                            <p className="text-sm">
-                              {formatCustom(notification.read_at, "dd/MM HH:mm")}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+
+              {/* Desktop Table */}
+              <div className="hidden md:block rounded-md border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Morador</TableHead>
+                      <TableHead>Ocorrência</TableHead>
+                      <TableHead>Enviado em</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Entregue</TableHead>
+                      <TableHead>Lido</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredNotifications?.map((notification) => {
+                      const status = getDisplayStatus(notification);
+                      const config = statusConfig[status] || statusConfig.pending;
+
+                      return (
+                        <TableRow key={notification.id}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{notification.resident?.full_name || "—"}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {notification.resident?.phone ? formatPhone(notification.resident.phone) : "Sem telefone"}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <p className="max-w-[200px] truncate">
+                              {notification.occurrence?.title || "—"}
                             </p>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+                          </TableCell>
+                          <TableCell>
+                            <p className="text-sm">
+                              {formatDate(notification.sent_at)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatCustom(notification.sent_at, "HH:mm")}
+                            </p>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={`${config.color} gap-1`}>
+                              {config.icon}
+                              {config.label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {notification.delivered_at ? (
+                              <p className="text-sm">
+                                {formatCustom(notification.delivered_at, "dd/MM HH:mm")}
+                              </p>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {notification.read_at ? (
+                              <p className="text-sm">
+                                {formatCustom(notification.read_at, "dd/MM HH:mm")}
+                              </p>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

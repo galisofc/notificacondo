@@ -9,11 +9,11 @@ export default function WhatsApp() {
       <Helmet>
         <title>Configuração WhatsApp | Super Admin</title>
       </Helmet>
-      <div className="space-y-6 animate-fade-up">
+      <div className="space-y-4 md:space-y-6 animate-fade-up">
         <SuperAdminBreadcrumbs items={[{ label: "WhatsApp" }]} />
         <div>
-          <h1 className="font-display text-3xl font-bold text-foreground">WhatsApp</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="font-display text-xl md:text-3xl font-bold text-foreground">WhatsApp</h1>
+          <p className="text-sm md:text-base text-muted-foreground mt-1">
             Configure a integração com WhatsApp
           </p>
         </div>
