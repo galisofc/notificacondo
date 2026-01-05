@@ -477,41 +477,39 @@ const ResidentOccurrenceDetails = () => {
             <CardTitle className="text-xl">{occurrence.title}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Location & Date first */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-secondary/30 border border-border/30">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Calendar className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Data da Ocorrência</p>
+                  <p className="text-sm font-medium text-foreground">{formatDateTime(occurrence.occurred_at)}</p>
+                </div>
+              </div>
+
+              {occurrence.location && (
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-secondary/30 border border-border/30">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <MapPin className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Local da Ocorrência</p>
+                    <p className="text-sm font-medium text-foreground">{occurrence.location}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Description */}
             <div>
               <h4 className="text-sm font-medium text-muted-foreground mb-2">Descrição</h4>
               <p className="text-foreground">{occurrence.description}</p>
             </div>
-
-            {occurrence.location && (
-              <div className="flex items-center gap-3 p-4 rounded-xl bg-secondary/30 border border-border/30">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <MapPin className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Local da Ocorrência</p>
-                  <p className="text-sm font-medium text-foreground">{occurrence.location}</p>
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
 
-        {/* Data da Ocorrência */}
-        <Card className="bg-gradient-card border-border/50">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3 p-4 rounded-xl bg-blue-500/5 border border-blue-500/20">
-              <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-blue-500" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Data da Ocorrência</p>
-                <p className="text-sm font-medium text-foreground">
-                  {formatDateTime(occurrence.occurred_at)}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Condominium and Unit Info */}
         {residentInfo && (
