@@ -301,7 +301,7 @@ const OccurrenceDetails = () => {
         id: `notif-${notif.id}`,
         type: "notification",
         title: "Notificação Enviada",
-        description: `Via ${notif.sent_via}`,
+        description: "Via WhatsApp",
         date: notif.sent_at,
         icon: <Send className="w-4 h-4" />,
         color: "bg-amber-500",
