@@ -60,6 +60,14 @@ const ResidentAccess = () => {
 
         // Redirect to magic link to authenticate (will redirect to occurrence details)
         if (data.magicLink) {
+          const targetPath = data.occurrence_id
+            ? `/resident/occurrences/${data.occurrence_id}`
+            : "/resident";
+
+          // Fallback redirect: if the auth provider ignores redirectTo,
+          // we still navigate after login based on this stored intent.
+          localStorage.setItem("post_magiclink_redirect", targetPath);
+
           setRedirecting(true);
           window.location.href = data.magicLink;
         }
