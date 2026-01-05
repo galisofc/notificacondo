@@ -473,7 +473,7 @@ const DefenseAnalysis = () => {
                     <CardContent className="space-y-3">
                       <div>
                         <p className="font-medium">{selectedDefense.occurrences.title}</p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-muted-foreground text-justify">
                           {selectedDefense.occurrences.description}
                         </p>
                       </div>
