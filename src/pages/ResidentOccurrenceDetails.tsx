@@ -502,20 +502,9 @@ const ResidentOccurrenceDetails = () => {
               )}
             </div>
 
-            {/* Description */}
-            <div>
-              <h4 className="text-sm font-medium text-muted-foreground mb-2">Descrição</h4>
-              <p className="text-foreground">{occurrence.description}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-
-        {/* Condominium and Unit Info */}
-        {residentInfo && (
-          <Card className="bg-gradient-card border-border/50">
-            <CardContent className="pt-6">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            {/* Condominium and Unit Info - before description */}
+            {residentInfo && (
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl bg-secondary/30 border border-border/30">
                 <div className="flex items-center gap-3 flex-1">
                   <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                     <Building2 className="w-5 h-5 text-primary" />
@@ -537,9 +526,15 @@ const ResidentOccurrenceDetails = () => {
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            )}
+
+            {/* Description */}
+            <div>
+              <h4 className="text-sm font-medium text-muted-foreground mb-2">Descrição</h4>
+              <p className="text-foreground">{occurrence.description}</p>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Fundamentação Legal - Card separado como no modelo */}
         {(occurrence.convention_article || occurrence.internal_rules_article || occurrence.civil_code_article || occurrence.legal_basis) && (
