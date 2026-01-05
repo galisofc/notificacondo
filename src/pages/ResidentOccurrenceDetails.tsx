@@ -478,6 +478,37 @@ const ResidentOccurrenceDetails = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Main Info */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Envolvidos */}
+            <Card className="bg-gradient-card border-border/50">
+              <CardHeader>
+                <CardTitle className="text-lg">Envolvidos</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Building2 className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Condomínio</p>
+                    <p className="font-medium text-foreground">{residentInfo?.condominium_name || occurrence.condominiums?.name}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Home className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Bloco / Apto</p>
+                    <p className="font-medium text-foreground">
+                      {residentInfo?.block_name || occurrence.blocks?.name}
+                      {(residentInfo?.apartment_number || occurrence.apartments?.number) && ` - Apto ${residentInfo?.apartment_number || occurrence.apartments?.number}`}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Location & Date */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card className="bg-gradient-card border-border/50">
@@ -885,40 +916,7 @@ const ResidentOccurrenceDetails = () => {
             )}
           </div>
 
-          {/* Right Column - Info */}
-          <div className="space-y-6">
-            {/* Envolvidos */}
-            <Card className="bg-gradient-card border-border/50">
-              <CardHeader>
-                <CardTitle className="text-lg">Envolvidos</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <Building2 className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Condomínio</p>
-                    <p className="font-medium text-foreground">{residentInfo?.condominium_name || occurrence.condominiums?.name}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <Home className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Bloco / Apto</p>
-                    <p className="font-medium text-foreground">
-                      {residentInfo?.block_name || occurrence.blocks?.name}
-                      {(residentInfo?.apartment_number || occurrence.apartments?.number) && ` - Apto ${residentInfo?.apartment_number || occurrence.apartments?.number}`}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-          </div>
+          {/* Right Column - Empty for now, can be used for future sidebar content */}
         </div>
 
         {/* Image Lightbox Dialog with Navigation */}
