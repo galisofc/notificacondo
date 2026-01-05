@@ -22,6 +22,11 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   ArrowLeft,
   Loader2,
   Calendar,
@@ -47,6 +52,7 @@ import {
   Monitor,
   Eye,
   Globe,
+  ChevronDown,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -1300,104 +1306,117 @@ const OccurrenceDetails = () => {
                       const status = getStatusInfo();
                       
                       return (
-                        <div 
-                          key={notif.id} 
-                          className="relative group animate-fade-in"
-                          style={{ animationDelay: `${index * 50}ms` }}
+                        <Collapsible 
+                          key={notif.id}
+                          defaultOpen={index === 0}
                         >
-                          {/* Main row */}
-                          <div className="flex items-stretch">
-                            {/* Timeline indicator */}
-                            <div className="w-16 shrink-0 flex flex-col items-center py-4 bg-muted/20">
-                              <div className={`w-10 h-10 rounded-full ${status.bg} flex items-center justify-center ${status.color} transition-transform group-hover:scale-110`}>
-                                {status.icon}
-                              </div>
-                              {index < notifications.length - 1 && (
-                                <div className="flex-1 w-0.5 bg-border/50 mt-2" />
-                              )}
-                            </div>
-                            
-                            {/* Content */}
-                            <div className="flex-1 py-4 pr-4 pl-2">
-                              {/* Header row */}
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                  <span className={`text-sm font-semibold ${status.color}`}>{status.label}</span>
-                                  <span className="text-xs text-muted-foreground px-2 py-0.5 rounded-full bg-muted/50 capitalize">
-                                    {notif.sent_via.replace('_', ' ')}
-                                  </span>
+                          <div 
+                            className="relative group animate-fade-in"
+                            style={{ animationDelay: `${index * 50}ms` }}
+                          >
+                            {/* Main row */}
+                            <div className="flex items-stretch">
+                              {/* Timeline indicator */}
+                              <div className="w-14 shrink-0 flex flex-col items-center py-3 bg-muted/20">
+                                <div className={`w-8 h-8 rounded-full ${status.bg} flex items-center justify-center ${status.color} transition-transform group-hover:scale-110`}>
+                                  {status.icon}
                                 </div>
-                                <span className="text-xs text-muted-foreground">
-                                  {formatDateTime(notif.sent_at)}
-                                </span>
+                                {index < notifications.length - 1 && (
+                                  <div className="flex-1 w-0.5 bg-border/50 mt-2" />
+                                )}
                               </div>
                               
-                              {/* Details when read */}
-                              {notif.read_at && (
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                  {/* Read date */}
-                                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-muted/40 text-xs">
-                                    <Calendar className="w-3.5 h-3.5 text-primary" />
-                                    <span className="text-muted-foreground">Lida:</span>
-                                    <span className="font-medium">{formatDateTime(notif.read_at)}</span>
-                                  </div>
-                                  
-                                  {/* Device */}
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-muted/40 text-xs cursor-help hover:bg-muted/60 transition-colors">
-                                          {getDeviceIcon()}
-                                          <span className="font-medium">{getDeviceName()}</span>
-                                        </div>
-                                      </TooltipTrigger>
-                                      {notif.user_agent && (
-                                        <TooltipContent side="top" className="max-w-sm break-all">
-                                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">User Agent</p>
-                                          <p className="font-mono text-xs">{notif.user_agent}</p>
-                                        </TooltipContent>
-                                      )}
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                  
-                                  {/* Location */}
-                                  {(locationInfo?.city || locationInfo?.region || locationInfo?.country) && (
-                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-muted/40 text-xs">
-                                      <MapPin className="w-3.5 h-3.5 text-amber-500" />
-                                      <span className="font-medium">
-                                        {[locationInfo?.city, locationInfo?.region].filter(Boolean).join(', ') || locationInfo?.country}
+                              {/* Content */}
+                              <div className="flex-1 py-3 pr-4 pl-2">
+                                {/* Header row - clickable to expand */}
+                                <CollapsibleTrigger asChild>
+                                  <button className="w-full flex items-center justify-between text-left hover:bg-muted/20 -mx-2 px-2 py-1 rounded-md transition-colors">
+                                    <div className="flex items-center gap-2">
+                                      <span className={`text-sm font-semibold ${status.color}`}>{status.label}</span>
+                                      <span className="text-xs text-muted-foreground px-2 py-0.5 rounded-full bg-muted/50 capitalize">
+                                        {notif.sent_via.replace('_', ' ')}
                                       </span>
                                     </div>
-                                  )}
-                                  
-                                  {/* IP */}
-                                  {notif.ip_address && (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-muted/40 text-xs cursor-help hover:bg-muted/60 transition-colors">
-                                            <Globe className="w-3.5 h-3.5 text-slate-500" />
-                                            <span className="font-mono font-medium">{formatIp(notif.ip_address)}</span>
-                                          </div>
-                                        </TooltipTrigger>
-                                        {notif.ip_address.includes(',') && (
-                                          <TooltipContent side="top" className="max-w-xs">
-                                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Todos os IPs</p>
-                                            <div className="space-y-0.5">
-                                              {notif.ip_address.split(',').map((ip, i) => (
-                                                <p key={i} className="font-mono text-xs">{ip.trim()}</p>
-                                              ))}
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs text-muted-foreground">
+                                        {formatDateTime(notif.sent_at)}
+                                      </span>
+                                      {notif.read_at && (
+                                        <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+                                      )}
+                                    </div>
+                                  </button>
+                                </CollapsibleTrigger>
+                                
+                                {/* Collapsible details when read */}
+                                {notif.read_at && (
+                                  <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
+                                    <div className="mt-3 flex flex-wrap gap-2 pt-2 border-t border-border/30">
+                                      {/* Read date */}
+                                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-muted/40 text-xs">
+                                        <Calendar className="w-3.5 h-3.5 text-primary" />
+                                        <span className="text-muted-foreground">Lida:</span>
+                                        <span className="font-medium">{formatDateTime(notif.read_at)}</span>
+                                      </div>
+                                      
+                                      {/* Device */}
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-muted/40 text-xs cursor-help hover:bg-muted/60 transition-colors">
+                                              {getDeviceIcon()}
+                                              <span className="font-medium">{getDeviceName()}</span>
                                             </div>
-                                          </TooltipContent>
-                                        )}
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  )}
-                                </div>
-                              )}
+                                          </TooltipTrigger>
+                                          {notif.user_agent && (
+                                            <TooltipContent side="top" className="max-w-sm break-all">
+                                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">User Agent</p>
+                                              <p className="font-mono text-xs">{notif.user_agent}</p>
+                                            </TooltipContent>
+                                          )}
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                      
+                                      {/* Location */}
+                                      {(locationInfo?.city || locationInfo?.region || locationInfo?.country) && (
+                                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-muted/40 text-xs">
+                                          <MapPin className="w-3.5 h-3.5 text-amber-500" />
+                                          <span className="font-medium">
+                                            {[locationInfo?.city, locationInfo?.region].filter(Boolean).join(', ') || locationInfo?.country}
+                                          </span>
+                                        </div>
+                                      )}
+                                      
+                                      {/* IP */}
+                                      {notif.ip_address && (
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-muted/40 text-xs cursor-help hover:bg-muted/60 transition-colors">
+                                                <Globe className="w-3.5 h-3.5 text-slate-500" />
+                                                <span className="font-mono font-medium">{formatIp(notif.ip_address)}</span>
+                                              </div>
+                                            </TooltipTrigger>
+                                            {notif.ip_address.includes(',') && (
+                                              <TooltipContent side="top" className="max-w-xs">
+                                                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Todos os IPs</p>
+                                                <div className="space-y-0.5">
+                                                  {notif.ip_address.split(',').map((ip, i) => (
+                                                    <p key={i} className="font-mono text-xs">{ip.trim()}</p>
+                                                  ))}
+                                                </div>
+                                              </TooltipContent>
+                                            )}
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                      )}
+                                    </div>
+                                  </CollapsibleContent>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
+                        </Collapsible>
                       );
                     })}
                   </div>
