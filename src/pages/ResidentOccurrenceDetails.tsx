@@ -568,25 +568,25 @@ const ResidentOccurrenceDetails = () => {
                   {occurrence.convention_article && (
                     <div>
                       <p className="text-sm text-muted-foreground">Artigo da Convenção</p>
-                      <p className="font-medium text-foreground">{occurrence.convention_article}</p>
+                      <p className="font-medium text-foreground whitespace-pre-line text-justify">{occurrence.convention_article}</p>
                     </div>
                   )}
                   {occurrence.internal_rules_article && (
                     <div>
                       <p className="text-sm text-muted-foreground">Artigo do Regimento Interno</p>
-                      <p className="font-medium text-foreground">{occurrence.internal_rules_article}</p>
+                      <p className="font-medium text-foreground whitespace-pre-line text-justify">{occurrence.internal_rules_article}</p>
                     </div>
                   )}
                   {occurrence.civil_code_article && (
                     <div>
                       <p className="text-sm text-muted-foreground">Artigo do Código Civil</p>
-                      <p className="font-medium text-foreground">{occurrence.civil_code_article}</p>
+                      <p className="font-medium text-foreground whitespace-pre-line text-justify">{occurrence.civil_code_article}</p>
                     </div>
                   )}
                   {occurrence.legal_basis && (
                     <div>
                       <p className="text-sm text-muted-foreground">Observações Legais</p>
-                      <p className="font-medium text-foreground">{occurrence.legal_basis}</p>
+                      <p className="font-medium text-foreground whitespace-pre-line text-justify">{occurrence.legal_basis}</p>
                     </div>
                   )}
                 </CardContent>
