@@ -323,8 +323,8 @@ const OccurrenceDetails = () => {
           title: "Notificação Lida",
           description: readIp ? `IP: ${readIp}` : "Visualizada pelo morador",
           date: notif.read_at,
-          icon: <Eye className="w-4 h-4" />,
-          color: "bg-blue-500",
+          icon: <MessageCircle className="w-4 h-4" />,
+          color: "bg-green-500",
         });
       }
 
