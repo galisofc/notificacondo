@@ -5,6 +5,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useDateFormatter } from "@/hooks/useFormattedDate";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { useIsMobile } from "@/hooks/use-mobile";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
 import { MercadoPagoTransparentCheckout } from "@/components/mercadopago/MercadoPagoTransparentCheckout";
@@ -112,11 +114,20 @@ const SindicoInvoices = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { date: formatDate } = useDateFormatter();
+  const isMobile = useIsMobile();
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus>("all");
   const [condominiumFilter, setCondominiumFilter] = useState<string>("all");
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  const { containerRef, PullIndicator } = usePullToRefresh({
+    onRefresh: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["sindico-invoices"] });
+      await queryClient.invalidateQueries({ queryKey: ["sindico-condominiums"] });
+    },
+    isEnabled: isMobile,
+  });
 
   // Subscribe to realtime updates on invoices table
   useEffect(() => {
@@ -323,7 +334,8 @@ const SindicoInvoices = () => {
         <meta name="description" content="Acompanhe as faturas dos seus condomínios" />
       </Helmet>
 
-      <div className="space-y-6">
+      <div ref={containerRef} className="space-y-6 overflow-auto">
+        <PullIndicator />
         <SindicoBreadcrumbs items={[{ label: "Faturas" }]} />
 
         {/* Header */}

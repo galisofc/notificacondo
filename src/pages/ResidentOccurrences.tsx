@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useDateFormatter } from "@/hooks/useFormattedDate";
 import { Helmet } from "react-helmet-async";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -27,6 +27,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Occurrence {
   id: string;
@@ -46,6 +48,7 @@ const ResidentOccurrences = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { date: formatDate } = useDateFormatter();
+  const isMobile = useIsMobile();
 
   const [occurrences, setOccurrences] = useState<Occurrence[]>([]);
   const [defenseDeadlineDays, setDefenseDeadlineDays] = useState<number>(10);
@@ -55,42 +58,48 @@ const ResidentOccurrences = () => {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
 
-  useEffect(() => {
-    const fetchOccurrences = async () => {
-      if (!residentInfo) return;
+  const fetchOccurrences = useCallback(async () => {
+    if (!residentInfo) return;
 
-      try {
-        const { data, error } = await supabase
-          .from("occurrences")
-          .select("*, condominiums(defense_deadline_days)")
-          .eq("resident_id", residentInfo.id)
-          .order("created_at", { ascending: false });
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("occurrences")
+        .select("*, condominiums(defense_deadline_days)")
+        .eq("resident_id", residentInfo.id)
+        .order("created_at", { ascending: false });
 
-        if (error) throw error;
+      if (error) throw error;
 
-        if (data && data.length > 0 && data[0].condominiums) {
-          setDefenseDeadlineDays((data[0].condominiums as any).defense_deadline_days || 10);
-        }
-
-        setOccurrences(data || []);
-      } catch (error) {
-        console.error("Error fetching occurrences:", error);
-        toast({
-          title: "Erro",
-          description: "Não foi possível carregar suas ocorrências.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
+      if (data && data.length > 0 && data[0].condominiums) {
+        setDefenseDeadlineDays((data[0].condominiums as any).defense_deadline_days || 10);
       }
-    };
 
+      setOccurrences(data || []);
+    } catch (error) {
+      console.error("Error fetching occurrences:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar suas ocorrências.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [residentInfo, toast]);
+
+  const { containerRef, PullIndicator } = usePullToRefresh({
+    onRefresh: fetchOccurrences,
+    isEnabled: isMobile,
+  });
+
+  useEffect(() => {
     if (residentInfo) {
       fetchOccurrences();
     } else if (!roleLoading) {
       setLoading(false);
     }
-  }, [residentInfo, roleLoading]);
+  }, [residentInfo, roleLoading, fetchOccurrences]);
 
   // Filter occurrences
   const filteredOccurrences = useMemo(() => {
@@ -259,7 +268,8 @@ const ResidentOccurrences = () => {
         <meta name="description" content="Lista de ocorrências do morador" />
       </Helmet>
 
-      <div className="space-y-4 md:space-y-6 animate-fade-up">
+      <div ref={containerRef} className="space-y-4 md:space-y-6 animate-fade-up overflow-auto">
+        <PullIndicator />
         {/* Breadcrumbs */}
         <ResidentBreadcrumbs items={[{ label: "Minhas Ocorrências" }]} />
 
