@@ -901,19 +901,6 @@ const OccurrenceDetails = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Main Info */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Description */}
-            <Card className="bg-gradient-card border-border/50">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <AlertTriangle className="w-5 h-5 text-primary" />
-                  Descrição
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-foreground whitespace-pre-wrap">{occurrence.description}</p>
-              </CardContent>
-            </Card>
-
             {/* Location & Date */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card className="bg-gradient-card border-border/50">
@@ -946,6 +933,19 @@ const OccurrenceDetails = () => {
                 </Card>
               )}
             </div>
+
+            {/* Description */}
+            <Card className="bg-gradient-card border-border/50">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-primary" />
+                  Descrição
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-foreground whitespace-pre-wrap">{occurrence.description}</p>
+              </CardContent>
+            </Card>
 
             {/* Legal Basis */}
             {(occurrence.convention_article || occurrence.internal_rules_article || occurrence.civil_code_article || occurrence.legal_basis) && (
