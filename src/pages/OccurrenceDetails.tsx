@@ -1246,18 +1246,22 @@ const OccurrenceDetails = () => {
 
             {/* Notifications */}
             {notifications.length > 0 && (
-              <Card className="bg-gradient-card border-border/50">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Send className="w-5 h-5 text-primary" />
-                    Notificações
-                    <Badge variant="secondary" className="ml-auto text-xs">
-                      {notifications.length}
+              <Card className="bg-gradient-card border-border/50 overflow-hidden">
+                <CardHeader className="pb-3 border-b border-border/30">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Send className="w-4 h-4 text-primary" />
+                      </div>
+                      Histórico de Notificações
+                    </CardTitle>
+                    <Badge variant="secondary" className="text-xs font-semibold">
+                      {notifications.length} {notifications.length === 1 ? 'envio' : 'envios'}
                     </Badge>
-                  </CardTitle>
+                  </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
+                <CardContent className="p-0">
+                  <div className="divide-y divide-border/30">
                     {notifications.map((notif, index) => {
                       const deviceInfo = notif.device_info as { browser?: string; os?: string; device?: string } | null;
                       const locationInfo = notif.location_info as { city?: string; region?: string; country?: string } | null;
@@ -1276,141 +1280,123 @@ const OccurrenceDetails = () => {
                       const getDeviceIcon = () => {
                         const device = getDeviceName().toLowerCase();
                         if (device.includes('celular') || device.includes('mobile')) {
-                          return <Smartphone className="w-4 h-4" />;
+                          return <Smartphone className="w-4 h-4 text-blue-500" />;
                         }
-                        return <Monitor className="w-4 h-4" />;
+                        return <Monitor className="w-4 h-4 text-blue-500" />;
                       };
 
                       const formatIp = (ip: string) => {
-                        // Show only unique IPs, take first one
                         const ips = ip.split(',').map(i => i.trim());
                         return ips[0];
                       };
+
+                      const getStatusInfo = () => {
+                        if (notif.acknowledged_at) return { label: 'Confirmada', color: 'text-primary', bg: 'bg-primary/10', icon: <CheckCircle2 className="w-3.5 h-3.5" /> };
+                        if (notif.read_at) return { label: 'Lida', color: 'text-blue-500', bg: 'bg-blue-500/10', icon: <Eye className="w-3.5 h-3.5" /> };
+                        if (notif.delivered_at) return { label: 'Entregue', color: 'text-green-500', bg: 'bg-green-500/10', icon: <CheckCircle2 className="w-3.5 h-3.5" /> };
+                        return { label: 'Enviada', color: 'text-muted-foreground', bg: 'bg-muted', icon: <Send className="w-3.5 h-3.5" /> };
+                      };
+
+                      const status = getStatusInfo();
                       
                       return (
                         <div 
                           key={notif.id} 
-                          className="relative overflow-hidden rounded-xl border border-border/50 bg-background/50 transition-all hover:border-primary/30 hover:shadow-sm"
+                          className="relative group animate-fade-in"
+                          style={{ animationDelay: `${index * 50}ms` }}
                         >
-                          {/* Header */}
-                          <div className="flex items-center justify-between px-4 py-3 bg-muted/30 border-b border-border/30">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center">
-                                <MessageCircle className="w-4 h-4 text-green-500" />
+                          {/* Main row */}
+                          <div className="flex items-stretch">
+                            {/* Timeline indicator */}
+                            <div className="w-16 shrink-0 flex flex-col items-center py-4 bg-muted/20">
+                              <div className={`w-10 h-10 rounded-full ${status.bg} flex items-center justify-center ${status.color} transition-transform group-hover:scale-110`}>
+                                {status.icon}
                               </div>
-                              <div>
-                                <span className="font-medium text-sm capitalize">{notif.sent_via.replace('_', ' ')}</span>
-                                <p className="text-xs text-muted-foreground">
-                                  Enviada em {formatDateTime(notif.sent_at)}
-                                </p>
-                              </div>
-                            </div>
-                            
-                            {/* Status */}
-                            <div className="flex items-center gap-1.5">
-                              {notif.acknowledged_at ? (
-                                <Badge className="bg-primary/10 text-primary border-primary/20 text-xs">
-                                  <CheckCircle2 className="w-3 h-3 mr-1" /> Confirmada
-                                </Badge>
-                              ) : notif.read_at ? (
-                                <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-xs">
-                                  <Eye className="w-3 h-3 mr-1" /> Lida
-                                </Badge>
-                              ) : notif.delivered_at ? (
-                                <Badge className="bg-green-500/10 text-green-500 border-green-500/20 text-xs">
-                                  <CheckCircle2 className="w-3 h-3 mr-1" /> Entregue
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="text-xs text-muted-foreground">
-                                  Enviada
-                                </Badge>
+                              {index < notifications.length - 1 && (
+                                <div className="flex-1 w-0.5 bg-border/50 mt-2" />
                               )}
                             </div>
-                          </div>
-                          
-                          {/* Read details */}
-                          {notif.read_at && (
-                            <div className="px-4 py-3">
-                              <div className="grid grid-cols-2 gap-3">
-                                {/* Date */}
-                                <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-muted/30">
-                                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                                    <Calendar className="w-4 h-4 text-primary" />
-                                  </div>
-                                  <div className="min-w-0">
-                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Lida em</p>
-                                    <p className="text-xs font-medium truncate">{formatDateTime(notif.read_at)}</p>
-                                  </div>
+                            
+                            {/* Content */}
+                            <div className="flex-1 py-4 pr-4 pl-2">
+                              {/* Header row */}
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-sm font-semibold ${status.color}`}>{status.label}</span>
+                                  <span className="text-xs text-muted-foreground px-2 py-0.5 rounded-full bg-muted/50 capitalize">
+                                    {notif.sent_via.replace('_', ' ')}
+                                  </span>
                                 </div>
-                                
-                                {/* Device */}
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-muted/30 cursor-help">
-                                        <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
-                                          {getDeviceIcon()}
-                                        </div>
-                                        <div className="min-w-0">
-                                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Dispositivo</p>
-                                          <p className="text-xs font-medium truncate">{getDeviceName()}</p>
-                                        </div>
-                                      </div>
-                                    </TooltipTrigger>
-                                    {notif.user_agent && (
-                                      <TooltipContent side="top" className="max-w-xs break-all text-xs">
-                                        <p className="font-mono">{notif.user_agent}</p>
-                                      </TooltipContent>
-                                    )}
-                                  </Tooltip>
-                                </TooltipProvider>
-                                
-                                {/* Location */}
-                                {(locationInfo?.city || locationInfo?.region || locationInfo?.country) && (
-                                  <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-muted/30">
-                                    <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
-                                      <MapPin className="w-4 h-4 text-amber-500" />
-                                    </div>
-                                    <div className="min-w-0">
-                                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Localização</p>
-                                      <p className="text-xs font-medium truncate">
-                                        {[locationInfo?.city, locationInfo?.region].filter(Boolean).join(', ') || locationInfo?.country || '-'}
-                                      </p>
-                                    </div>
+                                <span className="text-xs text-muted-foreground">
+                                  {formatDateTime(notif.sent_at)}
+                                </span>
+                              </div>
+                              
+                              {/* Details when read */}
+                              {notif.read_at && (
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  {/* Read date */}
+                                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-muted/40 text-xs">
+                                    <Calendar className="w-3.5 h-3.5 text-primary" />
+                                    <span className="text-muted-foreground">Lida:</span>
+                                    <span className="font-medium">{formatDateTime(notif.read_at)}</span>
                                   </div>
-                                )}
-                                
-                                {/* IP */}
-                                {notif.ip_address && (
+                                  
+                                  {/* Device */}
                                   <TooltipProvider>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
-                                        <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-muted/30 cursor-help">
-                                          <div className="w-8 h-8 rounded-full bg-slate-500/10 flex items-center justify-center shrink-0">
-                                            <Globe className="w-4 h-4 text-slate-500" />
-                                          </div>
-                                          <div className="min-w-0">
-                                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Endereço IP</p>
-                                            <p className="text-xs font-medium font-mono truncate">{formatIp(notif.ip_address)}</p>
-                                          </div>
+                                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-muted/40 text-xs cursor-help hover:bg-muted/60 transition-colors">
+                                          {getDeviceIcon()}
+                                          <span className="font-medium">{getDeviceName()}</span>
                                         </div>
                                       </TooltipTrigger>
-                                      {notif.ip_address.includes(',') && (
-                                        <TooltipContent side="top" className="max-w-xs">
-                                          <p className="text-xs font-medium mb-1">Todos os IPs:</p>
-                                          <div className="space-y-0.5">
-                                            {notif.ip_address.split(',').map((ip, i) => (
-                                              <p key={i} className="font-mono text-xs">{ip.trim()}</p>
-                                            ))}
-                                          </div>
+                                      {notif.user_agent && (
+                                        <TooltipContent side="top" className="max-w-sm break-all">
+                                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">User Agent</p>
+                                          <p className="font-mono text-xs">{notif.user_agent}</p>
                                         </TooltipContent>
                                       )}
                                     </Tooltip>
                                   </TooltipProvider>
-                                )}
-                              </div>
+                                  
+                                  {/* Location */}
+                                  {(locationInfo?.city || locationInfo?.region || locationInfo?.country) && (
+                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-muted/40 text-xs">
+                                      <MapPin className="w-3.5 h-3.5 text-amber-500" />
+                                      <span className="font-medium">
+                                        {[locationInfo?.city, locationInfo?.region].filter(Boolean).join(', ') || locationInfo?.country}
+                                      </span>
+                                    </div>
+                                  )}
+                                  
+                                  {/* IP */}
+                                  {notif.ip_address && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-muted/40 text-xs cursor-help hover:bg-muted/60 transition-colors">
+                                            <Globe className="w-3.5 h-3.5 text-slate-500" />
+                                            <span className="font-mono font-medium">{formatIp(notif.ip_address)}</span>
+                                          </div>
+                                        </TooltipTrigger>
+                                        {notif.ip_address.includes(',') && (
+                                          <TooltipContent side="top" className="max-w-xs">
+                                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Todos os IPs</p>
+                                            <div className="space-y-0.5">
+                                              {notif.ip_address.split(',').map((ip, i) => (
+                                                <p key={i} className="font-mono text-xs">{ip.trim()}</p>
+                                              ))}
+                                            </div>
+                                          </TooltipContent>
+                                        )}
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  )}
+                                </div>
+                              )}
                             </div>
-                          )}
+                          </div>
                         </div>
                       );
                     })}
