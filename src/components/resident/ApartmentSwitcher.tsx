@@ -33,7 +33,7 @@ const ApartmentSwitcher = () => {
                 <Home className="w-4 h-4 text-primary flex-shrink-0" />
                 <div className="flex flex-col items-start">
                   <span className="text-sm font-medium">
-                    {residentInfo.block_name} - Apt {residentInfo.apartment_number}
+                    {residentInfo.block_name} - APTO {residentInfo.apartment_number}
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {residentInfo.condominium_name}
@@ -54,7 +54,7 @@ const ApartmentSwitcher = () => {
                 <Home className="w-4 h-4 text-primary flex-shrink-0" />
                 <div className="flex flex-col">
                   <span className="text-sm font-medium">
-                    {profile.block_name} - Apt {profile.apartment_number}
+                    {profile.block_name} - APTO {profile.apartment_number}
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {profile.condominium_name}
