@@ -122,7 +122,7 @@ interface TimelineItem {
   id: string;
   type: "created" | "notification" | "defense" | "decision" | "evidence" | "read" | "acknowledged";
   title: string;
-  description: string;
+  description: React.ReactNode;
   date: string;
   icon: React.ReactNode;
   color: string;
@@ -301,7 +301,7 @@ const OccurrenceDetails = () => {
         id: `notif-${notif.id}`,
         type: "notification",
         title: "Notificação Enviada",
-        description: "Via WhatsApp",
+        description: <span className="flex items-center gap-1"><MessageCircle className="w-3 h-3 text-green-500" /> Via WhatsApp</span>,
         date: notif.sent_at,
         icon: <Send className="w-4 h-4" />,
         color: "bg-amber-500",
