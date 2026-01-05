@@ -34,7 +34,9 @@ import {
   Home,
   ChevronLeft,
   ChevronRight,
+  Clock,
 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import ResidentBreadcrumbs from "@/components/resident/ResidentBreadcrumbs";
@@ -815,6 +817,106 @@ const ResidentOccurrenceDetails = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Defense Deadline Progress */}
+            {occurrence && (occurrence.status === "notificado" || occurrence.status === "registrada" || occurrence.status === "em_defesa") && (
+              <Card className="bg-gradient-card border-border/50">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-primary" />
+                    Prazo para Defesa
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {(() => {
+                    const deadlineDays = occurrence.condominiums?.defense_deadline_days || 10;
+                    const createdAt = new Date(occurrence.created_at);
+                    const deadlineDate = new Date(createdAt);
+                    deadlineDate.setDate(deadlineDate.getDate() + deadlineDays);
+                    
+                    const now = new Date();
+                    const totalMs = deadlineDate.getTime() - createdAt.getTime();
+                    const elapsedMs = now.getTime() - createdAt.getTime();
+                    const remainingMs = deadlineDate.getTime() - now.getTime();
+                    
+                    const progressPercent = Math.min(100, Math.max(0, (elapsedMs / totalMs) * 100));
+                    const remainingDays = Math.ceil(remainingMs / (1000 * 60 * 60 * 24));
+                    const isExpired = remainingMs <= 0;
+                    const isUrgent = remainingDays <= 2 && !isExpired;
+                    const hasDefense = defenses.length > 0;
+
+                    if (hasDefense) {
+                      return (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3 p-4 rounded-xl bg-green-500/10 border border-green-500/20">
+                            <CheckCircle2 className="w-6 h-6 text-green-500" />
+                            <div>
+                              <p className="font-medium text-green-600">Defesa Enviada</p>
+                              <p className="text-xs text-muted-foreground">
+                                Enviada em {formatDateTime(defenses[0].submitted_at)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Progresso do prazo</span>
+                          <span className={`font-medium ${isExpired ? 'text-red-500' : isUrgent ? 'text-orange-500' : 'text-foreground'}`}>
+                            {isExpired ? 'Prazo encerrado' : `${remainingDays} dia${remainingDays !== 1 ? 's' : ''} restante${remainingDays !== 1 ? 's' : ''}`}
+                          </span>
+                        </div>
+                        
+                        <Progress 
+                          value={progressPercent} 
+                          className={`h-3 ${isExpired ? '[&>div]:bg-red-500' : isUrgent ? '[&>div]:bg-orange-500' : '[&>div]:bg-primary'}`}
+                        />
+                        
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>{formatDate(occurrence.created_at)}</span>
+                          <span>{formatDate(deadlineDate.toISOString())}</span>
+                        </div>
+
+                        {isExpired ? (
+                          <div className="flex items-center gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20 mt-2">
+                            <XCircle className="w-6 h-6 text-red-500" />
+                            <div>
+                              <p className="font-medium text-red-600">Prazo Encerrado</p>
+                              <p className="text-xs text-muted-foreground">
+                                Não é mais possível enviar defesa
+                              </p>
+                            </div>
+                          </div>
+                        ) : isUrgent ? (
+                          <div className="flex items-center gap-3 p-4 rounded-xl bg-orange-500/10 border border-orange-500/20 mt-2">
+                            <AlertTriangle className="w-6 h-6 text-orange-500" />
+                            <div>
+                              <p className="font-medium text-orange-600">Prazo Urgente!</p>
+                              <p className="text-xs text-muted-foreground">
+                                Envie sua defesa o quanto antes
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-3 p-4 rounded-xl bg-primary/10 border border-primary/20 mt-2">
+                            <Clock className="w-6 h-6 text-primary" />
+                            <div>
+                              <p className="font-medium text-primary">Prazo Aberto</p>
+                              <p className="text-xs text-muted-foreground">
+                                Você pode enviar sua defesa
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
+            )}
 
           </div>
         </div>
