@@ -465,18 +465,10 @@ const DefenseAnalysis = () => {
                   {/* Occurrence Info */}
                   <Card>
                     <CardHeader className="pb-2">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base flex items-center gap-2">
-                          <FileText className="w-4 h-4" />
-                          Ocorrência
-                        </CardTitle>
-                        {selectedDefense.occurrences.condominiums?.name && (
-                          <span className="flex items-center gap-1 text-sm font-medium text-primary">
-                            <Building2 className="w-4 h-4" />
-                            {selectedDefense.occurrences.condominiums.name}
-                          </span>
-                        )}
-                      </div>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <FileText className="w-4 h-4" />
+                        Ocorrência
+                      </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <div>
