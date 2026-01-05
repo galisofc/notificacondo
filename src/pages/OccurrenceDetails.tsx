@@ -119,7 +119,7 @@ interface Notification {
 
 interface TimelineItem {
   id: string;
-  type: "created" | "notification" | "defense" | "decision" | "evidence";
+  type: "created" | "notification" | "defense" | "decision" | "evidence" | "read";
   title: string;
   description: string;
   date: string;
@@ -276,11 +276,32 @@ const OccurrenceDetails = () => {
         id: `notif-${notif.id}`,
         type: "notification",
         title: "Notificação Enviada",
-        description: `Via ${notif.sent_via}${notif.delivered_at ? " - Entregue" : ""}${notif.read_at ? " - Lida" : ""}${notif.acknowledged_at ? " - Confirmada" : ""}`,
+        description: `Via ${notif.sent_via}`,
         date: notif.sent_at,
         icon: <Send className="w-4 h-4" />,
         color: "bg-amber-500",
       });
+
+      // Add read event if notification was read
+      if (notif.read_at) {
+        const formatIpAddress = (ip: string | null) => {
+          if (!ip) return null;
+          const ips = ip.split(',').map(i => i.trim());
+          return ips[0];
+        };
+        
+        const readIp = formatIpAddress(notif.ip_address);
+        
+        items.push({
+          id: `read-${notif.id}`,
+          type: "read",
+          title: "Notificação Lida",
+          description: readIp ? `IP: ${readIp}` : "Visualizada pelo morador",
+          date: notif.read_at,
+          icon: <Eye className="w-4 h-4" />,
+          color: "bg-blue-500",
+        });
+      }
     });
 
     // Defenses
