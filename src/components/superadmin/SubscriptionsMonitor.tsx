@@ -80,6 +80,7 @@ const formatCnpj = (value: string): string => {
 export function SubscriptionsMonitor() {
   const navigate = useNavigate();
   const [planFilter, setPlanFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const { date: formatDate, dateTime: formatDateTime } = useDateFormatter();
 
@@ -252,25 +253,42 @@ export function SubscriptionsMonitor() {
     return { status: "normal", daysRemaining, hoursRemaining, label: `${daysRemaining}d` };
   };
 
-  // Filter subscriptions based on search term (CNPJ or email)
+  // Filter subscriptions based on search term (CNPJ or email) and status
   const filteredSubscriptions = useMemo(() => {
-    if (!subscriptions || !searchTerm.trim()) return subscriptions;
+    if (!subscriptions) return subscriptions;
     
-    const search = searchTerm.toLowerCase().trim();
-    const searchDigits = searchTerm.replace(/\D/g, ""); // Remove non-digits for CNPJ search
+    let filtered = subscriptions;
     
-    return subscriptions.filter((sub) => {
-      const cnpj = sub.condominium?.cnpj || "";
-      const email = sub.owner_profile?.email?.toLowerCase() || "";
-      const name = sub.condominium?.name?.toLowerCase() || "";
-      const sindicoName = sub.owner_profile?.full_name?.toLowerCase() || "";
+    // Filter by status
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((sub) => {
+        if (statusFilter === "ativo") return sub.active && !sub.is_trial;
+        if (statusFilter === "inativo") return !sub.active;
+        if (statusFilter === "trial") return sub.is_trial;
+        return true;
+      });
+    }
+    
+    // Filter by search term
+    if (searchTerm.trim()) {
+      const search = searchTerm.toLowerCase().trim();
+      const searchDigits = searchTerm.replace(/\D/g, ""); // Remove non-digits for CNPJ search
       
-      return (searchDigits.length > 0 && cnpj.includes(searchDigits)) || 
-             email.includes(search) || 
-             name.includes(search) ||
-             sindicoName.includes(search);
-    });
-  }, [subscriptions, searchTerm]);
+      filtered = filtered.filter((sub) => {
+        const cnpj = sub.condominium?.cnpj || "";
+        const email = sub.owner_profile?.email?.toLowerCase() || "";
+        const name = sub.condominium?.name?.toLowerCase() || "";
+        const sindicoName = sub.owner_profile?.full_name?.toLowerCase() || "";
+        
+        return (searchDigits.length > 0 && cnpj.includes(searchDigits)) || 
+               email.includes(search) || 
+               name.includes(search) ||
+               sindicoName.includes(search);
+      });
+    }
+    
+    return filtered;
+  }, [subscriptions, searchTerm, statusFilter]);
 
   return (
     <div className="space-y-6">
@@ -356,6 +374,17 @@ export function SubscriptionsMonitor() {
                   className="pl-9 w-full sm:w-[280px]"
                 />
               </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-[130px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="ativo">Ativos</SelectItem>
+                  <SelectItem value="inativo">Inativos</SelectItem>
+                  <SelectItem value="trial">Trial</SelectItem>
+                </SelectContent>
+              </Select>
               <Select value={planFilter} onValueChange={setPlanFilter}>
                 <SelectTrigger className="w-full sm:w-[150px]">
                   <SelectValue placeholder="Filtrar plano" />
