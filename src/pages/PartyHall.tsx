@@ -11,12 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, PartyPopper, Settings, Plus, Check, X, ClipboardList, MessageCircle, Eye } from "lucide-react";
+import { Calendar as CalendarIcon, PartyPopper, Settings, Plus, Check, X, ClipboardList, MessageCircle, Eye, CalendarDays, LayoutGrid } from "lucide-react";
 import { format, parseISO, isToday, isTomorrow, isPast, isFuture } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import BookingFormDialog from "@/components/party-hall/BookingFormDialog";
 import ChecklistFormDialog from "@/components/party-hall/ChecklistFormDialog";
 import BookingDetailsDialog from "@/components/party-hall/BookingDetailsDialog";
+import BookingCalendar from "@/components/party-hall/BookingCalendar";
 import { useNavigate } from "react-router-dom";
 
 interface Booking {
@@ -76,6 +77,7 @@ export default function PartyHall() {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [checklistType, setChecklistType] = useState<"entrada" | "saida">("entrada");
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
 
   // Fetch condominiums
   const { data: condominiums = [] } = useQuery({
@@ -366,13 +368,33 @@ export default function PartyHall() {
             </p>
           </div>
           <div className="flex gap-2">
+            <div className="flex border rounded-lg p-1 bg-muted/50">
+              <Button 
+                variant={viewMode === "list" ? "default" : "ghost"} 
+                size="sm"
+                onClick={() => setViewMode("list")}
+                className="gap-1.5"
+              >
+                <LayoutGrid className="h-4 w-4" />
+                <span className="hidden sm:inline">Lista</span>
+              </Button>
+              <Button 
+                variant={viewMode === "calendar" ? "default" : "ghost"} 
+                size="sm"
+                onClick={() => setViewMode("calendar")}
+                className="gap-1.5"
+              >
+                <CalendarDays className="h-4 w-4" />
+                <span className="hidden sm:inline">Calendário</span>
+              </Button>
+            </div>
             <Button variant="outline" onClick={() => navigate("/party-hall/settings")}>
               <Settings className="h-4 w-4 mr-2" />
-              Configurações
+              <span className="hidden sm:inline">Configurações</span>
             </Button>
             <Button onClick={() => setBookingFormOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              Nova Reserva
+              <span className="hidden sm:inline">Nova Reserva</span>
             </Button>
           </div>
         </div>
@@ -408,76 +430,84 @@ export default function PartyHall() {
           </Select>
         </div>
 
-        {/* Tabs */}
-        <Tabs defaultValue="upcoming" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="upcoming" className="gap-2">
-              <Calendar className="h-4 w-4" />
-              <span className="hidden sm:inline">Próximas</span>
-              {upcomingBookings.length > 0 && (
-                <Badge variant="secondary" className="ml-1">{upcomingBookings.length}</Badge>
+        {/* Calendar View */}
+        {viewMode === "calendar" ? (
+          <BookingCalendar 
+            bookings={bookings} 
+            onBookingClick={handleViewDetails}
+          />
+        ) : (
+          /* List View - Tabs */
+          <Tabs defaultValue="upcoming" className="space-y-4">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="upcoming" className="gap-2">
+                <CalendarIcon className="h-4 w-4" />
+                <span className="hidden sm:inline">Próximas</span>
+                {upcomingBookings.length > 0 && (
+                  <Badge variant="secondary" className="ml-1">{upcomingBookings.length}</Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="active" className="gap-2">
+                <PartyPopper className="h-4 w-4" />
+                <span className="hidden sm:inline">Em Uso</span>
+                {activeBookings.length > 0 && (
+                  <Badge variant="secondary" className="ml-1">{activeBookings.length}</Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="history" className="gap-2">
+                <ClipboardList className="h-4 w-4" />
+                <span className="hidden sm:inline">Histórico</span>
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="upcoming" className="space-y-4">
+              {isLoading ? (
+                <div className="text-center py-8 text-muted-foreground">Carregando...</div>
+              ) : upcomingBookings.length === 0 ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <CalendarIcon className="h-12 w-12 text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">Nenhuma reserva futura</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {upcomingBookings.map(renderBookingCard)}
+                </div>
               )}
-            </TabsTrigger>
-            <TabsTrigger value="active" className="gap-2">
-              <PartyPopper className="h-4 w-4" />
-              <span className="hidden sm:inline">Em Uso</span>
-              {activeBookings.length > 0 && (
-                <Badge variant="secondary" className="ml-1">{activeBookings.length}</Badge>
+            </TabsContent>
+
+            <TabsContent value="active" className="space-y-4">
+              {activeBookings.length === 0 ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <PartyPopper className="h-12 w-12 text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">Nenhum espaço em uso no momento</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {activeBookings.map(renderBookingCard)}
+                </div>
               )}
-            </TabsTrigger>
-            <TabsTrigger value="history" className="gap-2">
-              <ClipboardList className="h-4 w-4" />
-              <span className="hidden sm:inline">Histórico</span>
-            </TabsTrigger>
-          </TabsList>
+            </TabsContent>
 
-          <TabsContent value="upcoming" className="space-y-4">
-            {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">Carregando...</div>
-            ) : upcomingBookings.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">Nenhuma reserva futura</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {upcomingBookings.map(renderBookingCard)}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="active" className="space-y-4">
-            {activeBookings.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <PartyPopper className="h-12 w-12 text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">Nenhum espaço em uso no momento</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {activeBookings.map(renderBookingCard)}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="history" className="space-y-4">
-            {pastBookings.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <ClipboardList className="h-12 w-12 text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">Nenhuma reserva no histórico</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {pastBookings.map(renderBookingCard)}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="history" className="space-y-4">
+              {pastBookings.length === 0 ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <ClipboardList className="h-12 w-12 text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">Nenhuma reserva no histórico</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {pastBookings.map(renderBookingCard)}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        )}
 
         {/* Dialogs */}
         <BookingFormDialog 
