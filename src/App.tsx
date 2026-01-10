@@ -24,6 +24,8 @@ import DefenseAnalysis from "./pages/DefenseAnalysis";
 import SindicoSettings from "./pages/SindicoSettings";
 import SindicoInvoices from "./pages/SindicoInvoices";
 import SindicoSubscriptions from "./pages/SindicoSubscriptions";
+import PartyHall from "./pages/PartyHall";
+import PartyHallSettings from "./pages/PartyHallSettings";
 import { Navigate } from "react-router-dom";
 import ResidentAccess from "./pages/ResidentAccess";
 import AuthCallback from "./pages/AuthCallback";
@@ -120,6 +122,22 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole={["sindico", "super_admin"]}>
                     <DefenseAnalysis />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/party-hall"
+                element={
+                  <ProtectedRoute requiredRole={["sindico", "super_admin"]}>
+                    <PartyHall />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/party-hall/settings"
+                element={
+                  <ProtectedRoute requiredRole={["sindico", "super_admin"]}>
+                    <PartyHallSettings />
                   </ProtectedRoute>
                 }
               />

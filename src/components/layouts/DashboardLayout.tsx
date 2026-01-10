@@ -41,6 +41,7 @@ import {
   Receipt,
   ChevronRight,
   Clock,
+  PartyPopper,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -197,6 +198,7 @@ function SidebarNavigation() {
     { title: "Condomínios", url: "/condominiums", icon: Building2 },
     { title: "Ocorrências", url: "/occurrences", icon: FileText },
     { title: "Análise de Defesas", url: "/defenses", icon: Scale, badge: pendingDefenses },
+    { title: "Salão de Festas", url: "/party-hall", icon: PartyPopper },
     { title: "Notificações", url: "/notifications", icon: Bell },
     { title: "Relatórios", url: "/reports", icon: BarChart3 },
     { title: "Assinaturas", url: "/sindico/subscriptions", icon: CreditCard },
