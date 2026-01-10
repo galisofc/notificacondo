@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,9 +12,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { format, addDays } from "date-fns";
+import { format, addDays, parseISO, startOfDay, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface BookingFormDialogProps {
   open: boolean;
@@ -52,6 +53,32 @@ export default function BookingFormDialog({ open, onOpenChange, condominiums }: 
     enabled: !!selectedCondominium,
   });
 
+  // Fetch existing bookings for the selected space to block dates
+  const { data: existingBookings = [] } = useQuery({
+    queryKey: ["space-bookings", selectedSpace],
+    queryFn: async () => {
+      if (!selectedSpace) return [];
+      const { data, error } = await supabase
+        .from("party_hall_bookings")
+        .select("booking_date, status")
+        .eq("party_hall_setting_id", selectedSpace)
+        .in("status", ["pendente", "confirmada", "em_uso"]);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedSpace,
+  });
+
+  // Create a set of blocked dates for quick lookup
+  const blockedDates = useMemo(() => {
+    return existingBookings.map(booking => startOfDay(parseISO(booking.booking_date)));
+  }, [existingBookings]);
+
+  // Check if a date is blocked
+  const isDateBlocked = (date: Date) => {
+    return blockedDates.some(blockedDate => isSameDay(blockedDate, date));
+  };
+
   // Fetch residents for selected condominium
   const { data: residents = [] } = useQuery({
     queryKey: ["condominium-residents", selectedCondominium],
@@ -87,11 +114,46 @@ export default function BookingFormDialog({ open, onOpenChange, condominiums }: 
     }
   }, [selectedSpace, spaces]);
 
+  // Reset booking date when space changes (in case selected date is now blocked)
+  useEffect(() => {
+    if (bookingDate && isDateBlocked(bookingDate)) {
+      setBookingDate(undefined);
+    }
+  }, [selectedSpace, existingBookings]);
+
   // Create booking mutation
   const createBookingMutation = useMutation({
     mutationFn: async () => {
       if (!selectedCondominium || !selectedSpace || !selectedResident || !bookingDate) {
         throw new Error("Preencha todos os campos obrigatórios");
+      }
+
+      // Validate advance days
+      const selectedSpaceData = spaces.find(s => s.id === selectedSpace);
+      const minDays = selectedSpaceData?.advance_days_required || 1;
+      const minDate = startOfDay(addDays(new Date(), minDays));
+      
+      if (startOfDay(bookingDate) < minDate) {
+        throw new Error(`A reserva deve ser feita com pelo menos ${minDays} dia(s) de antecedência`);
+      }
+
+      // Double-check if date is still available (race condition prevention)
+      const { data: conflictCheck, error: checkError } = await supabase
+        .from("party_hall_bookings")
+        .select("id")
+        .eq("party_hall_setting_id", selectedSpace)
+        .eq("booking_date", format(bookingDate, "yyyy-MM-dd"))
+        .in("status", ["pendente", "confirmada", "em_uso"])
+        .maybeSingle();
+
+      if (checkError) throw checkError;
+      if (conflictCheck) {
+        throw new Error("Esta data já foi reservada. Por favor, escolha outra data.");
+      }
+
+      // Validate guest count
+      if (selectedSpaceData?.max_guests && guestCount > selectedSpaceData.max_guests) {
+        throw new Error(`O número de convidados não pode exceder ${selectedSpaceData.max_guests}`);
       }
 
       const { error } = await supabase
@@ -112,6 +174,7 @@ export default function BookingFormDialog({ open, onOpenChange, condominiums }: 
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["party-hall-bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["space-bookings"] });
       onOpenChange(false);
       resetForm();
       toast({ title: "Reserva criada com sucesso!" });
@@ -136,6 +199,13 @@ export default function BookingFormDialog({ open, onOpenChange, condominiums }: 
   const minDate = selectedSpaceData 
     ? addDays(new Date(), selectedSpaceData.advance_days_required || 1)
     : addDays(new Date(), 1);
+
+  // Check if date should be disabled (before min date OR already booked)
+  const isDateDisabled = (date: Date) => {
+    return date < startOfDay(minDate) || isDateBlocked(date);
+  };
+
+  const guestCountExceedsMax = selectedSpaceData?.max_guests && guestCount > selectedSpaceData.max_guests;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -213,17 +283,31 @@ export default function BookingFormDialog({ open, onOpenChange, condominiums }: 
                   mode="single"
                   selected={bookingDate}
                   onSelect={setBookingDate}
-                  disabled={(date) => date < minDate}
+                  disabled={isDateDisabled}
                   locale={ptBR}
                   initialFocus
+                  modifiers={{
+                    booked: blockedDates,
+                  }}
+                  modifiersClassNames={{
+                    booked: "line-through text-muted-foreground bg-muted",
+                  }}
                 />
               </PopoverContent>
             </Popover>
-            {selectedSpaceData && (
-              <p className="text-xs text-muted-foreground">
-                Antecedência mínima: {selectedSpaceData.advance_days_required} dia(s)
-              </p>
-            )}
+            <div className="space-y-1">
+              {selectedSpaceData && (
+                <p className="text-xs text-muted-foreground">
+                  Antecedência mínima: {selectedSpaceData.advance_days_required} dia(s)
+                </p>
+              )}
+              {blockedDates.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="inline-block w-3 h-3 bg-muted rounded mr-1 align-middle" />
+                  Datas riscadas já possuem reserva
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -257,11 +341,24 @@ export default function BookingFormDialog({ open, onOpenChange, condominiums }: 
               placeholder="0"
             />
             {selectedSpaceData && (
-              <p className="text-xs text-muted-foreground">
+              <p className={cn(
+                "text-xs",
+                guestCountExceedsMax ? "text-destructive" : "text-muted-foreground"
+              )}>
                 Capacidade máxima: {selectedSpaceData.max_guests} pessoas
+                {guestCountExceedsMax && " (excedido!)"}
               </p>
             )}
           </div>
+
+          {guestCountExceedsMax && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                O número de convidados excede a capacidade máxima do espaço.
+              </AlertDescription>
+            </Alert>
+          )}
 
           <div className="grid gap-2">
             <Label htmlFor="observations">Observações</Label>
@@ -281,9 +378,16 @@ export default function BookingFormDialog({ open, onOpenChange, condominiums }: 
           </Button>
           <Button 
             onClick={() => createBookingMutation.mutate()}
-            disabled={!selectedCondominium || !selectedSpace || !selectedResident || !bookingDate || createBookingMutation.isPending}
+            disabled={
+              !selectedCondominium || 
+              !selectedSpace || 
+              !selectedResident || 
+              !bookingDate || 
+              guestCountExceedsMax ||
+              createBookingMutation.isPending
+            }
           >
-            Criar Reserva
+            {createBookingMutation.isPending ? "Criando..." : "Criar Reserva"}
           </Button>
         </DialogFooter>
       </DialogContent>
