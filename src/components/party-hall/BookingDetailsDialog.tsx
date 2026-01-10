@@ -15,7 +15,6 @@ interface Booking {
   start_time: string;
   end_time: string;
   status: string;
-  deposit_paid: boolean;
   guest_count: number | null;
   observations: string | null;
   notification_sent_at: string | null;
@@ -237,13 +236,6 @@ export default function BookingDetailsDialog({ open, onOpenChange, booking }: Bo
                   </div>
                 </div>
               )}
-              <div className="flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="text-muted-foreground">Caução</p>
-                  <p className="font-medium">{booking.deposit_paid ? "Paga" : "Pendente"}</p>
-                </div>
-              </div>
               {booking.notification_sent_at && (
                 <div className="flex items-center gap-2">
                   <MessageCircle className="h-4 w-4 text-muted-foreground" />

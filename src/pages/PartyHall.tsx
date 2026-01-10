@@ -11,13 +11,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar as CalendarIcon, PartyPopper, Settings, Plus, Check, X, ClipboardList, MessageCircle, Eye, CalendarDays, LayoutGrid } from "lucide-react";
+import { Calendar as CalendarIcon, PartyPopper, Settings, Plus, Check, X, ClipboardList, MessageCircle, Eye, CalendarDays, LayoutGrid, Pencil } from "lucide-react";
 import { format, parseISO, isToday, isTomorrow, isPast, isFuture } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import BookingFormDialog from "@/components/party-hall/BookingFormDialog";
 import ChecklistFormDialog from "@/components/party-hall/ChecklistFormDialog";
 import BookingDetailsDialog from "@/components/party-hall/BookingDetailsDialog";
 import BookingCalendar from "@/components/party-hall/BookingCalendar";
+import BookingEditDialog from "@/components/party-hall/BookingEditDialog";
 import { useNavigate } from "react-router-dom";
 
 interface Booking {
@@ -26,7 +27,6 @@ interface Booking {
   start_time: string;
   end_time: string;
   status: string;
-  deposit_paid: boolean;
   guest_count: number | null;
   observations: string | null;
   notification_sent_at: string | null;
@@ -75,6 +75,7 @@ export default function PartyHall() {
   const [bookingFormOpen, setBookingFormOpen] = useState(false);
   const [checklistDialogOpen, setChecklistDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [checklistType, setChecklistType] = useState<"entrada" | "saida">("entrada");
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
@@ -106,7 +107,6 @@ export default function PartyHall() {
           start_time,
           end_time,
           status,
-          deposit_paid,
           guest_count,
           observations,
           notification_sent_at,
@@ -227,6 +227,11 @@ export default function PartyHall() {
     setDetailsDialogOpen(true);
   };
 
+  const handleEditBooking = (booking: Booking) => {
+    setSelectedBooking(booking);
+    setEditDialogOpen(true);
+  };
+
   const hasChecklist = (booking: Booking, type: string) => {
     return booking.checklists?.some(c => c.type === type);
   };
@@ -286,16 +291,17 @@ export default function PartyHall() {
               <p className="font-medium">{booking.guest_count}</p>
             </div>
           )}
-          <div>
-            <p className="text-muted-foreground">Caução</p>
-            <p className="font-medium">{booking.deposit_paid ? "Paga" : "Pendente"}</p>
-          </div>
         </div>
 
         <div className="flex flex-wrap gap-2 pt-2 border-t">
           <Button size="sm" variant="outline" onClick={() => handleViewDetails(booking)}>
             <Eye className="h-4 w-4 mr-1" />
             Ver
+          </Button>
+
+          <Button size="sm" variant="outline" onClick={() => handleEditBooking(booking)}>
+            <Pencil className="h-4 w-4 mr-1" />
+            Editar
           </Button>
 
           {booking.status === "pendente" && (
@@ -527,6 +533,11 @@ export default function PartyHall() {
             <BookingDetailsDialog
               open={detailsDialogOpen}
               onOpenChange={setDetailsDialogOpen}
+              booking={selectedBooking}
+            />
+            <BookingEditDialog
+              open={editDialogOpen}
+              onOpenChange={setEditDialogOpen}
               booking={selectedBooking}
             />
           </>
