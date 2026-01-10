@@ -80,3 +80,7 @@ verify_jwt = false
 # Criação de pagamento PIX via Mercado Pago
 [functions.mercadopago-create-pix]
 verify_jwt = false
+
+# Notificação de salão de festas via WhatsApp
+[functions.send-party-hall-notification]
+verify_jwt = false

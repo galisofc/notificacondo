@@ -252,8 +252,10 @@ export default function PartyHallSettings() {
     <DashboardLayout>
       <div className="flex-1 space-y-4 p-4 md:p-6 lg:p-8 pt-6">
         <SindicoBreadcrumbs 
-          items={[{ label: "Salão de Festas", href: "/party-hall" }]}
-          current="Configurações" 
+          items={[
+            { label: "Salão de Festas", href: "/party-hall" },
+            { label: "Configurações" }
+          ]}
         />
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

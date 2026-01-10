@@ -355,7 +355,7 @@ export default function PartyHall() {
   return (
     <DashboardLayout>
       <div className="flex-1 space-y-4 p-4 md:p-6 lg:p-8 pt-6">
-        <SindicoBreadcrumbs current="Salão de Festas" />
+        <SindicoBreadcrumbs items={[{ label: "Salão de Festas" }]} />
         <TrialBanner />
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
