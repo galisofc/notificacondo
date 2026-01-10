@@ -84,3 +84,7 @@ verify_jwt = false
 # Notificação de salão de festas via WhatsApp
 [functions.send-party-hall-notification]
 verify_jwt = false
+
+# Lembrete automático de salão de festas (cron job)
+[functions.notify-party-hall-reminders]
+verify_jwt = false
