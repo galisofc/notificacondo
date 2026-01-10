@@ -937,6 +937,258 @@ export type Database = {
           },
         ]
       }
+      party_hall_bookings: {
+        Row: {
+          booking_date: string
+          condominium_id: string
+          created_at: string
+          deposit_paid: boolean | null
+          end_time: string
+          guest_count: number | null
+          id: string
+          notification_sent_at: string | null
+          observations: string | null
+          party_hall_setting_id: string
+          resident_id: string
+          start_time: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          booking_date: string
+          condominium_id: string
+          created_at?: string
+          deposit_paid?: boolean | null
+          end_time: string
+          guest_count?: number | null
+          id?: string
+          notification_sent_at?: string | null
+          observations?: string | null
+          party_hall_setting_id: string
+          resident_id: string
+          start_time: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          booking_date?: string
+          condominium_id?: string
+          created_at?: string
+          deposit_paid?: boolean | null
+          end_time?: string
+          guest_count?: number | null
+          id?: string
+          notification_sent_at?: string | null
+          observations?: string | null
+          party_hall_setting_id?: string
+          resident_id?: string
+          start_time?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_hall_bookings_condominium_id_fkey"
+            columns: ["condominium_id"]
+            isOneToOne: false
+            referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_hall_bookings_party_hall_setting_id_fkey"
+            columns: ["party_hall_setting_id"]
+            isOneToOne: false
+            referencedRelation: "party_hall_settings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_hall_bookings_resident_id_fkey"
+            columns: ["resident_id"]
+            isOneToOne: false
+            referencedRelation: "residents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      party_hall_checklist_items: {
+        Row: {
+          category: string | null
+          checklist_id: string
+          created_at: string
+          id: string
+          is_ok: boolean
+          item_name: string
+          observation: string | null
+          photos: string[] | null
+        }
+        Insert: {
+          category?: string | null
+          checklist_id: string
+          created_at?: string
+          id?: string
+          is_ok?: boolean
+          item_name: string
+          observation?: string | null
+          photos?: string[] | null
+        }
+        Update: {
+          category?: string | null
+          checklist_id?: string
+          created_at?: string
+          id?: string
+          is_ok?: boolean
+          item_name?: string
+          observation?: string | null
+          photos?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_hall_checklist_items_checklist_id_fkey"
+            columns: ["checklist_id"]
+            isOneToOne: false
+            referencedRelation: "party_hall_checklists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      party_hall_checklist_templates: {
+        Row: {
+          category: string | null
+          condominium_id: string
+          created_at: string
+          display_order: number | null
+          id: string
+          is_active: boolean
+          item_name: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          condominium_id: string
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_active?: boolean
+          item_name: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          condominium_id?: string
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_active?: boolean
+          item_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_hall_checklist_templates_condominium_id_fkey"
+            columns: ["condominium_id"]
+            isOneToOne: false
+            referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      party_hall_checklists: {
+        Row: {
+          booking_id: string
+          checked_at: string
+          checked_by: string
+          created_at: string
+          general_observations: string | null
+          id: string
+          signature_data: Json | null
+          type: string
+        }
+        Insert: {
+          booking_id: string
+          checked_at?: string
+          checked_by: string
+          created_at?: string
+          general_observations?: string | null
+          id?: string
+          signature_data?: Json | null
+          type: string
+        }
+        Update: {
+          booking_id?: string
+          checked_at?: string
+          checked_by?: string
+          created_at?: string
+          general_observations?: string | null
+          id?: string
+          signature_data?: Json | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_hall_checklists_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "party_hall_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      party_hall_settings: {
+        Row: {
+          advance_days_required: number | null
+          check_in_time: string | null
+          check_out_time: string | null
+          condominium_id: string
+          created_at: string
+          deposit_amount: number | null
+          id: string
+          is_active: boolean
+          max_guests: number | null
+          name: string
+          rental_fee: number | null
+          rules: string | null
+          updated_at: string
+        }
+        Insert: {
+          advance_days_required?: number | null
+          check_in_time?: string | null
+          check_out_time?: string | null
+          condominium_id: string
+          created_at?: string
+          deposit_amount?: number | null
+          id?: string
+          is_active?: boolean
+          max_guests?: number | null
+          name?: string
+          rental_fee?: number | null
+          rules?: string | null
+          updated_at?: string
+        }
+        Update: {
+          advance_days_required?: number | null
+          check_in_time?: string | null
+          check_out_time?: string | null
+          condominium_id?: string
+          created_at?: string
+          deposit_amount?: number | null
+          id?: string
+          is_active?: boolean
+          max_guests?: number | null
+          name?: string
+          rental_fee?: number | null
+          rules?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_hall_settings_condominium_id_fkey"
+            columns: ["condominium_id"]
+            isOneToOne: false
+            referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plans: {
         Row: {
           color: string
