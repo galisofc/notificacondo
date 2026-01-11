@@ -20,6 +20,7 @@ import ChecklistFormDialog from "@/components/party-hall/ChecklistFormDialog";
 import BookingDetailsDialog from "@/components/party-hall/BookingDetailsDialog";
 import BookingCalendar from "@/components/party-hall/BookingCalendar";
 import BookingEditDialog from "@/components/party-hall/BookingEditDialog";
+import BlockApartmentDisplay from "@/components/common/BlockApartmentDisplay";
 import { useNavigate } from "react-router-dom";
 
 interface Booking {
@@ -294,9 +295,12 @@ export default function PartyHall() {
           </div>
           <div>
             <p className="text-muted-foreground">Unidade</p>
-            <p className="font-medium">
-              {booking.resident.apartment.block.name} - {booking.resident.apartment.number}
-            </p>
+            <BlockApartmentDisplay
+              blockName={booking.resident.apartment.block.name}
+              apartmentNumber={booking.resident.apartment.number}
+              variant="default"
+              className="font-medium"
+            />
           </div>
           {booking.guest_count && (
             <div>
