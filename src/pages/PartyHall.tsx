@@ -8,6 +8,7 @@ import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
 import TrialBanner from "@/components/sindico/TrialBanner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -82,6 +83,8 @@ export default function PartyHall() {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [checklistType, setChecklistType] = useState<"entrada" | "saida">("entrada");
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [bookingToCancel, setBookingToCancel] = useState<Booking | null>(null);
 
   // Fetch condominiums
   const { data: condominiums = [] } = useQuery({
@@ -221,7 +224,16 @@ export default function PartyHall() {
   };
 
   const handleReject = (booking: Booking) => {
-    updateStatusMutation.mutate({ bookingId: booking.id, status: "cancelada" });
+    setBookingToCancel(booking);
+    setCancelDialogOpen(true);
+  };
+
+  const confirmCancel = () => {
+    if (bookingToCancel) {
+      updateStatusMutation.mutate({ bookingId: bookingToCancel.id, status: "cancelada" });
+    }
+    setCancelDialogOpen(false);
+    setBookingToCancel(null);
   };
 
   const handleStartUse = (booking: Booking) => {
@@ -563,6 +575,28 @@ export default function PartyHall() {
             />
           </>
         )}
+
+        <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Cancelar Reserva</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja cancelar esta reserva? Esta ação não pode ser desfeita.
+                {bookingToCancel && (
+                  <span className="block mt-2 font-medium text-foreground">
+                    {bookingToCancel.resident.full_name} - {format(parseISO(bookingToCancel.booking_date), "dd/MM/yyyy", { locale: ptBR })}
+                  </span>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Voltar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmCancel} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Confirmar Cancelamento
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );
