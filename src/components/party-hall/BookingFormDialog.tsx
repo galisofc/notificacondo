@@ -30,6 +30,8 @@ export default function BookingFormDialog({ open, onOpenChange, condominiums }: 
   
   const [selectedCondominium, setSelectedCondominium] = useState<string>("");
   const [selectedSpace, setSelectedSpace] = useState<string>("");
+  const [selectedBlock, setSelectedBlock] = useState<string>("");
+  const [selectedApartment, setSelectedApartment] = useState<string>("");
   const [selectedResident, setSelectedResident] = useState<string>("");
   const [bookingDate, setBookingDate] = useState<Date>();
   const [startTime, setStartTime] = useState("08:00");
@@ -79,33 +81,69 @@ export default function BookingFormDialog({ open, onOpenChange, condominiums }: 
     return blockedDates.some(blockedDate => isSameDay(blockedDate, date));
   };
 
-  // Fetch residents for selected condominium
-  const { data: residents = [] } = useQuery({
-    queryKey: ["condominium-residents", selectedCondominium],
+  // Fetch blocks for selected condominium
+  const { data: blocks = [] } = useQuery({
+    queryKey: ["condominium-blocks", selectedCondominium],
     queryFn: async () => {
       if (!selectedCondominium) return [];
       const { data, error } = await supabase
-        .from("residents")
-        .select(`
-          id,
-          full_name,
-          apartment:apartments!inner(
-            number,
-            block:blocks!inner(
-              name,
-              condominium_id
-            )
-          )
-        `)
-        .eq("apartment.block.condominium_id", selectedCondominium)
-        .order("full_name");
+        .from("blocks")
+        .select("id, name")
+        .eq("condominium_id", selectedCondominium)
+        .order("name");
       if (error) throw error;
       return data;
     },
     enabled: !!selectedCondominium,
   });
 
-  // Update times when space is selected
+  // Fetch apartments for selected block
+  const { data: apartments = [] } = useQuery({
+    queryKey: ["block-apartments", selectedBlock],
+    queryFn: async () => {
+      if (!selectedBlock) return [];
+      const { data, error } = await supabase
+        .from("apartments")
+        .select("id, number")
+        .eq("block_id", selectedBlock)
+        .order("number");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedBlock,
+  });
+
+  // Fetch residents for selected apartment
+  const { data: residents = [] } = useQuery({
+    queryKey: ["apartment-residents", selectedApartment],
+    queryFn: async () => {
+      if (!selectedApartment) return [];
+      const { data, error } = await supabase
+        .from("residents")
+        .select("id, full_name")
+        .eq("apartment_id", selectedApartment)
+        .order("full_name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedApartment,
+  });
+
+  // Reset dependent fields when parent changes
+  useEffect(() => {
+    setSelectedBlock("");
+    setSelectedApartment("");
+    setSelectedResident("");
+  }, [selectedCondominium]);
+
+  useEffect(() => {
+    setSelectedApartment("");
+    setSelectedResident("");
+  }, [selectedBlock]);
+
+  useEffect(() => {
+    setSelectedResident("");
+  }, [selectedApartment]);
   useEffect(() => {
     const space = spaces.find(s => s.id === selectedSpace);
     if (space) {
@@ -187,6 +225,8 @@ export default function BookingFormDialog({ open, onOpenChange, condominiums }: 
   const resetForm = () => {
     setSelectedCondominium("");
     setSelectedSpace("");
+    setSelectedBlock("");
+    setSelectedApartment("");
     setSelectedResident("");
     setBookingDate(undefined);
     setStartTime("08:00");
@@ -248,15 +288,47 @@ export default function BookingFormDialog({ open, onOpenChange, condominiums }: 
           </div>
 
           <div className="grid gap-2">
+            <Label htmlFor="block">Bloco *</Label>
+            <Select value={selectedBlock} onValueChange={setSelectedBlock} disabled={!selectedCondominium}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o bloco" />
+              </SelectTrigger>
+              <SelectContent>
+                {blocks.map((block) => (
+                  <SelectItem key={block.id} value={block.id}>
+                    {block.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="apartment">Apartamento *</Label>
+            <Select value={selectedApartment} onValueChange={setSelectedApartment} disabled={!selectedBlock}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o apartamento" />
+              </SelectTrigger>
+              <SelectContent>
+                {apartments.map((apartment) => (
+                  <SelectItem key={apartment.id} value={apartment.id}>
+                    {apartment.number}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid gap-2">
             <Label htmlFor="resident">Morador *</Label>
-            <Select value={selectedResident} onValueChange={setSelectedResident} disabled={!selectedCondominium}>
+            <Select value={selectedResident} onValueChange={setSelectedResident} disabled={!selectedApartment}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o morador" />
               </SelectTrigger>
               <SelectContent>
-                {residents.map((resident: any) => (
+                {residents.map((resident) => (
                   <SelectItem key={resident.id} value={resident.id}>
-                    {resident.full_name} - {resident.apartment?.block?.name} {resident.apartment?.number}
+                    {resident.full_name}
                   </SelectItem>
                 ))}
               </SelectContent>
