@@ -324,15 +324,6 @@ export default function PartyHallSettings() {
                           onChange={(e) => setNewSpace({ ...newSpace, rental_fee: Number(e.target.value) })}
                         />
                       </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="deposit">Caução (R$)</Label>
-                        <Input
-                          id="deposit"
-                          type="number"
-                          value={newSpace.deposit_amount}
-                          onChange={(e) => setNewSpace({ ...newSpace, deposit_amount: Number(e.target.value) })}
-                        />
-                      </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="grid gap-2">
@@ -449,10 +440,6 @@ export default function PartyHallSettings() {
                         <div>
                           <p className="text-muted-foreground">Taxa</p>
                           <p className="font-medium">R$ {space.rental_fee?.toFixed(2) || "0,00"}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Caução</p>
-                          <p className="font-medium">R$ {space.deposit_amount?.toFixed(2) || "0,00"}</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground">Horário</p>
@@ -592,15 +579,6 @@ export default function PartyHallSettings() {
                       type="number"
                       value={editingSpace.rental_fee}
                       onChange={(e) => setEditingSpace({ ...editingSpace, rental_fee: Number(e.target.value) })}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="edit-deposit">Caução (R$)</Label>
-                    <Input
-                      id="edit-deposit"
-                      type="number"
-                      value={editingSpace.deposit_amount}
-                      onChange={(e) => setEditingSpace({ ...editingSpace, deposit_amount: Number(e.target.value) })}
                     />
                   </div>
                 </div>
