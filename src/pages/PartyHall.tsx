@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureValidSession, isJwtExpiredError } from "@/lib/ensureAuth";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -99,61 +100,73 @@ export default function PartyHall() {
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ["party-hall-bookings", user?.id, selectedCondominium, selectedStatus],
     queryFn: async () => {
-      let query = supabase
-        .from("party_hall_bookings")
-        .select(`
-          id,
-          booking_date,
-          start_time,
-          end_time,
-          status,
-          guest_count,
-          observations,
-          notification_sent_at,
-          created_at,
-          resident:residents!inner(
+      const run = async () => {
+        let query = supabase
+          .from("party_hall_bookings")
+          .select(`
             id,
-            full_name,
-            phone,
-            email,
-            apartment:apartments!inner(
-              number,
-              block:blocks!inner(
-                name
+            booking_date,
+            start_time,
+            end_time,
+            status,
+            guest_count,
+            observations,
+            notification_sent_at,
+            created_at,
+            resident:residents!inner(
+              id,
+              full_name,
+              phone,
+              email,
+              apartment:apartments!inner(
+                number,
+                block:blocks!inner(
+                  name
+                )
               )
+            ),
+            party_hall_setting:party_hall_settings!inner(
+              id,
+              name
+            ),
+            condominium:condominiums!inner(
+              id,
+              name
+            ),
+            checklists:party_hall_checklists(
+              id,
+              type
             )
-          ),
-          party_hall_setting:party_hall_settings!inner(
-            id,
-            name
-          ),
-          condominium:condominiums!inner(
-            id,
-            name
-          ),
-          checklists:party_hall_checklists(
-            id,
-            type
-          )
-        `)
-        .order("booking_date", { ascending: false });
+          `)
+          .order("booking_date", { ascending: false });
 
-      if (selectedCondominium !== "all") {
-        query = query.eq("condominium_id", selectedCondominium);
-      } else {
-        const condoIds = condominiums.map(c => c.id);
-        if (condoIds.length > 0) {
-          query = query.in("condominium_id", condoIds);
+        if (selectedCondominium !== "all") {
+          query = query.eq("condominium_id", selectedCondominium);
+        } else {
+          const condoIds = condominiums.map((c) => c.id);
+          if (condoIds.length > 0) {
+            query = query.in("condominium_id", condoIds);
+          }
         }
-      }
 
-      if (selectedStatus !== "all") {
-        query = query.eq("status", selectedStatus);
-      }
+        if (selectedStatus !== "all") {
+          query = query.eq("status", selectedStatus);
+        }
 
-      const { data, error } = await query;
-      if (error) throw error;
-      return data as unknown as Booking[];
+        const { data, error } = await query;
+        if (error) throw error;
+        return data as unknown as Booking[];
+      };
+
+      try {
+        return await run();
+      } catch (err) {
+        if (isJwtExpiredError(err)) {
+          await ensureValidSession();
+          return await run();
+        }
+        throw err;
+      }
     },
     enabled: !!user?.id && condominiums.length > 0,
   });
