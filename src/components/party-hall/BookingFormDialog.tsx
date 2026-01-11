@@ -290,34 +290,100 @@ export default function BookingFormDialog({ open, onOpenChange, condominiums }: 
 
           <div className="grid gap-2">
             <Label htmlFor="block">Bloco *</Label>
-            <Select value={selectedBlock} onValueChange={setSelectedBlock} disabled={!selectedCondominium}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o bloco" />
-              </SelectTrigger>
-              <SelectContent>
-                {blocks.map((block) => (
-                  <SelectItem key={block.id} value={block.id}>
-                    {block.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  disabled={!selectedCondominium}
+                  className={cn(
+                    "w-full justify-between",
+                    !selectedBlock && "text-muted-foreground"
+                  )}
+                >
+                  {selectedBlock
+                    ? blocks.find((b) => b.id === selectedBlock)?.name
+                    : "Selecione o bloco"}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Buscar bloco..." />
+                  <CommandList>
+                    <CommandEmpty>Nenhum bloco encontrado.</CommandEmpty>
+                    <CommandGroup>
+                      {blocks.map((block) => (
+                        <CommandItem
+                          key={block.id}
+                          value={block.name}
+                          onSelect={() => {
+                            setSelectedBlock(block.id);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedBlock === block.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {block.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="grid gap-2">
             <Label htmlFor="apartment">Apartamento *</Label>
-            <Select value={selectedApartment} onValueChange={setSelectedApartment} disabled={!selectedBlock}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o apartamento" />
-              </SelectTrigger>
-              <SelectContent>
-                {apartments.map((apartment) => (
-                  <SelectItem key={apartment.id} value={apartment.id}>
-                    {apartment.number}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  disabled={!selectedBlock}
+                  className={cn(
+                    "w-full justify-between",
+                    !selectedApartment && "text-muted-foreground"
+                  )}
+                >
+                  {selectedApartment
+                    ? apartments.find((a) => a.id === selectedApartment)?.number
+                    : "Selecione o apartamento"}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Buscar apartamento..." />
+                  <CommandList>
+                    <CommandEmpty>Nenhum apartamento encontrado.</CommandEmpty>
+                    <CommandGroup>
+                      {apartments.map((apartment) => (
+                        <CommandItem
+                          key={apartment.id}
+                          value={apartment.number}
+                          onSelect={() => {
+                            setSelectedApartment(apartment.id);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedApartment === apartment.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {apartment.number}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="grid gap-2">
