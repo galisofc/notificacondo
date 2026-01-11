@@ -228,8 +228,26 @@ export default function PartyHall() {
     setCancelDialogOpen(true);
   };
 
-  const confirmCancel = () => {
+  const confirmCancel = async () => {
     if (bookingToCancel) {
+      // Send cancellation notification via WhatsApp
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          const { error: notifError } = await supabase.functions.invoke("send-party-hall-notification", {
+            body: { bookingId: bookingToCancel.id, notificationType: "cancelled" },
+          });
+          
+          if (notifError) {
+            console.error("Error sending cancellation notification:", notifError);
+            // Don't block the cancellation if notification fails
+          }
+        }
+      } catch (error) {
+        console.error("Error sending cancellation notification:", error);
+        // Don't block the cancellation if notification fails
+      }
+
       updateStatusMutation.mutate({ bookingId: bookingToCancel.id, status: "cancelada" });
     }
     setCancelDialogOpen(false);

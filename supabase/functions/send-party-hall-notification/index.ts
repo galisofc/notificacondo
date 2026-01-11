@@ -139,11 +139,20 @@ serve(async (req) => {
       );
     }
 
-    const { bookingId } = await req.json();
+    const { bookingId, notificationType = "reminder" } = await req.json();
 
     if (!bookingId) {
       return new Response(
         JSON.stringify({ error: "bookingId is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Valid notification types: "reminder", "cancelled"
+    const validTypes = ["reminder", "cancelled"];
+    if (!validTypes.includes(notificationType)) {
+      return new Response(
+        JSON.stringify({ error: `Invalid notificationType. Valid types: ${validTypes.join(", ")}` }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -216,11 +225,12 @@ serve(async (req) => {
       );
     }
 
-    // Get template
+    // Get template based on notification type
+    const templateSlug = notificationType === "cancelled" ? "party_hall_cancelled" : "party_hall_reminder";
     const { data: template } = await supabase
       .from("whatsapp_templates")
       .select("content")
-      .eq("slug", "party_hall_reminder")
+      .eq("slug", templateSlug)
       .eq("is_active", true)
       .single();
 
@@ -244,7 +254,25 @@ serve(async (req) => {
         .replace("{horario_inicio}", booking.start_time.slice(0, 5))
         .replace("{horario_fim}", booking.end_time.slice(0, 5));
     } else {
-      message = `🎉 *LEMBRETE DE RESERVA*
+      // Default messages based on type
+      if (notificationType === "cancelled") {
+        message = `❌ *RESERVA CANCELADA*
+
+🏢 *${condo.name}*
+
+Olá, *${resident.full_name.split(" ")[0]}*!
+
+Informamos que sua reserva do *${hallSetting.name}* foi cancelada.
+
+📅 *Data:* ${formattedDate}
+⏰ *Horário:* ${booking.start_time.slice(0, 5)} às ${booking.end_time.slice(0, 5)}
+
+Se você não solicitou este cancelamento ou tem dúvidas, entre em contato com a administração.
+
+Atenciosamente,
+Equipe ${condo.name}`;
+      } else {
+        message = `🎉 *LEMBRETE DE RESERVA*
 
 🏢 *${condo.name}*
 
@@ -262,6 +290,7 @@ Sua reserva do *${hallSetting.name}* está confirmada para:
 Em caso de dúvidas, entre em contato com a administração.
 
 Boa festa! 🎊`;
+      }
     }
 
     // Check if resident has phone
@@ -295,13 +324,15 @@ Boa festa! 🎊`;
       );
     }
 
-    // Update booking with notification timestamp
-    await supabase
-      .from("party_hall_bookings")
-      .update({ notification_sent_at: new Date().toISOString() })
-      .eq("id", bookingId);
+    // Update booking with notification timestamp (only for reminders)
+    if (notificationType === "reminder") {
+      await supabase
+        .from("party_hall_bookings")
+        .update({ notification_sent_at: new Date().toISOString() })
+        .eq("id", bookingId);
+    }
 
-    console.log(`Party hall notification sent successfully for booking ${bookingId}`);
+    console.log(`Party hall ${notificationType} notification sent successfully for booking ${bookingId}`);
 
     return new Response(
       JSON.stringify({ success: true, messageId: result.messageId }),
