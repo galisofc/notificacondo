@@ -243,6 +243,34 @@ serve(async (req) => {
       year: "numeric",
     });
 
+    // Fetch checklist template items for reminder notifications
+    let checklistItems: string[] = [];
+    if (notificationType === "reminder") {
+      const { data: templateItems } = await supabase
+        .from("party_hall_checklist_templates")
+        .select("item_name, category")
+        .eq("condominium_id", booking.condominium_id)
+        .eq("is_active", true)
+        .order("category")
+        .order("display_order");
+
+      if (templateItems && templateItems.length > 0) {
+        // Group items by category
+        const grouped: Record<string, string[]> = {};
+        templateItems.forEach((item: any) => {
+          const cat = item.category || "Geral";
+          if (!grouped[cat]) grouped[cat] = [];
+          grouped[cat].push(item.item_name);
+        });
+
+        // Format checklist items
+        Object.entries(grouped).forEach(([category, items]) => {
+          checklistItems.push(`*${category}:*`);
+          items.forEach(item => checklistItems.push(`  • ${item}`));
+        });
+      }
+    }
+
     // Build message
     let message: string;
     if (template?.content) {
@@ -252,7 +280,8 @@ serve(async (req) => {
         .replace("{espaco}", hallSetting.name)
         .replace("{data}", formattedDate)
         .replace("{horario_inicio}", booking.start_time.slice(0, 5))
-        .replace("{horario_fim}", booking.end_time.slice(0, 5));
+        .replace("{horario_fim}", booking.end_time.slice(0, 5))
+        .replace("{checklist}", checklistItems.length > 0 ? checklistItems.join("\n") : "");
     } else {
       // Default messages based on type
       if (notificationType === "cancelled") {
@@ -272,6 +301,10 @@ Se você não solicitou este cancelamento ou tem dúvidas, entre em contato com 
 Atenciosamente,
 Equipe ${condo.name}`;
       } else {
+        const checklistSection = checklistItems.length > 0 
+          ? `\n📋 *ITENS QUE SERÃO VERIFICADOS:*\n${checklistItems.join("\n")}\n`
+          : "";
+
         message = `🎉 *LEMBRETE DE RESERVA*
 
 🏢 *${condo.name}*
@@ -281,7 +314,7 @@ Olá, *${resident.full_name.split(" ")[0]}*!
 Sua reserva do *${hallSetting.name}* está confirmada para:
 📅 *Data:* ${formattedDate}
 ⏰ *Horário:* ${booking.start_time.slice(0, 5)} às ${booking.end_time.slice(0, 5)}
-
+${checklistSection}
 📋 *Lembre-se:*
 • Compareça no horário para o checklist de entrada
 • Traga documento de identificação
