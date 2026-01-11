@@ -48,6 +48,7 @@ interface Booking {
   party_hall_setting: {
     id: string;
     name: string;
+    rules: string | null;
   };
   condominium: {
     id: string;
@@ -128,7 +129,8 @@ export default function PartyHall() {
             ),
             party_hall_setting:party_hall_settings!inner(
               id,
-              name
+              name,
+              rules
             ),
             condominium:condominiums!inner(
               id,

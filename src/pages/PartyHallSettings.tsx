@@ -431,7 +431,7 @@ export default function PartyHallSettings() {
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="space-y-3">
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div>
                           <p className="text-muted-foreground">Taxa</p>
@@ -445,7 +445,17 @@ export default function PartyHallSettings() {
                           <p className="text-muted-foreground">Capacidade</p>
                           <p className="font-medium">{space.max_guests} pessoas</p>
                         </div>
+                        <div>
+                          <p className="text-muted-foreground">Antecedência</p>
+                          <p className="font-medium">{space.advance_days_required} dias</p>
+                        </div>
                       </div>
+                      {space.rules && (
+                        <div className="pt-2 border-t">
+                          <p className="text-muted-foreground text-sm mb-1">Regras de Uso</p>
+                          <p className="text-sm whitespace-pre-line">{space.rules}</p>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 ))}
