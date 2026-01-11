@@ -942,7 +942,6 @@ export type Database = {
           booking_date: string
           condominium_id: string
           created_at: string
-          deposit_paid: boolean | null
           end_time: string
           guest_count: number | null
           id: string
@@ -958,7 +957,6 @@ export type Database = {
           booking_date: string
           condominium_id: string
           created_at?: string
-          deposit_paid?: boolean | null
           end_time: string
           guest_count?: number | null
           id?: string
@@ -974,7 +972,6 @@ export type Database = {
           booking_date?: string
           condominium_id?: string
           created_at?: string
-          deposit_paid?: boolean | null
           end_time?: string
           guest_count?: number | null
           id?: string
@@ -1140,7 +1137,6 @@ export type Database = {
           check_out_time: string | null
           condominium_id: string
           created_at: string
-          deposit_amount: number | null
           id: string
           is_active: boolean
           max_guests: number | null
@@ -1155,7 +1151,6 @@ export type Database = {
           check_out_time?: string | null
           condominium_id: string
           created_at?: string
-          deposit_amount?: number | null
           id?: string
           is_active?: boolean
           max_guests?: number | null
@@ -1170,7 +1165,6 @@ export type Database = {
           check_out_time?: string | null
           condominium_id?: string
           created_at?: string
-          deposit_amount?: number | null
           id?: string
           is_active?: boolean
           max_guests?: number | null
