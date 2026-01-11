@@ -112,6 +112,29 @@ export default function BookingEditDialog({ open, onOpenChange, booking }: Booki
   const { data: residents = [] } = useQuery({
     queryKey: ["condominium-residents-edit", booking.condominium.id],
     queryFn: async () => {
+      // First get all blocks for this condominium
+      const { data: blocks, error: blocksError } = await supabase
+        .from("blocks")
+        .select("id")
+        .eq("condominium_id", booking.condominium.id);
+      
+      if (blocksError) throw blocksError;
+      if (!blocks || blocks.length === 0) return [];
+
+      const blockIds = blocks.map(b => b.id);
+
+      // Then get apartments in those blocks
+      const { data: apartments, error: apartmentsError } = await supabase
+        .from("apartments")
+        .select("id")
+        .in("block_id", blockIds);
+      
+      if (apartmentsError) throw apartmentsError;
+      if (!apartments || apartments.length === 0) return [];
+
+      const apartmentIds = apartments.map(a => a.id);
+
+      // Finally get residents in those apartments
       const { data, error } = await supabase
         .from("residents")
         .select(`
@@ -120,13 +143,13 @@ export default function BookingEditDialog({ open, onOpenChange, booking }: Booki
           apartment:apartments!inner(
             number,
             block:blocks!inner(
-              name,
-              condominium_id
+              name
             )
           )
         `)
-        .eq("apartment.block.condominium_id", booking.condominium.id)
+        .in("apartment_id", apartmentIds)
         .order("full_name");
+      
       if (error) throw error;
       return data;
     },
