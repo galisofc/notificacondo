@@ -200,6 +200,44 @@ export type Database = {
           },
         ]
       }
+      condominium_whatsapp_templates: {
+        Row: {
+          condominium_id: string
+          content: string
+          created_at: string
+          id: string
+          is_active: boolean
+          template_slug: string
+          updated_at: string
+        }
+        Insert: {
+          condominium_id: string
+          content: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          template_slug: string
+          updated_at?: string
+        }
+        Update: {
+          condominium_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          template_slug?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "condominium_whatsapp_templates_condominium_id_fkey"
+            columns: ["condominium_id"]
+            isOneToOne: false
+            referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       condominiums: {
         Row: {
           address: string | null

@@ -371,6 +371,7 @@ serve(async (req) => {
 
     const apt = resident.apartments as any;
     const condoName = apt.blocks.condominiums.name;
+    const condoId = apt.blocks.condominiums.id;
 
     // Type label mapping
     const typeLabels: Record<string, string> = {
@@ -378,6 +379,35 @@ serve(async (req) => {
       notificacao: "Notificação",
       multa: "Multa",
     };
+
+    // Fetch template - first check for custom condominium template
+    let templateContent: string | null = null;
+    
+    const { data: customTemplate } = await supabase
+      .from("condominium_whatsapp_templates")
+      .select("content")
+      .eq("condominium_id", condoId)
+      .eq("template_slug", "notification_occurrence")
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (customTemplate?.content) {
+      templateContent = customTemplate.content;
+      console.log("Using custom condominium template");
+    } else {
+      // Fall back to default template
+      const { data: defaultTemplate } = await supabase
+        .from("whatsapp_templates")
+        .select("content")
+        .eq("slug", "notification_occurrence")
+        .eq("is_active", true)
+        .maybeSingle();
+      
+      if (defaultTemplate?.content) {
+        templateContent = defaultTemplate.content;
+        console.log("Using default system template");
+      }
+    }
 
     // Build message with sanitization
     const defaultMessage = `🏢 *${sanitize(condoName)}*
@@ -392,14 +422,24 @@ Acesse o link abaixo para ver os detalhes e apresentar sua defesa:
 
 Este link é pessoal e intransferível.`;
 
-    const message = message_template 
-      ? sanitize(message_template)
-          .replace("{nome}", sanitize(resident.full_name))
-          .replace("{tipo}", typeLabels[occurrenceData.type] || occurrenceData.type)
-          .replace("{titulo}", sanitize(occurrenceData.title))
-          .replace("{condominio}", sanitize(condoName))
-          .replace("{link}", secureLink)
-      : defaultMessage;
+    let message: string;
+    if (message_template) {
+      message = sanitize(message_template)
+        .replace("{nome}", sanitize(resident.full_name))
+        .replace("{tipo}", typeLabels[occurrenceData.type] || occurrenceData.type)
+        .replace("{titulo}", sanitize(occurrenceData.title))
+        .replace("{condominio}", sanitize(condoName))
+        .replace("{link}", secureLink);
+    } else if (templateContent) {
+      message = templateContent
+        .replace("{nome}", sanitize(resident.full_name))
+        .replace("{tipo}", typeLabels[occurrenceData.type] || occurrenceData.type)
+        .replace("{titulo}", sanitize(occurrenceData.title))
+        .replace("{condominio}", sanitize(condoName))
+        .replace("{link}", secureLink);
+    } else {
+      message = defaultMessage;
+    }
 
     // Save notification record
     const { data: notification, error: notifError } = await supabase

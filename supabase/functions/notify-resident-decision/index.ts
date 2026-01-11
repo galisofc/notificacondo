@@ -168,6 +168,7 @@ serve(async (req) => {
         id,
         title,
         type,
+        condominium_id,
         residents!inner (
           id,
           full_name,
@@ -178,6 +179,7 @@ serve(async (req) => {
             blocks!inner (
               name,
               condominiums!inner (
+                id,
                 name
               )
             )
@@ -250,9 +252,59 @@ serve(async (req) => {
     };
 
     const info = decisionInfo[decision];
+    const condoId = occurrence.condominium_id;
+    
+    // Determine template slug based on decision
+    const templateSlugMap: Record<string, string> = {
+      arquivada: "decision_archived",
+      advertido: "decision_warning",
+      multado: "decision_fine",
+    };
+    const templateSlug = templateSlugMap[decision];
+    
+    // Get template - first check for custom condominium template
+    let templateContent: string | null = null;
+    
+    if (templateSlug) {
+      const { data: customTemplate } = await supabase
+        .from("condominium_whatsapp_templates")
+        .select("content")
+        .eq("condominium_id", condoId)
+        .eq("template_slug", templateSlug)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (customTemplate?.content) {
+        templateContent = customTemplate.content;
+        console.log("Using custom condominium template for", templateSlug);
+      } else {
+        const { data: defaultTemplate } = await supabase
+          .from("whatsapp_templates")
+          .select("content")
+          .eq("slug", templateSlug)
+          .eq("is_active", true)
+          .maybeSingle();
+        
+        if (defaultTemplate?.content) {
+          templateContent = defaultTemplate.content;
+          console.log("Using default system template for", templateSlug);
+        }
+      }
+    }
 
     // Build message
-    const message = `${info.emoji} *DECISÃO: ${info.label}*
+    const link = `${appBaseUrl}/resident/occurrences/${occurrence_id}`;
+    
+    let message: string;
+    if (templateContent) {
+      message = templateContent
+        .replace("{condominio}", condoName)
+        .replace("{nome}", resident.full_name)
+        .replace("{titulo}", occurrence.title)
+        .replace("{justificativa}", justification || "Sem justificativa adicional.")
+        .replace("{link}", link);
+    } else {
+      message = `${info.emoji} *DECISÃO: ${info.label}*
 
 🏢 *${condoName}*
 
@@ -267,7 +319,8 @@ ${info.description}
 ${justification ? `💬 *Justificativa:*\n${justification}` : ""}
 
 Acesse o sistema para mais detalhes:
-👉 ${appBaseUrl}/resident/occurrences/${occurrence_id}`;
+👉 ${link}`;
+    }
 
     console.log(`Sending WhatsApp to resident: ${resident.phone}`);
 

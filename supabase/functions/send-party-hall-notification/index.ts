@@ -225,14 +225,39 @@ serve(async (req) => {
       );
     }
 
-    // Get template based on notification type
+    // Get template based on notification type - first check for custom condominium template
     const templateSlug = notificationType === "cancelled" ? "party_hall_cancelled" : "party_hall_reminder";
-    const { data: template } = await supabase
-      .from("whatsapp_templates")
+    
+    let templateContent: string | null = null;
+    
+    // Check for custom condominium template first
+    const { data: customTemplate } = await supabase
+      .from("condominium_whatsapp_templates")
       .select("content")
-      .eq("slug", templateSlug)
+      .eq("condominium_id", booking.condominium_id)
+      .eq("template_slug", templateSlug)
       .eq("is_active", true)
-      .single();
+      .maybeSingle();
+
+    if (customTemplate?.content) {
+      templateContent = customTemplate.content;
+      console.log("Using custom condominium template for", templateSlug);
+    } else {
+      // Fall back to default template
+      const { data: defaultTemplate } = await supabase
+        .from("whatsapp_templates")
+        .select("content")
+        .eq("slug", templateSlug)
+        .eq("is_active", true)
+        .maybeSingle();
+      
+      if (defaultTemplate?.content) {
+        templateContent = defaultTemplate.content;
+        console.log("Using default system template for", templateSlug);
+      }
+    }
+    
+    const template = templateContent ? { content: templateContent } : null;
 
     // Format date
     const bookingDate = new Date(booking.booking_date + "T00:00:00");
