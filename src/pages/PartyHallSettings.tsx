@@ -22,7 +22,6 @@ interface PartyHallSetting {
   condominium_id: string;
   name: string;
   rental_fee: number;
-  deposit_amount: number;
   rules: string | null;
   advance_days_required: number;
   check_in_time: string;
@@ -56,7 +55,6 @@ export default function PartyHallSettings() {
   const [newSpace, setNewSpace] = useState({
     name: "",
     rental_fee: 0,
-    deposit_amount: 0,
     rules: "",
     advance_days_required: 3,
     check_in_time: "08:00",
@@ -142,7 +140,6 @@ export default function PartyHallSettings() {
       setNewSpace({
         name: "",
         rental_fee: 0,
-        deposit_amount: 0,
         rules: "",
         advance_days_required: 3,
         check_in_time: "08:00",
@@ -164,7 +161,6 @@ export default function PartyHallSettings() {
         .update({
           name: space.name,
           rental_fee: space.rental_fee,
-          deposit_amount: space.deposit_amount,
           rules: space.rules,
           advance_days_required: space.advance_days_required,
           check_in_time: space.check_in_time,
