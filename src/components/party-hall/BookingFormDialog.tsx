@@ -14,8 +14,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { format, addDays, parseISO, startOfDay, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, AlertCircle } from "lucide-react";
+import { CalendarIcon, AlertCircle, Check, ChevronsUpDown } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 interface BookingFormDialogProps {
   open: boolean;
@@ -321,18 +322,51 @@ export default function BookingFormDialog({ open, onOpenChange, condominiums }: 
 
           <div className="grid gap-2">
             <Label htmlFor="resident">Morador *</Label>
-            <Select value={selectedResident} onValueChange={setSelectedResident} disabled={!selectedApartment}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o morador" />
-              </SelectTrigger>
-              <SelectContent>
-                {residents.map((resident) => (
-                  <SelectItem key={resident.id} value={resident.id}>
-                    {resident.full_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  disabled={!selectedApartment}
+                  className={cn(
+                    "w-full justify-between",
+                    !selectedResident && "text-muted-foreground"
+                  )}
+                >
+                  {selectedResident
+                    ? residents.find((r) => r.id === selectedResident)?.full_name
+                    : "Selecione o morador"}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Buscar morador..." />
+                  <CommandList>
+                    <CommandEmpty>Nenhum morador encontrado.</CommandEmpty>
+                    <CommandGroup>
+                      {residents.map((resident) => (
+                        <CommandItem
+                          key={resident.id}
+                          value={resident.full_name}
+                          onSelect={() => {
+                            setSelectedResident(resident.id);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedResident === resident.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {resident.full_name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="grid gap-2">
