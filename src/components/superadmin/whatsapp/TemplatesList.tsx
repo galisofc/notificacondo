@@ -84,54 +84,53 @@ export function TemplatesList() {
   return (
     <>
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
+              <div className="p-2 rounded-lg bg-primary/10 shrink-0">
                 <MessageCircle className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <CardTitle>Templates de Mensagem</CardTitle>
-                <CardDescription>
-                  Gerencie os templates de mensagens enviadas via WhatsApp
+                <CardTitle className="text-base sm:text-lg">Templates de Mensagem</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
+                  Gerencie os templates enviadas via WhatsApp
                 </CardDescription>
               </div>
             </div>
-            <Badge variant="secondary" className="hidden sm:flex">
+            <Badge variant="secondary" className="self-start sm:self-auto">
               {templates?.length || 0} templates
             </Badge>
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Info Banner */}
-          <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-start gap-3">
-            <Info className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" />
-            <div className="text-sm">
+        <CardContent className="space-y-4 sm:space-y-6">
+          {/* Info Banner - collapsible on mobile */}
+          <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-start gap-2 sm:gap-3">
+            <Info className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500 mt-0.5 flex-shrink-0" />
+            <div className="text-xs sm:text-sm">
               <p className="font-medium text-blue-500 mb-1">Como usar variáveis</p>
               <p className="text-muted-foreground">
-                Use variáveis entre chaves para inserir dados dinâmicos. Ex:{" "}
-                <code className="bg-muted px-1 rounded">{"{nome}"}</code> será substituído pelo nome do morador.
-                Use <code className="bg-muted px-1 rounded">*texto*</code> para negrito.
+                Use <code className="bg-muted px-1 rounded text-xs">{"{nome}"}</code> para dados dinâmicos e <code className="bg-muted px-1 rounded text-xs">*texto*</code> para negrito.
               </p>
             </div>
           </div>
 
           {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar templates..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
+                className="pl-9 h-9 sm:h-10"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 self-end">
               <Button
                 variant={viewMode === "grid" ? "secondary" : "ghost"}
                 size="icon"
                 onClick={() => setViewMode("grid")}
+                className="h-9 w-9 sm:h-10 sm:w-10"
               >
                 <LayoutGrid className="h-4 w-4" />
               </Button>
@@ -139,43 +138,46 @@ export function TemplatesList() {
                 variant={viewMode === "list" ? "secondary" : "ghost"}
                 size="icon"
                 onClick={() => setViewMode("list")}
+                className="h-9 w-9 sm:h-10 sm:w-10"
               >
                 <List className="h-4 w-4" />
               </Button>
             </div>
           </div>
 
-          {/* Category Tabs */}
+          {/* Category Tabs - Horizontal scroll on mobile */}
           <Tabs value={selectedCategory} onValueChange={setSelectedCategory}>
-            <TabsList className="flex-wrap h-auto gap-1 bg-transparent p-0">
-              <TabsTrigger 
-                value="all" 
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                Todos
-              </TabsTrigger>
-              {TEMPLATE_CATEGORIES.map((category) => {
-                const Icon = category.icon;
-                const count = templates?.filter(t => category.slugs.includes(t.slug)).length || 0;
-                return (
-                  <TabsTrigger
-                    key={category.id}
-                    value={category.id}
-                    className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">{category.name}</span>
-                    <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                      {count}
-                    </Badge>
-                  </TabsTrigger>
-                );
-              })}
-            </TabsList>
+            <div className="-mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto scrollbar-hide">
+              <TabsList className="inline-flex w-max sm:flex-wrap h-auto gap-1 bg-transparent p-0">
+                <TabsTrigger 
+                  value="all" 
+                  className="text-xs sm:text-sm px-3 py-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground whitespace-nowrap"
+                >
+                  Todos
+                </TabsTrigger>
+                {TEMPLATE_CATEGORIES.map((category) => {
+                  const Icon = category.icon;
+                  const count = templates?.filter(t => category.slugs.includes(t.slug)).length || 0;
+                  return (
+                    <TabsTrigger
+                      key={category.id}
+                      value={category.id}
+                      className="gap-1 sm:gap-1.5 text-xs sm:text-sm px-2 sm:px-3 py-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground whitespace-nowrap"
+                    >
+                      <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                      <span className="hidden xs:inline sm:inline">{category.name}</span>
+                      <Badge variant="secondary" className="ml-0.5 sm:ml-1 h-4 sm:h-5 px-1 sm:px-1.5 text-[10px] sm:text-xs">
+                        {count}
+                      </Badge>
+                    </TabsTrigger>
+                  );
+                })}
+              </TabsList>
+            </div>
 
-            <TabsContent value="all" className="mt-6">
+            <TabsContent value="all" className="mt-4 sm:mt-6">
               {/* Show grouped by category */}
-              <div className="space-y-8">
+              <div className="space-y-6 sm:space-y-8">
                 {TEMPLATE_CATEGORIES.map((category) => {
                   const categoryTemplates = groupedTemplates[category.id];
                   if (!categoryTemplates?.length) return null;
@@ -183,17 +185,17 @@ export function TemplatesList() {
                   const Icon = category.icon;
                   return (
                     <div key={category.id}>
-                      <div className="flex items-center gap-2 mb-4">
+                      <div className="flex flex-wrap items-center gap-2 mb-3 sm:mb-4">
                         <div className={`p-1.5 rounded-lg ${category.bgColor}`}>
-                          <Icon className={`h-4 w-4 ${category.color}`} />
+                          <Icon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${category.color}`} />
                         </div>
-                        <h3 className="font-semibold">{category.name}</h3>
-                        <span className="text-sm text-muted-foreground">
+                        <h3 className="font-semibold text-sm sm:text-base">{category.name}</h3>
+                        <span className="text-xs sm:text-sm text-muted-foreground hidden sm:inline">
                           {category.description}
                         </span>
                       </div>
                       <div className={viewMode === "grid" 
-                        ? "grid gap-4 sm:grid-cols-2" 
+                        ? "grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2" 
                         : "space-y-3"
                       }>
                         {categoryTemplates.map((template) => (
@@ -212,18 +214,18 @@ export function TemplatesList() {
 
             {/* Individual category tabs */}
             {TEMPLATE_CATEGORIES.map((category) => (
-              <TabsContent key={category.id} value={category.id} className="mt-6">
-                <div className="flex items-center gap-2 mb-4">
+              <TabsContent key={category.id} value={category.id} className="mt-4 sm:mt-6">
+                <div className="flex flex-wrap items-center gap-2 mb-3 sm:mb-4">
                   <div className={`p-1.5 rounded-lg ${category.bgColor}`}>
-                    <category.icon className={`h-4 w-4 ${category.color}`} />
+                    <category.icon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${category.color}`} />
                   </div>
-                  <h3 className="font-semibold">{category.name}</h3>
-                  <span className="text-sm text-muted-foreground">
+                  <h3 className="font-semibold text-sm sm:text-base">{category.name}</h3>
+                  <span className="text-xs sm:text-sm text-muted-foreground hidden sm:inline">
                     {category.description}
                   </span>
                 </div>
                 <div className={viewMode === "grid" 
-                  ? "grid gap-4 sm:grid-cols-2" 
+                  ? "grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2" 
                   : "space-y-3"
                 }>
                   {groupedTemplates[category.id]?.map((template) => (
@@ -235,7 +237,7 @@ export function TemplatesList() {
                   ))}
                 </div>
                 {!groupedTemplates[category.id]?.length && (
-                  <div className="text-center py-8 text-muted-foreground">
+                  <div className="text-center py-6 sm:py-8 text-muted-foreground text-sm">
                     Nenhum template encontrado nesta categoria
                   </div>
                 )}
