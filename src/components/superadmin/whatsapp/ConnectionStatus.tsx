@@ -152,38 +152,39 @@ export function ConnectionStatus({ onConfigure }: ConnectionStatusProps) {
   return (
     <Card className={`${statusConfig.borderClass} ${statusConfig.bgClass}`}>
       <CardContent className="pt-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className={`p-3 rounded-xl ${statusConfig.bgClass}`}>
-              <Icon className={`h-6 w-6 ${statusConfig.iconClass}`} />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className={`p-2 sm:p-3 rounded-xl ${statusConfig.bgClass} shrink-0`}>
+              <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${statusConfig.iconClass}`} />
             </div>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-semibold">{statusConfig.title}</h3>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <h3 className="font-semibold text-sm sm:text-base">{statusConfig.title}</h3>
                 {statusConfig.badge}
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 {statusConfig.description}
                 {lastChecked && (
-                  <span className="ml-2 text-xs">
+                  <span className="hidden sm:inline ml-2 text-xs">
                     • Última verificação: {formatTime(lastChecked)}
                   </span>
                 )}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 self-end sm:self-auto">
             <Button
               variant="ghost"
               size="icon"
               onClick={handleRefresh}
               disabled={isRefreshing}
+              className="h-9 w-9"
             >
               <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
             </Button>
-            <Button variant="outline" onClick={onConfigure} className="gap-2">
+            <Button variant="outline" onClick={onConfigure} className="gap-2 h-9 text-sm">
               <Settings className="h-4 w-4" />
-              Configurar
+              <span className="hidden xs:inline">Configurar</span>
             </Button>
           </div>
         </div>
