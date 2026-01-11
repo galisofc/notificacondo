@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureValidSession, isJwtExpiredError } from "@/lib/ensureAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -112,46 +113,58 @@ export default function BookingEditDialog({ open, onOpenChange, booking }: Booki
   const { data: residents = [] } = useQuery({
     queryKey: ["condominium-residents-edit", booking.condominium.id],
     queryFn: async () => {
-      // First get all blocks for this condominium
-      const { data: blocks, error: blocksError } = await supabase
-        .from("blocks")
-        .select("id")
-        .eq("condominium_id", booking.condominium.id);
-      
-      if (blocksError) throw blocksError;
-      if (!blocks || blocks.length === 0) return [];
+      const run = async () => {
+        // First get all blocks for this condominium
+        const { data: blocks, error: blocksError } = await supabase
+          .from("blocks")
+          .select("id")
+          .eq("condominium_id", booking.condominium.id);
 
-      const blockIds = blocks.map(b => b.id);
+        if (blocksError) throw blocksError;
+        if (!blocks || blocks.length === 0) return [];
 
-      // Then get apartments in those blocks
-      const { data: apartments, error: apartmentsError } = await supabase
-        .from("apartments")
-        .select("id")
-        .in("block_id", blockIds);
-      
-      if (apartmentsError) throw apartmentsError;
-      if (!apartments || apartments.length === 0) return [];
+        const blockIds = blocks.map((b) => b.id);
 
-      const apartmentIds = apartments.map(a => a.id);
+        // Then get apartments in those blocks
+        const { data: apartments, error: apartmentsError } = await supabase
+          .from("apartments")
+          .select("id")
+          .in("block_id", blockIds);
 
-      // Finally get residents in those apartments
-      const { data, error } = await supabase
-        .from("residents")
-        .select(`
-          id,
-          full_name,
-          apartment:apartments!inner(
-            number,
-            block:blocks!inner(
-              name
+        if (apartmentsError) throw apartmentsError;
+        if (!apartments || apartments.length === 0) return [];
+
+        const apartmentIds = apartments.map((a) => a.id);
+
+        // Finally get residents in those apartments
+        const { data, error } = await supabase
+          .from("residents")
+          .select(`
+            id,
+            full_name,
+            apartment:apartments!inner(
+              number,
+              block:blocks!inner(
+                name
+              )
             )
-          )
-        `)
-        .in("apartment_id", apartmentIds)
-        .order("full_name");
-      
-      if (error) throw error;
-      return data;
+          `)
+          .in("apartment_id", apartmentIds)
+          .order("full_name");
+
+        if (error) throw error;
+        return data;
+      };
+
+      try {
+        return await run();
+      } catch (err) {
+        if (isJwtExpiredError(err)) {
+          await ensureValidSession();
+          return await run();
+        }
+        throw err;
+      }
     },
     enabled: open,
   });
@@ -252,6 +265,11 @@ export default function BookingEditDialog({ open, onOpenChange, booking }: Booki
                 <SelectValue placeholder="Selecione o morador" />
               </SelectTrigger>
               <SelectContent>
+                {!residents.some((r: any) => r.id === booking.resident.id) && (
+                  <SelectItem value={booking.resident.id}>
+                    {booking.resident.full_name} (atual)
+                  </SelectItem>
+                )}
                 {residents.map((resident: any) => (
                   <SelectItem key={resident.id} value={resident.id}>
                     {resident.full_name} - {resident.apartment?.block?.name} {resident.apartment?.number}
