@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import BlockApartmentDisplay from "@/components/common/BlockApartmentDisplay";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureValidSession, isJwtExpiredError } from "@/lib/ensureAuth";
@@ -266,10 +267,15 @@ export default function BookingEditDialog({ open, onOpenChange, booking }: Booki
 
           <div className="grid gap-2">
             <Label>Morador</Label>
-            <Input 
-              value={`${booking.resident.full_name} - ${booking.resident.apartment?.block?.name || ''} / Apto ${booking.resident.apartment?.number || ''}`} 
-              disabled 
-            />
+            <div className="flex items-center gap-2 h-10 px-3 rounded-md border bg-muted text-muted-foreground">
+              <span>{booking.resident.full_name}</span>
+              <span className="text-muted-foreground">-</span>
+              <BlockApartmentDisplay
+                blockName={booking.resident.apartment?.block?.name}
+                apartmentNumber={booking.resident.apartment?.number}
+                variant="inline"
+              />
+            </div>
           </div>
 
           <div className="grid gap-2">
