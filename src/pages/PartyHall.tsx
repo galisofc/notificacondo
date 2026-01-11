@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar as CalendarIcon, PartyPopper, Settings, Plus, Check, X, ClipboardList, MessageCircle, Eye, CalendarDays, LayoutGrid, Pencil } from "lucide-react";
+import { Calendar as CalendarIcon, PartyPopper, Settings, Plus, Check, X, ClipboardList, MessageCircle, Eye, CalendarDays, LayoutGrid, Pencil, History } from "lucide-react";
 import { format, parseISO, isToday, isTomorrow, isPast, isFuture } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import BookingFormDialog from "@/components/party-hall/BookingFormDialog";
@@ -445,6 +445,10 @@ export default function PartyHall() {
                 <span className="hidden sm:inline">Calendário</span>
               </Button>
             </div>
+            <Button variant="outline" onClick={() => navigate("/party-hall/notifications")}>
+              <History className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Notificações</span>
+            </Button>
             <Button variant="outline" onClick={() => navigate("/party-hall/settings")}>
               <Settings className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">Configurações</span>
