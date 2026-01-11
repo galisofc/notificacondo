@@ -316,6 +316,28 @@ Boa festa! 🎊`;
       message
     );
 
+    // Save notification to history
+    const notificationRecord = {
+      booking_id: bookingId,
+      condominium_id: booking.condominium_id,
+      resident_id: resident.id,
+      notification_type: notificationType,
+      phone: resident.phone,
+      message_content: message,
+      message_id: result.messageId || null,
+      status: result.error ? "failed" : "sent",
+      error_message: result.error || null,
+      sent_at: new Date().toISOString(),
+    };
+
+    const { error: insertError } = await supabase
+      .from("party_hall_notifications")
+      .insert(notificationRecord);
+
+    if (insertError) {
+      console.error("Error saving notification history:", insertError);
+    }
+
     if (result.error) {
       console.error("WhatsApp send error:", result.error);
       return new Response(

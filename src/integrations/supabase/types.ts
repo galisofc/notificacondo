@@ -1130,6 +1130,73 @@ export type Database = {
           },
         ]
       }
+      party_hall_notifications: {
+        Row: {
+          booking_id: string
+          condominium_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          message_content: string
+          message_id: string | null
+          notification_type: string
+          phone: string
+          resident_id: string
+          sent_at: string
+          status: string
+        }
+        Insert: {
+          booking_id: string
+          condominium_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_content: string
+          message_id?: string | null
+          notification_type: string
+          phone: string
+          resident_id: string
+          sent_at?: string
+          status?: string
+        }
+        Update: {
+          booking_id?: string
+          condominium_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_content?: string
+          message_id?: string | null
+          notification_type?: string
+          phone?: string
+          resident_id?: string
+          sent_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_hall_notifications_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "party_hall_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_hall_notifications_condominium_id_fkey"
+            columns: ["condominium_id"]
+            isOneToOne: false
+            referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_hall_notifications_resident_id_fkey"
+            columns: ["resident_id"]
+            isOneToOne: false
+            referencedRelation: "residents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       party_hall_settings: {
         Row: {
           advance_days_required: number | null

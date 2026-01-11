@@ -26,6 +26,7 @@ import SindicoInvoices from "./pages/SindicoInvoices";
 import SindicoSubscriptions from "./pages/SindicoSubscriptions";
 import PartyHall from "./pages/PartyHall";
 import PartyHallSettings from "./pages/PartyHallSettings";
+import PartyHallNotifications from "./pages/PartyHallNotifications";
 import { Navigate } from "react-router-dom";
 import ResidentAccess from "./pages/ResidentAccess";
 import AuthCallback from "./pages/AuthCallback";
@@ -138,6 +139,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole={["sindico", "super_admin"]}>
                     <PartyHallSettings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/party-hall/notifications"
+                element={
+                  <ProtectedRoute requiredRole={["sindico", "super_admin"]}>
+                    <PartyHallNotifications />
                   </ProtectedRoute>
                 }
               />
