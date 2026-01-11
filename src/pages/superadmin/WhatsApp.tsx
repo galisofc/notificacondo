@@ -1,6 +1,7 @@
 import { Helmet } from "react-helmet-async";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { WhatsAppConfig } from "@/components/superadmin/WhatsAppConfig";
+import { WhatsAppTemplates } from "@/components/superadmin/WhatsAppTemplates";
 import SuperAdminBreadcrumbs from "@/components/superadmin/SuperAdminBreadcrumbs";
 
 export default function WhatsApp() {
@@ -18,6 +19,7 @@ export default function WhatsApp() {
           </p>
         </div>
         <WhatsAppConfig />
+        <WhatsAppTemplates />
       </div>
     </DashboardLayout>
   );

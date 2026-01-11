@@ -63,6 +63,8 @@ const TEMPLATE_COLORS: Record<string, string> = {
   condominium_transfer_old_owner: "bg-slate-500/10 text-slate-500 border-slate-500/20",
   payment_confirmed: "bg-green-500/10 text-green-500 border-green-500/20",
   invoice_generated: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
+  party_hall_reminder: "bg-pink-500/10 text-pink-500 border-pink-500/20",
+  party_hall_cancelled: "bg-rose-500/10 text-rose-500 border-rose-500/20",
 };
 
 const DEFAULT_TEMPLATES: Record<string, string> = {
@@ -254,6 +256,39 @@ Acesse o sistema para visualizar e efetuar o pagamento:
 👉 {link}
 
 💡 Pague via PIX para confirmação instantânea!`,
+  party_hall_reminder: `🎉 *LEMBRETE DE RESERVA*
+
+🏢 *{condominio}*
+
+Olá, *{nome}*!
+
+Sua reserva do *{espaco}* está confirmada para:
+📅 *Data:* {data}
+⏰ *Horário:* {horario_inicio} às {horario_fim}
+
+{checklist}
+
+📋 *Lembre-se:*
+• Compareça no horário para o checklist de entrada
+• Respeite as regras do espaço
+
+Em caso de dúvidas, entre em contato com a administração.
+
+Boa festa! 🎊`,
+  party_hall_cancelled: `❌ *RESERVA CANCELADA*
+
+🏢 *{condominio}*
+
+Olá, *{nome}*!
+
+Sua reserva do *{espaco}* foi cancelada:
+📅 *Data:* {data}
+⏰ *Horário:* {horario_inicio} às {horario_fim}
+
+Em caso de dúvidas, entre em contato com a administração.
+
+Atenciosamente,
+Equipe {condominio}`,
 };
 
 export function WhatsAppTemplates() {
