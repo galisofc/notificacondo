@@ -33,6 +33,7 @@ interface Booking {
   party_hall_setting: {
     id: string;
     name: string;
+    rules?: string | null;
   };
   condominium: {
     id: string;
@@ -255,6 +256,19 @@ export default function BookingDetailsDialog({ open, onOpenChange, booking }: Bo
                 <div>
                   <h3 className="font-semibold mb-2">Observações da Reserva</h3>
                   <p className="text-sm text-muted-foreground">{booking.observations}</p>
+                </div>
+              </>
+            )}
+
+            {booking.party_hall_setting.rules && (
+              <>
+                <Separator />
+                <div>
+                  <h3 className="font-semibold mb-2 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-amber-500" />
+                    Regras do Espaço
+                  </h3>
+                  <p className="text-sm text-muted-foreground whitespace-pre-line">{booking.party_hall_setting.rules}</p>
                 </div>
               </>
             )}
