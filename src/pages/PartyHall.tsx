@@ -318,10 +318,12 @@ export default function PartyHall() {
             Ver
           </Button>
 
-          <Button size="sm" variant="outline" onClick={() => handleEditBooking(booking)}>
-            <Pencil className="h-4 w-4 mr-1" />
-            Editar
-          </Button>
+          {booking.status !== "finalizada" && booking.status !== "cancelada" && (
+            <Button size="sm" variant="outline" onClick={() => handleEditBooking(booking)}>
+              <Pencil className="h-4 w-4 mr-1" />
+              Editar
+            </Button>
+          )}
 
           {booking.status === "pendente" && (
             <>
