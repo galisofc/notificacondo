@@ -142,9 +142,14 @@ export default function BookingFormDialog({ open, onOpenChange, condominiums }: 
     setSelectedResident("");
   }, [selectedBlock]);
 
+  // Auto-select resident if apartment has only one resident
   useEffect(() => {
-    setSelectedResident("");
-  }, [selectedApartment]);
+    if (residents.length === 1) {
+      setSelectedResident(residents[0].id);
+    } else {
+      setSelectedResident("");
+    }
+  }, [residents]);
   useEffect(() => {
     const space = spaces.find(s => s.id === selectedSpace);
     if (space) {
