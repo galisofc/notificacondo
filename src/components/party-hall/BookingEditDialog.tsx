@@ -28,6 +28,12 @@ interface Booking {
   resident: {
     id: string;
     full_name: string;
+    apartment?: {
+      number: string;
+      block?: {
+        name: string;
+      };
+    };
   };
   party_hall_setting: {
     id: string;
@@ -260,7 +266,10 @@ export default function BookingEditDialog({ open, onOpenChange, booking }: Booki
 
           <div className="grid gap-2">
             <Label>Morador</Label>
-            <Input value={booking.resident.full_name} disabled />
+            <Input 
+              value={`${booking.resident.full_name} - ${booking.resident.apartment?.block?.name || ''} / Apto ${booking.resident.apartment?.number || ''}`} 
+              disabled 
+            />
           </div>
 
           <div className="grid gap-2">
