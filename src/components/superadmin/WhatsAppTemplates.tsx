@@ -67,6 +67,37 @@ const TEMPLATE_COLORS: Record<string, string> = {
   party_hall_cancelled: "bg-rose-500/10 text-rose-500 border-rose-500/20",
 };
 
+// Example values for preview
+const VARIABLE_EXAMPLES: Record<string, string> = {
+  nome: "João Silva",
+  condominio: "Residencial Primavera",
+  tipo: "Advertência",
+  titulo: "Barulho após horário permitido",
+  link: "https://app.exemplo.com/xyz123",
+  justificativa: "Após análise, consideramos procedente a reclamação.",
+  nome_morador: "Maria Santos",
+  dias_restantes: "3 dias",
+  data_expiracao: "15/01/2026",
+  link_planos: "https://app.exemplo.com/planos",
+  link_dashboard: "https://app.exemplo.com/dashboard",
+  nome_novo_sindico: "Carlos Oliveira",
+  nome_antigo_sindico: "Pedro Costa",
+  data_transferencia: "10/01/2026",
+  observacoes: "• Transferência solicitada pelo síndico anterior",
+  descricao_fatura: "Mensalidade Janeiro/2026",
+  metodo_pagamento: "PIX",
+  valor: "R$ 149,90",
+  data_pagamento: "10/01/2026",
+  numero_fatura: "FAT-2026-001",
+  periodo: "01/01/2026 a 31/01/2026",
+  data_vencimento: "15/01/2026",
+  espaco: "Salão de Festas",
+  data: "15/01/2026",
+  horario_inicio: "14:00",
+  horario_fim: "22:00",
+  checklist: "*Cozinha:*\n  • Fogão\n  • Geladeira\n  • Microondas\n*Salão:*\n  • Mesas\n  • Cadeiras\n  • Ar condicionado",
+};
+
 const DEFAULT_TEMPLATES: Record<string, string> = {
   notification_occurrence: `🏢 *{condominio}*
 
@@ -548,11 +579,21 @@ export function WhatsAppTemplates() {
               ))}
             </div>
 
-            <div className="p-3 rounded-lg bg-muted/50 border border-border/50">
-              <p className="text-xs text-muted-foreground mb-2">Pré-visualização:</p>
-              <div className="font-mono text-sm whitespace-pre-wrap bg-background p-3 rounded border">
-                {editContent}
+            <div className="p-3 rounded-lg bg-gradient-to-br from-green-500/10 to-green-600/5 border border-green-500/20">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <p className="text-xs font-medium text-green-600">Preview da Mensagem</p>
               </div>
+              <div className="bg-white dark:bg-zinc-900 rounded-lg p-4 shadow-sm border border-border/50">
+                <div className="font-mono text-sm whitespace-pre-wrap text-foreground">
+                  {editContent.replace(/\{(\w+)\}/g, (match, variable) => {
+                    return VARIABLE_EXAMPLES[variable] || match;
+                  })}
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2 italic">
+                * Os valores acima são exemplos. As variáveis serão substituídas pelos dados reais no envio.
+              </p>
             </div>
           </div>
 
