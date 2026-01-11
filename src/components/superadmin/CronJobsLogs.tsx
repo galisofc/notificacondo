@@ -298,6 +298,7 @@ export function CronJobsLogs() {
     { name: "generate-invoices", description: "Gerar faturas mensais" },
     { name: "notify-party-hall-reminders", description: "Lembretes de reservas de salão de festas" },
     { name: "start-party-hall-usage", description: "Iniciar uso de reservas do dia" },
+    { name: "finish-party-hall-usage", description: "Finalizar uso de reservas do dia" },
   ];
 
   const refreshAll = () => {

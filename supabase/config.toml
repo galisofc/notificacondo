@@ -92,3 +92,7 @@ verify_jwt = false
 # Iniciar uso automático de salão de festas (cron job)
 [functions.start-party-hall-usage]
 verify_jwt = false
+
+# Finalizar uso automático de salão de festas (cron job)
+[functions.finish-party-hall-usage]
+verify_jwt = false
