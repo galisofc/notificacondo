@@ -296,6 +296,8 @@ export function CronJobsLogs() {
   const availableFunctions = [
     { name: "notify-trial-ending", description: "Notificar trials expirando em 1-2 dias" },
     { name: "generate-invoices", description: "Gerar faturas mensais" },
+    { name: "notify-party-hall-reminders", description: "Lembretes de reservas de salão de festas" },
+    { name: "start-party-hall-usage", description: "Iniciar uso de reservas do dia" },
   ];
 
   const refreshAll = () => {
