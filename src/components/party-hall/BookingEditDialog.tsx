@@ -259,24 +259,8 @@ export default function BookingEditDialog({ open, onOpenChange, booking }: Booki
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="resident">Morador *</Label>
-            <Select value={selectedResident} onValueChange={setSelectedResident}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o morador" />
-              </SelectTrigger>
-              <SelectContent>
-                {!residents.some((r: any) => r.id === booking.resident.id) && (
-                  <SelectItem value={booking.resident.id}>
-                    {booking.resident.full_name} (atual)
-                  </SelectItem>
-                )}
-                {residents.map((resident: any) => (
-                  <SelectItem key={resident.id} value={resident.id}>
-                    {resident.full_name} - {resident.apartment?.block?.name} {resident.apartment?.number}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Morador</Label>
+            <Input value={booking.resident.full_name} disabled />
           </div>
 
           <div className="grid gap-2">
