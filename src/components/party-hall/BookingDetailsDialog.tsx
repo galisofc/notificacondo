@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Calendar, Clock, User, Building2, Users, MessageCircle, ClipboardCheck, Check, X, AlertCircle } from "lucide-react";
+import BlockApartmentDisplay from "@/components/common/BlockApartmentDisplay";
 
 interface Booking {
   id: string;
@@ -207,9 +208,12 @@ export default function BookingDetailsDialog({ open, onOpenChange, booking }: Bo
                 </div>
                 <div>
                   <p className="text-muted-foreground">Unidade</p>
-                  <p className="font-medium">
-                    {booking.resident.apartment.block.name} - {booking.resident.apartment.number}
-                  </p>
+                  <BlockApartmentDisplay
+                    blockName={booking.resident.apartment.block.name}
+                    apartmentNumber={booking.resident.apartment.number}
+                    variant="default"
+                    className="font-medium"
+                  />
                 </div>
                 {booking.resident.phone && (
                   <div>
