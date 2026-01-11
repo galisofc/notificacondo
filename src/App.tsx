@@ -24,6 +24,7 @@ import DefenseAnalysis from "./pages/DefenseAnalysis";
 import SindicoSettings from "./pages/SindicoSettings";
 import SindicoInvoices from "./pages/SindicoInvoices";
 import SindicoSubscriptions from "./pages/SindicoSubscriptions";
+import CondominiumTemplates from "./pages/CondominiumTemplates";
 import PartyHall from "./pages/PartyHall";
 import PartyHallSettings from "./pages/PartyHallSettings";
 import PartyHallNotifications from "./pages/PartyHallNotifications";
@@ -171,6 +172,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole="sindico">
                     <SindicoSubscriptions />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/sindico/templates"
+                element={
+                  <ProtectedRoute requiredRole="sindico">
+                    <CondominiumTemplates />
                   </ProtectedRoute>
                 }
               />
