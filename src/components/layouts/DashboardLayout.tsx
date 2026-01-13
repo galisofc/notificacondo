@@ -57,7 +57,7 @@ interface NavItem {
   badge?: number;
 }
 
-const superAdminNavItems: NavItem[] = [
+const getBaseSuperAdminNavItems = (): NavItem[] => [
   { title: "Início", url: "/superadmin", icon: Home },
   { title: "Síndicos", url: "/superadmin/sindicos", icon: Users },
   { title: "Condomínios", url: "/superadmin/condominiums", icon: Building2 },
@@ -86,8 +86,10 @@ function SidebarNavigation() {
   const { role, residentInfo, profileInfo, loading } = useUserRole();
   const { toast } = useToast();
   const [pendingDefenses, setPendingDefenses] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const [condoIds, setCondoIds] = useState<string[]>([]);
   const prevPendingDefensesRef = useRef<number>(0);
+  const prevUnreadMessagesRef = useRef<number>(0);
   const audioContextRef = useRef<AudioContext | null>(null);
 
   const playNotificationSound = useCallback(() => {
@@ -119,6 +121,7 @@ function SidebarNavigation() {
     }
   }, []);
 
+  // Fetch pending defenses for sindicos
   useEffect(() => {
     const fetchPendingDefenses = async () => {
       if (!user || role !== "sindico") return;
@@ -148,6 +151,62 @@ function SidebarNavigation() {
 
     fetchPendingDefenses();
   }, [user, role]);
+
+  // Fetch unread contact messages for super_admin
+  useEffect(() => {
+    const fetchUnreadMessages = async () => {
+      if (!user || role !== "super_admin") return;
+
+      try {
+        const { count } = await supabase
+          .from("contact_messages")
+          .select("*", { count: "exact", head: true })
+          .eq("is_read", false);
+
+        setUnreadMessages(count || 0);
+      } catch (error) {
+        console.error("Error fetching unread messages:", error);
+      }
+    };
+
+    fetchUnreadMessages();
+  }, [user, role]);
+
+  // Realtime subscription for contact messages (super_admin)
+  useEffect(() => {
+    if (!user || role !== "super_admin") return;
+
+    const channel = supabase
+      .channel("contact-messages-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "contact_messages",
+        },
+        async () => {
+          const { count } = await supabase
+            .from("contact_messages")
+            .select("*", { count: "exact", head: true })
+            .eq("is_read", false);
+
+          const newCount = count || 0;
+          
+          if (newCount > prevUnreadMessagesRef.current) {
+            playNotificationSound();
+          }
+          
+          prevUnreadMessagesRef.current = newCount;
+          setUnreadMessages(newCount);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, role, playNotificationSound]);
 
   useEffect(() => {
     if (!user || role !== "sindico" || condoIds.length === 0) return;
@@ -189,10 +248,23 @@ function SidebarNavigation() {
     prevPendingDefensesRef.current = pendingDefenses;
   }, [pendingDefenses]);
 
+  useEffect(() => {
+    prevUnreadMessagesRef.current = unreadMessages;
+  }, [unreadMessages]);
+
   const handleSignOut = async () => {
     await signOut();
     toast({ title: "Até logo!", description: "Você saiu da sua conta." });
     navigate("/");
+  };
+
+  const getSuperAdminNavItems = (): NavItem[] => {
+    const items = getBaseSuperAdminNavItems();
+    const messagesIndex = items.findIndex(item => item.url === "/superadmin/contact-messages");
+    if (messagesIndex !== -1 && unreadMessages > 0) {
+      items[messagesIndex] = { ...items[messagesIndex], badge: unreadMessages };
+    }
+    return items;
   };
 
   const getSindicoNavItems = (): NavItem[] => [
@@ -211,7 +283,7 @@ function SidebarNavigation() {
 
   const navItems =
     role === "super_admin"
-      ? superAdminNavItems
+      ? getSuperAdminNavItems()
       : role === "sindico"
       ? getSindicoNavItems()
       : residentNavItems;
