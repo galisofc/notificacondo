@@ -307,6 +307,29 @@ export function CronJobsLogs() {
     { name: "finish-party-hall-usage", label: "Finalizar Uso Salão", description: "Marca reservas finalizadas como 'concluídas' e envia checklist de saída" },
   ];
 
+  // Translation map for job names to Portuguese
+  const jobNameTranslations: Record<string, string> = {
+    "notify-trial-ending-daily": "Avisar Fim do Trial (Diário)",
+    "generate-invoices-daily": "Gerar Faturas (Diário)",
+    "notify-party-hall-reminders-daily": "Lembretes Salão de Festas (Diário)",
+    "start-party-hall-usage-daily": "Iniciar Uso Salão (Diário)",
+    "finish-party-hall-usage-daily": "Finalizar Uso Salão (Diário)",
+    "notify-trial-ending": "Avisar Fim do Trial",
+    "generate-invoices": "Gerar Faturas",
+    "notify-party-hall-reminders": "Lembretes Salão de Festas",
+    "start-party-hall-usage": "Iniciar Uso Salão",
+    "finish-party-hall-usage": "Finalizar Uso Salão",
+  };
+
+  const translateJobName = (jobName: string): string => {
+    return jobNameTranslations[jobName] || jobName;
+  };
+
+  const translateFunctionName = (functionName: string): string => {
+    const fn = availableFunctions.find(f => f.name === functionName);
+    return fn?.label || functionName;
+  };
+
   const refreshAll = () => {
     queryClient.invalidateQueries({ queryKey: ["cron-jobs"] });
     queryClient.invalidateQueries({ queryKey: ["cron-job-pause-status"] });
@@ -434,7 +457,7 @@ export function CronJobsLogs() {
                             )}
                           </Button>
                         </TableCell>
-                        <TableCell className="font-medium">{job.jobname}</TableCell>
+                        <TableCell className="font-medium">{translateJobName(job.jobname)}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Clock className="h-4 w-4 text-muted-foreground" />
@@ -443,7 +466,7 @@ export function CronJobsLogs() {
                         </TableCell>
                         <TableCell>
                           <code className="text-xs bg-muted px-2 py-1 rounded">
-                            {functionName}
+                            {translateFunctionName(functionName)}
                           </code>
                         </TableCell>
                         <TableCell>
@@ -543,7 +566,7 @@ export function CronJobsLogs() {
                         <TableRow key={log.id}>
                           <TableCell>
                             <code className="text-xs bg-muted px-2 py-1 rounded">
-                              {log.function_name}
+                              {translateFunctionName(log.function_name)}
                             </code>
                           </TableCell>
                           <TableCell>{getTriggerTypeBadge(log.trigger_type)}</TableCell>
@@ -602,7 +625,7 @@ export function CronJobsLogs() {
                           <TableCell className="font-mono text-xs">{run.runid}</TableCell>
                           <TableCell>
                             <code className="text-xs bg-muted px-2 py-1 rounded">
-                              {getJobNameFromCommand(run.command)}
+                              {translateFunctionName(getJobNameFromCommand(run.command))}
                             </code>
                           </TableCell>
                           <TableCell className="text-sm">
@@ -641,7 +664,7 @@ export function CronJobsLogs() {
           <DialogHeader>
             <DialogTitle>Executar Função Manualmente</DialogTitle>
             <DialogDescription>
-              Deseja executar a função <code className="bg-muted px-2 py-1 rounded">{selectedJob?.jobname}</code> agora?
+              Deseja executar a função <code className="bg-muted px-2 py-1 rounded">{selectedJob ? translateFunctionName(selectedJob.jobname) : ''}</code> agora?
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
