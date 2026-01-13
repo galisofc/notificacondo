@@ -25,65 +25,163 @@ const formatPhoneNumber = (phone: string): string => {
   return `55${cleaned}`;
 };
 
+// Helper to safely parse JSON response
+const safeParseResponse = async (response: Response, providerName: string): Promise<{ data?: any; error?: string }> => {
+  const contentType = response.headers.get("content-type") || "";
+  const text = await response.text();
+  
+  console.log(`[${providerName}] Response status: ${response.status}, content-type: ${contentType}`);
+  console.log(`[${providerName}] Response body (first 500 chars): ${text.substring(0, 500)}`);
+  
+  if (!contentType.includes("application/json") && !text.startsWith("{") && !text.startsWith("[")) {
+    console.error(`[${providerName}] Expected JSON but received: ${contentType}`);
+    return { error: `API retornou conteúdo não-JSON. Status: ${response.status}. Verifique a URL e credenciais da API.` };
+  }
+  
+  try {
+    const data = JSON.parse(text);
+    return { data };
+  } catch (e) {
+    console.error(`[${providerName}] Failed to parse JSON:`, e);
+    return { error: `Falha ao processar resposta da API: ${text.substring(0, 200)}` };
+  }
+};
+
 const providers: Record<string, ProviderConfig> = {
   zpro: {
+    // Z-PRO uses GET with query parameters
     async sendMessage(config, phone, message) {
       const formattedPhone = formatPhoneNumber(phone);
-      const response = await fetch(`${config.api_url}/instances/${config.instance_id}/token/${config.api_key}/send-text`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: formattedPhone, message }),
+      const baseUrl = config.api_url.replace(/\/$/, "");
+      
+      const params = new URLSearchParams({
+        body: message,
+        number: formattedPhone,
+        externalKey: config.api_key,
+        bearertoken: config.api_key,
+        isClosed: "false"
       });
-      const result = await response.json();
-      if (!response.ok) {
-        return { error: result.message || "Erro ao enviar mensagem via Z-PRO" };
+      
+      const url = `${baseUrl}/params/?${params.toString()}`;
+      console.log(`[Z-PRO] Sending to URL: ${url.substring(0, 150)}...`);
+      
+      try {
+        const response = await fetch(url, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+        
+        const { data: result, error: parseError } = await safeParseResponse(response, "Z-PRO");
+        
+        if (parseError) {
+          return { error: parseError };
+        }
+        
+        if (response.ok) {
+          const extractedMessageId = result?.id || result?.messageId || result?.key?.id || result?.msgId || result?.message_id;
+          
+          if (extractedMessageId && extractedMessageId !== "sent") {
+            return { messageId: String(extractedMessageId) };
+          }
+          
+          if (result?.status === "success" || result?.status === "PENDING" || response.status === 200) {
+            const trackingId = `zpro_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            console.log(`[Z-PRO] No message ID in response, using tracking ID: ${trackingId}`);
+            return { messageId: trackingId };
+          }
+          
+          return { messageId: `zpro_${Date.now()}` };
+        }
+        
+        return { error: result?.message || result?.error || `Erro ${response.status}` };
+      } catch (error: any) {
+        console.error(`[Z-PRO] Connection error:`, error);
+        return { error: `Erro de conexão: ${error.message}` };
       }
-      return { messageId: result.messageId || result.id };
     },
   },
   zapi: {
     async sendMessage(config, phone, message) {
       const formattedPhone = formatPhoneNumber(phone);
-      const response = await fetch(`${config.api_url}/instances/${config.instance_id}/token/${config.api_key}/send-text`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: formattedPhone, message }),
-      });
-      const result = await response.json();
-      if (!response.ok) {
-        return { error: result.message || "Erro ao enviar mensagem via Z-API" };
+      const url = `${config.api_url}/instances/${config.instance_id}/token/${config.api_key}/send-text`;
+      console.log(`[Z-API] Sending to URL: ${url.replace(config.api_key, "***")}`);
+      
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: formattedPhone, message }),
+        });
+        
+        const { data: result, error: parseError } = await safeParseResponse(response, "Z-API");
+        if (parseError) {
+          return { error: parseError };
+        }
+        
+        if (!response.ok) {
+          return { error: result?.message || `Erro ao enviar mensagem via Z-API (status: ${response.status})` };
+        }
+        return { messageId: result?.messageId || result?.zapiMessageId };
+      } catch (error: any) {
+        console.error(`[Z-API] Connection error:`, error);
+        return { error: `Erro de conexão: ${error.message}` };
       }
-      return { messageId: result.messageId || result.zapiMessageId };
     },
   },
   evolution: {
     async sendMessage(config, phone, message) {
       const formattedPhone = formatPhoneNumber(phone);
-      const response = await fetch(`${config.api_url}/message/sendText/${config.instance_id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", apikey: config.api_key },
-        body: JSON.stringify({ number: formattedPhone, text: message }),
-      });
-      const result = await response.json();
-      if (!response.ok) {
-        return { error: result.message || "Erro ao enviar mensagem via Evolution" };
+      const url = `${config.api_url}/message/sendText/${config.instance_id}`;
+      console.log(`[Evolution] Sending to URL: ${url}`);
+      
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", apikey: config.api_key },
+          body: JSON.stringify({ number: formattedPhone, text: message }),
+        });
+        
+        const { data: result, error: parseError } = await safeParseResponse(response, "Evolution");
+        if (parseError) {
+          return { error: parseError };
+        }
+        
+        if (!response.ok) {
+          return { error: result?.message || `Erro ao enviar mensagem via Evolution (status: ${response.status})` };
+        }
+        return { messageId: result?.key?.id };
+      } catch (error: any) {
+        console.error(`[Evolution] Connection error:`, error);
+        return { error: `Erro de conexão: ${error.message}` };
       }
-      return { messageId: result.key?.id };
     },
   },
   wppconnect: {
     async sendMessage(config, phone, message) {
       const formattedPhone = formatPhoneNumber(phone);
-      const response = await fetch(`${config.api_url}/api/${config.instance_id}/send-message`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.api_key}` },
-        body: JSON.stringify({ phone: formattedPhone, message, isGroup: false }),
-      });
-      const result = await response.json();
-      if (!response.ok || result.status === "error") {
-        return { error: result.message || "Erro ao enviar mensagem via WPPConnect" };
+      const url = `${config.api_url}/api/${config.instance_id}/send-message`;
+      console.log(`[WPPConnect] Sending to URL: ${url}`);
+      
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.api_key}` },
+          body: JSON.stringify({ phone: formattedPhone, message, isGroup: false }),
+        });
+        
+        const { data: result, error: parseError } = await safeParseResponse(response, "WPPConnect");
+        if (parseError) {
+          return { error: parseError };
+        }
+        
+        if (!response.ok || result?.status === "error") {
+          return { error: result?.message || `Erro ao enviar mensagem via WPPConnect (status: ${response.status})` };
+        }
+        return { messageId: result?.id };
+      } catch (error: any) {
+        console.error(`[WPPConnect] Connection error:`, error);
+        return { error: `Erro de conexão: ${error.message}` };
       }
-      return { messageId: result.id };
     },
   },
 };
