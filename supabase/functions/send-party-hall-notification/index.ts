@@ -40,21 +40,38 @@ const providers: Record<string, ProviderConfig> = {
   zpro: {
     async sendMessage(config, phone, message) {
       const formattedPhone = formatPhoneNumber(phone);
-      const response = await fetch(`${config.api_url}/instances/${config.instance_id}/token/${config.api_key}/send-text`, {
-        method: "POST",
+      const baseUrl = config.api_url.replace(/\/$/, "");
+      
+      // Z-PRO uses GET with query parameters
+      const params = new URLSearchParams({
+        body: message,
+        number: formattedPhone,
+        externalKey: config.api_key,
+        bearertoken: config.api_key,
+        isClosed: "false"
+      });
+      
+      const sendUrl = `${baseUrl}/params/?${params.toString()}`;
+      console.log("Z-PRO sending to:", sendUrl.substring(0, 150) + "...");
+      
+      const response = await fetch(sendUrl, {
+        method: "GET",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone: formattedPhone,
-          message,
-        }),
       });
 
       const { data: result, error: parseError } = await parseResponseSafely(response);
       if (parseError) return { error: parseError };
-      if (!response.ok) {
-        return { error: result?.message || "Erro ao enviar mensagem via Z-PRO" };
+      
+      if (response.ok) {
+        const extractedMessageId = result?.id || result?.messageId || result?.key?.id || result?.msgId;
+        if (extractedMessageId) {
+          return { messageId: String(extractedMessageId) };
+        }
+        // Generate tracking ID if no message ID returned
+        return { messageId: `zpro_${Date.now()}` };
       }
-      return { messageId: result.messageId || result.id };
+      
+      return { error: result?.message || result?.error || "Erro ao enviar mensagem via Z-PRO" };
     },
   },
   zapi: {
