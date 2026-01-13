@@ -12,6 +12,7 @@ import Auth from "./pages/Auth";
 import Contact from "./pages/Contact";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfUse from "./pages/TermsOfUse";
+import CivilCode from "./pages/CivilCode";
 import Dashboard from "./pages/Dashboard";
 import ResidentDashboard from "./pages/ResidentDashboard";
 import ResidentOccurrences from "./pages/ResidentOccurrences";
@@ -65,6 +66,7 @@ const App = () => (
               <Route path="/contato" element={<Contact />} />
               <Route path="/privacidade" element={<PrivacyPolicy />} />
               <Route path="/termos" element={<TermsOfUse />} />
+              <Route path="/codigo-civil" element={<CivilCode />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/auth/callback/next/:next" element={<AuthCallback />} />

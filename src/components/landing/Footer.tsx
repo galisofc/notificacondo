@@ -51,7 +51,7 @@ const Footer = () => {
               <li><Link to="/termos" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Termos de Uso</Link></li>
               <li><Link to="/privacidade" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Política de Privacidade</Link></li>
               <li><Link to="/privacidade#direitos" className="text-sm text-muted-foreground hover:text-foreground transition-colors">LGPD</Link></li>
-              <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Código Civil</a></li>
+              <li><Link to="/codigo-civil" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Código Civil</Link></li>
             </ul>
           </div>
         </div>
