@@ -68,7 +68,7 @@ const Pricing = () => {
             <span className="text-gradient">seu condomínio</span>
           </h2>
           <p className="text-muted-foreground text-lg">
-            Todos os planos incluem integração WhatsApp, registro de ciência e conformidade LGPD.
+            <span className="text-primary font-semibold">7 dias grátis para testar!</span> Todos os planos incluem integração WhatsApp, registro de ciência e conformidade LGPD.
             Cancele quando quiser.
           </p>
         </div>
