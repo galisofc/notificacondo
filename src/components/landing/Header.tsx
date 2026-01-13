@@ -31,7 +31,7 @@ const Header = () => {
             <a href="#fluxo" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
               Como Funciona
             </a>
-            <a href="#planos" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
+            <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
               Planos
             </a>
             <Link to="/contato" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
@@ -76,7 +76,7 @@ const Header = () => {
               <a href="#fluxo" className="text-muted-foreground hover:text-foreground transition-colors">
                 Como Funciona
               </a>
-              <a href="#planos" className="text-muted-foreground hover:text-foreground transition-colors">
+              <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
                 Planos
               </a>
               <Link to="/contato" className="text-muted-foreground hover:text-foreground transition-colors">
