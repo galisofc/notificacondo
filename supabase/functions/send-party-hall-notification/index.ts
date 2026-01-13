@@ -25,6 +25,17 @@ const formatPhoneNumber = (phone: string): string => {
   return `55${cleaned}`;
 };
 
+const parseResponseSafely = async (response: Response): Promise<{ data: any; error?: string }> => {
+  const text = await response.text();
+  try {
+    const data = JSON.parse(text);
+    return { data };
+  } catch {
+    console.error("Non-JSON response received:", text.substring(0, 500));
+    return { data: null, error: `API returned non-JSON response (status ${response.status}): ${text.substring(0, 200)}` };
+  }
+};
+
 const providers: Record<string, ProviderConfig> = {
   zpro: {
     async sendMessage(config, phone, message) {
@@ -38,9 +49,10 @@ const providers: Record<string, ProviderConfig> = {
         }),
       });
 
-      const result = await response.json();
+      const { data: result, error: parseError } = await parseResponseSafely(response);
+      if (parseError) return { error: parseError };
       if (!response.ok) {
-        return { error: result.message || "Erro ao enviar mensagem via Z-PRO" };
+        return { error: result?.message || "Erro ao enviar mensagem via Z-PRO" };
       }
       return { messageId: result.messageId || result.id };
     },
@@ -57,9 +69,10 @@ const providers: Record<string, ProviderConfig> = {
         }),
       });
 
-      const result = await response.json();
+      const { data: result, error: parseError } = await parseResponseSafely(response);
+      if (parseError) return { error: parseError };
       if (!response.ok) {
-        return { error: result.message || "Erro ao enviar mensagem via Z-API" };
+        return { error: result?.message || "Erro ao enviar mensagem via Z-API" };
       }
       return { messageId: result.messageId || result.zapiMessageId };
     },
@@ -79,9 +92,10 @@ const providers: Record<string, ProviderConfig> = {
         }),
       });
 
-      const result = await response.json();
+      const { data: result, error: parseError } = await parseResponseSafely(response);
+      if (parseError) return { error: parseError };
       if (!response.ok) {
-        return { error: result.message || "Erro ao enviar mensagem via Evolution" };
+        return { error: result?.message || "Erro ao enviar mensagem via Evolution" };
       }
       return { messageId: result.key?.id };
     },
@@ -102,9 +116,10 @@ const providers: Record<string, ProviderConfig> = {
         }),
       });
 
-      const result = await response.json();
-      if (!response.ok || result.status === "error") {
-        return { error: result.message || "Erro ao enviar mensagem via WPPConnect" };
+      const { data: result, error: parseError } = await parseResponseSafely(response);
+      if (parseError) return { error: parseError };
+      if (!response.ok || result?.status === "error") {
+        return { error: result?.message || "Erro ao enviar mensagem via WPPConnect" };
       }
       return { messageId: result.id };
     },
