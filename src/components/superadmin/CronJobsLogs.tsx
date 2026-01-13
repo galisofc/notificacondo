@@ -294,7 +294,15 @@ export function CronJobsLogs() {
     if (minute === "*" && hour === "*") return "A cada minuto";
     if (minute === "0" && hour === "*") return "A cada hora";
     if (minute !== "*" && hour !== "*" && dayOfMonth === "*" && month === "*" && dayOfWeek === "*") {
-      return `Diariamente às ${hour.padStart(2, "0")}:${minute.padStart(2, "0")} UTC`;
+      // Convert UTC to São Paulo time (UTC-3)
+      const utcHour = parseInt(hour, 10);
+      const utcMinute = parseInt(minute, 10);
+      
+      // São Paulo is UTC-3 (or UTC-2 during daylight saving, but Brazil suspended DST)
+      let spHour = utcHour - 3;
+      if (spHour < 0) spHour += 24;
+      
+      return `Diariamente às ${spHour.toString().padStart(2, "0")}:${utcMinute.toString().padStart(2, "0")} (Brasília)`;
     }
     
     return schedule;
