@@ -44,6 +44,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface CronJob {
   jobid: number;
@@ -294,11 +300,11 @@ export function CronJobsLogs() {
   };
 
   const availableFunctions = [
-    { name: "notify-trial-ending", description: "Notificar trials expirando em 1-2 dias" },
-    { name: "generate-invoices", description: "Gerar faturas mensais" },
-    { name: "notify-party-hall-reminders", description: "Lembretes de reservas de salão de festas" },
-    { name: "start-party-hall-usage", description: "Iniciar uso de reservas do dia" },
-    { name: "finish-party-hall-usage", description: "Finalizar uso de reservas do dia" },
+    { name: "notify-trial-ending", label: "Avisar Fim do Trial", description: "Envia notificações para síndicos cujo período de teste expira em 1-2 dias" },
+    { name: "generate-invoices", label: "Gerar Faturas", description: "Gera faturas mensais para assinaturas ativas com período vencido" },
+    { name: "notify-party-hall-reminders", label: "Lembretes Salão de Festas", description: "Envia lembretes de reservas de salão de festas para amanhã" },
+    { name: "start-party-hall-usage", label: "Iniciar Uso Salão", description: "Marca reservas do dia como 'em uso' e envia checklist de entrada" },
+    { name: "finish-party-hall-usage", label: "Finalizar Uso Salão", description: "Marca reservas finalizadas como 'concluídas' e envia checklist de saída" },
   ];
 
   const refreshAll = () => {
@@ -328,23 +334,31 @@ export function CronJobsLogs() {
         <CardContent>
           <div className="flex flex-wrap gap-3">
             {availableFunctions.map((fn) => (
-              <Button
-                key={fn.name}
-                variant="outline"
-                onClick={() => {
-                  setSelectedJob({ jobname: fn.name } as CronJob);
-                  setIsRunDialogOpen(true);
-                }}
-                disabled={triggerMutation.isPending}
-                className="gap-2"
-              >
-                {triggerMutation.isPending && triggerMutation.variables === fn.name ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Play className="h-4 w-4" />
-                )}
-                {fn.name}
-              </Button>
+              <TooltipProvider key={fn.name}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedJob({ jobname: fn.name } as CronJob);
+                        setIsRunDialogOpen(true);
+                      }}
+                      disabled={triggerMutation.isPending}
+                      className="gap-2"
+                    >
+                      {triggerMutation.isPending && triggerMutation.variables === fn.name ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Play className="h-4 w-4" />
+                      )}
+                      {fn.label}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-[250px]">
+                    <p className="text-xs">{fn.description}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             ))}
           </div>
         </CardContent>
