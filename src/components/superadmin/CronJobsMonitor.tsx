@@ -104,7 +104,7 @@ export function CronJobsMonitor() {
   const jobStatuses: JobStatus[] = useMemo(() => {
     return availableFunctions.map(fn => {
       const fnLogs = logs?.filter(l => l.function_name === fn.name) || [];
-      const successLogs = fnLogs.filter(l => l.status === "success" || l.status === "succeeded");
+      const successLogs = fnLogs.filter(l => l.status === "success" || l.status === "succeeded" || l.status === "completed");
       const failedLogs = fnLogs.filter(l => l.status === "error" || l.status === "failed");
       const lastExecution = fnLogs[0] || null;
       const pauseStatus = pauseStatuses?.find(p => p.function_name === fn.name);
@@ -133,7 +133,7 @@ export function CronJobsMonitor() {
 
   const overallStats = useMemo(() => {
     const total = logs?.length || 0;
-    const success = logs?.filter(l => l.status === "success" || l.status === "succeeded").length || 0;
+    const success = logs?.filter(l => l.status === "success" || l.status === "succeeded" || l.status === "completed").length || 0;
     const failed = logs?.filter(l => l.status === "error" || l.status === "failed").length || 0;
     const paused = pauseStatuses?.filter(p => p.paused).length || 0;
     
@@ -154,7 +154,7 @@ export function CronJobsMonitor() {
     if (!status.lastExecution) {
       return <Clock className="h-5 w-5 text-muted-foreground" />;
     }
-    if (status.lastExecution.status === "success" || status.lastExecution.status === "succeeded") {
+    if (status.lastExecution.status === "success" || status.lastExecution.status === "succeeded" || status.lastExecution.status === "completed") {
       return <CheckCircle2 className="h-5 w-5 text-emerald-500" />;
     }
     if (status.lastExecution.status === "error" || status.lastExecution.status === "failed") {
@@ -169,7 +169,7 @@ export function CronJobsMonitor() {
   const getStatusColor = (status: JobStatus): string => {
     if (status.isPaused) return "border-amber-500/50 bg-amber-500/5";
     if (!status.lastExecution) return "border-muted-foreground/30";
-    if (status.lastExecution.status === "success" || status.lastExecution.status === "succeeded") {
+    if (status.lastExecution.status === "success" || status.lastExecution.status === "succeeded" || status.lastExecution.status === "completed") {
       return "border-emerald-500/50 bg-emerald-500/5";
     }
     if (status.lastExecution.status === "error" || status.lastExecution.status === "failed") {
