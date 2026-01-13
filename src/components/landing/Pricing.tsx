@@ -1,11 +1,38 @@
 import { Button } from "@/components/ui/button";
-import { Check, Sparkles, Loader2, MessageCircle } from "lucide-react";
+import { Check, Sparkles, Loader2, MessageCircle, Clock, Flame } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 
 const Pricing = () => {
   const navigate = useNavigate();
+  
+  // Countdown timer - ends at midnight
+  const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
+  
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const now = new Date();
+      const endOfDay = new Date();
+      endOfDay.setHours(23, 59, 59, 999);
+      
+      const diff = endOfDay.getTime() - now.getTime();
+      
+      if (diff > 0) {
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+        setTimeLeft({ hours, minutes, seconds });
+      }
+    };
+    
+    calculateTimeLeft();
+    const timer = setInterval(calculateTimeLeft, 1000);
+    
+    return () => clearInterval(timer);
+  }, []);
+  
   const { data: plans, isLoading } = useQuery({
     queryKey: ['landing-plans'],
     queryFn: async () => {
@@ -61,6 +88,22 @@ const Pricing = () => {
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-secondary/20 to-transparent" />
       
       <div className="container mx-auto px-4 relative z-10">
+        {/* Urgency Banner */}
+        <div className="flex items-center justify-center gap-3 mb-12 px-6 py-4 rounded-2xl bg-gradient-to-r from-orange-500/10 via-red-500/10 to-orange-500/10 border border-orange-500/20 max-w-xl mx-auto animate-pulse">
+          <Flame className="w-5 h-5 text-orange-500" />
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-foreground">Oferta expira em:</span>
+            <div className="flex items-center gap-1 font-mono">
+              <span className="bg-orange-500 text-white px-2 py-1 rounded text-sm font-bold">{String(timeLeft.hours).padStart(2, '0')}</span>
+              <span className="text-orange-500 font-bold">:</span>
+              <span className="bg-orange-500 text-white px-2 py-1 rounded text-sm font-bold">{String(timeLeft.minutes).padStart(2, '0')}</span>
+              <span className="text-orange-500 font-bold">:</span>
+              <span className="bg-orange-500 text-white px-2 py-1 rounded text-sm font-bold">{String(timeLeft.seconds).padStart(2, '0')}</span>
+            </div>
+          </div>
+          <Clock className="w-4 h-4 text-orange-500" />
+        </div>
+
         <div className="text-center max-w-2xl mx-auto mb-16">
           <span className="text-primary text-sm font-semibold uppercase tracking-wider">Planos</span>
           <h2 className="font-display text-3xl md:text-5xl font-bold mt-4 mb-6">
