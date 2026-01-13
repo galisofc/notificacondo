@@ -68,7 +68,7 @@ const Pricing = () => {
             <span className="text-gradient">seu condomínio</span>
           </h2>
           <p className="text-muted-foreground text-lg">
-            Todos os planos incluem integração ZPRO, registro de ciência e conformidade LGPD.
+            Todos os planos incluem integração WhatsApp, registro de ciência e conformidade LGPD.
             Cancele quando quiser.
           </p>
         </div>
