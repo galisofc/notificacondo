@@ -5,6 +5,7 @@ import { z } from "zod";
 import { Shield, Send, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MaskedInput } from "@/components/ui/masked-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -168,7 +169,11 @@ const Contact = () => {
                         <FormItem>
                           <FormLabel>Telefone</FormLabel>
                           <FormControl>
-                            <Input placeholder="(11) 99999-9999" {...field} />
+                            <MaskedInput 
+                              mask="phone" 
+                              value={field.value || ""} 
+                              onChange={field.onChange}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
