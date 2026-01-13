@@ -34,9 +34,9 @@ const Header = () => {
             <a href="#planos" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
               Planos
             </a>
-            <a href="#contato" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
+            <Link to="/contato" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
               Contato
-            </a>
+            </Link>
           </nav>
 
           {/* CTA Buttons */}
@@ -79,9 +79,9 @@ const Header = () => {
               <a href="#planos" className="text-muted-foreground hover:text-foreground transition-colors">
                 Planos
               </a>
-              <a href="#contato" className="text-muted-foreground hover:text-foreground transition-colors">
+              <Link to="/contato" className="text-muted-foreground hover:text-foreground transition-colors">
                 Contato
-              </a>
+              </Link>
               <div className="flex flex-col gap-2 pt-4">
                 {user ? (
                   <Button variant="hero" className="w-full justify-center" onClick={() => navigate("/dashboard")}>
