@@ -9,6 +9,22 @@ const Header = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  const goToPricing = () => {
+    // If we're already on the landing page, scroll directly
+    if (window.location.pathname === "/") {
+      const el = document.getElementById("pricing");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth" });
+        window.location.hash = "pricing";
+      }
+    } else {
+      // Otherwise, navigate to the landing section
+      navigate("/#pricing");
+    }
+
+    setIsMenuOpen(false);
+  };
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
       <div className="container mx-auto px-4">
@@ -47,10 +63,10 @@ const Header = () => {
               </Button>
             ) : (
               <>
-                <Button variant="ghost" size="sm" onClick={() => navigate("/auth")}>
+                <Button variant="ghost" size="sm" onClick={() => navigate("/auth")}> 
                   Entrar
                 </Button>
-                <Button variant="hero" size="sm" onClick={() => navigate("/auth")}>
+                <Button variant="hero" size="sm" onClick={goToPricing}>
                   Começar Grátis
                 </Button>
               </>
@@ -92,7 +108,7 @@ const Header = () => {
                     <Button variant="ghost" className="w-full justify-center" onClick={() => navigate("/auth")}>
                       Entrar
                     </Button>
-                    <Button variant="hero" className="w-full justify-center" onClick={() => navigate("/auth")}>
+                    <Button variant="hero" className="w-full justify-center" onClick={goToPricing}>
                       Começar Grátis
                     </Button>
                   </>
