@@ -201,7 +201,7 @@ function SidebarNavigation() {
     { title: "Salão de Festas", url: "/party-hall", icon: PartyPopper },
     { title: "Notificações", url: "/notifications", icon: Bell },
     { title: "Relatórios", url: "/reports", icon: BarChart3 },
-    { title: "Templates WhatsApp", url: "/sindico/templates", icon: MessageCircle },
+    
     { title: "Assinaturas", url: "/sindico/subscriptions", icon: CreditCard },
     { title: "Faturas", url: "/sindico/invoices", icon: Receipt },
     { title: "Configurações", url: "/sindico/settings", icon: Settings },
