@@ -10,6 +10,7 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Contact from "./pages/Contact";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Dashboard from "./pages/Dashboard";
 import ResidentDashboard from "./pages/ResidentDashboard";
 import ResidentOccurrences from "./pages/ResidentOccurrences";
@@ -61,6 +62,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/contato" element={<Contact />} />
+              <Route path="/privacidade" element={<PrivacyPolicy />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/auth/callback/next/:next" element={<AuthCallback />} />
