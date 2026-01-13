@@ -749,6 +749,16 @@ const SindicoSubscriptions = () => {
                         </div>
                       )}
 
+                      {/* Period indicator */}
+                      {sub.current_period_start && sub.current_period_end && (
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-3 pb-2 border-b">
+                          <Clock className="h-3 w-3" />
+                          <span>
+                            Período: {formatDateLocal(sub.current_period_start).slice(0, 5)} - {formatDateLocal(sub.current_period_end).slice(0, 5)}
+                          </span>
+                        </div>
+                      )}
+
                       <TooltipProvider>
                         <div className="space-y-2 mb-4">
                           <div className="flex items-center justify-between text-xs">
