@@ -57,7 +57,7 @@ const Pricing = () => {
   const isPopular = (slug: string) => slug === 'profissional';
 
   return (
-    <section id="planos" className="py-24 relative">
+    <section id="pricing" className="py-24 relative">
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-secondary/20 to-transparent" />
       
       <div className="container mx-auto px-4 relative z-10">
