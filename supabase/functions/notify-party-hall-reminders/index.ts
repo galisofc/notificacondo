@@ -366,7 +366,7 @@ serve(async (req) => {
             lines.push(`   ☐ ${item}`);
           }
         }
-        checklistText = `\n📋 *Itens que serão verificados no checklist:*${lines.join("\n")}`;
+        checklistText = `\n📋 *Itens Revisados:*${lines.join("\n")}`;
       }
 
       // Format date
