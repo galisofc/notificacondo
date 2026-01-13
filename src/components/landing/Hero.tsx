@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Shield, CheckCircle, Play } from "lucide-react";
-import VideoModal from "./VideoModal";
+import ScreenshotsModal from "./ScreenshotsModal";
 
 const Hero = () => {
-  const [videoOpen, setVideoOpen] = useState(false);
+  const [screenshotsOpen, setScreenshotsOpen] = useState(false);
+
   return (
     <section className="relative min-h-screen flex items-center pt-16 overflow-hidden">
       {/* Background Effects */}
@@ -53,13 +54,13 @@ const Hero = () => {
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Button>
             </a>
-            <Button variant="glass" size="xl" onClick={() => setVideoOpen(true)}>
+            <Button variant="glass" size="xl" onClick={() => setScreenshotsOpen(true)}>
               <Play className="w-5 h-5" />
               Ver Demonstração
             </Button>
           </div>
 
-          <VideoModal open={videoOpen} onOpenChange={setVideoOpen} />
+          <ScreenshotsModal open={screenshotsOpen} onOpenChange={setScreenshotsOpen} />
 
           {/* Trust Indicators */}
           <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground animate-fade-up" style={{ animationDelay: '0.4s' }}>
