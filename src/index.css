@@ -5,6 +5,10 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Outfit:wght@100..900&display=swap');
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
   :root {
     --background: 210 20% 98%;
     --foreground: 220 20% 10%;
