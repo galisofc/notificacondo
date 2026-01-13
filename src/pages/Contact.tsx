@@ -339,7 +339,7 @@ const Contact = () => {
 
                       <p className="text-xs text-center text-muted-foreground pt-2">
                         Ao enviar, você concorda com nossa{" "}
-                        <Link to="/" className="text-primary hover:underline">
+                        <Link to="/privacidade" className="text-primary hover:underline">
                           Política de Privacidade
                         </Link>
                       </p>
