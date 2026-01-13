@@ -228,6 +228,7 @@ export function CronJobsLogs() {
     switch (status) {
       case "succeeded":
       case "success":
+      case "completed":
         return (
           <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 gap-1">
             <CheckCircle2 className="h-3 w-3" />
@@ -239,7 +240,7 @@ export function CronJobsLogs() {
         return (
           <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 gap-1">
             <XCircle className="h-3 w-3" />
-            Falhou
+            Falha
           </Badge>
         );
       case "running":
