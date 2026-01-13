@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useDateFormatter } from "@/hooks/useFormattedDate";
+import { CronJobsMonitor } from "./CronJobsMonitor";
 import {
   Card,
   CardContent,
@@ -339,6 +340,9 @@ export function CronJobsLogs() {
 
   return (
     <div className="space-y-6">
+      {/* Real-time Monitoring Panel */}
+      <CronJobsMonitor />
+
       {/* Quick Actions Card */}
       <Card>
         <CardHeader>
