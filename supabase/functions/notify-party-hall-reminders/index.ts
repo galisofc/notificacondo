@@ -340,6 +340,35 @@ serve(async (req) => {
         continue;
       }
 
+      // Fetch checklist items for this condominium
+      const { data: checklistItems } = await supabase
+        .from("party_hall_checklist_templates")
+        .select("item_name, category")
+        .eq("condominium_id", condo.id)
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
+
+      // Format checklist for message
+      let checklistText = "";
+      if (checklistItems && checklistItems.length > 0) {
+        // Group by category
+        const grouped: Record<string, string[]> = {};
+        for (const item of checklistItems) {
+          const cat = item.category || "Geral";
+          if (!grouped[cat]) grouped[cat] = [];
+          grouped[cat].push(item.item_name);
+        }
+
+        const lines: string[] = [];
+        for (const [category, items] of Object.entries(grouped)) {
+          lines.push(`\n📌 *${category}:*`);
+          for (const item of items) {
+            lines.push(`   ☐ ${item}`);
+          }
+        }
+        checklistText = `\n📋 *Itens que serão verificados no checklist:*${lines.join("\n")}`;
+      }
+
       // Format date
       const bookingDate = new Date(booking.booking_date + "T00:00:00");
       const formattedDate = bookingDate.toLocaleDateString("pt-BR", {
@@ -358,7 +387,8 @@ serve(async (req) => {
           .replace("{espaco}", hallSetting.name)
           .replace("{data}", formattedDate)
           .replace("{horario_inicio}", booking.start_time.slice(0, 5))
-          .replace("{horario_fim}", booking.end_time.slice(0, 5));
+          .replace("{horario_fim}", booking.end_time.slice(0, 5))
+          .replace("{checklist}", checklistText);
       } else {
         message = `🎉 *LEMBRETE DE RESERVA*
 
@@ -369,6 +399,7 @@ Olá, *${resident.full_name.split(" ")[0]}*!
 Sua reserva do *${hallSetting.name}* está confirmada para *AMANHÃ*:
 📅 *Data:* ${formattedDate}
 ⏰ *Horário:* ${booking.start_time.slice(0, 5)} às ${booking.end_time.slice(0, 5)}
+${checklistText}
 
 📋 *Lembre-se:*
 • Compareça no horário para o checklist de entrada
