@@ -9,6 +9,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import Contact from "./pages/Contact";
 import Dashboard from "./pages/Dashboard";
 import ResidentDashboard from "./pages/ResidentDashboard";
 import ResidentOccurrences from "./pages/ResidentOccurrences";
@@ -43,6 +44,7 @@ import CronJobs from "./pages/superadmin/CronJobs";
 import Transfers from "./pages/superadmin/Transfers";
 import WhatsApp from "./pages/superadmin/WhatsApp";
 import SuperAdminSettings from "./pages/superadmin/Settings";
+import ContactMessages from "./pages/superadmin/ContactMessages";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -58,6 +60,7 @@ const App = () => (
             <AuthProvider>
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/contato" element={<Contact />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/auth/callback/next/:next" element={<AuthCallback />} />
@@ -318,6 +321,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole="super_admin">
                     <SuperAdminSettings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/superadmin/contact-messages"
+                element={
+                  <ProtectedRoute requiredRole="super_admin">
+                    <ContactMessages />
                   </ProtectedRoute>
                 }
               />
