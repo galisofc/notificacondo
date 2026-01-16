@@ -198,53 +198,6 @@ export default function PorteiroDashboard() {
           </Card>
         </div>
 
-        {/* My Recent Packages - History */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div className="flex items-center gap-2">
-              <History className="w-5 h-5 text-primary" />
-              <CardTitle className="text-lg">Minhas Últimas Registradas</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {loadingMyPackages ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-14 w-full" />
-                ))}
-              </div>
-            ) : myPackages.length === 0 ? (
-              <div className="text-center py-6 text-muted-foreground">
-                <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p>Você ainda não registrou nenhuma encomenda</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {myPackages.map((pkg) => (
-                  <div
-                    key={pkg.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div>
-                        <p className="font-medium text-sm">
-                          {pkg.block_name} - APTO {pkg.apartment_number}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(new Date(pkg.received_at), {
-                            addSuffix: true,
-                            locale: ptBR,
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                    <PackageStatusBadge status={pkg.status} />
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
 
         {/* Recent Packages */}
         <div>
