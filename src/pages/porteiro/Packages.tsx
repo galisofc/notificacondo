@@ -59,7 +59,6 @@ export default function PorteiroPackages() {
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
     return (
-      pkg.pickup_code.toLowerCase().includes(search) ||
       pkg.apartment?.number?.toLowerCase().includes(search) ||
       pkg.block?.name?.toLowerCase().includes(search) ||
       pkg.description?.toLowerCase().includes(search)
@@ -88,7 +87,7 @@ export default function PorteiroPackages() {
     if (result.success) {
       toast({
         title: "Encomenda retirada!",
-        description: `Código ${selectedPackage.pickup_code} marcado como retirado`,
+        description: "Retirada confirmada com sucesso.",
       });
       setSelectedPackage(null);
     }
@@ -189,6 +188,7 @@ export default function PorteiroPackages() {
                     onClick={() => handlePackageClick(pkg)}
                     onViewDetails={() => handleViewDetails(pkg)}
                     showCondominium={condominiumIds.length > 1}
+                    showPickupCode={false}
                   />
                 ))}
               </div>
@@ -203,6 +203,7 @@ export default function PorteiroPackages() {
         onOpenChange={setIsPickupDialogOpen}
         package_={selectedPackage}
         onConfirm={handleConfirmPickup}
+        revealPickupCode={false}
       />
 
       {/* Package Details Dialog with Resend Notification */}
@@ -210,6 +211,7 @@ export default function PorteiroPackages() {
         open={isDetailsDialogOpen}
         onOpenChange={setIsDetailsDialogOpen}
         package_={detailsPackage}
+        showPickupCode={false}
       />
     </DashboardLayout>
   );

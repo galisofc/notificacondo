@@ -226,9 +226,6 @@ export default function PorteiroDashboard() {
                     className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="font-mono text-sm font-semibold bg-primary/10 text-primary px-2 py-1 rounded">
-                        {pkg.pickup_code}
-                      </div>
                       <div>
                         <p className="font-medium text-sm">
                           {pkg.block_name} - APTO {pkg.apartment_number}
@@ -284,21 +281,22 @@ export default function PorteiroDashboard() {
             </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {packages.slice(0, 6).map((pkg) => (
-                <PackageCard
-                  key={pkg.id}
-                  id={pkg.id}
-                  photoUrl={pkg.photo_url}
-                  pickupCode={pkg.pickup_code}
-                  status={pkg.status}
-                  apartmentNumber={pkg.apartment?.number || ""}
-                  blockName={pkg.block?.name || ""}
-                  condominiumName={pkg.condominium?.name}
-                  receivedAt={pkg.received_at}
-                  description={pkg.description || undefined}
-                  showCondominium={condominiumIds.length > 1}
-                />
-              ))}
+                {packages.slice(0, 6).map((pkg) => (
+                  <PackageCard
+                    key={pkg.id}
+                    id={pkg.id}
+                    photoUrl={pkg.photo_url}
+                    pickupCode={pkg.pickup_code}
+                    status={pkg.status}
+                    apartmentNumber={pkg.apartment?.number || ""}
+                    blockName={pkg.block?.name || ""}
+                    condominiumName={pkg.condominium?.name}
+                    receivedAt={pkg.received_at}
+                    description={pkg.description || undefined}
+                    showCondominium={condominiumIds.length > 1}
+                    showPickupCode={false}
+                  />
+                ))}
             </div>
           )}
         </div>

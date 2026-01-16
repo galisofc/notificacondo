@@ -18,7 +18,6 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { CameraCapture } from "@/components/packages/CameraCapture";
 import { CondominiumBlockApartmentSelect } from "@/components/packages/CondominiumBlockApartmentSelect";
-import { PickupCodeDisplay } from "@/components/packages/PickupCodeDisplay";
 import { generatePickupCode } from "@/lib/packageConstants";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -247,9 +246,9 @@ export default function RegisterPackage() {
 
       toast({
         title: "Encomenda registrada!",
-        description: notifResult.sent 
-          ? `Código: ${pickupCode} - Morador(es) notificado(s) via WhatsApp` 
-          : `Código: ${pickupCode}`,
+        description: notifResult.sent
+          ? "Morador(es) notificado(s) via WhatsApp."
+          : "Encomenda salva. Notificação não enviada.",
       });
     } catch (error) {
       console.error("Error registering package:", error);
@@ -290,10 +289,8 @@ export default function RegisterPackage() {
                 Encomenda Registrada!
               </h2>
               <p className="text-muted-foreground text-center mb-4">
-                Informe o código abaixo ao morador para retirada
+                O morador deve apresentar o código no app para confirmar a retirada
               </p>
-              
-              <PickupCodeDisplay code={registeredCode} className="mb-6" />
 
               {/* Notification Status */}
               {notificationResult && (

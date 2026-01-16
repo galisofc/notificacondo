@@ -33,6 +33,8 @@ interface PackageDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   package_: Package | null;
+  /** When false, the pickup code will not be rendered (useful for concierge views). */
+  showPickupCode?: boolean;
 }
 
 type NotificationStatus = "idle" | "sending" | "success" | "error";
@@ -47,6 +49,7 @@ export function PackageDetailsDialog({
   open,
   onOpenChange,
   package_,
+  showPickupCode = true,
 }: PackageDetailsDialogProps) {
   const { toast } = useToast();
   const [notificationStatus, setNotificationStatus] = useState<NotificationStatus>("idle");
@@ -150,9 +153,11 @@ export function PackageDetailsDialog({
             </div>
             <div className="flex-1 space-y-2">
               <div className="flex items-center gap-2">
-                <span className="font-mono font-bold text-xl text-primary tracking-wider">
-                  {package_.pickup_code}
-                </span>
+                {showPickupCode && (
+                  <span className="font-mono font-bold text-xl text-primary tracking-wider">
+                    {package_.pickup_code}
+                  </span>
+                )}
                 <PackageStatusBadge status={package_.status} />
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
