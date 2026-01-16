@@ -283,6 +283,7 @@ function SidebarNavigation() {
     { title: "Ocorrências", url: "/occurrences", icon: FileText },
     { title: "Análise de Defesas", url: "/defenses", icon: Scale, badge: pendingDefenses },
     { title: "Salão de Festas", url: "/party-hall", icon: PartyPopper },
+    { title: "Porteiros", url: "/sindico/porteiros", icon: DoorOpen },
     { title: "Notificações", url: "/notifications", icon: Bell },
     { title: "Relatórios", url: "/reports", icon: BarChart3 },
     
