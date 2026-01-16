@@ -50,6 +50,7 @@ import CronJobs from "./pages/superadmin/CronJobs";
 import Transfers from "./pages/superadmin/Transfers";
 import WhatsApp from "./pages/superadmin/WhatsApp";
 import SuperAdminSettings from "./pages/superadmin/Settings";
+import PorteiroSettings from "./pages/porteiro/Settings";
 import ContactMessages from "./pages/superadmin/ContactMessages";
 import PackageTypes from "./pages/superadmin/PackageTypes";
 
@@ -280,6 +281,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole="porteiro">
                     <PorteiroPackages />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/porteiro/configuracoes"
+                element={
+                  <ProtectedRoute requiredRole="porteiro">
+                    <PorteiroSettings />
                   </ProtectedRoute>
                 }
               />
