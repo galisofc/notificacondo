@@ -276,20 +276,29 @@ export default function Porteiros() {
     }
   };
 
-  const handleRemovePorter = async (porterId: string, porterName: string) => {
+  const handleRemovePorter = async (porterId: string, porterUserId: string, porterName: string) => {
     try {
-      const { error } = await supabase
-        .from("user_condominiums")
-        .delete()
-        .eq("id", porterId);
+      // Call edge function to completely delete the porter
+      const { data, error } = await supabase.functions.invoke("delete-porteiro", {
+        body: {
+          user_condominium_id: porterId,
+          porter_user_id: porterUserId,
+        },
+      });
 
       if (error) throw error;
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
 
       setPorters((prev) => prev.filter((p) => p.id !== porterId));
 
       toast({
-        title: "Porteiro removido",
-        description: `${porterName} foi removido do condomínio`,
+        title: data?.user_deleted ? "Porteiro excluído" : "Porteiro removido",
+        description: data?.user_deleted 
+          ? `${porterName} foi excluído completamente do sistema`
+          : `${porterName} foi removido do condomínio`,
       });
     } catch (error: any) {
       console.error("Error removing porter:", error);
@@ -534,6 +543,7 @@ export default function Porteiros() {
                                   onClick={() =>
                                     handleRemovePorter(
                                       porter.id,
+                                      porter.user_id,
                                       porter.profile?.full_name || "Porteiro"
                                     )
                                   }
