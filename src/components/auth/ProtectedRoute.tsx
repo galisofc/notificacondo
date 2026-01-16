@@ -10,7 +10,7 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
   const { user, loading: authLoading } = useAuth();
-  const { role, loading: roleLoading, isSuperAdmin, isSindico, isResident } = useUserRole();
+  const { role, loading: roleLoading, isSuperAdmin, isSindico, isResident, isPorteiro } = useUserRole();
   const location = useLocation();
 
   const loading = authLoading || roleLoading;
@@ -41,6 +41,8 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
         return <Navigate to="/superadmin" replace />;
       } else if (isSindico) {
         return <Navigate to="/dashboard" replace />;
+      } else if (isPorteiro) {
+        return <Navigate to="/porteiro" replace />;
       } else if (isResident) {
         return <Navigate to="/resident" replace />;
       }

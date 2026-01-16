@@ -1014,6 +1014,89 @@ export type Database = {
           },
         ]
       }
+      packages: {
+        Row: {
+          apartment_id: string
+          block_id: string
+          condominium_id: string
+          created_at: string
+          description: string | null
+          expires_at: string | null
+          id: string
+          photo_url: string
+          picked_up_at: string | null
+          picked_up_by: string | null
+          pickup_code: string
+          received_at: string
+          received_by: string
+          resident_id: string | null
+          status: Database["public"]["Enums"]["package_status"]
+        }
+        Insert: {
+          apartment_id: string
+          block_id: string
+          condominium_id: string
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          photo_url: string
+          picked_up_at?: string | null
+          picked_up_by?: string | null
+          pickup_code: string
+          received_at?: string
+          received_by: string
+          resident_id?: string | null
+          status?: Database["public"]["Enums"]["package_status"]
+        }
+        Update: {
+          apartment_id?: string
+          block_id?: string
+          condominium_id?: string
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          photo_url?: string
+          picked_up_at?: string | null
+          picked_up_by?: string | null
+          pickup_code?: string
+          received_at?: string
+          received_by?: string
+          resident_id?: string | null
+          status?: Database["public"]["Enums"]["package_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "packages_apartment_id_fkey"
+            columns: ["apartment_id"]
+            isOneToOne: false
+            referencedRelation: "apartments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "packages_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "packages_condominium_id_fkey"
+            columns: ["condominium_id"]
+            isOneToOne: false
+            referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "packages_resident_id_fkey"
+            columns: ["resident_id"]
+            isOneToOne: false
+            referencedRelation: "residents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       party_hall_bookings: {
         Row: {
           booking_date: string
@@ -1541,6 +1624,35 @@ export type Database = {
           },
         ]
       }
+      user_condominiums: {
+        Row: {
+          condominium_id: string
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          condominium_id: string
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          condominium_id?: string
+          created_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_condominiums_condominium_id_fkey"
+            columns: ["condominium_id"]
+            isOneToOne: false
+            referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1639,6 +1751,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_apartment_condominium_id: {
+        Args: { _apartment_id: string }
+        Returns: string
+      }
       get_cron_job_pause_status: {
         Args: never
         Returns: {
@@ -1712,9 +1828,13 @@ export type Database = {
         Args: { p_function_name: string }
         Returns: boolean
       }
+      user_belongs_to_condominium: {
+        Args: { _condominium_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      app_role: "super_admin" | "sindico" | "morador"
+      app_role: "super_admin" | "sindico" | "morador" | "porteiro"
       fine_status: "em_aberto" | "pago" | "vencido"
       occurrence_status:
         | "registrada"
@@ -1724,6 +1844,7 @@ export type Database = {
         | "advertido"
         | "multado"
       occurrence_type: "advertencia" | "notificacao" | "multa"
+      package_status: "pendente" | "retirada" | "expirada"
       plan_type: "start" | "essencial" | "profissional" | "enterprise"
     }
     CompositeTypes: {
@@ -1852,7 +1973,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["super_admin", "sindico", "morador"],
+      app_role: ["super_admin", "sindico", "morador", "porteiro"],
       fine_status: ["em_aberto", "pago", "vencido"],
       occurrence_status: [
         "registrada",
@@ -1863,6 +1984,7 @@ export const Constants = {
         "multado",
       ],
       occurrence_type: ["advertencia", "notificacao", "multa"],
+      package_status: ["pendente", "retirada", "expirada"],
       plan_type: ["start", "essencial", "profissional", "enterprise"],
     },
   },

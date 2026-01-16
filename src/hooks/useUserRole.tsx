@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
-export type UserRole = "super_admin" | "sindico" | "morador" | null;
+export type UserRole = "super_admin" | "sindico" | "morador" | "porteiro" | null;
 
 interface ResidentInfo {
   id: string;
@@ -26,17 +26,24 @@ interface ProfileInfo {
   avatar_url: string | null;
 }
 
+interface PorteiroCondominium {
+  id: string;
+  name: string;
+}
+
 interface UseUserRoleReturn {
   role: UserRole;
   loading: boolean;
   isResident: boolean;
   isSindico: boolean;
   isSuperAdmin: boolean;
+  isPorteiro: boolean;
   residentInfo: ResidentInfo | null;
   allResidentProfiles: ResidentInfo[];
   switchApartment: (residentId: string) => void;
   profileInfo: ProfileInfo | null;
   refetchProfile: () => Promise<void>;
+  porteiroCondominiums: PorteiroCondominium[];
 }
 
 const SELECTED_RESIDENT_KEY = "selected_resident_id";
@@ -48,6 +55,7 @@ export const useUserRole = (): UseUserRoleReturn => {
   const [residentInfo, setResidentInfo] = useState<ResidentInfo | null>(null);
   const [allResidentProfiles, setAllResidentProfiles] = useState<ResidentInfo[]>([]);
   const [profileInfo, setProfileInfo] = useState<ProfileInfo | null>(null);
+  const [porteiroCondominiums, setPorteiroCondominiums] = useState<PorteiroCondominium[]>([]);
 
   const fetchProfileInfo = useCallback(async (userId: string) => {
     const { data: profileData, error: profileError } = await supabase
@@ -112,9 +120,26 @@ export const useUserRole = (): UseUserRoleReturn => {
         const userRole = roleData?.role as UserRole || "morador";
         setRole(userRole);
 
-        // Fetch profile info for sindico and super_admin
-        if (userRole === "sindico" || userRole === "super_admin") {
+        // Fetch profile info for sindico, super_admin, and porteiro
+        if (userRole === "sindico" || userRole === "super_admin" || userRole === "porteiro") {
           await fetchProfileInfo(user.id);
+        }
+
+        // Fetch porter's condominiums
+        if (userRole === "porteiro") {
+          const { data: userCondos } = await supabase
+            .from("user_condominiums")
+            .select("condominium_id, condominiums(id, name)")
+            .eq("user_id", user.id);
+
+          if (userCondos) {
+            setPorteiroCondominiums(
+              userCondos.map((uc: any) => ({
+                id: uc.condominiums.id,
+                name: uc.condominiums.name,
+              }))
+            );
+          }
         }
 
         // If user is a resident, fetch all their resident records
@@ -228,10 +253,12 @@ export const useUserRole = (): UseUserRoleReturn => {
     isResident: role === "morador",
     isSindico: role === "sindico",
     isSuperAdmin: role === "super_admin",
+    isPorteiro: role === "porteiro",
     residentInfo,
     allResidentProfiles,
     switchApartment,
     profileInfo,
     refetchProfile,
+    porteiroCondominiums,
   };
 };
