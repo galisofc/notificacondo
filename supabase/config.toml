@@ -96,3 +96,7 @@ verify_jwt = false
 # Finalizar uso automático de salão de festas (cron job)
 [functions.finish-party-hall-usage]
 verify_jwt = false
+
+# Notificação de chegada de encomenda
+[functions.notify-package-arrival]
+verify_jwt = false
