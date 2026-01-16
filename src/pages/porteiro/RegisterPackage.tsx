@@ -171,6 +171,24 @@ export default function RegisterPackage() {
       return;
     }
 
+    if (!selectedPackageType) {
+      toast({
+        title: "Tipo obrigatório",
+        description: "Selecione o tipo de encomenda",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!trackingCode.trim()) {
+      toast({
+        title: "Código de rastreio obrigatório",
+        description: "Digite o código de rastreio da encomenda",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!user) {
       toast({
         title: "Não autenticado",
@@ -586,7 +604,7 @@ export default function RegisterPackage() {
 
               {/* Package Type Select */}
               <div className="space-y-2">
-                <Label htmlFor="package-type">Tipo de Encomenda</Label>
+                <Label htmlFor="package-type">Tipo de Encomenda *</Label>
                 <Select
                   value={selectedPackageType}
                   onValueChange={setSelectedPackageType}
@@ -607,7 +625,7 @@ export default function RegisterPackage() {
 
               {/* Tracking Code */}
               <div className="space-y-2">
-                <Label htmlFor="tracking-code">Código de Rastreio (opcional)</Label>
+                <Label htmlFor="tracking-code">Código de Rastreio *</Label>
                 <Input
                   id="tracking-code"
                   placeholder="Ex: AA123456789BR"
@@ -643,7 +661,7 @@ export default function RegisterPackage() {
                 className="w-full gap-2"
                 size="lg"
                 onClick={handleSubmit}
-                disabled={isSubmitting || !capturedImage || !selectedApartment || (destinationPreview && !destinationPreview.hasResidents)}
+                disabled={isSubmitting || !capturedImage || !selectedApartment || !selectedPackageType || !trackingCode.trim() || (destinationPreview && !destinationPreview.hasResidents)}
               >
                 {isSubmitting ? (
                   <>
