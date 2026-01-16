@@ -1014,6 +1014,39 @@ export type Database = {
           },
         ]
       }
+      package_types: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_order: number
+          icon: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       packages: {
         Row: {
           apartment_id: string
@@ -1023,6 +1056,7 @@ export type Database = {
           description: string | null
           expires_at: string | null
           id: string
+          package_type_id: string | null
           photo_url: string
           picked_up_at: string | null
           picked_up_by: string | null
@@ -1031,6 +1065,7 @@ export type Database = {
           received_by: string
           resident_id: string | null
           status: Database["public"]["Enums"]["package_status"]
+          tracking_code: string | null
         }
         Insert: {
           apartment_id: string
@@ -1040,6 +1075,7 @@ export type Database = {
           description?: string | null
           expires_at?: string | null
           id?: string
+          package_type_id?: string | null
           photo_url: string
           picked_up_at?: string | null
           picked_up_by?: string | null
@@ -1048,6 +1084,7 @@ export type Database = {
           received_by: string
           resident_id?: string | null
           status?: Database["public"]["Enums"]["package_status"]
+          tracking_code?: string | null
         }
         Update: {
           apartment_id?: string
@@ -1057,6 +1094,7 @@ export type Database = {
           description?: string | null
           expires_at?: string | null
           id?: string
+          package_type_id?: string | null
           photo_url?: string
           picked_up_at?: string | null
           picked_up_by?: string | null
@@ -1065,6 +1103,7 @@ export type Database = {
           received_by?: string
           resident_id?: string | null
           status?: Database["public"]["Enums"]["package_status"]
+          tracking_code?: string | null
         }
         Relationships: [
           {
@@ -1086,6 +1125,13 @@ export type Database = {
             columns: ["condominium_id"]
             isOneToOne: false
             referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "packages_package_type_id_fkey"
+            columns: ["package_type_id"]
+            isOneToOne: false
+            referencedRelation: "package_types"
             referencedColumns: ["id"]
           },
           {
