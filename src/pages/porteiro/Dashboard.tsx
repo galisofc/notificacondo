@@ -1,20 +1,35 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Package, PackagePlus, PackageCheck, Clock } from "lucide-react";
+import { Package, PackagePlus, PackageCheck, Clock, History } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { PackageCard } from "@/components/packages/PackageCard";
+import { PackageStatusBadge } from "@/components/packages/PackageStatusBadge";
 import { usePackages } from "@/hooks/usePackages";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
+interface MyPackage {
+  id: string;
+  pickup_code: string;
+  status: "pendente" | "retirada" | "expirada";
+  received_at: string;
+  block_name: string;
+  apartment_number: string;
+}
 
 export default function PorteiroDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [condominiumIds, setCondominiumIds] = useState<string[]>([]);
   const [userName, setUserName] = useState<string>("");
+  const [myPackages, setMyPackages] = useState<MyPackage[]>([]);
+  const [loadingMyPackages, setLoadingMyPackages] = useState(true);
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -48,6 +63,51 @@ export default function PorteiroDashboard() {
     };
 
     fetchCondominiums();
+  }, [user]);
+
+  // Fetch packages registered by this porter
+  useEffect(() => {
+    const fetchMyPackages = async () => {
+      if (!user) return;
+
+      setLoadingMyPackages(true);
+      try {
+        const { data, error } = await supabase
+          .from("packages")
+          .select(`
+            id,
+            pickup_code,
+            status,
+            received_at,
+            block:blocks(name),
+            apartment:apartments(number)
+          `)
+          .eq("received_by", user.id)
+          .order("received_at", { ascending: false })
+          .limit(5);
+
+        if (error) throw error;
+
+        if (data) {
+          setMyPackages(
+            data.map((p) => ({
+              id: p.id,
+              pickup_code: p.pickup_code,
+              status: p.status,
+              received_at: p.received_at,
+              block_name: (p.block as any)?.name || "",
+              apartment_number: (p.apartment as any)?.number || "",
+            }))
+          );
+        }
+      } catch (error) {
+        console.error("Error fetching my packages:", error);
+      } finally {
+        setLoadingMyPackages(false);
+      }
+    };
+
+    fetchMyPackages();
   }, [user]);
 
   const { packages, loading } = usePackages({
@@ -137,6 +197,57 @@ export default function PorteiroDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* My Recent Packages - History */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+              <History className="w-5 h-5 text-primary" />
+              <CardTitle className="text-lg">Minhas Últimas Registradas</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {loadingMyPackages ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-14 w-full" />
+                ))}
+              </div>
+            ) : myPackages.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground">
+                <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p>Você ainda não registrou nenhuma encomenda</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {myPackages.map((pkg) => (
+                  <div
+                    key={pkg.id}
+                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="font-mono text-sm font-semibold bg-primary/10 text-primary px-2 py-1 rounded">
+                        {pkg.pickup_code}
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">
+                          {pkg.block_name} - APTO {pkg.apartment_number}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(pkg.received_at), {
+                            addSuffix: true,
+                            locale: ptBR,
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                    <PackageStatusBadge status={pkg.status} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Recent Packages */}
         <div>
