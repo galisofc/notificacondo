@@ -132,15 +132,15 @@ export function CameraCapture({ onCapture, capturedImage, onClear, className }: 
       />
       
       {isStreaming ? (
-        <>
+        <div className="relative w-full h-full min-h-[300px]">
           <video
             ref={videoRef}
             autoPlay
             playsInline
             muted
-            className="w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full object-cover"
           />
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 z-10">
             <Button
               variant="secondary"
               size="icon"
@@ -166,7 +166,7 @@ export function CameraCapture({ onCapture, capturedImage, onClear, className }: 
               <X className="w-5 h-5" />
             </Button>
           </div>
-        </>
+        </div>
       ) : (
         <div className="flex flex-col items-center justify-center h-full min-h-[300px] p-6 gap-4">
           {error ? (
