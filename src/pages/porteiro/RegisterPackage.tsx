@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Package, CheckCircle2, Loader2, MessageCircle, AlertCircle, MapPin, User, Phone } from "lucide-react";
+import { ArrowLeft, Package, CheckCircle2, Loader2, MessageCircle, AlertCircle, MapPin, User, Phone, UserPlus } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,7 @@ interface DestinationPreview {
   apartmentNumber: string;
   residentName?: string;
   residentPhone?: string;
+  hasResidents: boolean;
 }
 
 export default function RegisterPackage() {
@@ -63,6 +64,11 @@ export default function RegisterPackage() {
   const [packageTypes, setPackageTypes] = useState<PackageType[]>([]);
   const [selectedPackageType, setSelectedPackageType] = useState("");
   const [trackingCode, setTrackingCode] = useState("");
+  const [showResidentForm, setShowResidentForm] = useState(false);
+  const [newResidentName, setNewResidentName] = useState("");
+  const [newResidentPhone, setNewResidentPhone] = useState("");
+  const [newResidentEmail, setNewResidentEmail] = useState("");
+  const [isSavingResident, setIsSavingResident] = useState(false);
 
   // Fetch porter's condominiums
   useEffect(() => {
@@ -104,25 +110,38 @@ export default function RegisterPackage() {
     const fetchDestinationPreview = async () => {
       if (!selectedCondominium || !selectedBlock || !selectedApartment) {
         setDestinationPreview(null);
+        setShowResidentForm(false);
         return;
       }
 
       try {
-        const [condoRes, blockRes, aptRes, residentRes] = await Promise.all([
+        const [condoRes, blockRes, aptRes, residentsRes] = await Promise.all([
           supabase.from("condominiums").select("name").eq("id", selectedCondominium).single(),
           supabase.from("blocks").select("name").eq("id", selectedBlock).single(),
           supabase.from("apartments").select("number").eq("id", selectedApartment).single(),
-          supabase.from("residents").select("full_name, phone").eq("apartment_id", selectedApartment).eq("is_responsible", true).maybeSingle(),
+          supabase.from("residents").select("full_name, phone").eq("apartment_id", selectedApartment),
         ]);
+
+        const residents = residentsRes.data || [];
+        const responsibleResident = residents.find(r => r.phone) || residents[0];
+        const hasResidents = residents.length > 0;
 
         if (condoRes.data && blockRes.data && aptRes.data) {
           setDestinationPreview({
             condominiumName: condoRes.data.name,
             blockName: blockRes.data.name,
             apartmentNumber: aptRes.data.number,
-            residentName: residentRes.data?.full_name || undefined,
-            residentPhone: residentRes.data?.phone || undefined,
+            residentName: responsibleResident?.full_name || undefined,
+            residentPhone: responsibleResident?.phone || undefined,
+            hasResidents,
           });
+
+          // Show resident form if no residents
+          if (!hasResidents) {
+            setShowResidentForm(true);
+          } else {
+            setShowResidentForm(false);
+          }
         }
       } catch (error) {
         console.error("Error fetching destination preview:", error);
@@ -273,7 +292,79 @@ export default function RegisterPackage() {
     setTrackingCode("");
     setNotificationResult(null);
     setDestinationPreview(null);
+    setShowResidentForm(false);
+    setNewResidentName("");
+    setNewResidentPhone("");
+    setNewResidentEmail("");
     setStep("form");
+  };
+
+  const handleSaveResident = async () => {
+    if (!newResidentName.trim()) {
+      toast({
+        title: "Nome obrigatório",
+        description: "Digite o nome do morador",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!newResidentPhone.trim()) {
+      toast({
+        title: "Telefone obrigatório",
+        description: "Digite o telefone do morador para notificação",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSavingResident(true);
+
+    try {
+      const { data, error } = await supabase
+        .from("residents")
+        .insert({
+          apartment_id: selectedApartment,
+          full_name: newResidentName.trim(),
+          phone: newResidentPhone.trim(),
+          email: newResidentEmail.trim() || `morador_${Date.now()}@temp.com`,
+          is_responsible: true,
+          is_owner: false,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update destination preview with new resident
+      if (destinationPreview) {
+        setDestinationPreview({
+          ...destinationPreview,
+          residentName: data.full_name,
+          residentPhone: data.phone || undefined,
+          hasResidents: true,
+        });
+      }
+
+      setShowResidentForm(false);
+      setNewResidentName("");
+      setNewResidentPhone("");
+      setNewResidentEmail("");
+
+      toast({
+        title: "Morador cadastrado!",
+        description: "Agora você pode registrar a encomenda",
+      });
+    } catch (error) {
+      console.error("Error saving resident:", error);
+      toast({
+        title: "Erro ao cadastrar",
+        description: "Não foi possível cadastrar o morador",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingResident(false);
+    }
   };
 
   if (step === "success") {
@@ -387,17 +478,17 @@ export default function RegisterPackage() {
 
               {/* Destination Preview */}
               {destinationPreview && (
-                <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
+                <div className={`p-4 rounded-lg border ${destinationPreview.hasResidents ? 'bg-primary/10 border-primary/20' : 'bg-destructive/10 border-destructive/20'}`}>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                      <MapPin className="w-5 h-5 text-primary" />
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${destinationPreview.hasResidents ? 'bg-primary/20' : 'bg-destructive/20'}`}>
+                      <MapPin className={`w-5 h-5 ${destinationPreview.hasResidents ? 'text-primary' : 'text-destructive'}`} />
                     </div>
                     <div className="flex-1">
                       <p className="text-xs text-muted-foreground">Destino selecionado</p>
                       <p className="font-semibold text-lg">
                         {destinationPreview.blockName} - APTO {destinationPreview.apartmentNumber}
                       </p>
-                      {destinationPreview.residentName && (
+                      {destinationPreview.residentName ? (
                         <div className="flex items-center gap-3 mt-1">
                           <p className="text-sm text-muted-foreground flex items-center gap-1">
                             <User className="w-3 h-3" />
@@ -413,9 +504,83 @@ export default function RegisterPackage() {
                             </a>
                           )}
                         </div>
+                      ) : (
+                        <p className="text-sm text-destructive flex items-center gap-1 mt-1">
+                          <AlertCircle className="w-3 h-3" />
+                          Nenhum morador cadastrado
+                        </p>
                       )}
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* Resident Registration Form */}
+              {showResidentForm && destinationPreview && !destinationPreview.hasResidents && (
+                <div className="p-4 rounded-lg bg-muted border border-border space-y-4">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <UserPlus className="w-4 h-4 text-primary" />
+                    Cadastrar Morador
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Cadastre pelo menos um morador para poder registrar encomendas nesta unidade.
+                  </p>
+                  
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="resident-name" className="text-xs">Nome Completo *</Label>
+                      <Input
+                        id="resident-name"
+                        placeholder="Ex: João da Silva"
+                        value={newResidentName}
+                        onChange={(e) => setNewResidentName(e.target.value)}
+                        disabled={isSavingResident}
+                      />
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <Label htmlFor="resident-phone" className="text-xs">Telefone (WhatsApp) *</Label>
+                      <Input
+                        id="resident-phone"
+                        placeholder="Ex: 11999998888"
+                        value={newResidentPhone}
+                        onChange={(e) => setNewResidentPhone(e.target.value.replace(/\D/g, ''))}
+                        disabled={isSavingResident}
+                        maxLength={11}
+                      />
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <Label htmlFor="resident-email" className="text-xs">E-mail (opcional)</Label>
+                      <Input
+                        id="resident-email"
+                        type="email"
+                        placeholder="Ex: morador@email.com"
+                        value={newResidentEmail}
+                        onChange={(e) => setNewResidentEmail(e.target.value)}
+                        disabled={isSavingResident}
+                      />
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={handleSaveResident}
+                    disabled={isSavingResident || !newResidentName.trim() || !newResidentPhone.trim()}
+                    className="w-full gap-2"
+                    size="sm"
+                  >
+                    {isSavingResident ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Salvando...
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-4 h-4" />
+                        Cadastrar Morador
+                      </>
+                    )}
+                  </Button>
                 </div>
               )}
 
@@ -464,11 +629,21 @@ export default function RegisterPackage() {
                 />
               </div>
 
+              {/* Show warning if no residents */}
+              {destinationPreview && !destinationPreview.hasResidents && (
+                <div className="p-3 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4" />
+                    Cadastre um morador acima para poder registrar a encomenda
+                  </p>
+                </div>
+              )}
+
               <Button
                 className="w-full gap-2"
                 size="lg"
                 onClick={handleSubmit}
-                disabled={isSubmitting || !capturedImage || !selectedApartment}
+                disabled={isSubmitting || !capturedImage || !selectedApartment || (destinationPreview && !destinationPreview.hasResidents)}
               >
                 {isSubmitting ? (
                   <>
