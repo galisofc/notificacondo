@@ -125,44 +125,17 @@ const Auth = () => {
     }
   }, [selectedPlanSlug]);
 
-  // Redirect authenticated users based on their role
+  // Redirect authenticated users based on their roles
   // Only runs on initial load, not during login process
   useEffect(() => {
     const checkRoleAndRedirect = async () => {
       // Don't redirect if we're in the middle of a login/signup process
       if (isLoading) return;
-      
+
       if (user) {
         try {
-          const { data: roleData } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", user.id)
-            .maybeSingle();
-
-          const role = roleData?.role;
-
-          if (role === "super_admin") {
-            navigate("/superadmin", { replace: true });
-            return;
-          }
-
-          if (role === "sindico") {
-            navigate("/dashboard", { replace: true });
-            return;
-          }
-
-          if (role === "morador") {
-            navigate("/resident", { replace: true });
-            return;
-          }
-
-          if (role === "porteiro") {
-            navigate("/porteiro", { replace: true });
-            return;
-          }
-
-          navigate("/dashboard", { replace: true });
+          const redirectPath = await redirectBasedOnRole(user.id);
+          navigate(redirectPath, { replace: true });
         } catch (error) {
           console.error("Error checking role:", error);
           navigate("/dashboard", { replace: true });
@@ -175,18 +148,18 @@ const Auth = () => {
 
   const redirectBasedOnRole = async (userId: string) => {
     try {
-      const { data: roleData } = await supabase
+      const { data: rolesData } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", userId)
-        .maybeSingle();
+        .eq("user_id", userId);
 
-      const role = roleData?.role;
+      const roles = (rolesData || []).map((r) => r.role);
 
-      if (role === "super_admin") return "/superadmin";
-      if (role === "sindico") return "/dashboard";
-      if (role === "morador") return "/resident";
-      if (role === "porteiro") return "/porteiro";
+      // Same priority used across the app
+      if (roles.includes("super_admin")) return "/superadmin";
+      if (roles.includes("porteiro")) return "/porteiro";
+      if (roles.includes("sindico")) return "/dashboard";
+      if (roles.includes("morador")) return "/resident";
 
       return "/dashboard";
     } catch (error) {

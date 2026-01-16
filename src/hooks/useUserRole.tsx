@@ -117,20 +117,23 @@ export const useUserRole = (): UseUserRoleReturn => {
           console.error("Error fetching user role:", roleError);
         }
 
-        // Priority order for roles: super_admin > sindico > porteiro > morador
+        // Priority order for roles:
+        // super_admin > porteiro > sindico > morador
+        // (If a user has multiple roles, we keep porteiro above sindico to avoid
+        // redirecting a concierge user into the manager dashboard.)
         const rolePriority: Record<string, number> = {
           super_admin: 4,
-          sindico: 3,
-          porteiro: 2,
+          porteiro: 3,
+          sindico: 2,
           morador: 1,
         };
 
         let userRole: UserRole = "morador";
-        
+
         if (rolesData && rolesData.length > 0) {
           // Sort roles by priority (highest first) and select the highest
-          const sortedRoles = rolesData.sort((a, b) => 
-            (rolePriority[b.role] || 0) - (rolePriority[a.role] || 0)
+          const sortedRoles = rolesData.sort(
+            (a, b) => (rolePriority[b.role] || 0) - (rolePriority[a.role] || 0)
           );
           userRole = sortedRoles[0].role as UserRole;
         }
