@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { DoorOpen, Plus, Trash2, Building2, Mail, Phone, Search, UserPlus, MessageCircle, Copy, Check, Key, AlertCircle, UserX, RefreshCw, Loader2 } from "lucide-react";
+import { DoorOpen, Plus, Trash2, Building2, Mail, Phone, Search, UserPlus, MessageCircle, Copy, Check, Key, AlertCircle, UserX, RefreshCw, Loader2, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -69,7 +69,14 @@ export default function Porteiros() {
   } | null>(null);
   const [passwordCopied, setPasswordCopied] = useState(false);
 
-  // Orphan users cleanup state
+  // Edit porter state
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [editingPorter, setEditingPorter] = useState<Porter | null>(null);
+  const [editForm, setEditForm] = useState({
+    full_name: "",
+    phone: "",
+  });
   const [orphanDialogOpen, setOrphanDialogOpen] = useState(false);
   const [orphanUsers, setOrphanUsers] = useState<Array<{
     id: string;
@@ -287,6 +294,74 @@ export default function Porteiros() {
       await navigator.clipboard.writeText(successData.password);
       setPasswordCopied(true);
       setTimeout(() => setPasswordCopied(false), 2000);
+    }
+  };
+
+  const handleOpenEditDialog = (porter: Porter) => {
+    setEditingPorter(porter);
+    setEditForm({
+      full_name: porter.profile?.full_name || "",
+      phone: porter.profile?.phone || "",
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdatePorter = async () => {
+    if (!editingPorter || !editForm.full_name.trim()) {
+      toast({
+        title: "Nome obrigatório",
+        description: "Informe o nome do porteiro",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          full_name: editForm.full_name.trim(),
+          phone: editForm.phone.trim() || null,
+        })
+        .eq("user_id", editingPorter.user_id);
+
+      if (error) throw error;
+
+      // Update local state
+      setPorters((prev) =>
+        prev.map((p) =>
+          p.id === editingPorter.id
+            ? {
+                ...p,
+                profile: p.profile
+                  ? {
+                      ...p.profile,
+                      full_name: editForm.full_name.trim(),
+                      phone: editForm.phone.trim() || null,
+                    }
+                  : null,
+              }
+            : p
+        )
+      );
+
+      toast({
+        title: "Porteiro atualizado",
+        description: "Os dados foram salvos com sucesso",
+      });
+
+      setIsEditDialogOpen(false);
+      setEditingPorter(null);
+    } catch (error: any) {
+      console.error("Error updating porter:", error);
+      toast({
+        title: "Erro ao atualizar porteiro",
+        description: error.message || "Tente novamente mais tarde",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -647,37 +722,46 @@ export default function Porteiros() {
                           {format(new Date(porter.created_at), "dd/MM/yyyy", { locale: ptBR })}
                         </TableCell>
                         <TableCell className="text-right">
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Remover porteiro?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  {porter.profile?.full_name} será removido do condomínio{" "}
-                                  {porter.condominium?.name}. Esta ação não pode ser desfeita.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() =>
-                                    handleRemovePorter(
-                                      porter.id,
-                                      porter.user_id,
-                                      porter.profile?.full_name || "Porteiro"
-                                    )
-                                  }
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  Remover
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => handleOpenEditDialog(porter)}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Remover porteiro?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    {porter.profile?.full_name} será removido do condomínio{" "}
+                                    {porter.condominium?.name}. Esta ação não pode ser desfeita.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() =>
+                                      handleRemovePorter(
+                                        porter.id,
+                                        porter.user_id,
+                                        porter.profile?.full_name || "Porteiro"
+                                      )
+                                    }
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    Remover
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -885,6 +969,69 @@ export default function Porteiros() {
                   <Trash2 className="w-4 h-4 mr-2" />
                   Remover ({selectedOrphans.size})
                 </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Porter Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="w-5 h-5 text-primary" />
+              Editar Porteiro
+            </DialogTitle>
+            <DialogDescription>
+              Atualize os dados do porteiro
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit_full_name">Nome completo *</Label>
+              <Input
+                id="edit_full_name"
+                value={editForm.full_name}
+                onChange={(e) => setEditForm((prev) => ({ ...prev, full_name: e.target.value }))}
+                placeholder="Nome do porteiro"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit_phone">Telefone</Label>
+              <Input
+                id="edit_phone"
+                value={editForm.phone}
+                onChange={(e) => setEditForm((prev) => ({ ...prev, phone: e.target.value }))}
+                placeholder="(00) 00000-0000"
+              />
+            </div>
+
+            {editingPorter?.profile?.email && (
+              <div className="space-y-2">
+                <Label className="text-muted-foreground">E-mail (não editável)</Label>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted px-3 py-2 rounded-md">
+                  <Mail className="w-4 h-4" />
+                  {editingPorter.profile.email}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleUpdatePorter} disabled={isUpdating}>
+              {isUpdating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                "Salvar"
               )}
             </Button>
           </DialogFooter>
