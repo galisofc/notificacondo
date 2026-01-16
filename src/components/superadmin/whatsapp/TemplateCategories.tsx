@@ -144,6 +144,8 @@ export const VARIABLE_EXAMPLES: Record<string, string> = {
   bloco: "A",
   apartamento: "101",
   codigo: "PKG-A1B2C3",
+  tipo_encomenda: "Correios",
+  codigo_rastreio: "BR123456789BR",
 };
 
 export function getCategoryForSlug(slug: string): TemplateCategory | undefined {
