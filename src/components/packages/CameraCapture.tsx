@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from "react";
-import { Camera, X, RotateCcw, ImageIcon, Loader2 } from "lucide-react";
+import { Camera, X, RotateCcw, ImageIcon, Loader2, ShieldAlert, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -18,12 +18,14 @@ export function CameraCapture({ onCapture, capturedImage, onClear, className }: 
   const [isLoading, setIsLoading] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isPermissionDenied, setIsPermissionDenied] = useState(false);
   const [facingMode, setFacingMode] = useState<"user" | "environment">("environment");
   const [isMounted, setIsMounted] = useState(false);
 
   const startCamera = useCallback(async () => {
     try {
       setError(null);
+      setIsPermissionDenied(false);
       setIsLoading(true);
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -38,9 +40,20 @@ export function CameraCapture({ onCapture, capturedImage, onClear, className }: 
         setStream(mediaStream);
         setIsStreaming(true);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error accessing camera:", err);
-      setError("Não foi possível acessar a câmera. Verifique as permissões.");
+      
+      // Check if permission was denied
+      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+        setIsPermissionDenied(true);
+        setError("Acesso à câmera foi negado.");
+      } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+        setError("Nenhuma câmera encontrada neste dispositivo.");
+      } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
+        setError("A câmera está sendo usada por outro aplicativo.");
+      } else {
+        setError("Não foi possível acessar a câmera. Verifique as permissões.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -234,10 +247,59 @@ export function CameraCapture({ onCapture, capturedImage, onClear, className }: 
             </div>
             <p className="text-sm text-muted-foreground text-center animate-pulse">Iniciando câmera...</p>
           </div>
+        ) : isPermissionDenied ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-4 gap-4 overflow-auto">
+            <div className="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center">
+              <ShieldAlert className="w-7 h-7 text-destructive" />
+            </div>
+            <div className="text-center space-y-2">
+              <p className="text-sm font-medium text-destructive">Acesso à câmera negado</p>
+              <p className="text-xs text-muted-foreground">Para liberar a câmera, siga os passos:</p>
+            </div>
+            
+            <div className="bg-muted/50 rounded-lg p-3 text-left w-full max-w-xs space-y-2">
+              <p className="text-xs font-medium text-foreground">No Chrome/Edge:</p>
+              <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                <li>Clique no ícone de cadeado 🔒 na barra de endereço</li>
+                <li>Encontre "Câmera" nas permissões</li>
+                <li>Altere para "Permitir"</li>
+                <li>Recarregue a página</li>
+              </ol>
+              
+              <p className="text-xs font-medium text-foreground pt-2">No Safari (iOS):</p>
+              <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                <li>Vá em Ajustes {">"} Safari</li>
+                <li>Toque em "Câmera"</li>
+                <li>Selecione "Permitir"</li>
+              </ol>
+            </div>
+
+            <div className="flex gap-2 flex-wrap justify-center">
+              <Button onClick={startCamera} variant="outline" size="sm" className="gap-2">
+                <RefreshCw className="w-4 h-4" />
+                Tentar Novamente
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                className="gap-2"
+              >
+                <ImageIcon className="w-4 h-4" />
+                Usar Galeria
+              </Button>
+            </div>
+          </div>
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center p-6 gap-4">
             {error ? (
-              <p className="text-sm text-destructive text-center">{error}</p>
+              <div className="text-center space-y-2">
+                <p className="text-sm text-destructive">{error}</p>
+                <Button onClick={startCamera} variant="outline" size="sm" className="gap-2">
+                  <RefreshCw className="w-4 h-4" />
+                  Tentar Novamente
+                </Button>
+              </div>
             ) : (
               <p className="text-sm text-muted-foreground text-center">Tire uma foto da encomenda</p>
             )}
