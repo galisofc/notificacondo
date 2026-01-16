@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from "react";
-import { Camera, X, RotateCcw, ImageIcon } from "lucide-react";
+import { Camera, X, RotateCcw, ImageIcon, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +15,7 @@ export function CameraCapture({ onCapture, capturedImage, onClear, className }: 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<"user" | "environment">("environment");
@@ -23,6 +24,7 @@ export function CameraCapture({ onCapture, capturedImage, onClear, className }: 
   const startCamera = useCallback(async () => {
     try {
       setError(null);
+      setIsLoading(true);
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode,
@@ -39,6 +41,8 @@ export function CameraCapture({ onCapture, capturedImage, onClear, className }: 
     } catch (err) {
       console.error("Error accessing camera:", err);
       setError("Não foi possível acessar a câmera. Verifique as permissões.");
+    } finally {
+      setIsLoading(false);
     }
   }, [facingMode]);
 
@@ -209,6 +213,16 @@ export function CameraCapture({ onCapture, capturedImage, onClear, className }: 
               <X className="w-5 h-5" />
             </Button>
           </div>
+        </div>
+      ) : isLoading ? (
+        <div className="flex flex-col items-center justify-center h-full min-h-[300px] p-6 gap-4">
+          <div className="relative">
+            <div className="w-16 h-16 rounded-full border-4 border-primary/20 animate-pulse" />
+            <Loader2 className="w-8 h-8 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-spin" />
+          </div>
+          <p className="text-sm text-muted-foreground text-center animate-pulse">
+            Iniciando câmera...
+          </p>
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center h-full min-h-[300px] p-6 gap-4">
