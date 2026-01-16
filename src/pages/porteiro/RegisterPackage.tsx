@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Package, CheckCircle2, Loader2, MessageCircle, AlertCircle } from "lucide-react";
+import { ArrowLeft, Package, CheckCircle2, Loader2, MessageCircle, AlertCircle, MapPin } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,12 @@ interface NotificationResult {
   message?: string;
 }
 
+interface DestinationPreview {
+  condominiumName: string;
+  blockName: string;
+  apartmentNumber: string;
+}
+
 export default function RegisterPackage() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -38,6 +44,7 @@ export default function RegisterPackage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registeredCode, setRegisteredCode] = useState("");
   const [notificationResult, setNotificationResult] = useState<NotificationResult | null>(null);
+  const [destinationPreview, setDestinationPreview] = useState<DestinationPreview | null>(null);
 
   // Fetch porter's condominiums
   useEffect(() => {
@@ -56,6 +63,36 @@ export default function RegisterPackage() {
 
     fetchCondominiums();
   }, [user]);
+
+  // Fetch destination preview when selections change
+  useEffect(() => {
+    const fetchDestinationPreview = async () => {
+      if (!selectedCondominium || !selectedBlock || !selectedApartment) {
+        setDestinationPreview(null);
+        return;
+      }
+
+      try {
+        const [condoRes, blockRes, aptRes] = await Promise.all([
+          supabase.from("condominiums").select("name").eq("id", selectedCondominium).single(),
+          supabase.from("blocks").select("name").eq("id", selectedBlock).single(),
+          supabase.from("apartments").select("number").eq("id", selectedApartment).single(),
+        ]);
+
+        if (condoRes.data && blockRes.data && aptRes.data) {
+          setDestinationPreview({
+            condominiumName: condoRes.data.name,
+            blockName: blockRes.data.name,
+            apartmentNumber: aptRes.data.number,
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching destination preview:", error);
+      }
+    };
+
+    fetchDestinationPreview();
+  }, [selectedCondominium, selectedBlock, selectedApartment]);
 
   const handleSubmit = async () => {
     if (!capturedImage) {
@@ -193,6 +230,7 @@ export default function RegisterPackage() {
     setDescription("");
     setRegisteredCode("");
     setNotificationResult(null);
+    setDestinationPreview(null);
     setStep("form");
   };
 
@@ -306,6 +344,26 @@ export default function RegisterPackage() {
                 onApartmentChange={setSelectedApartment}
                 disabled={isSubmitting}
               />
+
+              {/* Destination Preview */}
+              {destinationPreview && (
+                <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                      <MapPin className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground">Destino selecionado</p>
+                      <p className="font-semibold text-lg">
+                        {destinationPreview.blockName} - Ap {destinationPreview.apartmentNumber}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {destinationPreview.condominiumName}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="description">Descrição (opcional)</Label>
