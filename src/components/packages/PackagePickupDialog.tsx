@@ -26,6 +26,8 @@ interface PackagePickupDialogProps {
   onOpenChange: (open: boolean) => void;
   package_: Package | null;
   onConfirm: () => Promise<{ success: boolean; error?: string }>;
+  /** When false, the pickup code will not be rendered anywhere in the dialog. */
+  revealPickupCode?: boolean;
 }
 
 type Step = "validate" | "processing" | "success" | "error";
@@ -35,6 +37,7 @@ export function PackagePickupDialog({
   onOpenChange,
   package_,
   onConfirm,
+  revealPickupCode = true,
 }: PackagePickupDialogProps) {
   const [step, setStep] = useState<Step>("validate");
   const [inputCode, setInputCode] = useState("");
@@ -115,9 +118,11 @@ export function PackagePickupDialog({
                   />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-mono font-bold text-xl text-primary tracking-wider">
-                    {package_.pickup_code}
-                  </p>
+                  {revealPickupCode && (
+                    <p className="font-mono font-bold text-xl text-primary tracking-wider">
+                      {package_.pickup_code}
+                    </p>
+                  )}
                   <p className="text-sm text-muted-foreground">
                     {package_.block?.name} - Apto {package_.apartment?.number}
                   </p>
@@ -213,9 +218,11 @@ export function PackagePickupDialog({
               Retirada Confirmada!
             </p>
             <div className="mt-3 p-3 bg-muted rounded-lg text-center">
-              <p className="font-mono font-bold text-lg text-primary">
-                {package_.pickup_code}
-              </p>
+              {revealPickupCode && (
+                <p className="font-mono font-bold text-lg text-primary">
+                  {package_.pickup_code}
+                </p>
+              )}
               <p className="text-sm text-muted-foreground">
                 {package_.block?.name} - Apto {package_.apartment?.number}
               </p>

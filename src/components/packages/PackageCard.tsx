@@ -29,6 +29,8 @@ interface PackageCardProps {
   onViewDetails?: () => void;
   showCondominium?: boolean;
   compact?: boolean;
+  /** When false, the pickup code will not be rendered (useful for concierge views). */
+  showPickupCode?: boolean;
 }
 
 export function PackageCard({
@@ -46,6 +48,7 @@ export function PackageCard({
   onViewDetails,
   showCondominium = false,
   compact = false,
+  showPickupCode = true,
 }: PackageCardProps) {
   const formattedDate = format(new Date(receivedAt), "dd/MM/yyyy 'às' HH:mm", {
     locale: ptBR,
@@ -70,9 +73,11 @@ export function PackageCard({
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <span className="font-mono font-bold text-sm text-primary">
-                {pickupCode}
-              </span>
+              {showPickupCode && (
+                <span className="font-mono font-bold text-sm text-primary">
+                  {pickupCode}
+                </span>
+              )}
               <PackageStatusBadge status={status} />
             </div>
             <p className="text-sm text-muted-foreground truncate">
@@ -133,16 +138,17 @@ export function PackageCard({
         </div>
       </div>
       <CardContent className="p-4 space-y-3">
-        {/* Pickup Code - Prominently displayed */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-lg">
-            <Package className="w-4 h-4 text-primary" />
-            <span className="font-mono font-bold text-lg text-primary tracking-widest">
-              {pickupCode}
-            </span>
+        {showPickupCode && (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-lg">
+              <Package className="w-4 h-4 text-primary" />
+              <span className="font-mono font-bold text-lg text-primary tracking-widest">
+                {pickupCode}
+              </span>
+            </div>
           </div>
-        </div>
-        
+        )}
+
         <div className="space-y-1.5">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Building2 className="w-4 h-4" />
