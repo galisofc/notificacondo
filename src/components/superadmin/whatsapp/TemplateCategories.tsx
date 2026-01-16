@@ -6,6 +6,7 @@ import {
   CreditCard, 
   Clock, 
   ArrowRightLeft,
+  Package,
   type LucideIcon 
 } from "lucide-react";
 
@@ -81,6 +82,16 @@ export const TEMPLATE_CATEGORIES: TemplateCategory[] = [
     borderColor: "border-cyan-500/20",
     slugs: ["condominium_transfer", "condominium_transfer_old_owner"],
   },
+  {
+    id: "packages",
+    name: "Encomendas",
+    description: "Notificação de chegada de encomendas",
+    icon: Package,
+    color: "text-amber-500",
+    bgColor: "bg-amber-500/10",
+    borderColor: "border-amber-500/20",
+    slugs: ["package_arrival"],
+  },
 ];
 
 export const TEMPLATE_COLORS: Record<string, string> = {
@@ -98,6 +109,7 @@ export const TEMPLATE_COLORS: Record<string, string> = {
   invoice_generated: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
   party_hall_reminder: "bg-pink-500/10 text-pink-500 border-pink-500/20",
   party_hall_cancelled: "bg-rose-500/10 text-rose-500 border-rose-500/20",
+  package_arrival: "bg-amber-500/10 text-amber-500 border-amber-500/20",
 };
 
 // Example values for preview
@@ -129,6 +141,9 @@ export const VARIABLE_EXAMPLES: Record<string, string> = {
   horario_inicio: "14:00",
   horario_fim: "22:00",
   checklist: "*Cozinha:*\n  • Fogão\n  • Geladeira\n  • Microondas\n*Salão:*\n  • Mesas\n  • Cadeiras\n  • Ar condicionado",
+  bloco: "A",
+  apartamento: "101",
+  codigo: "PKG-A1B2C3",
 };
 
 export function getCategoryForSlug(slug: string): TemplateCategory | undefined {
