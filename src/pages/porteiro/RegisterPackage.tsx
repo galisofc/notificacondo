@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Package, CheckCircle2, Loader2 } from "lucide-react";
+import { ArrowLeft, Package, CheckCircle2, Loader2, MessageCircle, AlertCircle } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { CameraCapture } from "@/components/packages/CameraCapture";
 import { CondominiumBlockApartmentSelect } from "@/components/packages/CondominiumBlockApartmentSelect";
@@ -15,6 +16,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
 type RegistrationStep = "form" | "success";
+
+interface NotificationResult {
+  sent: boolean;
+  count: number;
+  message?: string;
+}
 
 export default function RegisterPackage() {
   const navigate = useNavigate();
@@ -30,6 +37,7 @@ export default function RegisterPackage() {
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registeredCode, setRegisteredCode] = useState("");
+  const [notificationResult, setNotificationResult] = useState<NotificationResult | null>(null);
 
   // Fetch porter's condominiums
   useEffect(() => {
@@ -126,8 +134,9 @@ export default function RegisterPackage() {
       if (insertError) throw insertError;
 
       // 4. Send WhatsApp notification (non-blocking)
+      let notifResult: NotificationResult = { sent: false, count: 0 };
       try {
-        const { error: notifyError } = await supabase.functions.invoke(
+        const { data: notifyData, error: notifyError } = await supabase.functions.invoke(
           "notify-package-arrival",
           {
             body: {
@@ -141,17 +150,28 @@ export default function RegisterPackage() {
 
         if (notifyError) {
           console.warn("Failed to send package notification:", notifyError);
+          notifResult = { sent: false, count: 0, message: "Erro ao enviar notificação" };
+        } else if (notifyData) {
+          notifResult = { 
+            sent: notifyData.notifications_sent > 0, 
+            count: notifyData.notifications_sent || 0,
+            message: notifyData.message 
+          };
         }
       } catch (notifyErr) {
         console.warn("Error calling notification function:", notifyErr);
+        notifResult = { sent: false, count: 0, message: "Erro de conexão" };
       }
 
+      setNotificationResult(notifResult);
       setRegisteredCode(pickupCode);
       setStep("success");
 
       toast({
         title: "Encomenda registrada!",
-        description: `Código de retirada: ${pickupCode}`,
+        description: notifResult.sent 
+          ? `Código: ${pickupCode} - Morador(es) notificado(s) via WhatsApp` 
+          : `Código: ${pickupCode}`,
       });
     } catch (error) {
       console.error("Error registering package:", error);
@@ -172,6 +192,7 @@ export default function RegisterPackage() {
     setSelectedApartment("");
     setDescription("");
     setRegisteredCode("");
+    setNotificationResult(null);
     setStep("form");
   };
 
@@ -187,11 +208,34 @@ export default function RegisterPackage() {
               <h2 className="text-2xl font-bold text-center mb-2">
                 Encomenda Registrada!
               </h2>
-              <p className="text-muted-foreground text-center mb-8">
+              <p className="text-muted-foreground text-center mb-4">
                 Informe o código abaixo ao morador para retirada
               </p>
               
-              <PickupCodeDisplay code={registeredCode} className="mb-8" />
+              <PickupCodeDisplay code={registeredCode} className="mb-6" />
+
+              {/* Notification Status */}
+              {notificationResult && (
+                <div className="w-full mb-6">
+                  {notificationResult.sent ? (
+                    <Badge 
+                      variant="secondary" 
+                      className="w-full justify-center py-2 gap-2 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      {notificationResult.count} morador{notificationResult.count !== 1 ? "es" : ""} notificado{notificationResult.count !== 1 ? "s" : ""} via WhatsApp
+                    </Badge>
+                  ) : (
+                    <Badge 
+                      variant="secondary" 
+                      className="w-full justify-center py-2 gap-2 bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                    >
+                      <AlertCircle className="w-4 h-4" />
+                      {notificationResult.message || "Nenhum morador com telefone cadastrado"}
+                    </Badge>
+                  )}
+                </div>
+              )}
 
               <div className="flex gap-3 w-full">
                 <Button
