@@ -44,6 +44,7 @@ import {
   PartyPopper,
   Mail,
   Package,
+  PackageCheck,
   PackagePlus,
   DoorOpen,
 } from "lucide-react";
@@ -85,7 +86,7 @@ const residentNavItems: NavItem[] = [
 const porteiroNavItems: NavItem[] = [
   { title: "Início", url: "/porteiro", icon: Home },
   { title: "Registrar Encomenda", url: "/porteiro/registrar", icon: PackagePlus },
-  { title: "Retirar Encomenda", url: "/porteiro/encomendas", icon: Package },
+  { title: "Retirar Encomenda", url: "/porteiro/encomendas", icon: PackageCheck },
 ];
 
 function SidebarNavigation() {
