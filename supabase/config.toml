@@ -104,3 +104,7 @@ verify_jwt = false
 # Criação de porteiro com envio de senha por WhatsApp
 [functions.create-porteiro]
 verify_jwt = false
+
+# Exclusão completa de porteiro do sistema
+[functions.delete-porteiro]
+verify_jwt = false
