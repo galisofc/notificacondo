@@ -18,6 +18,7 @@ export function CameraCapture({ onCapture, capturedImage, onClear, className }: 
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<"user" | "environment">("environment");
+  const [isMounted, setIsMounted] = useState(false);
 
   const startCamera = useCallback(async () => {
     try {
@@ -92,16 +93,25 @@ export function CameraCapture({ onCapture, capturedImage, onClear, className }: 
     };
   }, [stream]);
 
-  // Auto-start camera when component mounts
+  // Mark component as mounted
   useEffect(() => {
-    if (!capturedImage && !isStreaming) {
-      startCamera();
-    }
+    setIsMounted(true);
+    return () => setIsMounted(false);
   }, []);
+
+  // Auto-start camera when component mounts (with delay to ensure ref is ready)
+  useEffect(() => {
+    if (isMounted && !capturedImage && !isStreaming && !stream) {
+      const timer = setTimeout(() => {
+        startCamera();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isMounted, capturedImage]);
 
   // Restart camera when facing mode changes
   useEffect(() => {
-    if (isStreaming) {
+    if (isStreaming && isMounted) {
       startCamera();
     }
   }, [facingMode]);
