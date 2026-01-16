@@ -357,9 +357,6 @@ export default function RegisterPackage() {
                       <p className="font-semibold text-lg">
                         {destinationPreview.blockName} - Ap {destinationPreview.apartmentNumber}
                       </p>
-                      <p className="text-sm text-muted-foreground">
-                        {destinationPreview.condominiumName}
-                      </p>
                     </div>
                   </div>
                 </div>
