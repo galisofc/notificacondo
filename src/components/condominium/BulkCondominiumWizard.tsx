@@ -365,23 +365,18 @@ export function BulkCondominiumWizard({
 
       if (condoError) throw condoError;
 
-      // 2. Create subscription
+      // 2. Update subscription with selected plan (trigger already creates the subscription)
       const selectedPlan = plans.find((p) => p.slug === condoData.plan_slug);
       if (selectedPlan && newCondo) {
-        const now = new Date();
-        const periodEnd = new Date(now);
-        periodEnd.setMonth(periodEnd.getMonth() + 1);
-
-        const { error: subError } = await supabase.from("subscriptions").insert({
-          condominium_id: newCondo.id,
-          plan: condoData.plan_slug as "start" | "essencial" | "profissional" | "enterprise",
-          active: true,
-          notifications_limit: selectedPlan.notifications_limit,
-          warnings_limit: selectedPlan.warnings_limit,
-          fines_limit: selectedPlan.fines_limit,
-          current_period_start: now.toISOString(),
-          current_period_end: periodEnd.toISOString(),
-        });
+        const { error: subError } = await supabase
+          .from("subscriptions")
+          .update({
+            plan: condoData.plan_slug as "start" | "essencial" | "profissional" | "enterprise",
+            notifications_limit: selectedPlan.notifications_limit,
+            warnings_limit: selectedPlan.warnings_limit,
+            fines_limit: selectedPlan.fines_limit,
+          })
+          .eq("condominium_id", newCondo.id);
 
         if (subError) throw subError;
       }
