@@ -34,6 +34,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { MaskedInput, formatCNPJ, formatPhone } from "@/components/ui/masked-input";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Building2,
   Search,
   Edit,
@@ -45,6 +55,7 @@ import {
   ChevronLeft,
   ChevronRight,
   FileText,
+  Trash2,
 } from "lucide-react";
 
 interface Condominium {
@@ -80,7 +91,9 @@ export function CondominiumsManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedCondominium, setSelectedCondominium] = useState<CondominiumWithOwner | null>(null);
+  const [condominiumToDelete, setCondominiumToDelete] = useState<CondominiumWithOwner | null>(null);
   const [isLoadingCep, setIsLoadingCep] = useState(false);
   const [isLoadingCnpj, setIsLoadingCnpj] = useState(false);
   
@@ -162,6 +175,150 @@ export function CondominiumsManagement() {
     onError: (error: any) => {
       toast({
         title: "Erro ao atualizar",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (condominiumId: string) => {
+      // Delete related data in order (child tables first)
+      // 1. Delete notifications_sent via occurrences
+      const { data: occurrences } = await supabase
+        .from("occurrences")
+        .select("id")
+        .eq("condominium_id", condominiumId);
+      
+      if (occurrences && occurrences.length > 0) {
+        const occurrenceIds = occurrences.map(o => o.id);
+        
+        // Delete decisions
+        await supabase.from("decisions").delete().in("occurrence_id", occurrenceIds);
+        
+        // Delete defenses and their attachments
+        const { data: defenses } = await supabase
+          .from("defenses")
+          .select("id")
+          .in("occurrence_id", occurrenceIds);
+        
+        if (defenses && defenses.length > 0) {
+          const defenseIds = defenses.map(d => d.id);
+          await supabase.from("defense_attachments").delete().in("defense_id", defenseIds);
+          await supabase.from("defenses").delete().in("occurrence_id", occurrenceIds);
+        }
+        
+        // Delete fines
+        await supabase.from("fines").delete().in("occurrence_id", occurrenceIds);
+        
+        // Delete notifications_sent
+        await supabase.from("notifications_sent").delete().in("occurrence_id", occurrenceIds);
+        
+        // Delete occurrence evidences
+        await supabase.from("occurrence_evidences").delete().in("occurrence_id", occurrenceIds);
+        
+        // Delete magic link access logs
+        await supabase.from("magic_link_access_logs").delete().in("occurrence_id", occurrenceIds);
+        
+        // Delete occurrences
+        await supabase.from("occurrences").delete().eq("condominium_id", condominiumId);
+      }
+      
+      // 2. Delete party hall related data
+      const { data: bookings } = await supabase
+        .from("party_hall_bookings")
+        .select("id")
+        .eq("condominium_id", condominiumId);
+      
+      if (bookings && bookings.length > 0) {
+        const bookingIds = bookings.map(b => b.id);
+        
+        // Delete checklists and their items
+        const { data: checklists } = await supabase
+          .from("party_hall_checklists")
+          .select("id")
+          .in("booking_id", bookingIds);
+        
+        if (checklists && checklists.length > 0) {
+          const checklistIds = checklists.map(c => c.id);
+          await supabase.from("party_hall_checklist_items").delete().in("checklist_id", checklistIds);
+          await supabase.from("party_hall_checklists").delete().in("booking_id", bookingIds);
+        }
+        
+        // Delete party hall notifications
+        await supabase.from("party_hall_notifications").delete().eq("condominium_id", condominiumId);
+        
+        // Delete bookings
+        await supabase.from("party_hall_bookings").delete().eq("condominium_id", condominiumId);
+      }
+      
+      // Delete party hall settings
+      await supabase.from("party_hall_settings").delete().eq("condominium_id", condominiumId);
+      
+      // Delete party hall checklist templates
+      await supabase.from("party_hall_checklist_templates").delete().eq("condominium_id", condominiumId);
+      
+      // 3. Delete packages
+      await supabase.from("packages").delete().eq("condominium_id", condominiumId);
+      
+      // 4. Delete residents via apartments and blocks
+      const { data: blocks } = await supabase
+        .from("blocks")
+        .select("id")
+        .eq("condominium_id", condominiumId);
+      
+      if (blocks && blocks.length > 0) {
+        const blockIds = blocks.map(b => b.id);
+        
+        const { data: apartments } = await supabase
+          .from("apartments")
+          .select("id")
+          .in("block_id", blockIds);
+        
+        if (apartments && apartments.length > 0) {
+          const apartmentIds = apartments.map(a => a.id);
+          await supabase.from("residents").delete().in("apartment_id", apartmentIds);
+          await supabase.from("apartments").delete().in("block_id", blockIds);
+        }
+        
+        await supabase.from("blocks").delete().eq("condominium_id", condominiumId);
+      }
+      
+      // 5. Delete user_condominiums
+      await supabase.from("user_condominiums").delete().eq("condominium_id", condominiumId);
+      
+      // 6. Delete invoices
+      await supabase.from("invoices").delete().eq("condominium_id", condominiumId);
+      
+      // 7. Delete subscription
+      await supabase.from("subscriptions").delete().eq("condominium_id", condominiumId);
+      
+      // 8. Delete condominium transfers
+      await supabase.from("condominium_transfers").delete().eq("condominium_id", condominiumId);
+      
+      // 9. Delete condominium whatsapp templates
+      await supabase.from("condominium_whatsapp_templates").delete().eq("condominium_id", condominiumId);
+      
+      // 10. Finally delete the condominium
+      const { error } = await supabase
+        .from("condominiums")
+        .delete()
+        .eq("id", condominiumId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["superadmin-condominiums"] });
+      setIsDeleteDialogOpen(false);
+      setCondominiumToDelete(null);
+      toast({
+        title: "Condomínio excluído",
+        description: "O condomínio e todos os dados relacionados foram removidos.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao excluir",
         description: error.message || "Tente novamente.",
         variant: "destructive",
       });
@@ -284,6 +441,16 @@ export function CondominiumsManagement() {
   const handleOpenView = (condominium: CondominiumWithOwner) => {
     setSelectedCondominium(condominium);
     setIsViewDialogOpen(true);
+  };
+
+  const handleOpenDelete = (condominium: CondominiumWithOwner) => {
+    setCondominiumToDelete(condominium);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!condominiumToDelete) return;
+    deleteMutation.mutate(condominiumToDelete.id);
   };
 
   const handleSave = () => {
@@ -503,6 +670,14 @@ export function CondominiumsManagement() {
                               onClick={() => handleOpenEdit(condo)}
                             >
                               <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => handleOpenDelete(condo)}
+                            >
+                              <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
                         </TableCell>
@@ -859,6 +1034,56 @@ export function CondominiumsManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir condomínio?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                Você está prestes a excluir permanentemente o condomínio{" "}
+                <strong>{condominiumToDelete?.name}</strong>.
+              </p>
+              <p className="text-destructive font-medium">
+                ⚠️ Esta ação irá remover TODOS os dados relacionados:
+              </p>
+              <ul className="list-disc list-inside text-sm space-y-1 ml-2">
+                <li>Blocos e apartamentos</li>
+                <li>Moradores</li>
+                <li>Ocorrências, defesas e multas</li>
+                <li>Reservas de salão de festas</li>
+                <li>Encomendas</li>
+                <li>Assinaturas e faturas</li>
+                <li>Notificações</li>
+              </ul>
+              <p className="font-semibold">Esta ação não pode ser desfeita!</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={deleteMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Excluindo...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Excluir permanentemente
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
