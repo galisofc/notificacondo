@@ -102,6 +102,20 @@ export default function Porteiros() {
       setLoading(true);
       const condoIds = condominiums.map((c) => c.id);
 
+      // First, get all users with 'porteiro' role
+      const { data: porterRoles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "porteiro");
+
+      const porterUserIds = porterRoles?.map((r) => r.user_id) || [];
+
+      if (porterUserIds.length === 0) {
+        setPorters([]);
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("user_condominiums")
         .select(`
@@ -111,7 +125,8 @@ export default function Porteiros() {
           created_at,
           condominium:condominiums(name)
         `)
-        .in("condominium_id", condoIds);
+        .in("condominium_id", condoIds)
+        .in("user_id", porterUserIds);
 
       if (error) {
         console.error("Error fetching porters:", error);
