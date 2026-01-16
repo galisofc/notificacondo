@@ -213,8 +213,26 @@ export default function Porteiros() {
         console.error("Error checking existing profile:", profileError);
       }
 
-      // If profile exists, check if already linked to this condominium
+      // If profile exists, check if user is a sindico or super_admin (cannot be registered as porter)
       if (existingProfile) {
+        const { data: existingRoles } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", existingProfile.user_id);
+
+        const roles = (existingRoles || []).map((r) => r.role);
+        
+        if (roles.includes("sindico") || roles.includes("super_admin")) {
+          toast({
+            title: "E-mail não permitido",
+            description: "Este e-mail pertence a um síndico ou administrador e não pode ser cadastrado como porteiro",
+            variant: "destructive",
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
+        // Check if already linked to this condominium
         const { data: existingLink } = await supabase
           .from("user_condominiums")
           .select("id")

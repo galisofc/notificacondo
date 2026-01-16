@@ -300,6 +300,22 @@ serve(async (req) => {
 
     // Handle existing user (from profile or auth)
     if (existingProfile || existingAuthUser) {
+      // Check if user is a sindico or super_admin - cannot be registered as porter
+      const { data: existingRoles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId);
+
+      const roles = (existingRoles || []).map((r: { role: string }) => r.role);
+
+      if (roles.includes("sindico") || roles.includes("super_admin")) {
+        console.log(`User ${userId} is a sindico/super_admin, cannot be registered as porter`);
+        return new Response(
+          JSON.stringify({ error: "Este e-mail pertence a um síndico ou administrador e não pode ser cadastrado como porteiro" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       // Check if already a porter for this condominium
       const { data: existingLink } = await supabase
         .from("user_condominiums")
