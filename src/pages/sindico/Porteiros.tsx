@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { DoorOpen, Plus, Trash2, Building2, Mail, Phone, Search, UserPlus, MessageCircle, Copy, Check, Key, AlertCircle } from "lucide-react";
+import { DoorOpen, Plus, Trash2, Building2, Mail, Phone, Search, UserPlus, MessageCircle, Copy, Check, Key, AlertCircle, UserX, RefreshCw, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -68,6 +68,20 @@ export default function Porteiros() {
     is_new_user: boolean;
   } | null>(null);
   const [passwordCopied, setPasswordCopied] = useState(false);
+
+  // Orphan users cleanup state
+  const [orphanDialogOpen, setOrphanDialogOpen] = useState(false);
+  const [orphanUsers, setOrphanUsers] = useState<Array<{
+    id: string;
+    email: string | null;
+    created_at: string;
+    has_profile: boolean;
+    has_role: boolean;
+    has_condominium: boolean;
+  }>>([]);
+  const [isLoadingOrphans, setIsLoadingOrphans] = useState(false);
+  const [isDeletingOrphans, setIsDeletingOrphans] = useState(false);
+  const [selectedOrphans, setSelectedOrphans] = useState<Set<string>>(new Set());
 
   // Fetch síndico's condominiums
   useEffect(() => {
@@ -276,6 +290,100 @@ export default function Porteiros() {
     }
   };
 
+  const handleLoadOrphanUsers = async () => {
+    setIsLoadingOrphans(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("cleanup-orphan-users", {
+        body: { action: "list" },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      setOrphanUsers(data.orphan_users || []);
+      setSelectedOrphans(new Set());
+      setOrphanDialogOpen(true);
+    } catch (error: any) {
+      console.error("Error loading orphan users:", error);
+      toast({
+        title: "Erro ao carregar usuários órfãos",
+        description: error.message || "Tente novamente mais tarde",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingOrphans(false);
+    }
+  };
+
+  const handleDeleteOrphans = async () => {
+    if (selectedOrphans.size === 0) {
+      toast({
+        title: "Nenhum usuário selecionado",
+        description: "Selecione pelo menos um usuário para remover",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsDeletingOrphans(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("cleanup-orphan-users", {
+        body: { 
+          action: "delete",
+          user_ids: Array.from(selectedOrphans),
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const deletedCount = data.deleted?.length || 0;
+      const errorCount = data.errors?.length || 0;
+
+      // Remove deleted users from the list
+      setOrphanUsers(prev => prev.filter(u => !data.deleted?.includes(u.id)));
+      setSelectedOrphans(new Set());
+
+      toast({
+        title: "Limpeza concluída",
+        description: `${deletedCount} usuário(s) removido(s)${errorCount > 0 ? `, ${errorCount} erro(s)` : ""}`,
+      });
+
+      if (orphanUsers.length - deletedCount === 0) {
+        setOrphanDialogOpen(false);
+      }
+    } catch (error: any) {
+      console.error("Error deleting orphan users:", error);
+      toast({
+        title: "Erro ao remover usuários órfãos",
+        description: error.message || "Tente novamente mais tarde",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeletingOrphans(false);
+    }
+  };
+
+  const toggleOrphanSelection = (userId: string) => {
+    setSelectedOrphans(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(userId)) {
+        newSet.delete(userId);
+      } else {
+        newSet.add(userId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleAllOrphans = () => {
+    if (selectedOrphans.size === orphanUsers.length) {
+      setSelectedOrphans(new Set());
+    } else {
+      setSelectedOrphans(new Set(orphanUsers.map(u => u.id)));
+    }
+  };
+
   const handleRemovePorter = async (porterId: string, porterUserId: string, porterName: string) => {
     try {
       // Call edge function to completely delete the porter
@@ -325,13 +433,28 @@ export default function Porteiros() {
             </p>
           </div>
 
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <UserPlus className="w-4 h-4" />
-                Adicionar Porteiro
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              className="gap-2" 
+              onClick={handleLoadOrphanUsers}
+              disabled={isLoadingOrphans}
+            >
+              {isLoadingOrphans ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <UserX className="w-4 h-4" />
+              )}
+              Limpar Órfãos
+            </Button>
+
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="gap-2">
+                  <UserPlus className="w-4 h-4" />
+                  Adicionar Porteiro
+                </Button>
+              </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Adicionar Novo Porteiro</DialogTitle>
@@ -414,6 +537,7 @@ export default function Porteiros() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {/* Filters */}
@@ -647,6 +771,121 @@ export default function Porteiros() {
               }}
             >
               Entendi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Orphan Users Cleanup Dialog */}
+      <Dialog open={orphanDialogOpen} onOpenChange={setOrphanDialogOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserX className="w-5 h-5 text-destructive" />
+              Usuários Órfãos
+            </DialogTitle>
+            <DialogDescription>
+              Usuários que existem na autenticação mas não possuem perfil ou papel definido no sistema.
+              Estes usuários podem causar conflitos ao adicionar novos porteiros.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto py-4">
+            {orphanUsers.length === 0 ? (
+              <div className="text-center py-12">
+                <Check className="w-12 h-12 mx-auto text-green-500 mb-4" />
+                <h3 className="text-lg font-medium mb-2">Nenhum usuário órfão encontrado</h3>
+                <p className="text-muted-foreground">
+                  O sistema está limpo!
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">
+                    {orphanUsers.length} usuário(s) órfão(s) encontrado(s)
+                  </p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={toggleAllOrphans}
+                  >
+                    {selectedOrphans.size === orphanUsers.length ? "Desmarcar todos" : "Selecionar todos"}
+                  </Button>
+                </div>
+
+                <div className="border rounded-lg divide-y">
+                  {orphanUsers.map((orphan) => (
+                    <div
+                      key={orphan.id}
+                      className={`flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/50 transition-colors ${
+                        selectedOrphans.has(orphan.id) ? "bg-muted" : ""
+                      }`}
+                      onClick={() => toggleOrphanSelection(orphan.id)}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedOrphans.has(orphan.id)}
+                        onChange={() => toggleOrphanSelection(orphan.id)}
+                        className="h-4 w-4 rounded border-gray-300"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                          <span className="font-medium truncate">
+                            {orphan.email || "E-mail não definido"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
+                          <span>ID: {orphan.id.slice(0, 8)}...</span>
+                          <span>Criado em: {format(new Date(orphan.created_at), "dd/MM/yyyy", { locale: ptBR })}</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-1">
+                        {!orphan.has_profile && (
+                          <Badge variant="secondary" className="text-xs">Sem perfil</Badge>
+                        )}
+                        {!orphan.has_role && (
+                          <Badge variant="secondary" className="text-xs">Sem papel</Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => handleLoadOrphanUsers()}
+              disabled={isLoadingOrphans || isDeletingOrphans}
+            >
+              {isLoadingOrphans ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4 mr-2" />
+              )}
+              Atualizar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteOrphans}
+              disabled={selectedOrphans.size === 0 || isDeletingOrphans}
+            >
+              {isDeletingOrphans ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Removendo...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Remover ({selectedOrphans.size})
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

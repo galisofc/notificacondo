@@ -108,3 +108,7 @@ verify_jwt = false
 # Exclusão completa de porteiro do sistema
 [functions.delete-porteiro]
 verify_jwt = false
+
+# Limpeza de usuários órfãos no auth.users
+[functions.cleanup-orphan-users]
+verify_jwt = false
