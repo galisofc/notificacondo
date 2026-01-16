@@ -7,6 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { CameraCapture } from "@/components/packages/CameraCapture";
 import { CondominiumBlockApartmentSelect } from "@/components/packages/CondominiumBlockApartmentSelect";
@@ -14,6 +22,12 @@ import { PickupCodeDisplay } from "@/components/packages/PickupCodeDisplay";
 import { generatePickupCode } from "@/lib/packageConstants";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+
+interface PackageType {
+  id: string;
+  name: string;
+  icon: string | null;
+}
 
 type RegistrationStep = "form" | "success";
 
@@ -47,6 +61,9 @@ export default function RegisterPackage() {
   const [registeredCode, setRegisteredCode] = useState("");
   const [notificationResult, setNotificationResult] = useState<NotificationResult | null>(null);
   const [destinationPreview, setDestinationPreview] = useState<DestinationPreview | null>(null);
+  const [packageTypes, setPackageTypes] = useState<PackageType[]>([]);
+  const [selectedPackageType, setSelectedPackageType] = useState("");
+  const [trackingCode, setTrackingCode] = useState("");
 
   // Fetch porter's condominiums
   useEffect(() => {
@@ -65,6 +82,23 @@ export default function RegisterPackage() {
 
     fetchCondominiums();
   }, [user]);
+
+  // Fetch package types
+  useEffect(() => {
+    const fetchPackageTypes = async () => {
+      const { data, error } = await supabase
+        .from("package_types")
+        .select("id, name, icon")
+        .eq("is_active", true)
+        .order("display_order");
+
+      if (data && !error) {
+        setPackageTypes(data);
+      }
+    };
+
+    fetchPackageTypes();
+  }, []);
 
   // Fetch destination preview when selections change
   useEffect(() => {
@@ -169,6 +203,8 @@ export default function RegisterPackage() {
           description: description || null,
           photo_url: urlData.publicUrl,
           status: "pendente",
+          package_type_id: selectedPackageType || null,
+          tracking_code: trackingCode || null,
         })
         .select()
         .single();
@@ -234,6 +270,8 @@ export default function RegisterPackage() {
     setSelectedApartment("");
     setDescription("");
     setRegisteredCode("");
+    setSelectedPackageType("");
+    setTrackingCode("");
     setNotificationResult(null);
     setDestinationPreview(null);
     setStep("form");
@@ -383,6 +421,39 @@ export default function RegisterPackage() {
                   </div>
                 </div>
               )}
+
+              {/* Package Type Select */}
+              <div className="space-y-2">
+                <Label htmlFor="package-type">Tipo de Encomenda</Label>
+                <Select
+                  value={selectedPackageType}
+                  onValueChange={setSelectedPackageType}
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger id="package-type">
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {packageTypes.map((type) => (
+                      <SelectItem key={type.id} value={type.id}>
+                        {type.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Tracking Code */}
+              <div className="space-y-2">
+                <Label htmlFor="tracking-code">Código de Rastreio (opcional)</Label>
+                <Input
+                  id="tracking-code"
+                  placeholder="Ex: AA123456789BR"
+                  value={trackingCode}
+                  onChange={(e) => setTrackingCode(e.target.value.toUpperCase())}
+                  disabled={isSubmitting}
+                />
+              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="description">Descrição (opcional)</Label>
