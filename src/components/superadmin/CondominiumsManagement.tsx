@@ -182,7 +182,22 @@ export function CondominiumsManagement() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (condominiumId: string) => {
+    mutationFn: async (condominium: CondominiumWithOwner) => {
+      const condominiumId = condominium.id;
+      
+      // Get current user for audit log
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      // Store condominium data before deletion for audit log
+      const condominiumData = {
+        id: condominium.id,
+        name: condominium.name,
+        cnpj: condominium.cnpj,
+        owner_id: condominium.owner_id,
+        owner_name: condominium.owner?.full_name,
+        owner_email: condominium.owner?.email,
+      };
+      
       // Delete related data in order (child tables first)
       // 1. Delete notifications_sent via occurrences
       const { data: occurrences } = await supabase
@@ -306,6 +321,15 @@ export function CondominiumsManagement() {
         .eq("id", condominiumId);
 
       if (error) throw error;
+      
+      // 11. Create audit log entry
+      await supabase.from("audit_logs").insert({
+        table_name: "condominiums",
+        action: "DELETE",
+        record_id: condominiumId,
+        old_data: condominiumData,
+        user_id: user?.id || null,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["superadmin-condominiums"] });
@@ -450,7 +474,7 @@ export function CondominiumsManagement() {
 
   const handleConfirmDelete = () => {
     if (!condominiumToDelete) return;
-    deleteMutation.mutate(condominiumToDelete.id);
+    deleteMutation.mutate(condominiumToDelete);
   };
 
   const handleSave = () => {
