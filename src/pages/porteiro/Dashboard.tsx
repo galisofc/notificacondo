@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Package, PackagePlus, PackageCheck, Clock, History } from "lucide-react";
+import { Package, PackagePlus, PackageCheck, Clock, History, Search, QrCode } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -196,6 +196,65 @@ export default function PorteiroDashboard() {
               <p className="text-xs text-muted-foreground">Entregues aos moradores</p>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Quick Actions */}
+        <div>
+          <h2 className="text-lg font-semibold mb-4">Ações Rápidas</h2>
+          <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+            <Card 
+              className="cursor-pointer hover:bg-muted/50 transition-colors"
+              onClick={() => navigate("/porteiro/registrar")}
+            >
+              <CardContent className="flex flex-col items-center justify-center py-6">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+                  <PackagePlus className="w-6 h-6 text-primary" />
+                </div>
+                <p className="font-medium text-sm text-center">Nova Encomenda</p>
+              </CardContent>
+            </Card>
+
+            <Card 
+              className="cursor-pointer hover:bg-muted/50 transition-colors"
+              onClick={() => navigate("/porteiro/encomendas")}
+            >
+              <CardContent className="flex flex-col items-center justify-center py-6">
+                <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center mb-3">
+                  <Search className="w-6 h-6 text-blue-500" />
+                </div>
+                <p className="font-medium text-sm text-center">Buscar Unidade</p>
+              </CardContent>
+            </Card>
+
+            <Card 
+              className="cursor-pointer hover:bg-muted/50 transition-colors"
+              onClick={() => navigate("/porteiro/encomendas")}
+            >
+              <CardContent className="flex flex-col items-center justify-center py-6">
+                <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center mb-3">
+                  <Clock className="w-6 h-6 text-yellow-500" />
+                </div>
+                <p className="font-medium text-sm text-center">Pendentes</p>
+                {stats.pending > 0 && (
+                  <span className="mt-1 px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-medium">
+                    {stats.pending}
+                  </span>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card 
+              className="cursor-pointer hover:bg-muted/50 transition-colors"
+              onClick={() => navigate("/porteiro/encomendas")}
+            >
+              <CardContent className="flex flex-col items-center justify-center py-6">
+                <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center mb-3">
+                  <QrCode className="w-6 h-6 text-green-500" />
+                </div>
+                <p className="font-medium text-sm text-center">Confirmar Retirada</p>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </DashboardLayout>
