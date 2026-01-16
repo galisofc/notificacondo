@@ -34,6 +34,7 @@ import PartyHallSettings from "./pages/PartyHallSettings";
 import PartyHallNotifications from "./pages/PartyHallNotifications";
 import { Navigate } from "react-router-dom";
 import ResidentAccess from "./pages/ResidentAccess";
+import ResidentPackages from "./pages/resident/Packages";
 import AuthCallback from "./pages/AuthCallback";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import Sindicos from "./pages/superadmin/Sindicos";
@@ -48,6 +49,11 @@ import Transfers from "./pages/superadmin/Transfers";
 import WhatsApp from "./pages/superadmin/WhatsApp";
 import SuperAdminSettings from "./pages/superadmin/Settings";
 import ContactMessages from "./pages/superadmin/ContactMessages";
+
+// Porteiro pages
+import PorteiroDashboard from "./pages/porteiro/Dashboard";
+import RegisterPackage from "./pages/porteiro/RegisterPackage";
+import PorteiroPackages from "./pages/porteiro/Packages";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -222,8 +228,42 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/resident/packages"
+                element={
+                  <ProtectedRoute requiredRole="morador">
+                    <ResidentPackages />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="/acesso/:token" element={<ResidentAccess />} />
               <Route path="/resident/access" element={<ResidentAccess />} />
+
+              {/* Porteiro Routes */}
+              <Route
+                path="/porteiro"
+                element={
+                  <ProtectedRoute requiredRole="porteiro">
+                    <PorteiroDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/porteiro/registrar"
+                element={
+                  <ProtectedRoute requiredRole="porteiro">
+                    <RegisterPackage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/porteiro/encomendas"
+                element={
+                  <ProtectedRoute requiredRole="porteiro">
+                    <PorteiroPackages />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Super Admin Routes */}
               <Route
