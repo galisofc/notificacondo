@@ -244,20 +244,37 @@ serve(async (req) => {
     // ========== CHECK IF USER EXISTS ==========
     const emailLower = email.toLowerCase().trim();
     
+    // First check in profiles table
     const { data: existingProfile } = await supabase
       .from("profiles")
       .select("user_id")
       .eq("email", emailLower)
       .maybeSingle();
 
+    // Also check directly in auth.users (in case profile doesn't exist)
+    const { data: authUsers } = await supabase.auth.admin.listUsers();
+    const existingAuthUser = authUsers?.users?.find(
+      (u) => u.email?.toLowerCase() === emailLower
+    );
+
     let userId: string;
     let password: string | null = null;
     let isNewUser = false;
 
+    // Determine if user exists (either in profiles or in auth)
     if (existingProfile) {
       userId = existingProfile.user_id;
-      console.log(`User already exists with id: ${userId}`);
+      console.log(`User already exists in profiles with id: ${userId}`);
+    } else if (existingAuthUser) {
+      userId = existingAuthUser.id;
+      console.log(`User already exists in auth with id: ${userId}`);
+    } else {
+      // User doesn't exist anywhere - create new user
+      userId = ""; // Will be set after creation
+    }
 
+    // Handle existing user (from profile or auth)
+    if (existingProfile || existingAuthUser) {
       // Check if already a porter for this condominium
       const { data: existingLink } = await supabase
         .from("user_condominiums")
@@ -288,6 +305,21 @@ serve(async (req) => {
         });
         console.log(`Added porteiro role to existing user ${userId}`);
       }
+
+      // Create profile if it doesn't exist (user was in auth but not profiles)
+      if (!existingProfile && existingAuthUser) {
+        const { error: profileError } = await supabase.from("profiles").insert({
+          user_id: userId,
+          email: emailLower,
+          full_name: full_name,
+          phone: phone || null,
+        });
+        if (profileError) {
+          console.log("Profile already exists or error:", profileError.message);
+        } else {
+          console.log(`Created profile for existing auth user ${userId}`);
+        }
+      }
     } else {
       // Create new user
       password = generatePassword();
@@ -295,7 +327,7 @@ serve(async (req) => {
 
       console.log(`Creating new user for: ${emailLower}`);
 
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      const { data: authData, error: createError } = await supabase.auth.admin.createUser({
         email: emailLower,
         password: password,
         email_confirm: true,
@@ -304,10 +336,10 @@ serve(async (req) => {
         },
       });
 
-      if (authError || !authData.user) {
-        console.error("Error creating user:", authError);
+      if (createError || !authData.user) {
+        console.error("Error creating user:", createError);
         return new Response(
-          JSON.stringify({ error: authError?.message || "Erro ao criar usuário" }),
+          JSON.stringify({ error: createError?.message || "Erro ao criar usuário" }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
