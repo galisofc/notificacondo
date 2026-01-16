@@ -6,6 +6,7 @@ import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MaskedInput } from "@/components/ui/masked-input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -587,12 +588,12 @@ export default function Porteiros() {
 
                 <div className="space-y-2">
                   <Label htmlFor="phone">Telefone</Label>
-                  <Input
+                  <MaskedInput
                     id="phone"
-                    placeholder="(11) 99999-9999"
+                    mask="phone"
                     value={newPorter.phone}
-                    onChange={(e) =>
-                      setNewPorter((prev) => ({ ...prev, phone: e.target.value }))
+                    onChange={(value) =>
+                      setNewPorter((prev) => ({ ...prev, phone: value }))
                     }
                   />
                 </div>
@@ -1001,11 +1002,11 @@ export default function Porteiros() {
 
             <div className="space-y-2">
               <Label htmlFor="edit_phone">Telefone</Label>
-              <Input
+              <MaskedInput
                 id="edit_phone"
+                mask="phone"
                 value={editForm.phone}
-                onChange={(e) => setEditForm((prev) => ({ ...prev, phone: e.target.value }))}
-                placeholder="(00) 00000-0000"
+                onChange={(value) => setEditForm((prev) => ({ ...prev, phone: value }))}
               />
             </div>
 
