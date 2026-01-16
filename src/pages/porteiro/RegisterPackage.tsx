@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Package, CheckCircle2, Loader2, MessageCircle, AlertCircle, MapPin, User } from "lucide-react";
+import { ArrowLeft, Package, CheckCircle2, Loader2, MessageCircle, AlertCircle, MapPin, User, Phone } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,7 @@ interface DestinationPreview {
   blockName: string;
   apartmentNumber: string;
   residentName?: string;
+  residentPhone?: string;
 }
 
 export default function RegisterPackage() {
@@ -78,7 +79,7 @@ export default function RegisterPackage() {
           supabase.from("condominiums").select("name").eq("id", selectedCondominium).single(),
           supabase.from("blocks").select("name").eq("id", selectedBlock).single(),
           supabase.from("apartments").select("number").eq("id", selectedApartment).single(),
-          supabase.from("residents").select("full_name").eq("apartment_id", selectedApartment).eq("is_responsible", true).maybeSingle(),
+          supabase.from("residents").select("full_name, phone").eq("apartment_id", selectedApartment).eq("is_responsible", true).maybeSingle(),
         ]);
 
         if (condoRes.data && blockRes.data && aptRes.data) {
@@ -87,6 +88,7 @@ export default function RegisterPackage() {
             blockName: blockRes.data.name,
             apartmentNumber: aptRes.data.number,
             residentName: residentRes.data?.full_name || undefined,
+            residentPhone: residentRes.data?.phone || undefined,
           });
         }
       } catch (error) {
@@ -361,10 +363,21 @@ export default function RegisterPackage() {
                         {destinationPreview.blockName} - APTO {destinationPreview.apartmentNumber}
                       </p>
                       {destinationPreview.residentName && (
-                        <p className="text-sm text-muted-foreground flex items-center gap-1">
-                          <User className="w-3 h-3" />
-                          {destinationPreview.residentName}
-                        </p>
+                        <div className="flex items-center gap-3 mt-1">
+                          <p className="text-sm text-muted-foreground flex items-center gap-1">
+                            <User className="w-3 h-3" />
+                            {destinationPreview.residentName}
+                          </p>
+                          {destinationPreview.residentPhone && (
+                            <a 
+                              href={`tel:${destinationPreview.residentPhone}`}
+                              className="text-sm text-primary flex items-center gap-1 hover:underline"
+                            >
+                              <Phone className="w-3 h-3" />
+                              {destinationPreview.residentPhone}
+                            </a>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
