@@ -100,25 +100,27 @@ export function CameraCapture({ onCapture, capturedImage, onClear, className }: 
   // Mark component as mounted
   useEffect(() => {
     setIsMounted(true);
-    return () => setIsMounted(false);
+    return () => {
+      // no state updates needed on unmount
+    };
   }, []);
 
-  // Auto-start camera when component mounts (with delay to ensure ref is ready)
+  // Auto-start camera when component mounts (wait one tick for videoRef)
   useEffect(() => {
     if (isMounted && !capturedImage && !isStreaming && !stream) {
       const timer = setTimeout(() => {
         startCamera();
-      }, 100);
+      }, 0);
       return () => clearTimeout(timer);
     }
-  }, [isMounted, capturedImage]);
+  }, [isMounted, capturedImage, startCamera, isStreaming, stream]);
 
   // Restart camera when facing mode changes
   useEffect(() => {
     if (isStreaming && isMounted) {
       startCamera();
     }
-  }, [facingMode]);
+  }, [facingMode, isMounted, isStreaming, startCamera]);
 
   if (capturedImage) {
     return (
@@ -151,104 +153,111 @@ export function CameraCapture({ onCapture, capturedImage, onClear, className }: 
         onChange={handleFileSelect}
         className="hidden"
       />
-      
-      {isStreaming ? (
-        <div className="relative w-full h-full min-h-[300px]">
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-          
-          {/* Animated focus guide overlay */}
-          <div className="absolute inset-0 pointer-events-none z-[5]">
-            {/* Semi-transparent corners */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="relative w-[80%] h-[70%] max-w-[320px] max-h-[240px]">
-                {/* Animated corner brackets */}
-                <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-lg animate-pulse" />
-                <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-lg animate-pulse" style={{ animationDelay: '0.2s' }} />
-                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-lg animate-pulse" style={{ animationDelay: '0.4s' }} />
-                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white rounded-br-lg animate-pulse" style={{ animationDelay: '0.6s' }} />
-                
-                {/* Center crosshair */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6">
-                  <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white/60" />
-                  <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white/60" />
+
+      {/* Keep video mounted so we can attach the stream even before "isStreaming" becomes true */}
+      <div className="relative w-full h-full min-h-[300px]">
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className={cn(
+            "absolute inset-0 w-full h-full object-cover transition-opacity",
+            isStreaming ? "opacity-100" : "opacity-0",
+          )}
+        />
+
+        {isStreaming ? (
+          <>
+            {/* Animated focus guide overlay */}
+            <div className="absolute inset-0 pointer-events-none z-[5]">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="relative w-[80%] h-[70%] max-w-[320px] max-h-[240px]">
+                  <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-lg animate-pulse" />
+                  <div
+                    className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-lg animate-pulse"
+                    style={{ animationDelay: "0.2s" }}
+                  />
+                  <div
+                    className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-lg animate-pulse"
+                    style={{ animationDelay: "0.4s" }}
+                  />
+                  <div
+                    className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white rounded-br-lg animate-pulse"
+                    style={{ animationDelay: "0.6s" }}
+                  />
+
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6">
+                    <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white/60" />
+                    <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white/60" />
+                  </div>
                 </div>
               </div>
+
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/50 text-white text-sm px-3 py-1.5 rounded-full backdrop-blur-sm">
+                Centralize a encomenda
+              </div>
             </div>
-            
-            {/* Instruction text */}
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/50 text-white text-sm px-3 py-1.5 rounded-full backdrop-blur-sm">
-              Centralize a encomenda
+
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 z-10">
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={switchCamera}
+                className="rounded-full w-12 h-12"
+              >
+                <RotateCcw className="w-5 h-5" />
+              </Button>
+              <Button
+                variant="default"
+                size="icon"
+                onClick={capturePhoto}
+                className="rounded-full w-16 h-16 bg-white hover:bg-white/90 text-foreground shadow-lg"
+              >
+                <div className="w-12 h-12 rounded-full border-4 border-foreground" />
+              </Button>
+              <Button
+                variant="destructive"
+                size="icon"
+                onClick={stopCamera}
+                className="rounded-full w-12 h-12"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+          </>
+        ) : isLoading ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 gap-4">
+            <div className="relative">
+              <div className="w-16 h-16 rounded-full border-4 border-primary/20 animate-pulse" />
+              <Loader2 className="w-8 h-8 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-spin" />
+            </div>
+            <p className="text-sm text-muted-foreground text-center animate-pulse">Iniciando câmera...</p>
+          </div>
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 gap-4">
+            {error ? (
+              <p className="text-sm text-destructive text-center">{error}</p>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center">Tire uma foto da encomenda</p>
+            )}
+            <div className="flex gap-3">
+              <Button onClick={startCamera} className="gap-2">
+                <Camera className="w-4 h-4" />
+                Abrir Câmera
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                className="gap-2"
+              >
+                <ImageIcon className="w-4 h-4" />
+                Galeria
+              </Button>
             </div>
           </div>
-          
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 z-10">
-            <Button
-              variant="secondary"
-              size="icon"
-              onClick={switchCamera}
-              className="rounded-full w-12 h-12"
-            >
-              <RotateCcw className="w-5 h-5" />
-            </Button>
-            <Button
-              variant="default"
-              size="icon"
-              onClick={capturePhoto}
-              className="rounded-full w-16 h-16 bg-white hover:bg-white/90 text-foreground shadow-lg"
-            >
-              <div className="w-12 h-12 rounded-full border-4 border-foreground" />
-            </Button>
-            <Button
-              variant="destructive"
-              size="icon"
-              onClick={stopCamera}
-              className="rounded-full w-12 h-12"
-            >
-              <X className="w-5 h-5" />
-            </Button>
-          </div>
-        </div>
-      ) : isLoading ? (
-        <div className="flex flex-col items-center justify-center h-full min-h-[300px] p-6 gap-4">
-          <div className="relative">
-            <div className="w-16 h-16 rounded-full border-4 border-primary/20 animate-pulse" />
-            <Loader2 className="w-8 h-8 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-spin" />
-          </div>
-          <p className="text-sm text-muted-foreground text-center animate-pulse">
-            Iniciando câmera...
-          </p>
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center h-full min-h-[300px] p-6 gap-4">
-          {error ? (
-            <p className="text-sm text-destructive text-center">{error}</p>
-          ) : (
-            <p className="text-sm text-muted-foreground text-center">
-              Tire uma foto da encomenda
-            </p>
-          )}
-          <div className="flex gap-3">
-            <Button onClick={startCamera} className="gap-2">
-              <Camera className="w-4 h-4" />
-              Abrir Câmera
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-              className="gap-2"
-            >
-              <ImageIcon className="w-4 h-4" />
-              Galeria
-            </Button>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
