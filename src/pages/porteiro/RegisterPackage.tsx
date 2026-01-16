@@ -355,7 +355,7 @@ export default function RegisterPackage() {
                     <div className="flex-1">
                       <p className="text-xs text-muted-foreground">Destino selecionado</p>
                       <p className="font-semibold text-lg">
-                        {destinationPreview.blockName} - Ap {destinationPreview.apartmentNumber}
+                        {destinationPreview.blockName} - APTO {destinationPreview.apartmentNumber}
                       </p>
                     </div>
                   </div>
