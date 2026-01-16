@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PackageCard } from "@/components/packages/PackageCard";
 import { PackagePickupDialog } from "@/components/packages/PackagePickupDialog";
+import { PackageDetailsDialog } from "@/components/packages/PackageDetailsDialog";
 import { usePackages, Package as PackageType } from "@/hooks/usePackages";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +25,8 @@ export default function PorteiroPackages() {
   const [activeTab, setActiveTab] = useState<"pendente" | "retirada" | "all">("pendente");
   const [selectedPackage, setSelectedPackage] = useState<PackageType | null>(null);
   const [isPickupDialogOpen, setIsPickupDialogOpen] = useState(false);
+  const [detailsPackage, setDetailsPackage] = useState<PackageType | null>(null);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
 
   // Fetch porter's condominiums
   useEffect(() => {
@@ -68,6 +71,11 @@ export default function PorteiroPackages() {
       setSelectedPackage(pkg);
       setIsPickupDialogOpen(true);
     }
+  };
+
+  const handleViewDetails = (pkg: PackageType) => {
+    setDetailsPackage(pkg);
+    setIsDetailsDialogOpen(true);
   };
 
   const handleConfirmPickup = async () => {
@@ -179,6 +187,7 @@ export default function PorteiroPackages() {
                     receivedAt={pkg.received_at}
                     description={pkg.description || undefined}
                     onClick={() => handlePackageClick(pkg)}
+                    onViewDetails={() => handleViewDetails(pkg)}
                     showCondominium={condominiumIds.length > 1}
                   />
                 ))}
@@ -194,6 +203,13 @@ export default function PorteiroPackages() {
         onOpenChange={setIsPickupDialogOpen}
         package_={selectedPackage}
         onConfirm={handleConfirmPickup}
+      />
+
+      {/* Package Details Dialog with Resend Notification */}
+      <PackageDetailsDialog
+        open={isDetailsDialogOpen}
+        onOpenChange={setIsDetailsDialogOpen}
+        package_={detailsPackage}
       />
     </DashboardLayout>
   );

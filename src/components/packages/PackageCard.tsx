@@ -1,7 +1,14 @@
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Package, Clock, Building2 } from "lucide-react";
+import { Package, Clock, Building2, MoreVertical, Send, Info } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { PackageStatusBadge } from "./PackageStatusBadge";
 import { PickupCodeDisplay } from "./PickupCodeDisplay";
 import { PackageStatus } from "@/lib/packageConstants";
@@ -18,6 +25,8 @@ interface PackageCardProps {
   receivedAt: string;
   description?: string;
   onClick?: () => void;
+  onResendNotification?: () => void;
+  onViewDetails?: () => void;
   showCondominium?: boolean;
   compact?: boolean;
 }
@@ -33,6 +42,8 @@ export function PackageCard({
   receivedAt,
   description,
   onClick,
+  onResendNotification,
+  onViewDetails,
   showCondominium = false,
   compact = false,
 }: PackageCardProps) {
@@ -79,7 +90,7 @@ export function PackageCard({
   return (
     <Card
       className={cn(
-        "overflow-hidden transition-all hover:shadow-lg",
+        "overflow-hidden transition-all hover:shadow-lg group",
         onClick && "cursor-pointer"
       )}
       onClick={onClick}
@@ -90,8 +101,35 @@ export function PackageCard({
           alt="Encomenda"
           className="w-full h-full object-cover"
         />
-        <div className="absolute top-3 right-3">
+        <div className="absolute top-3 right-3 flex items-center gap-2">
           <PackageStatusBadge status={status} />
+          {(onResendNotification || onViewDetails) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                {onViewDetails && (
+                  <DropdownMenuItem onClick={onViewDetails}>
+                    <Info className="w-4 h-4 mr-2" />
+                    Ver Detalhes
+                  </DropdownMenuItem>
+                )}
+                {onResendNotification && status === "pendente" && (
+                  <DropdownMenuItem onClick={onResendNotification}>
+                    <Send className="w-4 h-4 mr-2" />
+                    Reenviar Notificação
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
       <CardContent className="p-4 space-y-3">
