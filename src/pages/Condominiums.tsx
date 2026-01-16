@@ -31,7 +31,9 @@ import {
   Search,
   Crown,
   Phone,
+  Wand2,
 } from "lucide-react";
+import { BulkCondominiumWizard } from "@/components/condominium/BulkCondominiumWizard";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -92,6 +94,7 @@ const Condominiums = () => {
   const [saving, setSaving] = useState(false);
   const [fetchingCNPJ, setFetchingCNPJ] = useState(false);
   const [fetchingCEP, setFetchingCEP] = useState(false);
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
 
   const fetchPlans = async () => {
     try {
@@ -444,8 +447,16 @@ const Condominiums = () => {
           </p>
         </div>
 
-        {/* Add Button */}
-        <div className="flex justify-end mb-4 md:mb-6">
+        {/* Add Buttons */}
+        <div className="flex flex-col sm:flex-row justify-end gap-2 mb-4 md:mb-6">
+          <Button
+            variant="outline"
+            onClick={() => setIsWizardOpen(true)}
+            className="w-full sm:w-auto"
+          >
+            <Wand2 className="w-4 h-4 mr-2" />
+            Cadastro Rápido
+          </Button>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="hero" onClick={openNewDialog} className="w-full sm:w-auto">
@@ -796,6 +807,14 @@ const Condominiums = () => {
             ))}
           </div>
         )}
+
+        {/* Bulk Condominium Wizard */}
+        <BulkCondominiumWizard
+          open={isWizardOpen}
+          onOpenChange={setIsWizardOpen}
+          plans={plans}
+          onSuccess={fetchCondominiums}
+        />
       </div>
     </DashboardLayout>
   );
