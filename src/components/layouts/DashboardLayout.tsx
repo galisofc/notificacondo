@@ -87,6 +87,7 @@ const getPorteiroNavItems = (pendingPackages: number): NavItem[] => [
   { title: "Início", url: "/porteiro", icon: Home },
   { title: "Registrar Encomenda", url: "/porteiro/registrar", icon: PackagePlus },
   { title: "Retirar Encomenda", url: "/porteiro/encomendas", icon: PackageCheck, badge: pendingPackages },
+  { title: "Configurações", url: "/porteiro/configuracoes", icon: Settings },
 ];
 
 function SidebarNavigation() {
