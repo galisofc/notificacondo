@@ -106,18 +106,35 @@ export const useUserRole = (): UseUserRoleReturn => {
       }
 
       try {
-        // Fetch user role from user_roles table
-        const { data: roleData, error: roleError } = await supabase
+        // Fetch all user roles from user_roles table
+        const { data: rolesData, error: roleError } = await supabase
           .from("user_roles")
           .select("role")
           .eq("user_id", user.id)
-          .maybeSingle();
+          .order("created_at", { ascending: false });
 
         if (roleError) {
           console.error("Error fetching user role:", roleError);
         }
 
-        const userRole = roleData?.role as UserRole || "morador";
+        // Priority order for roles: super_admin > sindico > porteiro > morador
+        const rolePriority: Record<string, number> = {
+          super_admin: 4,
+          sindico: 3,
+          porteiro: 2,
+          morador: 1,
+        };
+
+        let userRole: UserRole = "morador";
+        
+        if (rolesData && rolesData.length > 0) {
+          // Sort roles by priority (highest first) and select the highest
+          const sortedRoles = rolesData.sort((a, b) => 
+            (rolePriority[b.role] || 0) - (rolePriority[a.role] || 0)
+          );
+          userRole = sortedRoles[0].role as UserRole;
+        }
+        
         setRole(userRole);
 
         // Fetch profile info for sindico, super_admin, and porteiro
