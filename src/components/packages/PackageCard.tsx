@@ -133,10 +133,14 @@ export function PackageCard({
         </div>
       </div>
       <CardContent className="p-4 space-y-3">
+        {/* Pickup Code - Prominently displayed */}
         <div className="flex items-center justify-between">
-          <span className="font-mono font-bold text-lg text-primary tracking-wider">
-            {pickupCode}
-          </span>
+          <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-lg">
+            <Package className="w-4 h-4 text-primary" />
+            <span className="font-mono font-bold text-lg text-primary tracking-widest">
+              {pickupCode}
+            </span>
+          </div>
         </div>
         
         <div className="space-y-1.5">
