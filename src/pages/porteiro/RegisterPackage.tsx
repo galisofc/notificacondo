@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { MaskedInput } from "@/components/ui/masked-input";
 import {
   Select,
   SelectContent,
@@ -326,7 +327,7 @@ export default function RegisterPackage() {
         .insert({
           apartment_id: selectedApartment,
           full_name: newResidentName.trim(),
-          phone: newResidentPhone.trim(),
+          phone: newResidentPhone.replace(/\D/g, ''),
           email: newResidentEmail.trim() || `morador_${Date.now()}@temp.com`,
           is_responsible: true,
           is_owner: false,
@@ -540,13 +541,12 @@ export default function RegisterPackage() {
                     
                     <div className="space-y-1">
                       <Label htmlFor="resident-phone" className="text-xs">Telefone (WhatsApp) *</Label>
-                      <Input
+                      <MaskedInput
                         id="resident-phone"
-                        placeholder="Ex: 11999998888"
+                        mask="phone"
                         value={newResidentPhone}
-                        onChange={(e) => setNewResidentPhone(e.target.value.replace(/\D/g, ''))}
+                        onChange={setNewResidentPhone}
                         disabled={isSavingResident}
-                        maxLength={11}
                       />
                     </div>
                     
