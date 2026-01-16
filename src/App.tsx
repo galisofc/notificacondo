@@ -51,6 +51,7 @@ import Transfers from "./pages/superadmin/Transfers";
 import WhatsApp from "./pages/superadmin/WhatsApp";
 import SuperAdminSettings from "./pages/superadmin/Settings";
 import ContactMessages from "./pages/superadmin/ContactMessages";
+import PackageTypes from "./pages/superadmin/PackageTypes";
 
 // Porteiro pages
 import PorteiroDashboard from "./pages/porteiro/Dashboard";
@@ -393,6 +394,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole="super_admin">
                     <ContactMessages />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/superadmin/package-types"
+                element={
+                  <ProtectedRoute requiredRole="super_admin">
+                    <PackageTypes />
                   </ProtectedRoute>
                 }
               />

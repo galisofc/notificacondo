@@ -67,6 +67,7 @@ const getBaseSuperAdminNavItems = (): NavItem[] => [
   { title: "Assinaturas", url: "/superadmin/subscriptions", icon: CreditCard },
   { title: "Faturas", url: "/superadmin/invoices", icon: Receipt },
   { title: "Transferências", url: "/superadmin/transfers", icon: Scale },
+  { title: "Tipos de Encomenda", url: "/superadmin/package-types", icon: Package },
   { title: "Mensagens", url: "/superadmin/contact-messages", icon: Mail },
   { title: "Logs", url: "/superadmin/logs", icon: FileText },
   { title: "Cron Jobs", url: "/superadmin/cron-jobs", icon: Clock },
