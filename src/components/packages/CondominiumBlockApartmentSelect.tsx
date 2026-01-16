@@ -317,15 +317,6 @@ export function CondominiumBlockApartmentSelect({
         )}
       </div>
 
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-2 text-muted-foreground">ou selecione manualmente</span>
-        </div>
-      </div>
-
       {/* Condominium Select */}
       <div className="space-y-2">
         <Label htmlFor="condominium">Condomínio</Label>
@@ -345,56 +336,6 @@ export function CondominiumBlockApartmentSelect({
             {condominiums.map((condo) => (
               <SelectItem key={condo.id} value={condo.id}>
                 {condo.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Block Select */}
-      <div className="space-y-2">
-        <Label htmlFor="block">Bloco</Label>
-        <Select
-          value={selectedBlock}
-          onValueChange={onBlockChange}
-          disabled={disabled || !selectedCondominium || loadingBlocks}
-        >
-          <SelectTrigger id="block">
-            {loadingBlocks ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <SelectValue placeholder="Selecione o bloco" />
-            )}
-          </SelectTrigger>
-          <SelectContent>
-            {blocks.map((block) => (
-              <SelectItem key={block.id} value={block.id}>
-                {block.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Apartment Select */}
-      <div className="space-y-2">
-        <Label htmlFor="apartment">Apartamento</Label>
-        <Select
-          value={selectedApartment}
-          onValueChange={onApartmentChange}
-          disabled={disabled || !selectedBlock || loadingApartments}
-        >
-          <SelectTrigger id="apartment">
-            {loadingApartments ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <SelectValue placeholder="Selecione o apartamento" />
-            )}
-          </SelectTrigger>
-          <SelectContent>
-            {apartments.map((apt) => (
-              <SelectItem key={apt.id} value={apt.id}>
-                {apt.number}
               </SelectItem>
             ))}
           </SelectContent>
