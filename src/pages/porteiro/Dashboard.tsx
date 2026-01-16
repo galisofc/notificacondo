@@ -197,62 +197,6 @@ export default function PorteiroDashboard() {
             </CardContent>
           </Card>
         </div>
-
-
-        {/* Recent Packages */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Últimas Encomendas</h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/porteiro/encomendas")}
-            >
-              Ver todas
-            </Button>
-          </div>
-
-          {loading ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-64 rounded-xl" />
-              ))}
-            </div>
-          ) : packages.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Package className="w-12 h-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium mb-2">Nenhuma encomenda</h3>
-                <p className="text-muted-foreground text-center mb-4">
-                  Registre a primeira encomenda do dia
-                </p>
-                <Button onClick={() => navigate("/porteiro/registrar")} className="gap-2">
-                  <PackagePlus className="w-4 h-4" />
-                  Registrar Encomenda
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {packages.slice(0, 6).map((pkg) => (
-                  <PackageCard
-                    key={pkg.id}
-                    id={pkg.id}
-                    photoUrl={pkg.photo_url}
-                    pickupCode={pkg.pickup_code}
-                    status={pkg.status}
-                    apartmentNumber={pkg.apartment?.number || ""}
-                    blockName={pkg.block?.name || ""}
-                    condominiumName={pkg.condominium?.name}
-                    receivedAt={pkg.received_at}
-                    description={pkg.description || undefined}
-                    showCondominium={condominiumIds.length > 1}
-                    showPickupCode={false}
-                  />
-                ))}
-            </div>
-          )}
-        </div>
       </div>
     </DashboardLayout>
   );
