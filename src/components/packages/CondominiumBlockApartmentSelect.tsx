@@ -255,8 +255,26 @@ export function CondominiumBlockApartmentSelect({
     setQuickSearchError("");
   };
 
+  // Get condominium name for display
+  const selectedCondominiumName = condominiums.find(c => c.id === selectedCondominium)?.name || "";
+
   return (
     <div className="space-y-4">
+      {/* Condominium Display (read-only) */}
+      <div className="space-y-2">
+        <Label htmlFor="condominium">Condomínio</Label>
+        {loadingCondos ? (
+          <div className="flex items-center gap-2 h-10 px-3 border rounded-md bg-muted">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span className="text-muted-foreground text-sm">Carregando...</span>
+          </div>
+        ) : (
+          <div className="h-10 px-3 border rounded-md bg-muted flex items-center">
+            <span className="text-sm font-medium">{selectedCondominiumName || "Nenhum condomínio vinculado"}</span>
+          </div>
+        )}
+      </div>
+
       {/* Quick Search */}
       <div className="space-y-2">
         <Label htmlFor="quick-search" className="flex items-center gap-2">
@@ -312,34 +330,6 @@ export function CondominiumBlockApartmentSelect({
         {quickSearchError && (
           <p className="text-sm text-destructive">{quickSearchError}</p>
         )}
-        {!selectedCondominium && (
-          <p className="text-xs text-muted-foreground">Selecione o condomínio para usar a busca rápida</p>
-        )}
-      </div>
-
-      {/* Condominium Select */}
-      <div className="space-y-2">
-        <Label htmlFor="condominium">Condomínio</Label>
-        <Select
-          value={selectedCondominium}
-          onValueChange={onCondominiumChange}
-          disabled={disabled || loadingCondos}
-        >
-          <SelectTrigger id="condominium">
-            {loadingCondos ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <SelectValue placeholder="Selecione o condomínio" />
-            )}
-          </SelectTrigger>
-          <SelectContent>
-            {condominiums.map((condo) => (
-              <SelectItem key={condo.id} value={condo.id}>
-                {condo.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
     </div>
   );
