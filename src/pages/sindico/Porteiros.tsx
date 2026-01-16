@@ -201,6 +201,38 @@ export default function Porteiros() {
     setIsSubmitting(true);
 
     try {
+      // Check if email already exists in profiles
+      const emailLower = newPorter.email.toLowerCase().trim();
+      const { data: existingProfile, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, user_id")
+        .eq("email", emailLower)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error("Error checking existing profile:", profileError);
+      }
+
+      // If profile exists, check if already linked to this condominium
+      if (existingProfile) {
+        const { data: existingLink } = await supabase
+          .from("user_condominiums")
+          .select("id")
+          .eq("user_id", existingProfile.user_id)
+          .eq("condominium_id", newPorter.condominium_id)
+          .maybeSingle();
+
+        if (existingLink) {
+          toast({
+            title: "E-mail já cadastrado",
+            description: "Este e-mail já está vinculado a um porteiro neste condomínio",
+            variant: "destructive",
+          });
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       // Call edge function to create porter
       const { data, error } = await supabase.functions.invoke("create-porteiro", {
         body: {
