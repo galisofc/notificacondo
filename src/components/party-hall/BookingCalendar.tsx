@@ -264,7 +264,7 @@ export default function BookingCalendar({ bookings, onDateSelect, onBookingClick
                         </p>
                         <p>
                           <span className="font-medium text-foreground">Unidade:</span>{" "}
-                          {booking.resident.apartment.block.name} - {booking.resident.apartment.number}
+                          <span className="uppercase">{booking.resident.apartment.block.name} - APTO {booking.resident.apartment.number}</span>
                         </p>
                         <p className="text-xs opacity-70">
                           {booking.condominium.name}

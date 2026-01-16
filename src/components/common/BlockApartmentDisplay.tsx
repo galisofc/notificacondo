@@ -42,7 +42,7 @@ const BlockApartmentDisplay = ({
 
   if (variant === "inline") {
     return (
-      <span className={cn("inline-flex items-center gap-1", className)}>
+      <span className={cn("inline-flex items-center gap-1 uppercase", className)}>
         {showIcons && <Building2 className="w-3 h-3 text-muted-foreground" />}
         <span className={valueClassName}>{formatValue()}</span>
       </span>
@@ -51,7 +51,7 @@ const BlockApartmentDisplay = ({
 
   if (variant === "compact") {
     return (
-      <div className={cn("flex items-center gap-2", className)}>
+      <div className={cn("flex items-center gap-2 uppercase", className)}>
         {showIcons && (
           <div className="flex items-center gap-1">
             <Building2 className="w-4 h-4 text-primary" />
@@ -67,7 +67,7 @@ const BlockApartmentDisplay = ({
 
   if (variant === "label") {
     return (
-      <div className={cn("space-y-1", className)}>
+      <div className={cn("space-y-1 uppercase", className)}>
         <p className={cn("text-sm text-muted-foreground", labelClassName)}>
           BLOCO / APTO
         </p>
@@ -80,7 +80,7 @@ const BlockApartmentDisplay = ({
 
   // Default variant
   return (
-    <div className={cn("flex items-center gap-2", className)}>
+    <div className={cn("flex items-center gap-2 uppercase", className)}>
       {showIcons && <Building2 className="w-4 h-4 text-primary flex-shrink-0" />}
       <div className="flex flex-col">
         {hasBlock && (
