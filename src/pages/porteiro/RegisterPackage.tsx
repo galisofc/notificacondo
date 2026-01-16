@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Package, CheckCircle2, Loader2, MessageCircle, AlertCircle, MapPin } from "lucide-react";
+import { ArrowLeft, Package, CheckCircle2, Loader2, MessageCircle, AlertCircle, MapPin, User } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -361,7 +361,8 @@ export default function RegisterPackage() {
                         {destinationPreview.blockName} - APTO {destinationPreview.apartmentNumber}
                       </p>
                       {destinationPreview.residentName && (
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-muted-foreground flex items-center gap-1">
+                          <User className="w-3 h-3" />
                           {destinationPreview.residentName}
                         </p>
                       )}
