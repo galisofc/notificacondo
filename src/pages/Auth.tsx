@@ -153,6 +153,11 @@ const Auth = () => {
             return;
           }
 
+          if (role === "porteiro") {
+            navigate("/porteiro", { replace: true });
+            return;
+          }
+
           navigate("/dashboard", { replace: true });
         } catch (error) {
           console.error("Error checking role:", error);
@@ -177,6 +182,7 @@ const Auth = () => {
       if (role === "super_admin") return "/superadmin";
       if (role === "sindico") return "/dashboard";
       if (role === "morador") return "/resident";
+      if (role === "porteiro") return "/porteiro";
 
       return "/dashboard";
     } catch (error) {
