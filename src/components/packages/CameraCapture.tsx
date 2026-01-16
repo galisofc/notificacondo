@@ -92,6 +92,13 @@ export function CameraCapture({ onCapture, capturedImage, onClear, className }: 
     };
   }, [stream]);
 
+  // Auto-start camera when component mounts
+  useEffect(() => {
+    if (!capturedImage && !isStreaming) {
+      startCamera();
+    }
+  }, []);
+
   // Restart camera when facing mode changes
   useEffect(() => {
     if (isStreaming) {
