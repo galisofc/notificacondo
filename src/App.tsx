@@ -28,6 +28,7 @@ import DefenseAnalysis from "./pages/DefenseAnalysis";
 import SindicoSettings from "./pages/SindicoSettings";
 import SindicoInvoices from "./pages/SindicoInvoices";
 import SindicoSubscriptions from "./pages/SindicoSubscriptions";
+import SindicoPorteiros from "./pages/sindico/Porteiros";
 
 import PartyHall from "./pages/PartyHall";
 import PartyHallSettings from "./pages/PartyHallSettings";
@@ -187,6 +188,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole="sindico">
                     <SindicoSubscriptions />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/sindico/porteiros"
+                element={
+                  <ProtectedRoute requiredRole="sindico">
+                    <SindicoPorteiros />
                   </ProtectedRoute>
                 }
               />
