@@ -151,6 +151,33 @@ function generatePassword(): string {
   return password;
 }
 
+async function findAuthUserByEmail(
+  supabase: any,
+  emailLower: string,
+): Promise<{ id: string; email?: string | null } | null> {
+  // admin.listUsers is paginated; if we only fetch page 1 we can miss older users.
+  // We'll scan pages with a safe cap.
+  const perPage = 200;
+  const maxPages = 50; // up to 10k users
+
+  for (let page = 1; page <= maxPages; page++) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
+    if (error) {
+      console.error("Error listing auth users:", error);
+      return null;
+    }
+
+    const users = data?.users ?? [];
+    const found = users.find((u: any) => (u.email ?? "").toLowerCase() === emailLower);
+    if (found) return found;
+
+    if (users.length < perPage) break; // last page reached
+  }
+
+  return null;
+}
+
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -251,11 +278,9 @@ serve(async (req) => {
       .eq("email", emailLower)
       .maybeSingle();
 
-    // Also check directly in auth.users (in case profile doesn't exist)
-    const { data: authUsers } = await supabase.auth.admin.listUsers();
-    const existingAuthUser = authUsers?.users?.find(
-      (u) => u.email?.toLowerCase() === emailLower
-    );
+    // Also check directly in auth users (in case profile doesn't exist)
+    const existingAuthUser = await findAuthUserByEmail(supabase, emailLower);
+
 
     let userId: string;
     let password: string | null = null;
