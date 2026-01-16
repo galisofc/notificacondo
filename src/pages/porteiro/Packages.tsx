@@ -334,7 +334,7 @@ export default function PorteiroPackages() {
                         <Building2 className="w-5 h-5 text-primary" />
                       </div>
                       <div>
-                        <p className="font-semibold text-lg">
+                        <p className="font-semibold text-lg uppercase">
                           {selectedApartment.blockName} - APTO {selectedApartment.number}
                         </p>
                         <p className="text-sm text-muted-foreground">
