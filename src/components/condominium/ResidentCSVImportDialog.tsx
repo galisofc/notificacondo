@@ -249,8 +249,8 @@ Maria Santos,maria@email.com,11988888888,,não,não`;
             <FileSpreadsheet className="w-5 h-5" />
             Importar Moradores via CSV
           </DialogTitle>
-          <DialogDescription>
-            {blockName} - Apto {apartmentNumber}
+          <DialogDescription className="uppercase">
+            {blockName} - APTO {apartmentNumber}
           </DialogDescription>
         </DialogHeader>
 

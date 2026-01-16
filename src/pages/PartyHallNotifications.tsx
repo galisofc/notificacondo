@@ -270,8 +270,8 @@ export default function PartyHallNotifications() {
                           </TableCell>
                           <TableCell>
                             <div className="font-medium">{notification.booking.resident.full_name}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {notification.booking.resident.apartment.block.name} - Ap. {notification.booking.resident.apartment.number}
+                            <div className="text-sm text-muted-foreground uppercase">
+                              {notification.booking.resident.apartment.block.name} - APTO {notification.booking.resident.apartment.number}
                             </div>
                           </TableCell>
                           <TableCell className="whitespace-nowrap">
