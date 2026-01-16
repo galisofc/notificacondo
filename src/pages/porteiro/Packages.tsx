@@ -1,21 +1,14 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Package, PackagePlus, Search, Filter, PackageCheck } from "lucide-react";
+import { Package, PackagePlus, Search, PackageCheck } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { PackageCard } from "@/components/packages/PackageCard";
+import { PackagePickupDialog } from "@/components/packages/PackagePickupDialog";
 import { usePackages, Package as PackageType } from "@/hooks/usePackages";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -31,7 +24,6 @@ export default function PorteiroPackages() {
   const [activeTab, setActiveTab] = useState<"pendente" | "retirada" | "all">("pendente");
   const [selectedPackage, setSelectedPackage] = useState<PackageType | null>(null);
   const [isPickupDialogOpen, setIsPickupDialogOpen] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
 
   // Fetch porter's condominiums
   useEffect(() => {
@@ -79,26 +71,21 @@ export default function PorteiroPackages() {
   };
 
   const handleConfirmPickup = async () => {
-    if (!selectedPackage || !user) return;
+    if (!selectedPackage || !user) {
+      return { success: false, error: "Usuário não autenticado" };
+    }
 
-    setIsProcessing(true);
     const result = await markAsPickedUp(selectedPackage.id, user.id);
-    setIsProcessing(false);
 
     if (result.success) {
       toast({
         title: "Encomenda retirada!",
         description: `Código ${selectedPackage.pickup_code} marcado como retirado`,
       });
-      setIsPickupDialogOpen(false);
       setSelectedPackage(null);
-    } else {
-      toast({
-        title: "Erro",
-        description: result.error,
-        variant: "destructive",
-      });
     }
+
+    return result;
   };
 
   const pendingCount = packages.filter((p) => p.status === "pendente").length;
@@ -202,60 +189,12 @@ export default function PorteiroPackages() {
       </div>
 
       {/* Pickup Confirmation Dialog */}
-      <Dialog open={isPickupDialogOpen} onOpenChange={setIsPickupDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirmar Retirada</DialogTitle>
-            <DialogDescription>
-              Deseja marcar esta encomenda como retirada?
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedPackage && (
-            <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
-              <div className="w-20 h-20 rounded-lg overflow-hidden bg-background">
-                <img
-                  src={selectedPackage.photo_url}
-                  alt="Encomenda"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div>
-                <p className="font-mono font-bold text-lg text-primary">
-                  {selectedPackage.pickup_code}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {selectedPackage.block?.name} - Apto {selectedPackage.apartment?.number}
-                </p>
-              </div>
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsPickupDialogOpen(false)}
-              disabled={isProcessing}
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleConfirmPickup}
-              disabled={isProcessing}
-              className="gap-2"
-            >
-              {isProcessing ? (
-                "Processando..."
-              ) : (
-                <>
-                  <PackageCheck className="w-4 h-4" />
-                  Confirmar Retirada
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PackagePickupDialog
+        open={isPickupDialogOpen}
+        onOpenChange={setIsPickupDialogOpen}
+        package_={selectedPackage}
+        onConfirm={handleConfirmPickup}
+      />
     </DashboardLayout>
   );
 }
