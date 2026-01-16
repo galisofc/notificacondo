@@ -140,6 +140,32 @@ export function CameraCapture({ onCapture, capturedImage, onClear, className }: 
             muted
             className="absolute inset-0 w-full h-full object-cover"
           />
+          
+          {/* Animated focus guide overlay */}
+          <div className="absolute inset-0 pointer-events-none z-[5]">
+            {/* Semi-transparent corners */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="relative w-[80%] h-[70%] max-w-[320px] max-h-[240px]">
+                {/* Animated corner brackets */}
+                <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-lg animate-pulse" />
+                <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-lg animate-pulse" style={{ animationDelay: '0.2s' }} />
+                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-lg animate-pulse" style={{ animationDelay: '0.4s' }} />
+                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white rounded-br-lg animate-pulse" style={{ animationDelay: '0.6s' }} />
+                
+                {/* Center crosshair */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6">
+                  <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white/60" />
+                  <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white/60" />
+                </div>
+              </div>
+            </div>
+            
+            {/* Instruction text */}
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/50 text-white text-sm px-3 py-1.5 rounded-full backdrop-blur-sm">
+              Centralize a encomenda
+            </div>
+          </div>
+          
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 z-10">
             <Button
               variant="secondary"
