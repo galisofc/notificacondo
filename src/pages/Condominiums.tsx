@@ -309,23 +309,18 @@ const Condominiums = () => {
 
         if (error) throw error;
 
-        // Create subscription with selected plan
+        // Update subscription with selected plan (trigger already creates the subscription)
         const selectedPlan = plans.find((p) => p.slug === formData.plan_slug);
         if (selectedPlan && newCondo) {
-          const now = new Date();
-          const periodEnd = new Date(now);
-          periodEnd.setMonth(periodEnd.getMonth() + 1);
-
-          const { error: subError } = await supabase.from("subscriptions").insert({
-            condominium_id: newCondo.id,
-            plan: formData.plan_slug as "start" | "essencial" | "profissional" | "enterprise",
-            active: true,
-            notifications_limit: selectedPlan.notifications_limit,
-            warnings_limit: selectedPlan.warnings_limit,
-            fines_limit: selectedPlan.fines_limit,
-            current_period_start: now.toISOString(),
-            current_period_end: periodEnd.toISOString(),
-          });
+          const { error: subError } = await supabase
+            .from("subscriptions")
+            .update({
+              plan: formData.plan_slug as "start" | "essencial" | "profissional" | "enterprise",
+              notifications_limit: selectedPlan.notifications_limit,
+              warnings_limit: selectedPlan.warnings_limit,
+              fines_limit: selectedPlan.fines_limit,
+            })
+            .eq("condominium_id", newCondo.id);
 
           if (subError) throw subError;
         }
