@@ -276,6 +276,30 @@ serve(async (req) => {
       );
     }
 
+    // ========== FETCH PACKAGE DETAILS ==========
+    const { data: packageData, error: pkgError } = await supabase
+      .from("packages")
+      .select(`
+        id,
+        tracking_code,
+        package_type_id,
+        package_types (
+          id,
+          name
+        )
+      `)
+      .eq("id", package_id)
+      .single();
+
+    if (pkgError) {
+      console.error("Error fetching package:", pkgError);
+    }
+
+    const packageTypeName = (packageData?.package_types as any)?.name || "Não informado";
+    const trackingCode = packageData?.tracking_code || "Não informado";
+
+    console.log(`Package type: ${packageTypeName}, Tracking: ${trackingCode}`);
+
     // ========== FETCH RESIDENTS ==========
     const { data: residents, error: resError } = await supabase
       .from("residents")
@@ -382,13 +406,17 @@ serve(async (req) => {
       }
     }
 
-    // Default message template
+    // Default message template (with package type and tracking)
     const defaultMessage = `📦 *Nova Encomenda!*
+
+🏢 *{condominio}*
 
 Olá, *{nome}*!
 
-Você tem uma encomenda aguardando na portaria do *{condominio}*.
+Você tem uma encomenda aguardando na portaria.
 
+📋 *Tipo:* {tipo_encomenda}
+📍 *Rastreio:* {codigo_rastreio}
 🏠 *Destino:* Bloco {bloco}, Apto {apartamento}
 🔑 *Código de retirada:* {codigo}
 
@@ -400,14 +428,16 @@ _Mensagem automática - NotificaCondo_`;
     const results: Array<{ resident_id: string; success: boolean; error?: string }> = [];
 
     for (const resident of residentsWithPhone) {
-      // Build message
+      // Build message with all variables including package type and tracking
       let message = templateContent || defaultMessage;
       message = message
         .replace(/{nome}/g, sanitize(resident.full_name))
         .replace(/{condominio}/g, sanitize(condoName))
         .replace(/{bloco}/g, sanitize(blockName))
         .replace(/{apartamento}/g, sanitize(aptNumber))
-        .replace(/{codigo}/g, pickup_code);
+        .replace(/{codigo}/g, pickup_code)
+        .replace(/{tipo_encomenda}/g, sanitize(packageTypeName))
+        .replace(/{codigo_rastreio}/g, sanitize(trackingCode));
 
       console.log(`Sending notification to ${resident.full_name} (${resident.phone})`);
 
