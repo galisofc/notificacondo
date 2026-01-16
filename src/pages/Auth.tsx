@@ -126,8 +126,12 @@ const Auth = () => {
   }, [selectedPlanSlug]);
 
   // Redirect authenticated users based on their role
+  // Only runs on initial load, not during login process
   useEffect(() => {
     const checkRoleAndRedirect = async () => {
+      // Don't redirect if we're in the middle of a login/signup process
+      if (isLoading) return;
+      
       if (user) {
         try {
           const { data: roleData } = await supabase
@@ -167,7 +171,7 @@ const Auth = () => {
     };
 
     checkRoleAndRedirect();
-  }, [user, navigate]);
+  }, [user, navigate, isLoading]);
 
   const redirectBasedOnRole = async (userId: string) => {
     try {
