@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   Shield,
   Calendar,
+  Package,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -237,6 +238,12 @@ const Dashboard = () => {
       label: "Analisar Defesas",
       description: `${stats.pendingDefenses} defesa${stats.pendingDefenses !== 1 ? "s" : ""} pendente${stats.pendingDefenses !== 1 ? "s" : ""}`,
       action: () => navigate("/defenses"),
+    },
+    {
+      icon: Package,
+      label: "Encomendas",
+      description: "Estatísticas e histórico de encomendas",
+      action: () => navigate("/sindico/packages"),
     },
   ];
 

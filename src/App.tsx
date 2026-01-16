@@ -29,6 +29,7 @@ import SindicoSettings from "./pages/SindicoSettings";
 import SindicoInvoices from "./pages/SindicoInvoices";
 import SindicoSubscriptions from "./pages/SindicoSubscriptions";
 import SindicoPorteiros from "./pages/sindico/Porteiros";
+import PackagesDashboard from "./pages/sindico/PackagesDashboard";
 
 import PartyHall from "./pages/PartyHall";
 import PartyHallSettings from "./pages/PartyHallSettings";
@@ -196,6 +197,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole="sindico">
                     <SindicoPorteiros />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/sindico/packages"
+                element={
+                  <ProtectedRoute requiredRole={["sindico", "super_admin"]}>
+                    <PackagesDashboard />
                   </ProtectedRoute>
                 }
               />
