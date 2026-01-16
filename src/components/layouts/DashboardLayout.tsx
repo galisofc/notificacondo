@@ -43,6 +43,9 @@ import {
   Clock,
   PartyPopper,
   Mail,
+  Package,
+  PackagePlus,
+  DoorOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -74,7 +77,14 @@ const getBaseSuperAdminNavItems = (): NavItem[] => [
 const residentNavItems: NavItem[] = [
   { title: "Início", url: "/resident", icon: Home },
   { title: "Minhas Ocorrências", url: "/resident/occurrences", icon: FileText },
+  { title: "Minhas Encomendas", url: "/resident/packages", icon: Package },
   { title: "Meu Perfil", url: "/resident/profile", icon: User },
+];
+
+const porteiroNavItems: NavItem[] = [
+  { title: "Início", url: "/porteiro", icon: Home },
+  { title: "Registrar Encomenda", url: "/porteiro/registrar", icon: PackagePlus },
+  { title: "Encomendas", url: "/porteiro/encomendas", icon: Package },
 ];
 
 function SidebarNavigation() {
@@ -286,6 +296,8 @@ function SidebarNavigation() {
       ? getSuperAdminNavItems()
       : role === "sindico"
       ? getSindicoNavItems()
+      : role === "porteiro"
+      ? porteiroNavItems
       : residentNavItems;
 
   const getRoleConfig = () => {
@@ -301,6 +313,12 @@ function SidebarNavigation() {
           title: "NOTIFICA",
           subtitle: "Gestão Condominial",
           icon: Building2,
+        };
+      case "porteiro":
+        return {
+          title: "NOTIFICA",
+          subtitle: "Portaria",
+          icon: DoorOpen,
         };
       default:
         return {
@@ -350,6 +368,8 @@ function SidebarNavigation() {
         return "Administrador";
       case "sindico":
         return "Síndico";
+      case "porteiro":
+        return "Porteiro";
       default:
         return "Morador";
     }
