@@ -83,10 +83,10 @@ const residentNavItems: NavItem[] = [
   { title: "Meu Perfil", url: "/resident/profile", icon: User },
 ];
 
-const porteiroNavItems: NavItem[] = [
+const getPorteiroNavItems = (pendingPackages: number): NavItem[] => [
   { title: "Início", url: "/porteiro", icon: Home },
   { title: "Registrar Encomenda", url: "/porteiro/registrar", icon: PackagePlus },
-  { title: "Retirar Encomenda", url: "/porteiro/encomendas", icon: PackageCheck },
+  { title: "Retirar Encomenda", url: "/porteiro/encomendas", icon: PackageCheck, badge: pendingPackages },
 ];
 
 function SidebarNavigation() {
@@ -99,7 +99,9 @@ function SidebarNavigation() {
   const { toast } = useToast();
   const [pendingDefenses, setPendingDefenses] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
+  const [pendingPackages, setPendingPackages] = useState(0);
   const [condoIds, setCondoIds] = useState<string[]>([]);
+  const [porteiroCondoIds, setPorteiroCondoIds] = useState<string[]>([]);
   const prevPendingDefensesRef = useRef<number>(0);
   const prevUnreadMessagesRef = useRef<number>(0);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -264,6 +266,67 @@ function SidebarNavigation() {
     prevUnreadMessagesRef.current = unreadMessages;
   }, [unreadMessages]);
 
+  // Fetch pending packages for porteiro
+  useEffect(() => {
+    const fetchPendingPackages = async () => {
+      if (!user || role !== "porteiro") return;
+
+      try {
+        const { data: userCondos } = await supabase
+          .from("user_condominiums")
+          .select("condominium_id")
+          .eq("user_id", user.id);
+
+        const ids = userCondos?.map((c) => c.condominium_id) || [];
+        setPorteiroCondoIds(ids);
+
+        if (ids.length > 0) {
+          const { count } = await supabase
+            .from("packages")
+            .select("*", { count: "exact", head: true })
+            .in("condominium_id", ids)
+            .eq("status", "pendente");
+
+          setPendingPackages(count || 0);
+        }
+      } catch (error) {
+        console.error("Error fetching pending packages:", error);
+      }
+    };
+
+    fetchPendingPackages();
+  }, [user, role]);
+
+  // Realtime subscription for packages (porteiro)
+  useEffect(() => {
+    if (!user || role !== "porteiro" || porteiroCondoIds.length === 0) return;
+
+    const channel = supabase
+      .channel("packages-status-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "packages",
+        },
+        async () => {
+          const { count } = await supabase
+            .from("packages")
+            .select("*", { count: "exact", head: true })
+            .in("condominium_id", porteiroCondoIds)
+            .eq("status", "pendente");
+
+          setPendingPackages(count || 0);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, role, porteiroCondoIds]);
+
   const handleSignOut = async () => {
     await signOut();
     toast({ title: "Até logo!", description: "Você saiu da sua conta." });
@@ -300,7 +363,7 @@ function SidebarNavigation() {
       : role === "sindico"
       ? getSindicoNavItems()
       : role === "porteiro"
-      ? porteiroNavItems
+      ? getPorteiroNavItems(pendingPackages)
       : residentNavItems;
 
   const getRoleConfig = () => {
