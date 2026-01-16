@@ -1,13 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import BlockApartmentDisplay from "@/components/common/BlockApartmentDisplay";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MaskedInput, formatPhone, formatCPF } from "@/components/ui/masked-input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -15,7 +14,18 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Building,
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Building2,
   Home,
   Users,
   Plus,
@@ -27,12 +37,26 @@ import {
   Mail,
   User,
   Search,
-  Filter,
+  ChevronRight,
+  MoreVertical,
+  MapPin,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
-import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
-import { isValidCPF } from "@/lib/utils";
+import { isValidCPF, formatCNPJ, formatCEP } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+
+interface Condominium {
+  id: string;
+  name: string;
+  address: string | null;
+  address_number: string | null;
+  neighborhood: string | null;
+  city: string | null;
+  state: string | null;
+  cnpj: string | null;
+  zip_code: string | null;
+}
 
 interface Block {
   id: string;
@@ -66,11 +90,17 @@ const CondominiumDetails = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const [condominium, setCondominium] = useState<{ name: string } | null>(null);
+  const [condominium, setCondominium] = useState<Condominium | null>(null);
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [apartments, setApartments] = useState<Apartment[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Search
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Expanded blocks
+  const [expandedBlocks, setExpandedBlocks] = useState<Set<string>>(new Set());
 
   // Dialogs
   const [blockDialog, setBlockDialog] = useState(false);
@@ -81,6 +111,9 @@ const CondominiumDetails = () => {
   const [editingBlock, setEditingBlock] = useState<Block | null>(null);
   const [editingApartment, setEditingApartment] = useState<Apartment | null>(null);
   const [editingResident, setEditingResident] = useState<Resident | null>(null);
+
+  // Pre-selected block for new apartment
+  const [selectedBlockForApartment, setSelectedBlockForApartment] = useState<string>("");
 
   // Form data
   const [blockForm, setBlockForm] = useState({ name: "", description: "", floors: "1" });
@@ -102,38 +135,91 @@ const CondominiumDetails = () => {
 
   const [saving, setSaving] = useState(false);
 
-  // Filters - Apartments
-  const [apartmentFilterBlock, setApartmentFilterBlock] = useState("");
-  const [apartmentFilterNumber, setApartmentFilterNumber] = useState("");
+  // Build full address
+  const fullAddress = useMemo(() => {
+    if (!condominium) return "";
+    const parts = [
+      condominium.address,
+      condominium.address_number,
+      condominium.neighborhood,
+      condominium.city,
+      condominium.state,
+    ].filter(Boolean);
+    return parts.join(", ");
+  }, [condominium]);
 
-  // Filters - Residents
-  const [residentFilterSearch, setResidentFilterSearch] = useState("");
-  const [residentFilterApartment, setResidentFilterApartment] = useState("");
+  // Quick search logic: BBAA format (2 digits block, 2 digits apartment)
+  const parseQuickSearch = (query: string) => {
+    const digits = query.replace(/\D/g, "");
+    if (digits.length === 4) {
+      return {
+        blockNumber: digits.substring(0, 2),
+        aptNumber: digits.substring(2, 4),
+      };
+    }
+    return null;
+  };
 
-  // Filtered apartments
-  const filteredApartments = apartments.filter((apt) => {
-    const matchesBlock = !apartmentFilterBlock || apt.block_id === apartmentFilterBlock;
-    const matchesNumber = !apartmentFilterNumber || apt.number.toLowerCase().includes(apartmentFilterNumber.toLowerCase());
-    return matchesBlock && matchesNumber;
-  });
+  // Filter blocks and apartments based on search
+  const filteredBlocks = useMemo(() => {
+    if (!searchQuery.trim()) return blocks;
 
-  // Filtered residents
-  const filteredResidents = residents.filter((res) => {
-    const matchesSearch = !residentFilterSearch || 
-      res.full_name.toLowerCase().includes(residentFilterSearch.toLowerCase()) ||
-      res.email.toLowerCase().includes(residentFilterSearch.toLowerCase());
-    const matchesApartment = !residentFilterApartment || res.apartment_id === residentFilterApartment;
-    return matchesSearch && matchesApartment;
-  });
+    const query = searchQuery.toLowerCase().trim();
+    const quickSearch = parseQuickSearch(searchQuery);
+
+    return blocks.filter((block) => {
+      // Match block name
+      if (block.name.toLowerCase().includes(query)) return true;
+
+      // Quick search: extract block number from name (e.g., "Bloco 3" -> "03")
+      if (quickSearch) {
+        const blockNumberMatch = block.name.match(/\d+/);
+        if (blockNumberMatch) {
+          const blockNum = blockNumberMatch[0].padStart(2, "0");
+          if (blockNum === quickSearch.blockNumber) {
+            // Check if any apartment in this block matches
+            const blockApts = apartments.filter((a) => a.block_id === block.id);
+            return blockApts.some((apt) => {
+              const aptNum = apt.number.padStart(2, "0");
+              return aptNum === quickSearch.aptNumber || apt.number.includes(quickSearch.aptNumber);
+            });
+          }
+        }
+      }
+
+      // Check if any apartment in this block matches the search
+      const blockApts = apartments.filter((a) => a.block_id === block.id);
+      return blockApts.some((apt) => apt.number.toLowerCase().includes(query));
+    });
+  }, [blocks, apartments, searchQuery]);
+
+  // Get apartments for a block, filtered by search
+  const getFilteredApartments = (blockId: string) => {
+    const blockApts = apartments.filter((a) => a.block_id === blockId);
+    
+    if (!searchQuery.trim()) return blockApts;
+
+    const query = searchQuery.toLowerCase().trim();
+    const quickSearch = parseQuickSearch(searchQuery);
+
+    if (quickSearch) {
+      return blockApts.filter((apt) => {
+        const aptNum = apt.number.padStart(2, "0");
+        return aptNum === quickSearch.aptNumber || apt.number.includes(quickSearch.aptNumber);
+      });
+    }
+
+    return blockApts.filter((apt) => apt.number.toLowerCase().includes(query));
+  };
 
   const fetchData = async () => {
     if (!id || !user) return;
 
     try {
-      // Fetch condominium
+      // Fetch condominium with full data
       const { data: condoData, error: condoError } = await supabase
         .from("condominiums")
-        .select("name")
+        .select("id, name, address, address_number, neighborhood, city, state, cnpj, zip_code")
         .eq("id", id)
         .eq("owner_id", user.id)
         .maybeSingle();
@@ -190,6 +276,19 @@ const CondominiumDetails = () => {
     fetchData();
   }, [id, user]);
 
+  // Toggle block expansion
+  const toggleBlock = (blockId: string) => {
+    setExpandedBlocks((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(blockId)) {
+        newSet.delete(blockId);
+      } else {
+        newSet.add(blockId);
+      }
+      return newSet;
+    });
+  };
+
   // Block handlers
   const handleBlockSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -242,6 +341,12 @@ const CondominiumDetails = () => {
   };
 
   // Apartment handlers
+  const openNewApartmentDialog = (blockId: string) => {
+    setEditingApartment(null);
+    setApartmentForm({ block_id: blockId, number: "", floor: "", monthly_fee: "" });
+    setApartmentDialog(true);
+  };
+
   const handleApartmentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -310,6 +415,20 @@ const CondominiumDetails = () => {
   };
 
   // Resident handlers
+  const openNewResidentDialog = (apartmentId: string) => {
+    setEditingResident(null);
+    setResidentForm({
+      apartment_id: apartmentId,
+      full_name: "",
+      email: "",
+      phone: "",
+      cpf: "",
+      is_owner: false,
+      is_responsible: false,
+    });
+    setResidentDialog(true);
+  };
+
   const handleResidentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -387,7 +506,7 @@ const CondominiumDetails = () => {
     const apt = apartments.find((a) => a.id === aptId);
     if (!apt) return "";
     const block = blocks.find((b) => b.id === apt.block_id);
-    return `${block?.name || ""} - APTO ${apt.number}`;
+    return `${block?.name || ""} - Apto ${apt.number}`;
   };
 
   if (loading) {
@@ -402,53 +521,91 @@ const CondominiumDetails = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-4 md:space-y-6">
-        <SindicoBreadcrumbs 
-          items={[
-            { label: "Condomínios", href: "/condominiums" },
-            { label: condominium?.name || "Detalhes" }
-          ]} 
-        />
-        
-        <div className="flex items-center gap-3 md:gap-4 mb-4 md:mb-8">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/condominiums")} className="shrink-0">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <h1 className="font-display text-xl md:text-3xl font-bold text-foreground truncate">
-              {condominium?.name}
-            </h1>
-            <p className="text-sm md:text-base text-muted-foreground">
-              Gerencie blocos, apartamentos e moradores
-            </p>
+      <div className="space-y-6">
+        {/* Back Link */}
+        <button
+          onClick={() => navigate("/condominiums")}
+          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Voltar para Condomínios
+        </button>
+
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <Building2 className="w-7 h-7 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="font-display text-xl md:text-2xl font-bold text-foreground uppercase tracking-tight">
+                {condominium?.name}
+              </h1>
+              {fullAddress && (
+                <p className="text-sm text-muted-foreground mt-0.5 flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 shrink-0" />
+                  <span className="uppercase">{fullAddress}</span>
+                </p>
+              )}
+            </div>
           </div>
+          <Button
+            variant="hero"
+            onClick={() => {
+              setEditingBlock(null);
+              setBlockForm({ name: "", description: "", floors: "1" });
+              setBlockDialog(true);
+            }}
+            className="shrink-0"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Novo Bloco
+          </Button>
         </div>
 
-        <Tabs defaultValue="blocks" className="w-full">
-          <TabsList className="mb-4 md:mb-6 bg-secondary/50 w-full grid grid-cols-3 h-auto p-1">
-            <TabsTrigger value="blocks" className="gap-1 md:gap-2 text-xs md:text-sm py-2">
-              <Building className="w-3 h-3 md:w-4 md:h-4" />
-              <span className="hidden sm:inline">Blocos</span>
-              <span className="sm:hidden">Blocos</span>
-              <span className="ml-1">({blocks.length})</span>
-            </TabsTrigger>
-            <TabsTrigger value="apartments" className="gap-1 md:gap-2 text-xs md:text-sm py-2">
-              <Home className="w-3 h-3 md:w-4 md:h-4" />
-              <span className="hidden sm:inline">Apartamentos</span>
-              <span className="sm:hidden">Aptos</span>
-              <span className="ml-1">({apartments.length})</span>
-            </TabsTrigger>
-            <TabsTrigger value="residents" className="gap-1 md:gap-2 text-xs md:text-sm py-2">
-              <Users className="w-3 h-3 md:w-4 md:h-4" />
-              <span className="hidden sm:inline">Moradores</span>
-              <span className="sm:hidden">Morad.</span>
-              <span className="ml-1">({residents.length})</span>
-            </TabsTrigger>
-          </TabsList>
+        {/* Stats Badges */}
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="secondary" className="gap-1.5 px-3 py-1.5 text-sm font-normal">
+            <Building2 className="w-3.5 h-3.5" />
+            {blocks.length} bloco(s)
+          </Badge>
+          <Badge variant="secondary" className="gap-1.5 px-3 py-1.5 text-sm font-normal">
+            <Home className="w-3.5 h-3.5" />
+            {apartments.length} apartamento(s)
+          </Badge>
+          <Badge variant="secondary" className="gap-1.5 px-3 py-1.5 text-sm font-normal">
+            <Users className="w-3.5 h-3.5" />
+            {residents.length} morador(es)
+          </Badge>
+        </div>
 
-          {/* BLOCKS TAB */}
-          <TabsContent value="blocks">
-            <div className="flex justify-end mb-4">
+        {/* Search */}
+        <div className="space-y-1">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome ou código (ex: 0344 = Bloco 03, Apto 44)"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-background border-border"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Digite 4 números para busca rápida: BBAA (BB=bloco, AA=apto)
+          </p>
+        </div>
+
+        {/* Blocks List */}
+        <div className="space-y-3">
+          {blocks.length === 0 ? (
+            <div className="text-center py-16 rounded-xl bg-card border border-border">
+              <Building2 className="w-12 h-12 text-primary mx-auto mb-4" />
+              <h3 className="font-display text-lg font-semibold text-foreground mb-2">
+                Nenhum bloco cadastrado
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                Cadastre blocos para organizar os apartamentos.
+              </p>
               <Button
                 variant="hero"
                 onClick={() => {
@@ -458,374 +615,265 @@ const CondominiumDetails = () => {
                 }}
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Novo Bloco
+                Cadastrar Primeiro Bloco
               </Button>
             </div>
-
-            {blocks.length === 0 ? (
-              <div className="text-center py-12 rounded-2xl bg-gradient-card border border-border/50">
-                <Building className="w-12 h-12 text-primary mx-auto mb-4" />
-                <h3 className="font-display text-lg font-semibold text-foreground mb-2">
-                  Nenhum bloco cadastrado
-                </h3>
-                <p className="text-muted-foreground">
-                  Cadastre blocos para organizar os apartamentos.
-                </p>
-              </div>
-            ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {blocks.map((block) => (
-                  <div
-                    key={block.id}
-                    className="p-4 rounded-xl bg-gradient-card border border-border/50"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Building className="w-5 h-5 text-primary" />
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-foreground">{block.name}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {apartments.filter((a) => a.block_id === block.id).length} apartamentos
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setEditingBlock(block);
-                            setBlockForm({ name: block.name, description: block.description || "", floors: String(block.floors || 1) });
-                            setBlockDialog(true);
-                          }}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteBlock(block.id)}
-                        >
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          {/* APARTMENTS TAB */}
-          <TabsContent value="apartments">
-            {/* Filters */}
-            <div className="flex flex-col gap-3 mb-4 md:mb-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por número..."
-                    value={apartmentFilterNumber}
-                    onChange={(e) => setApartmentFilterNumber(e.target.value)}
-                    className="pl-10 bg-secondary/50"
-                  />
-                </div>
-                <select
-                  value={apartmentFilterBlock}
-                  onChange={(e) => setApartmentFilterBlock(e.target.value)}
-                  className="h-10 px-3 rounded-lg bg-secondary/50 border border-border text-foreground text-sm"
-                >
-                  <option value="">Todos os blocos</option>
-                  {blocks.map((b) => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
-                  ))}
-                </select>
-              </div>
-              <Button
-                variant="hero"
-                className="w-full sm:w-auto sm:self-end"
-                onClick={() => {
-                  if (blocks.length === 0) {
-                    toast({ title: "Atenção", description: "Cadastre um bloco primeiro.", variant: "destructive" });
-                    return;
-                  }
-                  setEditingApartment(null);
-                  setApartmentForm({ block_id: blocks[0].id, number: "", floor: "", monthly_fee: "" });
-                  setApartmentDialog(true);
-                }}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Novo Apartamento
-              </Button>
+          ) : filteredBlocks.length === 0 ? (
+            <div className="text-center py-12 rounded-xl bg-card border border-border">
+              <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="font-display text-lg font-semibold text-foreground mb-2">
+                Nenhum resultado encontrado
+              </h3>
+              <p className="text-muted-foreground">
+                Tente outra busca ou limpe o filtro.
+              </p>
             </div>
+          ) : (
+            filteredBlocks.map((block) => {
+              const blockApartments = getFilteredApartments(block.id);
+              const allBlockApartments = apartments.filter((a) => a.block_id === block.id);
+              const isExpanded = expandedBlocks.has(block.id);
 
-            {/* Results counter */}
-            {apartments.length > 0 && (
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-sm text-muted-foreground">
-                  Mostrando <span className="font-medium text-foreground">{filteredApartments.length}</span> de <span className="font-medium text-foreground">{apartments.length}</span> apartamentos
-                </p>
-                {(apartmentFilterBlock || apartmentFilterNumber) && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setApartmentFilterBlock("");
-                      setApartmentFilterNumber("");
-                    }}
-                    className="text-xs"
-                  >
-                    Limpar filtros
-                  </Button>
-                )}
-              </div>
-            )}
+              return (
+                <Collapsible key={block.id} open={isExpanded} onOpenChange={() => toggleBlock(block.id)}>
+                  <div className="rounded-xl border border-border bg-card overflow-hidden">
+                    {/* Block Header */}
+                    <div className="flex items-center justify-between p-4">
+                      <CollapsibleTrigger asChild>
+                        <button className="flex items-center gap-3 flex-1 text-left">
+                          <ChevronRight
+                            className={cn(
+                              "w-5 h-5 text-muted-foreground transition-transform duration-200",
+                              isExpanded && "rotate-90"
+                            )}
+                          />
+                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Building2 className="w-5 h-5 text-primary" />
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-foreground">{block.name}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              {allBlockApartments.length} apartamento(s)
+                            </p>
+                          </div>
+                        </button>
+                      </CollapsibleTrigger>
 
-            {apartments.length === 0 ? (
-              <div className="text-center py-12 rounded-2xl bg-gradient-card border border-border/50">
-                <Home className="w-12 h-12 text-primary mx-auto mb-4" />
-                <h3 className="font-display text-lg font-semibold text-foreground mb-2">
-                  Nenhum apartamento cadastrado
-                </h3>
-                <p className="text-muted-foreground">
-                  Cadastre apartamentos nos blocos.
-                </p>
-              </div>
-            ) : filteredApartments.length === 0 ? (
-              <div className="text-center py-12 rounded-2xl bg-gradient-card border border-border/50">
-                <Filter className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="font-display text-lg font-semibold text-foreground mb-2">
-                  Nenhum resultado encontrado
-                </h3>
-                <p className="text-muted-foreground">
-                  Ajuste os filtros para ver os apartamentos.
-                </p>
-              </div>
-            ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {filteredApartments.map((apt) => (
-                  <div
-                    key={apt.id}
-                    className="p-4 rounded-xl bg-gradient-card border border-border/50"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
-                        <Home className="w-5 h-5 text-accent" />
-                      </div>
-                      <div className="flex gap-1">
+                      <div className="flex items-center gap-2">
                         <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setEditingApartment(apt);
-                            setApartmentForm({
-                              block_id: apt.block_id,
-                              number: apt.number,
-                              floor: apt.floor?.toString() || "",
-                              monthly_fee: apt.monthly_fee?.toString() || "",
-                            });
-                            setApartmentDialog(true);
-                          }}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openNewApartmentDialog(block.id)}
                         >
-                          <Edit className="w-4 h-4" />
+                          <Plus className="w-3 h-3 mr-1" />
+                          Apto
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteApartment(apt.id)}
-                        >
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setEditingBlock(block);
+                                setBlockForm({
+                                  name: block.name,
+                                  description: block.description || "",
+                                  floors: String(block.floors || 1),
+                                });
+                                setBlockDialog(true);
+                              }}
+                            >
+                              <Edit className="w-4 h-4 mr-2" />
+                              Editar Bloco
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteBlock(block.id)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Excluir Bloco
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
-                    <BlockApartmentDisplay
-                      blockName={getBlockName(apt.block_id)}
-                      apartmentNumber={apt.number}
-                      variant="compact"
-                    />
-                    {apt.floor !== null && (
-                      <p className="text-xs text-muted-foreground">
-                        {apt.floor === 0 ? "Térreo" : `${apt.floor}º Andar`}
-                      </p>
-                    )}
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {residents.filter((r) => r.apartment_id === apt.id).length} moradores
-                    </p>
+
+                    {/* Apartments List (Collapsible) */}
+                    <CollapsibleContent>
+                      <div className="border-t border-border">
+                        {blockApartments.length === 0 ? (
+                          <div className="p-6 text-center text-muted-foreground">
+                            {searchQuery ? "Nenhum apartamento encontrado" : "Nenhum apartamento neste bloco"}
+                          </div>
+                        ) : (
+                          <div className="divide-y divide-border">
+                            {blockApartments.map((apt) => {
+                              const aptResidents = residents.filter((r) => r.apartment_id === apt.id);
+                              return (
+                                <div key={apt.id} className="p-4 hover:bg-secondary/30 transition-colors">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center">
+                                        <Home className="w-4 h-4 text-accent" />
+                                      </div>
+                                      <div>
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-medium text-foreground">
+                                            Apto {apt.number}
+                                          </span>
+                                          {apt.floor !== null && (
+                                            <span className="text-xs text-muted-foreground">
+                                              ({apt.floor === 0 ? "Térreo" : `${apt.floor}º andar`})
+                                            </span>
+                                          )}
+                                        </div>
+                                        <p className="text-sm text-muted-foreground">
+                                          {aptResidents.length} morador(es)
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => openNewResidentDialog(apt.id)}
+                                      >
+                                        <Plus className="w-3 h-3 mr-1" />
+                                        Morador
+                                      </Button>
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                                            <MoreVertical className="w-4 h-4" />
+                                          </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                          <DropdownMenuItem
+                                            onClick={() => {
+                                              setEditingApartment(apt);
+                                              setApartmentForm({
+                                                block_id: apt.block_id,
+                                                number: apt.number,
+                                                floor: apt.floor?.toString() || "",
+                                                monthly_fee: apt.monthly_fee?.toString() || "",
+                                              });
+                                              setApartmentDialog(true);
+                                            }}
+                                          >
+                                            <Edit className="w-4 h-4 mr-2" />
+                                            Editar Apartamento
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem
+                                            onClick={() => handleDeleteApartment(apt.id)}
+                                            className="text-destructive focus:text-destructive"
+                                          >
+                                            <Trash2 className="w-4 h-4 mr-2" />
+                                            Excluir Apartamento
+                                          </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
+                                    </div>
+                                  </div>
+
+                                  {/* Residents under apartment */}
+                                  {aptResidents.length > 0 && (
+                                    <div className="mt-3 ml-12 space-y-2">
+                                      {aptResidents.map((resident) => (
+                                        <div
+                                          key={resident.id}
+                                          className="flex items-center justify-between p-3 rounded-lg bg-secondary/50"
+                                        >
+                                          <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                              <User className="w-4 h-4 text-primary" />
+                                            </div>
+                                            <div>
+                                              <p className="font-medium text-sm text-foreground">
+                                                {resident.full_name}
+                                              </p>
+                                              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                                {resident.email && (
+                                                  <span className="flex items-center gap-1">
+                                                    <Mail className="w-3 h-3" />
+                                                    {resident.email}
+                                                  </span>
+                                                )}
+                                                {resident.phone && (
+                                                  <span className="flex items-center gap-1">
+                                                    <Phone className="w-3 h-3" />
+                                                    {formatPhone(resident.phone)}
+                                                  </span>
+                                                )}
+                                              </div>
+                                              <div className="flex gap-1 mt-1">
+                                                {resident.is_owner && (
+                                                  <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px]">
+                                                    Proprietário
+                                                  </span>
+                                                )}
+                                                {resident.is_responsible && (
+                                                  <span className="px-1.5 py-0.5 rounded bg-accent/10 text-accent text-[10px]">
+                                                    Responsável
+                                                  </span>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </div>
+                                          <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                              <Button variant="ghost" size="icon" className="h-7 w-7">
+                                                <MoreVertical className="w-3 h-3" />
+                                              </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                              <DropdownMenuItem
+                                                onClick={() => {
+                                                  setEditingResident(resident);
+                                                  setResidentForm({
+                                                    apartment_id: resident.apartment_id,
+                                                    full_name: resident.full_name,
+                                                    email: resident.email,
+                                                    phone: resident.phone || "",
+                                                    cpf: resident.cpf || "",
+                                                    is_owner: resident.is_owner,
+                                                    is_responsible: resident.is_responsible,
+                                                  });
+                                                  setResidentDialog(true);
+                                                }}
+                                              >
+                                                <Edit className="w-4 h-4 mr-2" />
+                                                Editar Morador
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem
+                                                onClick={() => handleDeleteResident(resident.id)}
+                                                className="text-destructive focus:text-destructive"
+                                              >
+                                                <Trash2 className="w-4 h-4 mr-2" />
+                                                Excluir Morador
+                                              </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                          </DropdownMenu>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </CollapsibleContent>
                   </div>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          {/* RESIDENTS TAB */}
-          <TabsContent value="residents">
-            {/* Filters */}
-            <div className="flex flex-col gap-3 mb-4 md:mb-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por nome ou email..."
-                    value={residentFilterSearch}
-                    onChange={(e) => setResidentFilterSearch(e.target.value)}
-                    className="pl-10 bg-secondary/50"
-                  />
-                </div>
-                <select
-                  value={residentFilterApartment}
-                  onChange={(e) => setResidentFilterApartment(e.target.value)}
-                  className="h-10 px-3 rounded-lg bg-secondary/50 border border-border text-foreground text-sm"
-                >
-                  <option value="">Todos os apartamentos</option>
-                  {apartments.map((apt) => (
-                    <option key={apt.id} value={apt.id}>
-                      {getBlockName(apt.block_id)} - APTO {apt.number}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <Button
-                variant="hero"
-                className="w-full sm:w-auto sm:self-end"
-                onClick={() => {
-                  if (apartments.length === 0) {
-                    toast({ title: "Atenção", description: "Cadastre um apartamento primeiro.", variant: "destructive" });
-                    return;
-                  }
-                  setEditingResident(null);
-                  setResidentForm({
-                    apartment_id: apartments[0].id,
-                    full_name: "",
-                    email: "",
-                    phone: "",
-                    cpf: "",
-                    is_owner: false,
-                    is_responsible: false,
-                  });
-                  setResidentDialog(true);
-                }}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Novo Morador
-              </Button>
-            </div>
-
-            {/* Results counter */}
-            {residents.length > 0 && (
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-sm text-muted-foreground">
-                  Mostrando <span className="font-medium text-foreground">{filteredResidents.length}</span> de <span className="font-medium text-foreground">{residents.length}</span> moradores
-                </p>
-                {(residentFilterSearch || residentFilterApartment) && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setResidentFilterSearch("");
-                      setResidentFilterApartment("");
-                    }}
-                    className="text-xs"
-                  >
-                    Limpar filtros
-                  </Button>
-                )}
-              </div>
-            )}
-
-            {residents.length === 0 ? (
-              <div className="text-center py-12 rounded-2xl bg-gradient-card border border-border/50">
-                <Users className="w-12 h-12 text-primary mx-auto mb-4" />
-                <h3 className="font-display text-lg font-semibold text-foreground mb-2">
-                  Nenhum morador cadastrado
-                </h3>
-                <p className="text-muted-foreground">
-                  Cadastre moradores nos apartamentos.
-                </p>
-              </div>
-            ) : filteredResidents.length === 0 ? (
-              <div className="text-center py-12 rounded-2xl bg-gradient-card border border-border/50">
-                <Filter className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="font-display text-lg font-semibold text-foreground mb-2">
-                  Nenhum resultado encontrado
-                </h3>
-                <p className="text-muted-foreground">
-                  Ajuste os filtros para ver os moradores.
-                </p>
-              </div>
-            ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredResidents.map((resident) => (
-                  <div
-                    key={resident.id}
-                    className="p-4 rounded-xl bg-gradient-card border border-border/50"
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <User className="w-5 h-5 text-primary" />
-                      </div>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setEditingResident(resident);
-                            setResidentForm({
-                              apartment_id: resident.apartment_id,
-                              full_name: resident.full_name,
-                              email: resident.email,
-                              phone: resident.phone || "",
-                              cpf: resident.cpf || "",
-                              is_owner: resident.is_owner,
-                              is_responsible: resident.is_responsible,
-                            });
-                            setResidentDialog(true);
-                          }}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteResident(resident.id)}
-                        >
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </div>
-                    <h4 className="font-semibold text-foreground">{resident.full_name}</h4>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      {getApartmentInfo(resident.apartment_id)}
-                    </p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Mail className="w-3 h-3" />
-                      <span className="truncate">{resident.email}</span>
-                    </div>
-                    {resident.phone && (
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Phone className="w-3 h-3" />
-                        <span>{formatPhone(resident.phone)}</span>
-                      </div>
-                    )}
-                    <div className="flex gap-2 mt-2">
-                      {resident.is_owner && (
-                        <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs">
-                          Proprietário
-                        </span>
-                      )}
-                      {resident.is_responsible && (
-                        <span className="px-2 py-0.5 rounded-full bg-accent/10 text-accent text-xs">
-                          Responsável
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+                </Collapsible>
+              );
+            })
+          )}
+        </div>
 
         {/* DIALOGS */}
         {/* Block Dialog */}
@@ -888,7 +936,7 @@ const CondominiumDetails = () => {
             </DialogHeader>
             <form onSubmit={handleApartmentSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label>BLOCO *</Label>
+                <Label>Bloco *</Label>
                 <select
                   value={apartmentForm.block_id}
                   onChange={(e) => setApartmentForm({ ...apartmentForm, block_id: e.target.value, floor: "" })}
@@ -927,7 +975,6 @@ const CondominiumDetails = () => {
                     {apartmentForm.block_id && (() => {
                       const selectedBlock = blocks.find(b => b.id === apartmentForm.block_id);
                       const floorsCount = selectedBlock?.floors || 1;
-                      // floors = total de pavimentos (inclui térreo), então andares = floors - 1
                       return Array.from({ length: floorsCount - 1 }, (_, i) => (
                         <option key={i + 1} value={String(i + 1)}>{i + 1}º Andar</option>
                       ));
@@ -975,7 +1022,7 @@ const CondominiumDetails = () => {
                 >
                   {apartments.map((a) => (
                     <option key={a.id} value={a.id}>
-                      {getBlockName(a.block_id)} - APTO {a.number}
+                      {getBlockName(a.block_id)} - Apto {a.number}
                     </option>
                   ))}
                 </select>
