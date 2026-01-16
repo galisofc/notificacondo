@@ -417,7 +417,7 @@ Você tem uma encomenda aguardando na portaria.
 
 📋 *Tipo:* {tipo_encomenda}
 📍 *Rastreio:* {codigo_rastreio}
-🏠 *Destino:* Bloco {bloco}, Apto {apartamento}
+🏠 *Destino:* BLOCO {bloco}, APTO {apartamento}
 🔑 *Código de retirada:* {codigo}
 
 Apresente este código na portaria para retirar sua encomenda.
