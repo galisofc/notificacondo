@@ -13,7 +13,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DoorOpen, Plus, Trash2, Building2, Mail, Phone, Search, UserPlus } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { DoorOpen, Plus, Trash2, Building2, Mail, Phone, Search, UserPlus, MessageCircle, Copy, Check, Key, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -56,6 +57,17 @@ export default function Porteiros() {
     phone: "",
     condominium_id: "",
   });
+  
+  // Success dialog state (shows password if WhatsApp failed)
+  const [successDialogOpen, setSuccessDialogOpen] = useState(false);
+  const [successData, setSuccessData] = useState<{
+    full_name: string;
+    email: string;
+    password?: string;
+    whatsapp_sent: boolean;
+    is_new_user: boolean;
+  } | null>(null);
+  const [passwordCopied, setPasswordCopied] = useState(false);
 
   // Fetch síndico's condominiums
   useEffect(() => {
@@ -152,94 +164,59 @@ export default function Porteiros() {
     setIsSubmitting(true);
 
     try {
-      // 1. Check if user already exists by email
-      const { data: existingProfile } = await supabase
-        .from("profiles")
-        .select("user_id")
-        .eq("email", newPorter.email.toLowerCase())
-        .maybeSingle();
+      // Call edge function to create porter
+      const { data, error } = await supabase.functions.invoke("create-porteiro", {
+        body: {
+          full_name: newPorter.full_name,
+          email: newPorter.email,
+          phone: newPorter.phone || null,
+          condominium_id: newPorter.condominium_id,
+        },
+      });
 
-      let userId: string;
+      if (error) throw error;
 
-      if (existingProfile) {
-        userId = existingProfile.user_id;
-        
-        // Check if already a porter for this condominium
-        const { data: existingLink } = await supabase
-          .from("user_condominiums")
-          .select("id")
-          .eq("user_id", userId)
-          .eq("condominium_id", newPorter.condominium_id)
-          .maybeSingle();
+      if (data?.error) {
+        throw new Error(data.error);
+      }
 
-        if (existingLink) {
-          toast({
-            title: "Porteiro já cadastrado",
-            description: "Este usuário já é porteiro deste condomínio",
-            variant: "destructive",
-          });
-          setIsSubmitting(false);
-          return;
-        }
-      } else {
-        // 2. Create new user via edge function (similar to create-sindico)
-        // For now, we'll create a profile and user_role entry
-        // The user will need to set their password via magic link
-        const tempPassword = crypto.randomUUID();
-        
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: newPorter.email.toLowerCase(),
-          password: tempPassword,
-          options: {
-            data: {
-              full_name: newPorter.full_name,
-            },
-          },
+      // Show success feedback
+      if (data.is_new_user && !data.whatsapp_sent && data.password) {
+        // WhatsApp failed, show password dialog
+        setSuccessData({
+          full_name: newPorter.full_name,
+          email: newPorter.email,
+          password: data.password,
+          whatsapp_sent: false,
+          is_new_user: true,
         });
-
-        if (authError || !authData.user) {
-          throw new Error(authError?.message || "Erro ao criar usuário");
-        }
-
-        userId = authData.user.id;
-
-        // Update profile with phone if provided
-        if (newPorter.phone) {
-          await supabase
-            .from("profiles")
-            .update({ phone: newPorter.phone, full_name: newPorter.full_name })
-            .eq("user_id", userId);
-        }
-
-        // Add porteiro role
-        await supabase.from("user_roles").insert({
-          user_id: userId,
-          role: "porteiro",
+        setSuccessDialogOpen(true);
+      } else if (data.is_new_user && data.whatsapp_sent) {
+        // WhatsApp sent successfully
+        toast({
+          title: "Porteiro cadastrado! ✅",
+          description: (
+            <div className="flex items-center gap-2">
+              <MessageCircle className="w-4 h-4 text-green-500" />
+              <span>Credenciais enviadas via WhatsApp</span>
+            </div>
+          ),
+        });
+      } else {
+        // Existing user linked
+        toast({
+          title: "Porteiro vinculado!",
+          description: "O usuário já existente foi vinculado ao condomínio",
         });
       }
 
-      // 3. Link porter to condominium
-      const { error: linkError } = await supabase.from("user_condominiums").insert({
-        user_id: userId,
-        condominium_id: newPorter.condominium_id,
-      });
-
-      if (linkError) throw linkError;
-
-      toast({
-        title: "Porteiro adicionado!",
-        description: existingProfile
-          ? "Porteiro vinculado ao condomínio com sucesso"
-          : "Um e-mail de confirmação foi enviado ao porteiro",
-      });
-
-      // Refresh list
+      // Reset form and close dialog
       setNewPorter({ full_name: "", email: "", phone: "", condominium_id: "" });
       setIsDialogOpen(false);
 
       // Refetch porters
       const condoIds = condominiums.map((c) => c.id);
-      const { data } = await supabase
+      const { data: portersData } = await supabase
         .from("user_condominiums")
         .select(`
           id,
@@ -250,14 +227,14 @@ export default function Porteiros() {
         `)
         .in("condominium_id", condoIds);
 
-      const userIds = data?.map((p) => p.user_id) || [];
+      const userIds = portersData?.map((p) => p.user_id) || [];
       const { data: profiles } = await supabase
         .from("profiles")
         .select("user_id, full_name, email, phone")
         .in("user_id", userIds);
 
       const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || []);
-      const portersWithProfiles = (data || []).map((p) => ({
+      const portersWithProfiles = (portersData || []).map((p) => ({
         ...p,
         profile: profileMap.get(p.user_id) || null,
         condominium: p.condominium as { name: string } | null,
@@ -273,6 +250,14 @@ export default function Porteiros() {
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleCopyPassword = async () => {
+    if (successData?.password) {
+      await navigator.clipboard.writeText(successData.password);
+      setPasswordCopied(true);
+      setTimeout(() => setPasswordCopied(false), 2000);
     }
   };
 
@@ -554,6 +539,93 @@ export default function Porteiros() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Success Dialog with Password */}
+      <Dialog open={successDialogOpen} onOpenChange={setSuccessDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Key className="w-5 h-5 text-primary" />
+              Porteiro Cadastrado
+            </DialogTitle>
+            <DialogDescription>
+              O WhatsApp não foi enviado. Anote as credenciais abaixo para informar ao porteiro.
+            </DialogDescription>
+          </DialogHeader>
+
+          {successData && (
+            <div className="space-y-4 py-4">
+              <Alert variant="destructive" className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20">
+                <AlertCircle className="h-4 w-4 text-yellow-600" />
+                <AlertTitle className="text-yellow-800 dark:text-yellow-200">Atenção</AlertTitle>
+                <AlertDescription className="text-yellow-700 dark:text-yellow-300">
+                  {successData.password 
+                    ? "Não foi possível enviar as credenciais via WhatsApp. Anote a senha abaixo!"
+                    : "O porteiro foi vinculado ao condomínio."}
+                </AlertDescription>
+              </Alert>
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 text-sm">
+                  <div className="p-2 rounded-lg bg-muted">
+                    <Mail className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">E-mail</p>
+                    <p className="font-medium">{successData.email}</p>
+                  </div>
+                </div>
+
+                {successData.password && (
+                  <div className="flex items-center gap-3 text-sm">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <Key className="w-4 h-4 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-muted-foreground">Senha</p>
+                      <div className="flex items-center gap-2">
+                        <code className="text-lg font-mono font-bold text-primary bg-primary/10 px-3 py-1 rounded">
+                          {successData.password}
+                        </code>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleCopyPassword}
+                          className="gap-1"
+                        >
+                          {passwordCopied ? (
+                            <>
+                              <Check className="w-3 h-3" />
+                              Copiado
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3 h-3" />
+                              Copiar
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button 
+              onClick={() => {
+                setSuccessDialogOpen(false);
+                setSuccessData(null);
+                setPasswordCopied(false);
+              }}
+            >
+              Entendi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
