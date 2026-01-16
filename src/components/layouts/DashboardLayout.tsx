@@ -85,7 +85,7 @@ const residentNavItems: NavItem[] = [
 const porteiroNavItems: NavItem[] = [
   { title: "Início", url: "/porteiro", icon: Home },
   { title: "Registrar Encomenda", url: "/porteiro/registrar", icon: PackagePlus },
-  { title: "Encomendas", url: "/porteiro/encomendas", icon: Package },
+  { title: "Retirar Encomenda", url: "/porteiro/encomendas", icon: Package },
 ];
 
 function SidebarNavigation() {
