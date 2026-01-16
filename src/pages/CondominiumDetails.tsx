@@ -22,6 +22,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -40,11 +41,13 @@ import {
   ChevronRight,
   MoreVertical,
   MapPin,
+  FileSpreadsheet,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { isValidCPF, formatCNPJ, formatCEP } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import ResidentCSVImportDialog from "@/components/condominium/ResidentCSVImportDialog";
 
 interface Condominium {
   id: string;
@@ -106,6 +109,8 @@ const CondominiumDetails = () => {
   const [blockDialog, setBlockDialog] = useState(false);
   const [apartmentDialog, setApartmentDialog] = useState(false);
   const [residentDialog, setResidentDialog] = useState(false);
+  const [csvImportDialog, setCsvImportDialog] = useState(false);
+  const [csvImportApartment, setCsvImportApartment] = useState<{ id: string; number: string; blockName: string } | null>(null);
 
   // Editing states
   const [editingBlock, setEditingBlock] = useState<Block | null>(null);
@@ -768,6 +773,17 @@ const CondominiumDetails = () => {
                                             Editar Apartamento
                                           </DropdownMenuItem>
                                           <DropdownMenuItem
+                                            onClick={() => {
+                                              const blockName = blocks.find(b => b.id === apt.block_id)?.name || "";
+                                              setCsvImportApartment({ id: apt.id, number: apt.number, blockName });
+                                              setCsvImportDialog(true);
+                                            }}
+                                          >
+                                            <FileSpreadsheet className="w-4 h-4 mr-2" />
+                                            Importar Moradores (CSV)
+                                          </DropdownMenuItem>
+                                          <DropdownMenuSeparator />
+                                          <DropdownMenuItem
                                             onClick={() => handleDeleteApartment(apt.id)}
                                             className="text-destructive focus:text-destructive"
                                           >
@@ -1101,6 +1117,21 @@ const CondominiumDetails = () => {
             </form>
           </DialogContent>
         </Dialog>
+
+        {/* CSV Import Dialog */}
+        {csvImportApartment && (
+          <ResidentCSVImportDialog
+            open={csvImportDialog}
+            onOpenChange={(open) => {
+              setCsvImportDialog(open);
+              if (!open) setCsvImportApartment(null);
+            }}
+            apartmentId={csvImportApartment.id}
+            apartmentNumber={csvImportApartment.number}
+            blockName={csvImportApartment.blockName}
+            onSuccess={fetchData}
+          />
+        )}
       </div>
     </DashboardLayout>
   );
