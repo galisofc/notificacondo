@@ -220,4 +220,18 @@ Em caso de dúvidas, entre em contato com a administração.
 
 Atenciosamente,
 Equipe {condominio}`,
+  package_arrival: `📦 *Nova Encomenda!*
+
+🏢 *{condominio}*
+
+Olá, *{nome}*!
+
+Você tem uma encomenda aguardando na portaria.
+
+🏠 *Destino:* Bloco {bloco}, Apto {apartamento}
+🔑 *Código de retirada:* {codigo}
+
+Apresente este código na portaria para retirar sua encomenda.
+
+_Mensagem automática - NotificaCondo_`,
 };
