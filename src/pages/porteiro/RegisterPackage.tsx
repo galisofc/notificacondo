@@ -27,6 +27,7 @@ interface DestinationPreview {
   condominiumName: string;
   blockName: string;
   apartmentNumber: string;
+  residentName?: string;
 }
 
 export default function RegisterPackage() {
@@ -73,10 +74,11 @@ export default function RegisterPackage() {
       }
 
       try {
-        const [condoRes, blockRes, aptRes] = await Promise.all([
+        const [condoRes, blockRes, aptRes, residentRes] = await Promise.all([
           supabase.from("condominiums").select("name").eq("id", selectedCondominium).single(),
           supabase.from("blocks").select("name").eq("id", selectedBlock).single(),
           supabase.from("apartments").select("number").eq("id", selectedApartment).single(),
+          supabase.from("residents").select("full_name").eq("apartment_id", selectedApartment).eq("is_responsible", true).maybeSingle(),
         ]);
 
         if (condoRes.data && blockRes.data && aptRes.data) {
@@ -84,6 +86,7 @@ export default function RegisterPackage() {
             condominiumName: condoRes.data.name,
             blockName: blockRes.data.name,
             apartmentNumber: aptRes.data.number,
+            residentName: residentRes.data?.full_name || undefined,
           });
         }
       } catch (error) {
@@ -357,6 +360,11 @@ export default function RegisterPackage() {
                       <p className="font-semibold text-lg">
                         {destinationPreview.blockName} - APTO {destinationPreview.apartmentNumber}
                       </p>
+                      {destinationPreview.residentName && (
+                        <p className="text-sm text-muted-foreground">
+                          {destinationPreview.residentName}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
