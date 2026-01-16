@@ -108,18 +108,43 @@ export default function RegisterPackage() {
         .getPublicUrl(fileName);
 
       // 3. Insert package record
-      const { error: insertError } = await supabase.from("packages").insert({
-        condominium_id: selectedCondominium,
-        block_id: selectedBlock,
-        apartment_id: selectedApartment,
-        received_by: user.id,
-        pickup_code: pickupCode,
-        description: description || null,
-        photo_url: urlData.publicUrl,
-        status: "pendente",
-      });
+      const { data: packageData, error: insertError } = await supabase
+        .from("packages")
+        .insert({
+          condominium_id: selectedCondominium,
+          block_id: selectedBlock,
+          apartment_id: selectedApartment,
+          received_by: user.id,
+          pickup_code: pickupCode,
+          description: description || null,
+          photo_url: urlData.publicUrl,
+          status: "pendente",
+        })
+        .select()
+        .single();
 
       if (insertError) throw insertError;
+
+      // 4. Send WhatsApp notification (non-blocking)
+      try {
+        const { error: notifyError } = await supabase.functions.invoke(
+          "notify-package-arrival",
+          {
+            body: {
+              package_id: packageData.id,
+              apartment_id: selectedApartment,
+              pickup_code: pickupCode,
+              photo_url: urlData.publicUrl,
+            },
+          }
+        );
+
+        if (notifyError) {
+          console.warn("Failed to send package notification:", notifyError);
+        }
+      } catch (notifyErr) {
+        console.warn("Error calling notification function:", notifyErr);
+      }
 
       setRegisteredCode(pickupCode);
       setStep("success");
