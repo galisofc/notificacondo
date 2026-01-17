@@ -656,12 +656,15 @@ const SindicoSubscriptions = () => {
                       key={sub.id}
                       className="p-4 rounded-xl border border-border bg-card hover:border-primary/30 transition-all"
                     >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Building2 className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium text-sm">{sub.condominium.name}</span>
-                          </div>
+                      <div className="mb-3">
+                        {/* Condominium name - first line */}
+                        <div className="flex items-center gap-2 mb-2">
+                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium text-sm">{sub.condominium.name}</span>
+                        </div>
+                        
+                        {/* Badges - second line */}
+                        <div className="flex flex-wrap items-center gap-2">
                           <Badge 
                             variant={sub.active ? "default" : "secondary"}
                             className={sub.active 
@@ -681,8 +684,6 @@ const SindicoSubscriptions = () => {
                               </>
                             )}
                           </Badge>
-                        </div>
-                        <div className="flex items-center gap-2">
                           <Badge className={`${getPlanColor(sub.plan)} text-white`}>
                             {PLAN_NAMES[sub.plan] || sub.plan}
                           </Badge>
