@@ -186,7 +186,7 @@ const ResidentDashboard = () => {
       </Helmet>
 
       <div className="space-y-6 md:space-y-8 animate-fade-up">
-        <ResidentBreadcrumbs items={[{ label: "Dashboard" }]} />
+        <ResidentBreadcrumbs items={[]} />
         {/* Pending Defense Alert */}
         {stats.pendingDefenses > 0 && (
           <div 

@@ -338,7 +338,7 @@ export default function SuperAdminDashboard() {
       </Helmet>
 
       <div className="space-y-8 animate-fade-up">
-        <SuperAdminBreadcrumbs items={[{ label: "Dashboard" }]} />
+        <SuperAdminBreadcrumbs items={[]} />
         {/* Page Header */}
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground">
