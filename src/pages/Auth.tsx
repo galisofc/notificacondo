@@ -495,29 +495,57 @@ const Auth = () => {
           </div>
 
           <h1 className="font-display text-4xl font-bold mb-6 text-foreground">
-            Gestão de multas com{" "}
-            <span className="text-gradient">prova jurídica</span>
+            Gestão completa do{" "}
+            <span className="text-gradient">seu condomínio</span>
           </h1>
           
           <p className="text-lg text-muted-foreground mb-8 max-w-md">
-            Notificações, advertências e multas condominiais com contraditório, 
-            ampla defesa e registro de ciência automático.
+            Sistema integrado para gestão de multas, controle de encomendas 
+            e reservas do salão de festas com notificações automáticas.
           </p>
 
-          <div className="space-y-4">
-            {[
-              "Registro completo de ocorrências",
-              "Envio automático via WhatsApp",
-              "Prova de ciência irrefutável",
-              "Dossiê jurídico exportável",
-            ].map((feature, index) => (
-              <div key={index} className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
-                  <div className="w-2 h-2 rounded-full bg-primary" />
-                </div>
-                <span className="text-muted-foreground">{feature}</span>
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-primary uppercase tracking-wide">Gestão de Multas</h3>
+              <div className="space-y-2">
+                {["Registro de ocorrências com prova jurídica", "Notificação automática via WhatsApp", "Contraditório e ampla defesa"].map((feature, index) => (
+                  <div key={index} className="flex items-center gap-3">
+                    <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    </div>
+                    <span className="text-sm text-muted-foreground">{feature}</span>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-blue-500 uppercase tracking-wide">Controle de Encomendas</h3>
+              <div className="space-y-2">
+                {["Registro com foto e código de retirada", "Notificação instantânea ao morador", "Histórico completo de entregas"].map((feature, index) => (
+                  <div key={index} className="flex items-center gap-3">
+                    <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                    </div>
+                    <span className="text-sm text-muted-foreground">{feature}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-purple-500 uppercase tracking-wide">Salão de Festas</h3>
+              <div className="space-y-2">
+                {["Reservas online com calendário", "Lembretes automáticos", "Checklist de entrada e saída"].map((feature, index) => (
+                  <div key={index} className="flex items-center gap-3">
+                    <div className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center">
+                      <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                    </div>
+                    <span className="text-sm text-muted-foreground">{feature}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
