@@ -63,6 +63,7 @@ interface PackageWithRelations {
   received_at: string;
   received_by: string;
   picked_up_at: string | null;
+  picked_up_by: string | null;
   picked_up_by_name: string | null;
   pickup_code: string;
   photo_url: string;
@@ -74,6 +75,7 @@ interface PackageWithRelations {
   resident: { id: string; full_name: string; phone: string | null } | null;
   package_type: { id: string; name: string; icon: string | null } | null;
   received_by_profile: { full_name: string } | null;
+  picked_up_by_profile: { full_name: string } | null;
 }
 
 interface Condominium {
@@ -146,6 +148,7 @@ const SindicoPackages = () => {
           received_at,
           received_by,
           picked_up_at,
+          picked_up_by,
           picked_up_by_name,
           pickup_code,
           photo_url,
@@ -163,15 +166,17 @@ const SindicoPackages = () => {
 
       if (error) throw error;
 
-      // Fetch profiles for received_by users (porteiros)
+      // Fetch profiles for received_by and picked_up_by users (porteiros)
       const receivedByIds = [...new Set(data?.map((p) => p.received_by).filter(Boolean) || [])];
+      const pickedUpByIds = [...new Set(data?.map((p) => p.picked_up_by).filter(Boolean) || [])];
+      const allPorteiroIds = [...new Set([...receivedByIds, ...pickedUpByIds])];
       let profilesMap: Record<string, { full_name: string }> = {};
       
-      if (receivedByIds.length > 0) {
+      if (allPorteiroIds.length > 0) {
         const { data: profiles } = await supabase
           .from("profiles")
           .select("user_id, full_name")
-          .in("user_id", receivedByIds);
+          .in("user_id", allPorteiroIds);
         
         if (profiles) {
           profilesMap = profiles.reduce((acc, p) => {
@@ -203,6 +208,7 @@ const SindicoPackages = () => {
       return (data || []).map((pkg) => ({
         ...pkg,
         received_by_profile: profilesMap[pkg.received_by] || null,
+        picked_up_by_profile: pkg.picked_up_by ? profilesMap[pkg.picked_up_by] || null : null,
         resident: pkg.resident || residentsMap[pkg.apartment_id] || null,
       })) as PackageWithRelations[];
     },
@@ -720,6 +726,12 @@ const SindicoPackages = () => {
                       <div>
                         <p className="text-xs text-muted-foreground">Retirado por</p>
                         <p className="font-medium">{selectedPackage.picked_up_by_name}</p>
+                      </div>
+                    )}
+                    {selectedPackage.picked_up_by_profile && (
+                      <div className="col-span-2">
+                        <p className="text-xs text-muted-foreground">Entregue por (Porteiro)</p>
+                        <p className="font-medium">{selectedPackage.picked_up_by_profile.full_name}</p>
                       </div>
                     )}
                   </div>
