@@ -15,7 +15,18 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -35,6 +46,7 @@ import {
   Search,
   UserPlus,
   Pencil,
+  Trash2,
   Users,
   Phone,
   Mail,
@@ -107,6 +119,8 @@ export default function PorteiroCondominio() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingResident, setEditingResident] = useState<Resident | null>(null);
   const [selectedApartmentId, setSelectedApartmentId] = useState<string>("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [residentToDelete, setResidentToDelete] = useState<Resident | null>(null);
 
   const [formData, setFormData] = useState({
     full_name: "",
@@ -292,6 +306,15 @@ export default function PorteiroCondominio() {
     setEditingResident(null);
     setSelectedApartmentId("");
   };
+  const openDeleteDialog = (resident: Resident) => {
+    setResidentToDelete(resident);
+    setDeleteDialogOpen(true);
+  };
+
+  const closeDeleteDialog = () => {
+    setDeleteDialogOpen(false);
+    setResidentToDelete(null);
+  };
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -352,6 +375,38 @@ export default function PorteiroCondominio() {
       return;
     }
     saveMutation.mutate();
+  };
+
+  const deleteMutation = useMutation({
+    mutationFn: async (residentId: string) => {
+      const { error } = await supabase
+        .from("residents")
+        .delete()
+        .eq("id", residentId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["porteiro-blocks-residents", selectedCondoId],
+      });
+      toast({
+        title: "Morador excluído com sucesso!",
+      });
+      closeDeleteDialog();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao excluir",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDelete = () => {
+    if (residentToDelete) {
+      deleteMutation.mutate(residentToDelete.id);
+    }
   };
 
   const getTotalResidents = () => {
@@ -572,13 +627,23 @@ export default function PorteiroCondominio() {
                                             )}
                                           </div>
                                         </div>
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          onClick={() => openEditDialog(resident)}
-                                        >
-                                          <Pencil className="h-4 w-4" />
-                                        </Button>
+                                        <div className="flex items-center gap-1">
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => openEditDialog(resident)}
+                                          >
+                                            <Pencil className="h-4 w-4" />
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                            onClick={() => openDeleteDialog(resident)}
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        </div>
                                       </div>
                                     ))
                                   )}
@@ -707,6 +772,40 @@ export default function PorteiroCondominio() {
             </form>
           </DialogContent>
         </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja excluir o morador{" "}
+                <span className="font-semibold">{residentToDelete?.full_name}</span>?
+                <br />
+                Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleteMutation.isPending}>
+                Cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                disabled={deleteMutation.isPending}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deleteMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Excluindo...
+                  </>
+                ) : (
+                  "Excluir"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );
