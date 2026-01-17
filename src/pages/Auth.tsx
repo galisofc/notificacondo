@@ -360,7 +360,12 @@ const Auth = () => {
           return;
         }
 
-        const { error } = await signUp(formData.email, formData.password, formData.fullName);
+        const { error } = await signUp(formData.email, formData.password, {
+          fullName: formData.fullName,
+          phone: formData.phone,
+          cpf: formData.cpf,
+          role: 'sindico',
+        });
         
         if (error) {
           if (error.message.includes("User already registered")) {
@@ -384,26 +389,8 @@ const Auth = () => {
         const { data: { user: newUser } } = await supabase.auth.getUser();
         
         if (newUser) {
-          // Update profile with additional info
-          await supabase
-            .from('profiles')
-            .update({
-              cpf: formData.cpf || null,
-              phone: formData.phone || null,
-            })
-            .eq('user_id', newUser.id);
-
-          // Create the sindico role for the new user
-          const { error: roleError } = await supabase
-            .from('user_roles')
-            .insert({
-              user_id: newUser.id,
-              role: 'sindico' as Database['public']['Enums']['app_role'],
-            });
-          
-          if (roleError) {
-            console.error('Error creating sindico role:', roleError);
-          }
+          // Note: Profile and sindico role are now created automatically by the handle_new_user() trigger
+          // We only need to create the condominium here
 
           // Create the condominium for the new user
           const { data: condominium, error: condoError } = await supabase
