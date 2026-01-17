@@ -35,7 +35,7 @@ const Header = () => {
             <img 
               src={logoImage} 
               alt="NotificaCondo" 
-              className="h-10 w-auto object-contain"
+              className="h-12 w-auto object-contain"
             />
           </Link>
 
