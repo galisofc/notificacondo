@@ -370,7 +370,17 @@ function SidebarNavigation() {
   };
 
   const getSuperAdminNavItems = (): NavStructure => {
-    const items = JSON.parse(JSON.stringify(getBaseSuperAdminNavItems())) as NavStructure;
+    // Deep clone while preserving icon references
+    const items: NavStructure = getBaseSuperAdminNavItems().map(item => {
+      if (isNavGroup(item)) {
+        return {
+          ...item,
+          items: item.items.map(subItem => ({ ...subItem }))
+        };
+      }
+      return { ...item };
+    });
+    
     // Find and update messages badge in Sistema group
     for (const item of items) {
       if (isNavGroup(item)) {
