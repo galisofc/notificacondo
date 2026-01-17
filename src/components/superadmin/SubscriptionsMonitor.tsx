@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { differenceInHours, isPast } from "date-fns";
+import { differenceInHours, differenceInDays, isPast, startOfDay, parseISO } from "date-fns";
 import { useDateFormatter } from "@/hooks/useFormattedDate";
 import { formatCNPJ } from "@/components/ui/masked-input";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
@@ -232,17 +232,18 @@ export function SubscriptionsMonitor() {
 
   const getTrialStatus = (trialEndsAt: string | null) => {
     if (!trialEndsAt) return null;
-    const endDate = new Date(trialEndsAt);
     
-    if (isPast(endDate)) {
+    const now = startOfDay(new Date());
+    const endDate = startOfDay(parseISO(trialEndsAt));
+    const daysRemaining = differenceInDays(endDate, now);
+    const hoursRemaining = differenceInHours(parseISO(trialEndsAt), new Date());
+    
+    if (isPast(parseISO(trialEndsAt))) {
       return { status: "expired", daysRemaining: 0, hoursRemaining: 0, label: "Expirado" };
     }
     
-    const hoursRemaining = differenceInHours(endDate, new Date());
-    const daysRemaining = Math.ceil(hoursRemaining / 24);
-    
-    // Show hours when less than 24h remaining
-    if (hoursRemaining < 24) {
+    // Show hours when less than 1 day remaining
+    if (daysRemaining <= 0 && hoursRemaining > 0) {
       return { 
         status: "critical", 
         daysRemaining: 0, 

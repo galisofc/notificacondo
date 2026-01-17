@@ -4,7 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { differenceInHours, isPast, format, startOfDay, parseISO } from "date-fns";
+import { differenceInHours, differenceInDays, isPast, format, startOfDay, parseISO } from "date-fns";
 import { useDateFormatter } from "@/hooks/useFormattedDate";
 
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -1161,11 +1161,12 @@ export default function SubscriptionDetails() {
                         const trialEndsAt = subscription.trial_ends_at;
                         if (!trialEndsAt) return null;
                         
-                        const endDate = new Date(trialEndsAt);
-                        const isExpired = isPast(endDate);
-                        const hoursRemaining = differenceInHours(endDate, new Date());
-                        const daysRemaining = Math.ceil(hoursRemaining / 24);
-                        const isUrgent = hoursRemaining < 48 && hoursRemaining > 0;
+                        const now = startOfDay(new Date());
+                        const endDate = startOfDay(parseISO(trialEndsAt));
+                        const daysRemaining = differenceInDays(endDate, now);
+                        const hoursRemaining = differenceInHours(parseISO(trialEndsAt), new Date());
+                        const isExpired = isPast(parseISO(trialEndsAt));
+                        const isUrgent = daysRemaining <= 2 && daysRemaining > 0;
                         
                         return (
                           <>
@@ -1199,7 +1200,7 @@ export default function SubscriptionDetails() {
                                 >
                                   {isExpired 
                                     ? "Expirado" 
-                                    : hoursRemaining < 24 
+                                    : daysRemaining <= 0 && hoursRemaining > 0
                                       ? `${hoursRemaining}h restante${hoursRemaining !== 1 ? 's' : ''}`
                                       : `${daysRemaining}d restante${daysRemaining !== 1 ? 's' : ''}`
                                   }
