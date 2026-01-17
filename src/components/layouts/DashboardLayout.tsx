@@ -529,7 +529,7 @@ function SidebarNavigation() {
             alt="NotificaCondo" 
             className={cn(
               "object-contain transition-all duration-200",
-              collapsed ? "w-10 h-10" : "w-full h-auto max-h-28"
+              collapsed ? "w-12 h-12" : "w-full h-auto max-h-28"
             )} 
           />
         </div>
