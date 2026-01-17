@@ -43,6 +43,7 @@ import {
   MapPin,
   FileSpreadsheet,
   Wand2,
+  UsersRound,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -50,6 +51,7 @@ import { isValidCPF, formatCNPJ, formatCEP } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import ResidentCSVImportDialog from "@/components/condominium/ResidentCSVImportDialog";
 import { BulkBlocksApartmentsWizard } from "@/components/condominium/BulkBlocksApartmentsWizard";
+import BulkResidentCSVImportDialog from "@/components/condominium/BulkResidentCSVImportDialog";
 
 interface Condominium {
   id: string;
@@ -113,6 +115,7 @@ const CondominiumDetails = () => {
   const [residentDialog, setResidentDialog] = useState(false);
   const [csvImportDialog, setCsvImportDialog] = useState(false);
   const [bulkWizardDialog, setBulkWizardDialog] = useState(false);
+  const [bulkResidentImportDialog, setBulkResidentImportDialog] = useState(false);
   const [csvImportApartment, setCsvImportApartment] = useState<{ id: string; number: string; blockName: string } | null>(null);
 
   // Editing states
@@ -565,6 +568,16 @@ const CondominiumDetails = () => {
             </div>
           </div>
           <div className="flex gap-2 shrink-0">
+            <Button
+              variant="outline"
+              onClick={() => setBulkResidentImportDialog(true)}
+              className="gap-2"
+              disabled={blocks.length === 0 || apartments.length === 0}
+              title={blocks.length === 0 || apartments.length === 0 ? "Cadastre blocos e apartamentos primeiro" : "Importar moradores via CSV"}
+            >
+              <UsersRound className="w-4 h-4" />
+              <span className="hidden sm:inline">Importar Moradores</span>
+            </Button>
             <Button
               variant="outline"
               onClick={() => setBulkWizardDialog(true)}
@@ -1168,6 +1181,17 @@ const CondominiumDetails = () => {
           onOpenChange={setBulkWizardDialog}
           condominiumId={id!}
           condominiumName={condominium?.name || ""}
+          onSuccess={fetchData}
+        />
+
+        {/* Bulk Resident CSV Import Dialog */}
+        <BulkResidentCSVImportDialog
+          open={bulkResidentImportDialog}
+          onOpenChange={setBulkResidentImportDialog}
+          condominiumId={id!}
+          condominiumName={condominium?.name || ""}
+          blocks={blocks}
+          apartments={apartments}
           onSuccess={fetchData}
         />
       </div>
