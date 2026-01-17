@@ -725,7 +725,7 @@ const SindicoSubscriptions = () => {
                         </div>
                       )}
 
-                      {sub.current_period_end && !sub.is_trial && (
+                      {sub.current_period_end && !sub.is_trial && !sub.is_lifetime && (
                         <div className="flex items-center gap-2 mb-3">
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Clock className="h-3 w-3" />
@@ -756,7 +756,7 @@ const SindicoSubscriptions = () => {
                       )}
 
                       {/* Period indicator */}
-                      {sub.current_period_start && sub.current_period_end && (
+                      {sub.current_period_start && sub.current_period_end && !sub.is_lifetime && (
                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-3 pb-2 border-b">
                           <Clock className="h-3 w-3" />
                           <span>
