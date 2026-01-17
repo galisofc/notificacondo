@@ -439,25 +439,25 @@ function SidebarNavigation() {
     switch (role) {
       case "super_admin":
         return {
-          title: "ADMIN",
+          title: "NOTIFICACONDO",
           subtitle: "Super Admin",
           icon: Shield,
         };
       case "sindico":
         return {
-          title: "NOTIFICA",
+          title: "NOTIFICACONDO",
           subtitle: "Gestão Condominial",
           icon: Building2,
         };
       case "porteiro":
         return {
-          title: "NOTIFICA",
+          title: "NOTIFICACONDO",
           subtitle: "Portaria",
           icon: DoorOpen,
         };
       default:
         return {
-          title: "NOTIFICA",
+          title: "NOTIFICACONDO",
           subtitle: "Área do Morador",
           icon: Home,
         };
