@@ -679,9 +679,15 @@ const SindicoPackages = () => {
                   </Badge>
                 </div>
                 {selectedPackage.picked_up_at && (
-                  <div className="col-span-2">
+                  <div>
                     <p className="text-sm text-muted-foreground">Retirada em</p>
                     <p className="font-medium">{formatDateTime(selectedPackage.picked_up_at)}</p>
+                  </div>
+                )}
+                {selectedPackage.picked_up_by_name && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Retirado por</p>
+                    <p className="font-medium">{selectedPackage.picked_up_by_name}</p>
                   </div>
                 )}
                 {selectedPackage.tracking_code && (
