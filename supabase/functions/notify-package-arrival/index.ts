@@ -13,7 +13,7 @@ const sanitize = (str: string) => str.replace(/[<>"'`]/g, "").trim();
 type WhatsAppProvider = "zpro" | "zapi" | "evolution" | "wppconnect";
 
 interface ProviderConfig {
-  sendMessage: (phone: string, message: string, config: ProviderSettings) => Promise<{ success: boolean; messageId?: string; error?: string }>;
+  sendMessage: (phone: string, message: string, config: ProviderSettings, imageUrl?: string) => Promise<{ success: boolean; messageId?: string; error?: string }>;
 }
 
 interface ProviderSettings {
@@ -32,28 +32,51 @@ interface WhatsAppConfigRow {
   app_url?: string;
 }
 
-// Z-PRO Provider - Uses query parameters via GET
+// Z-PRO Provider - Uses query parameters via GET for text, POST for images
 const zproProvider: ProviderConfig = {
-  async sendMessage(phone: string, message: string, config: ProviderSettings) {
+  async sendMessage(phone: string, message: string, config: ProviderSettings, imageUrl?: string) {
     const baseUrl = config.apiUrl.replace(/\/$/, "");
     const phoneClean = phone.replace(/\D/g, "");
     
-    const params = new URLSearchParams({
-      body: message,
-      number: phoneClean,
-      externalKey: config.apiKey,
-      bearertoken: config.apiKey,
-      isClosed: "false"
-    });
-    
-    const sendUrl = `${baseUrl}/params/?${params.toString()}`;
-    console.log("Z-PRO sending to:", sendUrl.substring(0, 150) + "...");
-    
     try {
-      const response = await fetch(sendUrl, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      });
+      let response;
+      
+      if (imageUrl) {
+        // Send image with caption via POST /send-image
+        console.log("Z-PRO sending image to:", phoneClean);
+        console.log("Image URL:", imageUrl.substring(0, 100) + "...");
+        
+        response = await fetch(`${baseUrl}/send-image`, {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "externalKey": config.apiKey,
+          },
+          body: JSON.stringify({
+            phone: phoneClean,
+            image: imageUrl,
+            caption: message,
+            viewOnce: false
+          }),
+        });
+      } else {
+        // Send text only via GET (existing behavior)
+        const params = new URLSearchParams({
+          body: message,
+          number: phoneClean,
+          externalKey: config.apiKey,
+          bearertoken: config.apiKey,
+          isClosed: "false"
+        });
+        
+        const sendUrl = `${baseUrl}/params/?${params.toString()}`;
+        console.log("Z-PRO sending text to:", sendUrl.substring(0, 150) + "...");
+        
+        response = await fetch(sendUrl, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+      }
       
       const responseText = await response.text();
       console.log("Z-PRO response status:", response.status);
@@ -90,15 +113,31 @@ const zproProvider: ProviderConfig = {
 
 // Z-API Provider
 const zapiProvider: ProviderConfig = {
-  async sendMessage(phone: string, message: string, config: ProviderSettings) {
-    const response = await fetch(`${config.apiUrl}/instances/${config.instanceId}/token/${config.apiKey}/send-text`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        phone: phone.replace(/\D/g, ""),
-        message: message,
-      }),
-    });
+  async sendMessage(phone: string, message: string, config: ProviderSettings, imageUrl?: string) {
+    const phoneClean = phone.replace(/\D/g, "");
+    
+    let response;
+    if (imageUrl) {
+      // Send image with caption
+      response = await fetch(`${config.apiUrl}/instances/${config.instanceId}/token/${config.apiKey}/send-image`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: phoneClean,
+          image: imageUrl,
+          caption: message,
+        }),
+      });
+    } else {
+      response = await fetch(`${config.apiUrl}/instances/${config.instanceId}/token/${config.apiKey}/send-text`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: phoneClean,
+          message: message,
+        }),
+      });
+    }
     
     const data = await response.json();
     if (response.ok && data.zapiMessageId) {
@@ -110,18 +149,38 @@ const zapiProvider: ProviderConfig = {
 
 // Evolution API Provider
 const evolutionProvider: ProviderConfig = {
-  async sendMessage(phone: string, message: string, config: ProviderSettings) {
-    const response = await fetch(`${config.apiUrl}/message/sendText/${config.instanceId}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": config.apiKey,
-      },
-      body: JSON.stringify({
-        number: phone.replace(/\D/g, ""),
-        text: message,
-      }),
-    });
+  async sendMessage(phone: string, message: string, config: ProviderSettings, imageUrl?: string) {
+    const phoneClean = phone.replace(/\D/g, "");
+    
+    let response;
+    if (imageUrl) {
+      // Send media with caption
+      response = await fetch(`${config.apiUrl}/message/sendMedia/${config.instanceId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": config.apiKey,
+        },
+        body: JSON.stringify({
+          number: phoneClean,
+          mediatype: "image",
+          media: imageUrl,
+          caption: message,
+        }),
+      });
+    } else {
+      response = await fetch(`${config.apiUrl}/message/sendText/${config.instanceId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": config.apiKey,
+        },
+        body: JSON.stringify({
+          number: phoneClean,
+          text: message,
+        }),
+      });
+    }
     
     const data = await response.json();
     if (response.ok && data.key?.id) {
@@ -133,19 +192,39 @@ const evolutionProvider: ProviderConfig = {
 
 // WPPConnect Provider
 const wppconnectProvider: ProviderConfig = {
-  async sendMessage(phone: string, message: string, config: ProviderSettings) {
-    const response = await fetch(`${config.apiUrl}/api/${config.instanceId}/send-message`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${config.apiKey}`,
-      },
-      body: JSON.stringify({
-        phone: phone.replace(/\D/g, ""),
-        message: message,
-        isGroup: false,
-      }),
-    });
+  async sendMessage(phone: string, message: string, config: ProviderSettings, imageUrl?: string) {
+    const phoneClean = phone.replace(/\D/g, "");
+    
+    let response;
+    if (imageUrl) {
+      // Send file (image) with caption
+      response = await fetch(`${config.apiUrl}/api/${config.instanceId}/send-file-url`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${config.apiKey}`,
+        },
+        body: JSON.stringify({
+          phone: phoneClean,
+          url: imageUrl,
+          caption: message,
+          isGroup: false,
+        }),
+      });
+    } else {
+      response = await fetch(`${config.apiUrl}/api/${config.instanceId}/send-message`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${config.apiKey}`,
+        },
+        body: JSON.stringify({
+          phone: phoneClean,
+          message: message,
+          isGroup: false,
+        }),
+      });
+    }
     
     const data = await response.json();
     if (response.ok && data.status === "success") {
@@ -440,13 +519,21 @@ _Mensagem automática - NotificaCondo_`;
         .replace(/{codigo_rastreio}/g, sanitize(trackingCode));
 
       console.log(`Sending notification to ${resident.full_name} (${resident.phone})`);
+      if (photo_url) {
+        console.log(`Including package photo: ${photo_url.substring(0, 80)}...`);
+      }
 
       try {
-        const result = await provider.sendMessage(resident.phone!, message, {
-          apiUrl: typedConfig.api_url,
-          apiKey: typedConfig.api_key,
-          instanceId: typedConfig.instance_id,
-        });
+        const result = await provider.sendMessage(
+          resident.phone!, 
+          message, 
+          {
+            apiUrl: typedConfig.api_url,
+            apiKey: typedConfig.api_key,
+            instanceId: typedConfig.instance_id,
+          },
+          photo_url || undefined
+        );
 
         results.push({
           resident_id: resident.id,
