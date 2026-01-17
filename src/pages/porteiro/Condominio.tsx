@@ -201,16 +201,23 @@ export default function PorteiroCondominio() {
 
       if (apartmentsError) throw apartmentsError;
 
-      // Group apartments by block
-      const blocksWithApartments: Block[] = (blocksData || []).map((block) => ({
-        ...block,
-        apartments: (apartmentsData || [])
-          .filter((apt) => apt.block_id === block.id)
-          .map((apt) => ({
-            ...apt,
-            residents: apt.residents || [],
-          })),
-      }));
+      // Group apartments by block and sort blocks numerically
+      const blocksWithApartments: Block[] = (blocksData || [])
+        .map((block) => ({
+          ...block,
+          apartments: (apartmentsData || [])
+            .filter((apt) => apt.block_id === block.id)
+            .map((apt) => ({
+              ...apt,
+              residents: apt.residents || [],
+            })),
+        }))
+        .sort((a, b) => {
+          // Extract numbers from block names for proper numeric sorting
+          const numA = parseInt(a.name.replace(/\D/g, "")) || 0;
+          const numB = parseInt(b.name.replace(/\D/g, "")) || 0;
+          return numA - numB;
+        });
 
       return blocksWithApartments;
     },
@@ -534,7 +541,7 @@ export default function PorteiroCondominio() {
                             <ChevronRight className="h-5 w-5" />
                           )}
                           <Building2 className="h-5 w-5 text-primary" />
-                          <CardTitle className="text-lg">{block.name}</CardTitle>
+                          <CardTitle className="text-lg">{block.name.toUpperCase()}</CardTitle>
                           <Badge variant="secondary">
                             {block.apartments.length} apto(s)
                           </Badge>
