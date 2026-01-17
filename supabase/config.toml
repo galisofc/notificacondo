@@ -112,3 +112,7 @@ verify_jwt = false
 # Limpeza de usuários órfãos no auth.users
 [functions.cleanup-orphan-users]
 verify_jwt = false
+
+# Reenvio de credenciais de porteiro via WhatsApp
+[functions.resend-porter-credentials]
+verify_jwt = false
