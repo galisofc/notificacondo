@@ -55,6 +55,7 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import logoImage from "@/assets/logo.png";
+import logoIcon from "@/assets/logo-icon.png";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -524,7 +525,7 @@ function SidebarNavigation() {
       <SidebarHeader className="p-4 pb-6">
         <div className="flex items-center justify-center w-full">
           <img 
-            src={logoImage} 
+            src={collapsed ? logoIcon : logoImage} 
             alt="NotificaCondo" 
             className={cn(
               "object-contain transition-all duration-200",
