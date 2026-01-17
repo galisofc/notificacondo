@@ -68,6 +68,8 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [isSendingImageTest, setIsSendingImageTest] = useState(false);
   const [isSendingImageTestCustom, setIsSendingImageTestCustom] = useState(false);
+  const [isSendingImageTestBoth, setIsSendingImageTestBoth] = useState(false);
+  const [bothTestResult, setBothTestResult] = useState<{ winner: "token" | "custom" | null; results: { token?: { success: boolean; error?: string }; custom?: { success: boolean; error?: string } } } | null>(null);
   const [testResult, setTestResult] = useState<"success" | "error" | null>(null);
   const [showToken, setShowToken] = useState(false);
   const [testPhone, setTestPhone] = useState("");
@@ -337,6 +339,79 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
     }
   };
 
+  const handleSendImageTestBoth = async () => {
+    if (!testPhone) {
+      toast({
+        title: "Número obrigatório",
+        description: "Digite um número de telefone para enviar o teste de imagem.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSendingImageTestBoth(true);
+    setBothTestResult(null);
+
+    const testMode = async (mode: "token" | "custom"): Promise<{ mode: "token" | "custom"; success: boolean; error?: string; time: number }> => {
+      const start = Date.now();
+      try {
+        const { data, error } = await supabase.functions.invoke("send-whatsapp-image-test", {
+          body: { phone: testPhone, external_key_mode: mode },
+        });
+        if (error) throw error;
+        return { mode, success: data.success, error: data.error, time: Date.now() - start };
+      } catch (err: any) {
+        return { mode, success: false, error: err.message, time: Date.now() - start };
+      }
+    };
+
+    try {
+      // Run both tests in parallel
+      const [tokenResult, customResult] = await Promise.all([
+        testMode("token"),
+        testMode("custom"),
+      ]);
+
+      const results = {
+        token: { success: tokenResult.success, error: tokenResult.error },
+        custom: { success: customResult.success, error: customResult.error },
+      };
+
+      // Determine winner: first successful response
+      let winner: "token" | "custom" | null = null;
+      if (tokenResult.success && customResult.success) {
+        winner = tokenResult.time <= customResult.time ? "token" : "custom";
+      } else if (tokenResult.success) {
+        winner = "token";
+      } else if (customResult.success) {
+        winner = "custom";
+      }
+
+      setBothTestResult({ winner, results });
+
+      if (winner) {
+        toast({
+          title: `🏆 Vencedor: ${winner === "token" ? "externalKey=token" : "externalKey=custom"}`,
+          description: `Use o modo "${winner}" para envio de imagens.`,
+        });
+      } else {
+        toast({
+          title: "❌ Ambos falharam",
+          description: "Nenhum modo funcionou. Verifique as configurações.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erro ao testar",
+        description: "Não foi possível executar os testes.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingImageTestBoth(false);
+    }
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
@@ -536,22 +611,53 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
                   Img (token)
                 </Button>
                 {config.instance_id && config.instance_id !== "zpro-embedded" && (
-                  <Button
-                    variant="outline"
-                    onClick={() => handleSendImageTest("custom")}
-                    disabled={isSendingImageTestCustom || !testPhone}
-                    className="shrink-0 gap-2"
-                    title="Usa o campo External Key informado"
-                  >
-                    {isSendingImageTestCustom ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Image className="h-4 w-4" />
-                    )}
-                    Img (custom)
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleSendImageTest("custom")}
+                      disabled={isSendingImageTestCustom || !testPhone}
+                      className="shrink-0 gap-2"
+                      title="Usa o campo External Key informado"
+                    >
+                      {isSendingImageTestCustom ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Image className="h-4 w-4" />
+                      )}
+                      Img (custom)
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={handleSendImageTestBoth}
+                      disabled={isSendingImageTestBoth || !testPhone}
+                      className="shrink-0 gap-2"
+                      title="Testa ambos os modos em paralelo"
+                    >
+                      {isSendingImageTestBoth ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <TestTube className="h-4 w-4" />
+                      )}
+                      Ambos
+                    </Button>
+                  </>
                 )}
               </div>
+              {bothTestResult && (
+                <div className="p-3 rounded-md bg-muted/50 text-sm space-y-1">
+                  <div className="font-medium">
+                    Resultado: {bothTestResult.winner ? `🏆 ${bothTestResult.winner}` : "❌ Nenhum funcionou"}
+                  </div>
+                  <div className="text-xs text-muted-foreground space-y-0.5">
+                    <div>
+                      Token: {bothTestResult.results.token?.success ? "✅ OK" : `❌ ${bothTestResult.results.token?.error || "Falhou"}`}
+                    </div>
+                    <div>
+                      Custom: {bothTestResult.results.custom?.success ? "✅ OK" : `❌ ${bothTestResult.results.custom?.error || "Falhou"}`}
+                    </div>
+                  </div>
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">
                 Formato: código do país + DDD + número (sem espaços ou traços)
               </p>
