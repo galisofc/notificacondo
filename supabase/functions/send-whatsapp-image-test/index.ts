@@ -50,13 +50,19 @@ async function sendZproImage(phone: string, imageUrl: string, caption: string, c
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        // Z-PRO commonly expects a Bearer token header
+        "Authorization": `Bearer ${config.apiKey}`,
+        // ...and some installations use custom header names
         "externalKey": config.apiKey,
         "bearertoken": config.apiKey,
+        "token": config.apiKey,
+        "apikey": config.apiKey,
       },
       body: JSON.stringify({
         phone: phoneClean,
         url: imageUrl,
         caption: caption,
+        // keep compatibility with installations that validate token via body
         externalKey: config.apiKey,
         bearertoken: config.apiKey,
         token: config.apiKey,
