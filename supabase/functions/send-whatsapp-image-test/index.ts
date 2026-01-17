@@ -60,8 +60,20 @@ async function sendZproImage(phone: string, imageUrl: string, caption: string, c
       },
       body: JSON.stringify({
         phone: phoneClean,
+        // Some Z-PRO versions expect different field names for the media URL
         url: imageUrl,
+        image: imageUrl,
+        media: imageUrl,
+
+        // Some Z-PRO versions expect the caption field to be called body/message
         caption: caption,
+        body: caption,
+        message: caption,
+
+        // optional filename hints
+        fileName: "notificacondo-teste.png",
+        filename: "notificacondo-teste.png",
+
         // keep compatibility with installations that validate token via body
         externalKey: config.apiKey,
         bearertoken: config.apiKey,
