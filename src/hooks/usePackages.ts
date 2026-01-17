@@ -16,6 +16,7 @@ export interface Package {
   received_at: string;
   picked_up_at: string | null;
   picked_up_by: string | null;
+  picked_up_by_name: string | null;
   expires_at: string | null;
   created_at: string;
   // Joined data
