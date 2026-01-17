@@ -25,47 +25,57 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get authorization header
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "Não autorizado" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Verify the user
-    const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Token inválido" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Check if user is sindico or super_admin
-    const { data: userRoles } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id);
-
-    const roles = userRoles?.map(r => r.role) || [];
-    const isAuthorized = roles.includes("super_admin") || roles.includes("sindico");
-
-    if (!isAuthorized) {
-      return new Response(
-        JSON.stringify({ error: "Acesso negado. Apenas síndicos e super admins podem executar esta ação." }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const body = await req.json().catch(() => ({}));
+    
+    // Check for service key header for internal/admin calls
+    const serviceKeyHeader = req.headers.get("x-service-key");
+    const isServiceCall = serviceKeyHeader === supabaseServiceKey;
+
+    if (!isServiceCall) {
+      // Get authorization header for user calls
+      const authHeader = req.headers.get("authorization");
+      if (!authHeader) {
+        return new Response(
+          JSON.stringify({ error: "Não autorizado" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Verify the user
+      const token = authHeader.replace("Bearer ", "");
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+      
+      if (authError || !user) {
+        return new Response(
+          JSON.stringify({ error: "Token inválido" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Check if user is sindico or super_admin
+      const { data: userRoles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id);
+
+      const roles = userRoles?.map(r => r.role) || [];
+      const isAuthorized = roles.includes("super_admin") || roles.includes("sindico");
+
+      if (!isAuthorized) {
+        return new Response(
+          JSON.stringify({ error: "Acesso negado. Apenas síndicos e super admins podem executar esta ação." }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      console.log(`[cleanup-orphan-users] Authorized user call from: ${user.id}`);
+    } else {
+      console.log("[cleanup-orphan-users] Service key call - authorized");
+    }
     const action = body.action || "list"; // "list" or "delete"
     const userIdsToDelete = body.user_ids || []; // Array of user IDs to delete
 
-    console.log(`[cleanup-orphan-users] Action: ${action}, User: ${user.id}`);
+    console.log(`[cleanup-orphan-users] Action: ${action}`);
 
     if (action === "delete" && userIdsToDelete.length > 0) {
       // Delete specific orphan users
