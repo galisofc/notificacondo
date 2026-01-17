@@ -565,6 +565,7 @@ const SindicoSubscriptions = () => {
                   <p className="text-2xl font-bold">
                     {formatCurrency(
                       subscriptions?.reduce((acc, s) => {
+                        if (s.is_lifetime) return acc; // Exclude lifetime subscriptions
                         const plan = plans?.find((p) => p.slug === s.plan);
                         return acc + (plan?.price || 0);
                       }, 0) || 0
