@@ -50,16 +50,23 @@ const zproProvider: ProviderConfig = {
         console.log("Z-PRO image endpoint:", targetUrl);
 
         // The ZPRO API endpoint for images via URL: {baseUrl}/url
+        // Some Z-PRO setups require the token in headers (bearertoken) and/or in body.
         response = await fetch(targetUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            // keep compatibility with installations that validate token via headers
+            "externalKey": config.apiKey,
+            "bearertoken": config.apiKey,
           },
           body: JSON.stringify({
             phone: phoneClean,
             url: imageUrl,
             caption: message,
+            // keep compatibility with installations that validate token via body
             externalKey: config.apiKey,
+            bearertoken: config.apiKey,
+            token: config.apiKey,
           }),
         });
       } else {
