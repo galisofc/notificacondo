@@ -54,6 +54,7 @@ import {
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
+import logoImage from "@/assets/logo.png";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -522,12 +523,19 @@ function SidebarNavigation() {
       {/* Header with Logo */}
       <SidebarHeader className="p-4 pb-6">
         <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
-          <div className="rounded-xl bg-sidebar-primary/20 p-2.5 shrink-0">
-            <Icon className="w-6 h-6 text-sidebar-primary" />
+          <div className="shrink-0">
+            <img 
+              src={logoImage} 
+              alt="NotificaCondo" 
+              className={cn(
+                "object-contain",
+                collapsed ? "w-10 h-10" : "w-12 h-12"
+              )} 
+            />
           </div>
           {!collapsed && (
             <div className="overflow-hidden">
-              <span className="font-display text-xl font-bold text-sidebar-foreground block tracking-tight">
+              <span className="font-display text-lg font-bold text-sidebar-foreground block tracking-tight">
                 {config.title}
               </span>
               <span className="text-xs text-sidebar-primary font-semibold uppercase tracking-wider">
