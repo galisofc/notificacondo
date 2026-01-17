@@ -15,7 +15,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { DoorOpen, Plus, Trash2, Building2, Mail, Phone, Search, UserPlus, MessageCircle, Copy, Check, Key, AlertCircle, UserX, RefreshCw, Loader2, Pencil } from "lucide-react";
+import { DoorOpen, Plus, Trash2, Building2, Mail, Phone, Search, UserPlus, MessageCircle, Copy, Check, Key, AlertCircle, UserX, RefreshCw, Loader2, Pencil, ArrowLeft, ShieldCheck } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -52,6 +53,7 @@ export default function Porteiros() {
   // New porter form state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [dialogStep, setDialogStep] = useState<"form" | "confirm">("form");
   const [newPorter, setNewPorter] = useState({
     full_name: "",
     email: "",
@@ -188,7 +190,7 @@ export default function Porteiros() {
     return matchesCondominium && matchesSearch;
   });
 
-  const handleAddPorter = async () => {
+  const handleGoToConfirmStep = () => {
     if (!newPorter.full_name || !newPorter.email || !newPorter.condominium_id) {
       toast({
         title: "Campos obrigatórios",
@@ -197,6 +199,10 @@ export default function Porteiros() {
       });
       return;
     }
+    setDialogStep("confirm");
+  };
+
+  const handleAddPorter = async () => {
 
     setIsSubmitting(true);
 
@@ -299,6 +305,7 @@ export default function Porteiros() {
 
       // Reset form and close dialog
       setNewPorter({ full_name: "", email: "", phone: "", condominium_id: "" });
+      setDialogStep("form");
       setIsDialogOpen(false);
 
       // Refetch porters
@@ -574,95 +581,185 @@ export default function Porteiros() {
               Limpar Órfãos
             </Button>
 
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <Dialog open={isDialogOpen} onOpenChange={(open) => {
+              setIsDialogOpen(open);
+              if (!open) {
+                setDialogStep("form");
+                setNewPorter({ full_name: "", email: "", phone: "", condominium_id: "" });
+              }
+            }}>
               <DialogTrigger asChild>
                 <Button className="gap-2">
                   <UserPlus className="w-4 h-4" />
                   Adicionar Porteiro
                 </Button>
               </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Adicionar Novo Porteiro</DialogTitle>
-                <DialogDescription>
-                  O porteiro receberá um e-mail para acessar o sistema
-                </DialogDescription>
-              </DialogHeader>
+              <DialogContent>
+                {dialogStep === "form" ? (
+                  <>
+                    <DialogHeader>
+                      <DialogTitle>Adicionar Novo Porteiro</DialogTitle>
+                      <DialogDescription>
+                        O porteiro receberá um e-mail para acessar o sistema
+                      </DialogDescription>
+                    </DialogHeader>
 
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="condominium">Condomínio *</Label>
-                  <Select
-                    value={newPorter.condominium_id}
-                    onValueChange={(value) =>
-                      setNewPorter((prev) => ({ ...prev, condominium_id: value }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o condomínio" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {condominiums.map((condo) => (
-                        <SelectItem key={condo.id} value={condo.id}>
-                          {condo.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="condominium">Condomínio *</Label>
+                        <Select
+                          value={newPorter.condominium_id}
+                          onValueChange={(value) =>
+                            setNewPorter((prev) => ({ ...prev, condominium_id: value }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o condomínio" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {condominiums.map((condo) => (
+                              <SelectItem key={condo.id} value={condo.id}>
+                                {condo.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="full_name">Nome Completo *</Label>
-                  <Input
-                    id="full_name"
-                    placeholder="Nome do porteiro"
-                    value={newPorter.full_name}
-                    onChange={(e) =>
-                      setNewPorter((prev) => ({ ...prev, full_name: e.target.value }))
-                    }
-                  />
-                </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="full_name">Nome Completo *</Label>
+                        <Input
+                          id="full_name"
+                          placeholder="Nome do porteiro"
+                          value={newPorter.full_name}
+                          onChange={(e) =>
+                            setNewPorter((prev) => ({ ...prev, full_name: e.target.value }))
+                          }
+                        />
+                      </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email">E-mail *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="porteiro@email.com"
-                    value={newPorter.email}
-                    onChange={(e) =>
-                      setNewPorter((prev) => ({ ...prev, email: e.target.value }))
-                    }
-                  />
-                </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="email">E-mail *</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          placeholder="porteiro@email.com"
+                          value={newPorter.email}
+                          onChange={(e) =>
+                            setNewPorter((prev) => ({ ...prev, email: e.target.value }))
+                          }
+                        />
+                      </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Telefone</Label>
-                  <MaskedInput
-                    id="phone"
-                    mask="phone"
-                    value={newPorter.phone}
-                    onChange={(value) =>
-                      setNewPorter((prev) => ({ ...prev, phone: value }))
-                    }
-                  />
-                </div>
-              </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Telefone</Label>
+                        <MaskedInput
+                          id="phone"
+                          mask="phone"
+                          value={newPorter.phone}
+                          onChange={(value) =>
+                            setNewPorter((prev) => ({ ...prev, phone: value }))
+                          }
+                        />
+                      </div>
+                    </div>
 
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsDialogOpen(false)}
-                  disabled={isSubmitting}
-                >
-                  Cancelar
-                </Button>
-                <Button onClick={handleAddPorter} disabled={isSubmitting}>
-                  {isSubmitting ? "Adicionando..." : "Adicionar"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                    <DialogFooter>
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsDialogOpen(false)}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button onClick={handleGoToConfirmStep}>
+                        Continuar
+                      </Button>
+                    </DialogFooter>
+                  </>
+                ) : (
+                  <>
+                    <DialogHeader>
+                      <DialogTitle>Confirmar Cadastro</DialogTitle>
+                      <DialogDescription>
+                        Revise os dados antes de confirmar
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="py-4 space-y-4">
+                      <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-primary/10 p-2 rounded-full">
+                            <ShieldCheck className="w-5 h-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Tipo de Acesso</p>
+                            <p className="font-semibold text-primary">Porteiro</p>
+                          </div>
+                        </div>
+
+                        <Separator />
+
+                        <div className="flex items-center gap-3">
+                          <div className="bg-secondary p-2 rounded-full">
+                            <Building2 className="w-5 h-5 text-muted-foreground" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Condomínio Vinculado</p>
+                            <p className="font-medium">
+                              {condominiums.find(c => c.id === newPorter.condominium_id)?.name || "-"}
+                            </p>
+                          </div>
+                        </div>
+
+                        <Separator />
+
+                        <div className="grid gap-2">
+                          <div>
+                            <p className="text-xs text-muted-foreground">Nome</p>
+                            <p className="font-medium">{newPorter.full_name}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">E-mail</p>
+                            <p className="font-medium">{newPorter.email}</p>
+                          </div>
+                          {newPorter.phone && (
+                            <div>
+                              <p className="text-xs text-muted-foreground">Telefone</p>
+                              <p className="font-medium">{newPorter.phone}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <Alert>
+                        <MessageCircle className="h-4 w-4" />
+                        <AlertTitle>Notificação</AlertTitle>
+                        <AlertDescription>
+                          {newPorter.phone
+                            ? "As credenciais de acesso serão enviadas via WhatsApp."
+                            : "As credenciais serão exibidas após o cadastro para você informar manualmente."}
+                        </AlertDescription>
+                      </Alert>
+                    </div>
+
+                    <DialogFooter className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => setDialogStep("form")}
+                        disabled={isSubmitting}
+                        className="gap-2"
+                      >
+                        <ArrowLeft className="w-4 h-4" />
+                        Voltar
+                      </Button>
+                      <Button onClick={handleAddPorter} disabled={isSubmitting}>
+                        {isSubmitting ? "Cadastrando..." : "Confirmar Cadastro"}
+                      </Button>
+                    </DialogFooter>
+                  </>
+                )}
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
