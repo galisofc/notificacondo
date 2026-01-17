@@ -205,7 +205,7 @@ export default function PorteiroPackages() {
     setIsDetailsDialogOpen(true);
   };
 
-  const handleConfirmPickup = async () => {
+  const handleConfirmPickup = async (pickedUpByName: string) => {
     if (!selectedPackage || !user) {
       return { success: false, error: "Usuário não autenticado" };
     }
@@ -217,6 +217,7 @@ export default function PorteiroPackages() {
           status: "retirada" as PackageStatus,
           picked_up_at: new Date().toISOString(),
           picked_up_by: user.id,
+          picked_up_by_name: pickedUpByName,
         })
         .eq("id", selectedPackage.id);
 
@@ -224,7 +225,7 @@ export default function PorteiroPackages() {
 
       toast({
         title: "Encomenda retirada!",
-        description: "Retirada confirmada com sucesso.",
+        description: `Retirada por ${pickedUpByName} confirmada com sucesso.`,
       });
 
       // Refresh packages

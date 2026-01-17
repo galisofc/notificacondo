@@ -1060,6 +1060,7 @@ export type Database = {
           photo_url: string
           picked_up_at: string | null
           picked_up_by: string | null
+          picked_up_by_name: string | null
           pickup_code: string
           received_at: string
           received_by: string
@@ -1079,6 +1080,7 @@ export type Database = {
           photo_url: string
           picked_up_at?: string | null
           picked_up_by?: string | null
+          picked_up_by_name?: string | null
           pickup_code: string
           received_at?: string
           received_by: string
@@ -1098,6 +1100,7 @@ export type Database = {
           photo_url?: string
           picked_up_at?: string | null
           picked_up_by?: string | null
+          picked_up_by_name?: string | null
           pickup_code?: string
           received_at?: string
           received_by?: string
