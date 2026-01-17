@@ -340,11 +340,18 @@ serve(async (req) => {
         .maybeSingle();
 
       if (!existingRole) {
-        await supabase.from("user_roles").insert({
-          user_id: userId,
-          role: "porteiro",
-        });
-        console.log(`Added porteiro role to existing user ${userId}`);
+        const { error: upsertRoleError } = await supabase.from("user_roles").upsert(
+          {
+            user_id: userId,
+            role: "porteiro",
+          },
+          { onConflict: "user_id,role" }
+        );
+        if (upsertRoleError) {
+          console.error("Error adding porteiro role to existing user:", upsertRoleError);
+        } else {
+          console.log(`Added porteiro role to existing user ${userId}`);
+        }
       }
 
       // Create profile if it doesn't exist (user was in auth but not profiles)
@@ -374,6 +381,10 @@ serve(async (req) => {
         email_confirm: true,
         user_metadata: {
           full_name: full_name,
+          role: "porteiro",
+          // Instruct the signup trigger to NOT auto-assign any fallback role.
+          // (It will still honor explicit role above if present.)
+          skip_role_assignment: "true",
         },
       });
 
@@ -399,11 +410,14 @@ serve(async (req) => {
         .update(profileData)
         .eq("user_id", userId);
 
-      // Add porteiro role
-      const { error: roleError } = await supabase.from("user_roles").insert({
-        user_id: userId,
-        role: "porteiro",
-      });
+      // Add porteiro role (idempotent)
+      const { error: roleError } = await supabase.from("user_roles").upsert(
+        {
+          user_id: userId,
+          role: "porteiro",
+        },
+        { onConflict: "user_id,role" }
+      );
 
       if (roleError) {
         console.error("Error adding role:", roleError);
