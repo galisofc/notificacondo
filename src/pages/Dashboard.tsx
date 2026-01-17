@@ -16,7 +16,10 @@ import {
   Shield,
   Calendar,
   Package,
+  Sparkles,
+  Crown,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
@@ -46,6 +49,7 @@ const Dashboard = () => {
     pendingDefenses: 0,
   });
   const [profile, setProfile] = useState<{ full_name: string } | null>(null);
+  const [isLifetime, setIsLifetime] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const getDateFilter = (period: PeriodFilter): Date => {
@@ -94,6 +98,18 @@ const Dashboard = () => {
           .eq("owner_id", user.id);
 
         const condoIds = condos?.map((c) => c.id) || [];
+
+        // Check if any subscription is lifetime
+        if (condoIds.length > 0) {
+          const { data: lifetimeSubs } = await supabase
+            .from("subscriptions")
+            .select("is_lifetime")
+            .in("condominium_id", condoIds)
+            .eq("is_lifetime", true)
+            .limit(1);
+          
+          setIsLifetime(lifetimeSubs && lifetimeSubs.length > 0);
+        }
 
         let residentsCount = 0;
         let occurrencesCount = 0;
@@ -261,13 +277,22 @@ const Dashboard = () => {
         <TrialBanner />
 
         {/* Welcome Section */}
-        <div>
-          <h1 className="font-display text-3xl font-bold text-foreground">
-            Olá, {profile?.full_name?.split(" ")[0] || "Síndico"}! 👋
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Bem-vindo ao seu painel de gestão condominial.
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h1 className="font-display text-3xl font-bold text-foreground">
+              Olá, {profile?.full_name?.split(" ")[0] || "Síndico"}! 👋
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Bem-vindo ao seu painel de gestão condominial.
+            </p>
+          </div>
+          {isLifetime && (
+            <Badge className="bg-gradient-to-r from-amber-500 to-yellow-400 text-black font-bold border-0 gap-1.5 px-4 py-2 text-sm shadow-lg w-fit">
+              <Crown className="h-4 w-4" />
+              PLANO VITALÍCIO
+              <Sparkles className="h-4 w-4" />
+            </Badge>
+          )}
         </div>
 
         {/* Period Filter + Stats Grid */}
