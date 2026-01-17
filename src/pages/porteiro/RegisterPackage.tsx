@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Package, CheckCircle2, Loader2, MessageCircle, AlertCircle, MapPin, User, Phone, UserPlus } from "lucide-react";
+import { ArrowLeft, Package, CheckCircle2, Loader2, MessageCircle, AlertCircle, MapPin, User, Phone, UserPlus, Check, ChevronsUpDown, Search } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,12 +10,19 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { MaskedInput } from "@/components/ui/masked-input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { CameraCapture } from "@/components/packages/CameraCapture";
 import { CondominiumBlockApartmentSelect } from "@/components/packages/CondominiumBlockApartmentSelect";
@@ -602,25 +609,54 @@ export default function RegisterPackage() {
                 </div>
               )}
 
-              {/* Package Type Select */}
+              {/* Package Type Select with Search */}
               <div className="space-y-2">
                 <Label htmlFor="package-type">Tipo de Encomenda *</Label>
-                <Select
-                  value={selectedPackageType}
-                  onValueChange={setSelectedPackageType}
-                  disabled={isSubmitting}
-                >
-                  <SelectTrigger id="package-type">
-                    <SelectValue placeholder="Selecione o tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {packageTypes.map((type) => (
-                      <SelectItem key={type.id} value={type.id}>
-                        {type.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      disabled={isSubmitting}
+                      className={cn(
+                        "w-full justify-between font-normal",
+                        !selectedPackageType && "text-muted-foreground"
+                      )}
+                    >
+                      {selectedPackageType
+                        ? packageTypes.find((type) => type.id === selectedPackageType)?.name
+                        : "Selecione o tipo"}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Pesquisar tipo..." />
+                      <CommandList>
+                        <CommandEmpty>Nenhum tipo encontrado.</CommandEmpty>
+                        <CommandGroup>
+                          {packageTypes.map((type) => (
+                            <CommandItem
+                              key={type.id}
+                              value={type.name}
+                              onSelect={() => {
+                                setSelectedPackageType(type.id);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedPackageType === type.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {type.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               {/* Tracking Code */}
