@@ -23,6 +23,7 @@ import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
 import TrialBanner from "@/components/sindico/TrialBanner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { subDays, subMonths, subYears, startOfDay } from "date-fns";
+import { SindicoOnboardingModal } from "@/components/onboarding/SindicoOnboardingModal";
 
 type PeriodFilter = "7d" | "1m" | "1y";
 
@@ -32,6 +33,11 @@ interface DashboardStats {
   occurrences: number;
   pendingFines: number;
   pendingDefenses: number;
+}
+
+interface ProfileData {
+  full_name: string;
+  onboarding_completed: boolean | null;
 }
 
 const Dashboard = () => {
@@ -45,8 +51,10 @@ const Dashboard = () => {
     pendingFines: 0,
     pendingDefenses: 0,
   });
-  const [profile, setProfile] = useState<{ full_name: string } | null>(null);
+  const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [firstCondominiumId, setFirstCondominiumId] = useState<string | undefined>();
 
   const getDateFilter = (period: PeriodFilter): Date => {
     const now = new Date();
@@ -77,11 +85,16 @@ const Dashboard = () => {
       try {
         const { data: profileData } = await supabase
           .from("profiles")
-          .select("full_name")
+          .select("full_name, onboarding_completed")
           .eq("user_id", user.id)
           .maybeSingle();
 
         setProfile(profileData);
+
+        // Show onboarding modal if not completed
+        if (profileData && !profileData.onboarding_completed) {
+          setShowOnboarding(true);
+        }
 
         const { count: condoCount } = await supabase
           .from("condominiums")
@@ -94,6 +107,11 @@ const Dashboard = () => {
           .eq("owner_id", user.id);
 
         const condoIds = condos?.map((c) => c.id) || [];
+        
+        // Store the first condominium ID for onboarding navigation
+        if (condos && condos.length > 0) {
+          setFirstCondominiumId(condos[0].id);
+        }
 
         let residentsCount = 0;
         let occurrencesCount = 0;
@@ -371,6 +389,16 @@ const Dashboard = () => {
               </Button>
             </CardContent>
           </Card>
+        )}
+
+        {/* Onboarding Modal */}
+        {user && (
+          <SindicoOnboardingModal
+            open={showOnboarding}
+            onOpenChange={setShowOnboarding}
+            userId={user.id}
+            condominiumId={firstCondominiumId}
+          />
         )}
       </div>
     </DashboardLayout>
