@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useViewModePreference } from "@/hooks/useUserPreferences";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +27,7 @@ export function TemplatesList() {
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [viewMode, setViewMode] = useViewModePreference("whatsappTemplatesViewMode", "grid" as "grid" | "list");
 
   const { data: templates, isLoading } = useQuery({
     queryKey: ["whatsapp-templates"],

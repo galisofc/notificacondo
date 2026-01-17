@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useViewModePreference } from "@/hooks/useUserPreferences";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureValidSession, isJwtExpiredError } from "@/lib/ensureAuth";
 import { useAuth } from "@/hooks/useAuth";
@@ -82,7 +83,7 @@ export default function PartyHall() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [checklistType, setChecklistType] = useState<"entrada" | "saida">("entrada");
-  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+  const [viewMode, setViewMode] = useViewModePreference("partyHallViewMode", "list" as "list" | "calendar");
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [bookingToCancel, setBookingToCancel] = useState<Booking | null>(null);
 
