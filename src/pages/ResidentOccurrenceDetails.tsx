@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { startOfDay, differenceInDays, differenceInHours } from "date-fns";
 import { useDateFormatter } from "@/hooks/useFormattedDate";
 import { useParams, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
@@ -663,15 +664,17 @@ const ResidentOccurrenceDetails = () => {
                     const deadlineDate = new Date(createdAt);
                     deadlineDate.setDate(deadlineDate.getDate() + deadlineDays);
                     
-                    const now = new Date();
+                    const now = startOfDay(new Date());
+                    const deadlineEnd = startOfDay(deadlineDate);
                     const totalMs = deadlineDate.getTime() - createdAt.getTime();
-                    const elapsedMs = now.getTime() - createdAt.getTime();
-                    const remainingMs = deadlineDate.getTime() - now.getTime();
+                    const elapsedMs = new Date().getTime() - createdAt.getTime();
+                    const remainingMs = deadlineDate.getTime() - new Date().getTime();
                     
                     const progressPercent = Math.min(100, Math.max(0, (elapsedMs / totalMs) * 100));
-                    const remainingDays = Math.ceil(remainingMs / (1000 * 60 * 60 * 24));
+                    const remainingDays = differenceInDays(deadlineEnd, now);
+                    const remainingHours = differenceInHours(deadlineDate, new Date());
                     const isExpired = remainingMs <= 0;
-                    const isUrgent = remainingDays <= 2 && !isExpired;
+                    const isUrgent = remainingDays <= 2 && remainingDays > 0;
                     const hasDefense = defenses.length > 0;
 
                     if (hasDefense) {
@@ -695,7 +698,11 @@ const ResidentOccurrenceDetails = () => {
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">Progresso do prazo</span>
                           <span className={`font-medium ${isExpired ? 'text-red-500' : isUrgent ? 'text-orange-500' : 'text-foreground'}`}>
-                            {isExpired ? 'Prazo encerrado' : `${remainingDays} dia${remainingDays !== 1 ? 's' : ''} restante${remainingDays !== 1 ? 's' : ''}`}
+                            {isExpired 
+                              ? 'Prazo encerrado' 
+                              : remainingDays <= 0 && remainingHours > 0
+                                ? `${remainingHours} hora${remainingHours !== 1 ? 's' : ''} restante${remainingHours !== 1 ? 's' : ''}`
+                                : `${remainingDays} dia${remainingDays !== 1 ? 's' : ''} restante${remainingDays !== 1 ? 's' : ''}`}
                           </span>
                         </div>
                         
