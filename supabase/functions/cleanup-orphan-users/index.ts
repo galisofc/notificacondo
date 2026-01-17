@@ -31,6 +31,8 @@ serve(async (req) => {
     const serviceKeyHeader = req.headers.get("x-service-key");
     const isServiceCall = serviceKeyHeader === supabaseServiceKey;
 
+    let executingUserId: string | null = null;
+
     if (!isServiceCall) {
       // Get authorization header for user calls
       const authHeader = req.headers.get("authorization");
@@ -68,10 +70,12 @@ serve(async (req) => {
         );
       }
       
+      executingUserId = user.id;
       console.log(`[cleanup-orphan-users] Authorized user call from: ${user.id}`);
     } else {
       console.log("[cleanup-orphan-users] Service key call - authorized");
     }
+    
     const action = body.action || "list"; // "list" or "delete"
     const userIdsToDelete = body.user_ids || []; // Array of user IDs to delete
 
@@ -79,8 +83,15 @@ serve(async (req) => {
 
     if (action === "delete" && userIdsToDelete.length > 0) {
       // Delete specific orphan users
-      const deleted: string[] = [];
-      const errors: { id: string; error: string }[] = [];
+      const deleted: { id: string; email: string | null }[] = [];
+      const deleteErrors: { id: string; error: string }[] = [];
+
+      // First, get email for each user before deleting
+      const userEmails: Record<string, string | null> = {};
+      for (const userId of userIdsToDelete) {
+        const { data: userData } = await supabase.auth.admin.getUserById(userId);
+        userEmails[userId] = userData?.user?.email || null;
+      }
 
       for (const userId of userIdsToDelete) {
         try {
@@ -105,29 +116,46 @@ serve(async (req) => {
 
           // Only delete if truly orphan (no profile AND no role AND no condominium)
           if (!profile && !role && !condoLink) {
+            const userEmail = userEmails[userId];
+            
             const { error: deleteError } = await supabase.auth.admin.deleteUser(userId);
             
             if (deleteError) {
               console.error(`Error deleting user ${userId}:`, deleteError);
-              errors.push({ id: userId, error: deleteError.message });
+              deleteErrors.push({ id: userId, error: deleteError.message });
             } else {
-              console.log(`Successfully deleted orphan user: ${userId}`);
-              deleted.push(userId);
+              console.log(`Successfully deleted orphan user: ${userId} (${userEmail})`);
+              deleted.push({ id: userId, email: userEmail });
+
+              // Log audit entry
+              await supabase.from("audit_logs").insert({
+                table_name: "auth.users",
+                action: "DELETE_ORPHAN",
+                record_id: userId,
+                old_data: { 
+                  user_id: userId, 
+                  email: userEmail,
+                  reason: "orphan_cleanup"
+                },
+                user_id: executingUserId,
+              });
+              console.log(`Audit log created for orphan deletion: ${userId}`);
             }
           } else {
-            errors.push({ id: userId, error: "Usuário não é órfão (tem perfil, role ou vínculo com condomínio)" });
+            deleteErrors.push({ id: userId, error: "Usuário não é órfão (tem perfil, role ou vínculo com condomínio)" });
           }
         } catch (err: any) {
           console.error(`Error processing user ${userId}:`, err);
-          errors.push({ id: userId, error: err.message });
+          deleteErrors.push({ id: userId, error: err.message });
         }
       }
 
       return new Response(
         JSON.stringify({
           success: true,
-          deleted,
-          errors,
+          deleted: deleted.map(d => d.id),
+          deleted_details: deleted,
+          errors: deleteErrors,
           message: `${deleted.length} usuário(s) órfão(s) removido(s)`
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
