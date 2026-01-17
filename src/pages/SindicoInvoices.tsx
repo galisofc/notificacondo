@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useDateFormatter } from "@/hooks/useFormattedDate";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useItemsPerPagePreference } from "@/hooks/useUserPreferences";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
 import { MercadoPagoTransparentCheckout } from "@/components/mercadopago/MercadoPagoTransparentCheckout";
@@ -119,7 +120,7 @@ const SindicoInvoices = () => {
   const [condominiumFilter, setCondominiumFilter] = useState<string>("all");
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useItemsPerPagePreference("sindico-invoices-items-per-page", 10);
 
   const { containerRef, PullIndicator } = usePullToRefresh({
     onRefresh: async () => {
