@@ -711,7 +711,7 @@ export function BulkCondominiumWizard({
                     <Label htmlFor="numeric" className="flex-1 cursor-pointer">
                       <span className="font-medium">Numérico</span>
                       <span className="text-muted-foreground ml-2 text-sm">
-                        Bloco 1, Bloco 2, Bloco 3...
+                        BLOCO 1, BLOCO 2, BLOCO 3...
                       </span>
                     </Label>
                   </div>
@@ -720,7 +720,7 @@ export function BulkCondominiumWizard({
                     <Label htmlFor="alpha" className="flex-1 cursor-pointer">
                       <span className="font-medium">Alfabético</span>
                       <span className="text-muted-foreground ml-2 text-sm">
-                        Bloco A, Bloco B, Bloco C...
+                        BLOCO A, BLOCO B, BLOCO C...
                       </span>
                     </Label>
                   </div>
