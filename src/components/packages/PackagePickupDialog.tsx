@@ -25,7 +25,7 @@ interface PackagePickupDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   package_: Package | null;
-  onConfirm: () => Promise<{ success: boolean; error?: string }>;
+  onConfirm: (pickedUpByName: string) => Promise<{ success: boolean; error?: string }>;
   /** When false, the pickup code will not be rendered anywhere in the dialog. */
   revealPickupCode?: boolean;
 }
@@ -41,6 +41,7 @@ export function PackagePickupDialog({
 }: PackagePickupDialogProps) {
   const [step, setStep] = useState<Step>("validate");
   const [inputCode, setInputCode] = useState("");
+  const [pickedUpByName, setPickedUpByName] = useState("");
   const [codeValid, setCodeValid] = useState<boolean | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -50,6 +51,7 @@ export function PackagePickupDialog({
     if (open) {
       setStep("validate");
       setInputCode("");
+      setPickedUpByName("");
       setCodeValid(null);
       setErrorMessage("");
       // Focus input after dialog opens
@@ -68,10 +70,10 @@ export function PackagePickupDialog({
   }, [inputCode, package_]);
 
   const handleConfirm = async () => {
-    if (!codeValid) return;
+    if (!codeValid || !pickedUpByName.trim()) return;
     
     setStep("processing");
-    const result = await onConfirm();
+    const result = await onConfirm(pickedUpByName.trim());
     
     if (result.success) {
       setStep("success");
@@ -134,6 +136,22 @@ export function PackagePickupDialog({
                 </div>
               </div>
 
+              {/* Picked Up By Name Input */}
+              <div className="space-y-2">
+                <Label htmlFor="picked-up-by-name" className="flex items-center gap-2">
+                  <PackageCheck className="w-4 h-4" />
+                  Nome de quem está retirando
+                </Label>
+                <Input
+                  id="picked-up-by-name"
+                  placeholder="Digite o nome completo..."
+                  value={pickedUpByName}
+                  onChange={(e) => setPickedUpByName(e.target.value)}
+                  className="text-base"
+                  maxLength={100}
+                />
+              </div>
+
               {/* Code Input */}
               <div className="space-y-2">
                 <Label htmlFor="pickup-code" className="flex items-center gap-2">
@@ -183,7 +201,7 @@ export function PackagePickupDialog({
                 </Button>
                 <Button
                   onClick={handleConfirm}
-                  disabled={!codeValid}
+                  disabled={!codeValid || !pickedUpByName.trim()}
                   className="flex-1 gap-2"
                 >
                   <PackageCheck className="w-4 h-4" />
