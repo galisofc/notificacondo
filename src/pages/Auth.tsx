@@ -393,6 +393,18 @@ const Auth = () => {
             })
             .eq('user_id', newUser.id);
 
+          // Create the sindico role for the new user
+          const { error: roleError } = await supabase
+            .from('user_roles')
+            .insert({
+              user_id: newUser.id,
+              role: 'sindico' as Database['public']['Enums']['app_role'],
+            });
+          
+          if (roleError) {
+            console.error('Error creating sindico role:', roleError);
+          }
+
           // Create the condominium for the new user
           const { data: condominium, error: condoError } = await supabase
             .from('condominiums')
