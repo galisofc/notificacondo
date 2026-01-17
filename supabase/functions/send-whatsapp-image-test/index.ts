@@ -42,15 +42,12 @@ async function sendZproImage(phone: string, imageUrl: string, caption: string, c
 
   // Z-PRO Postman: BearerToken (auth header) + externalKey (body)
   const bearerToken = config.apiKey;
-  const externalKey = config.instanceId || "";
-
-  console.log("Z-PRO externalKey present:", Boolean(externalKey), "len:", externalKey?.length ?? 0);
+  
+  // If instance_id is empty or placeholder, fallback to api_key (common case: both are same)
+  let externalKey = config.instanceId || "";
   if (!externalKey || externalKey === "zpro-embedded") {
-    return {
-      success: false,
-      error: "External Key não configurada (preencha o campo External Key no painel do WhatsApp).",
-      debug: { endpoint: `${baseUrl}/url` },
-    };
+    externalKey = config.apiKey;
+    console.log("Z-PRO: using api_key as externalKey fallback");
   }
   
   const targetUrl = `${baseUrl}/url`;
@@ -59,14 +56,6 @@ async function sendZproImage(phone: string, imageUrl: string, caption: string, c
   console.log("Image URL:", imageUrl.substring(0, 100) + "...");
   
   try {
-    if (!externalKey) {
-      return {
-        success: false,
-        error: "External Key não configurada (preencha o campo External Key no painel).",
-        debug: { endpoint: targetUrl },
-      };
-    }
-
     const response = await fetch(targetUrl, {
       method: "POST",
       headers: {

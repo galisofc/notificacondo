@@ -49,9 +49,10 @@ const zproProvider: ProviderConfig = {
         const targetUrl = `${baseUrl}/url`;
         console.log("Z-PRO image endpoint:", targetUrl);
 
-        const externalKey = config.instanceId || "";
-        if (!externalKey) {
-          return { success: false, error: "External Key não configurada" };
+        // If instance_id is empty or placeholder, fallback to api_key
+        let externalKey = config.instanceId || "";
+        if (!externalKey || externalKey === "zpro-embedded") {
+          externalKey = config.apiKey;
         }
 
         response = await fetch(targetUrl, {
