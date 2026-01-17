@@ -167,12 +167,19 @@ const CondominiumDetails = () => {
 
   // Filter blocks and apartments based on search
   const filteredBlocks = useMemo(() => {
-    if (!searchQuery.trim()) return blocks;
+    // First, sort blocks numerically
+    const sortedBlocks = [...blocks].sort((a, b) => {
+      const numA = parseInt(a.name.replace(/\D/g, "")) || 0;
+      const numB = parseInt(b.name.replace(/\D/g, "")) || 0;
+      return numA - numB;
+    });
+
+    if (!searchQuery.trim()) return sortedBlocks;
 
     const query = searchQuery.toLowerCase().trim();
     const quickSearch = parseQuickSearch(searchQuery);
 
-    return blocks.filter((block) => {
+    return sortedBlocks.filter((block) => {
       // Match block name
       if (block.name.toLowerCase().includes(query)) return true;
 
@@ -656,7 +663,7 @@ const CondominiumDetails = () => {
                             <Building2 className="w-5 h-5 text-primary" />
                           </div>
                           <div>
-                            <h4 className="font-semibold text-foreground">{block.name}</h4>
+                            <h4 className="font-semibold text-foreground">{block.name.toUpperCase()}</h4>
                             <p className="text-sm text-muted-foreground">
                               {allBlockApartments.length} apartamento(s)
                             </p>
