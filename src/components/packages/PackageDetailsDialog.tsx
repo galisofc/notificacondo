@@ -11,7 +11,8 @@ import {
   Clock, 
   Package as PackageIcon,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  User
 } from "lucide-react";
 import {
   Dialog,
@@ -257,9 +258,34 @@ export function PackageDetailsDialog({
               </Button>
             )}
 
-            {package_.status !== "pendente" && (
+            {package_.status === "retirada" && (
+              <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Check className="w-5 h-5 text-green-600 dark:text-green-400" />
+                  <p className="text-sm font-medium text-green-700 dark:text-green-300">
+                    Encomenda Retirada
+                  </p>
+                </div>
+                {package_.picked_up_by_name && (
+                  <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                    <User className="w-4 h-4" />
+                    <span>Retirada por: <strong>{package_.picked_up_by_name}</strong></span>
+                  </div>
+                )}
+                {package_.picked_up_at && (
+                  <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                    <Clock className="w-4 h-4" />
+                    <span>
+                      {format(new Date(package_.picked_up_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {package_.status === "expirada" && (
               <p className="text-sm text-muted-foreground text-center py-2">
-                Esta encomenda já foi retirada. Notificações não são enviadas para encomendas retiradas.
+                Esta encomenda expirou. Notificações não são enviadas para encomendas expiradas.
               </p>
             )}
           </div>
