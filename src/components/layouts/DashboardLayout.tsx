@@ -122,6 +122,7 @@ const residentNavItems: NavStructure = [
 
 const getPorteiroNavItems = (pendingPackages: number): NavStructure => [
   { title: "Início", url: "/porteiro", icon: Home },
+  { title: "Condomínio", url: "/porteiro/condominio", icon: Building2 },
   { title: "Registrar Encomenda", url: "/porteiro/registrar", icon: PackagePlus },
   { title: "Retirar Encomenda", url: "/porteiro/encomendas", icon: PackageCheck, badge: pendingPackages },
   { title: "Configurações", url: "/porteiro/configuracoes", icon: Settings },
