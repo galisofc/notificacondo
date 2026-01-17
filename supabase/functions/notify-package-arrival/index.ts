@@ -62,10 +62,11 @@ const zproProvider: ProviderConfig = {
             "Authorization": `Bearer ${config.apiKey}`,
           },
           body: JSON.stringify({
-            phone: phoneClean,
-            url: imageUrl,
-            caption: message,
+            mediaUrl: imageUrl,
+            body: message,
+            number: phoneClean,
             externalKey,
+            isClosed: false,
           }),
         });
       } else {
