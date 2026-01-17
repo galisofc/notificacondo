@@ -37,12 +37,14 @@ async function sendZproMessage(phone: string, message: string, config: ProviderS
   const phoneClean = phone.replace(/\D/g, "");
   
   // Z-PRO API uses query parameters
+  // Postman uses BearerToken + externalKey (different values)
+  const externalKey = config.instanceId || "";
   const params = new URLSearchParams({
     body: message,
     number: phoneClean,
-    externalKey: config.apiKey,
+    externalKey,
     bearertoken: config.apiKey,
-    isClosed: "false"
+    isClosed: "false",
   });
   
   const sendUrl = `${baseUrl}/params/?${params.toString()}`;

@@ -43,40 +43,39 @@ const zproProvider: ProviderConfig = {
       
       if (imageUrl) {
         // Send image with caption via POST /url endpoint
-        // Docs: https://www.postman.com/comunidade-zdg/z-pro/request/25151510
+        // Postman: BearerToken (auth header) + externalKey (body)
         console.log("Z-PRO sending image to:", phoneClean);
         console.log("Image URL:", imageUrl.substring(0, 100) + "...");
         const targetUrl = `${baseUrl}/url`;
         console.log("Z-PRO image endpoint:", targetUrl);
 
-        // The ZPRO API endpoint for images via URL: {baseUrl}/url
-        // Some Z-PRO setups require the token in headers (bearertoken) and/or in body.
+        const externalKey = config.instanceId || "";
+        if (!externalKey) {
+          return { success: false, error: "External Key não configurada" };
+        }
+
         response = await fetch(targetUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            // keep compatibility with installations that validate token via headers
-            "externalKey": config.apiKey,
-            "bearertoken": config.apiKey,
+            "Authorization": `Bearer ${config.apiKey}`,
           },
           body: JSON.stringify({
             phone: phoneClean,
             url: imageUrl,
             caption: message,
-            // keep compatibility with installations that validate token via body
-            externalKey: config.apiKey,
-            bearertoken: config.apiKey,
-            token: config.apiKey,
+            externalKey,
           }),
         });
       } else {
         // Send text only via GET (existing behavior)
+        const externalKey = config.instanceId || "";
         const params = new URLSearchParams({
           body: message,
           number: phoneClean,
-          externalKey: config.apiKey,
+          externalKey,
           bearertoken: config.apiKey,
-          isClosed: "false"
+          isClosed: "false",
         });
         
         const sendUrl = `${baseUrl}/params/?${params.toString()}`;
