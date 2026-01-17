@@ -590,68 +590,7 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
                   )}
                   Texto
                 </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => handleSendImageTest("token")}
-                  disabled={isSendingImageTest || !testPhone}
-                  className="shrink-0 gap-2"
-                  title="Usa o Bearer Token também como externalKey"
-                >
-                  {isSendingImageTest ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Image className="h-4 w-4" />
-                  )}
-                  Img (token)
-                </Button>
-                {config.instance_id && config.instance_id !== "zpro-embedded" && (
-                  <>
-                    <Button
-                      variant="outline"
-                      onClick={() => handleSendImageTest("custom")}
-                      disabled={isSendingImageTestCustom || !testPhone}
-                      className="shrink-0 gap-2"
-                      title="Usa o campo External Key informado"
-                    >
-                      {isSendingImageTestCustom ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Image className="h-4 w-4" />
-                      )}
-                      Img (custom)
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      onClick={handleSendImageTestBoth}
-                      disabled={isSendingImageTestBoth || !testPhone}
-                      className="shrink-0 gap-2"
-                      title="Testa ambos os modos em paralelo"
-                    >
-                      {isSendingImageTestBoth ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <TestTube className="h-4 w-4" />
-                      )}
-                      Ambos
-                    </Button>
-                  </>
-                )}
               </div>
-              {bothTestResult && (
-                <div className="p-3 rounded-md bg-muted/50 text-sm space-y-1">
-                  <div className="font-medium">
-                    Resultado: {bothTestResult.winner ? `🏆 ${bothTestResult.winner}` : "❌ Nenhum funcionou"}
-                  </div>
-                  <div className="text-xs text-muted-foreground space-y-0.5">
-                    <div>
-                      Token: {bothTestResult.results.token?.success ? "✅ OK" : `❌ ${bothTestResult.results.token?.error || "Falhou"}`}
-                    </div>
-                    <div>
-                      Custom: {bothTestResult.results.custom?.success ? "✅ OK" : `❌ ${bothTestResult.results.custom?.error || "Falhou"}`}
-                    </div>
-                  </div>
-                </div>
-              )}
               <p className="text-xs text-muted-foreground">
                 Formato: código do país + DDD + número (sem espaços ou traços)
               </p>
