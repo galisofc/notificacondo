@@ -381,10 +381,10 @@ export function BulkCondominiumWizard({
         if (subError) throw subError;
       }
 
-      // 3. Create blocks in batch
+      // 3. Create blocks in batch (names in uppercase)
       const blocksToInsert = blockNames.map((name) => ({
         condominium_id: newCondo.id,
-        name,
+        name: name.toUpperCase(),
         floors: autoDetectFloor ? Math.max(...apartmentPreviews.map((a) => a.floor || 1)) : 1,
       }));
 
