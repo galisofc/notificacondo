@@ -99,12 +99,19 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
 
   useEffect(() => {
     if (existingConfig) {
+      const provider = existingConfig.provider;
+      const rawInstanceId = existingConfig.instance_id;
+
+      // Legacy: older versions stored a placeholder for Z-PRO.
+      // Force user to explicitly fill the correct External Key.
+      const instanceId = provider === "zpro" && rawInstanceId === "zpro-embedded" ? "" : rawInstanceId;
+
       setConfig({
         id: existingConfig.id,
-        provider: existingConfig.provider,
+        provider,
         api_url: existingConfig.api_url,
         api_key: existingConfig.api_key,
-        instance_id: existingConfig.instance_id,
+        instance_id: instanceId,
         is_active: existingConfig.is_active,
         app_url: (existingConfig as any).app_url || "https://notificacondo.com.br",
       });

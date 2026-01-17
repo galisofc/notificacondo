@@ -43,6 +43,15 @@ async function sendZproImage(phone: string, imageUrl: string, caption: string, c
   // Z-PRO Postman: BearerToken (auth header) + externalKey (body)
   const bearerToken = config.apiKey;
   const externalKey = config.instanceId || "";
+
+  console.log("Z-PRO externalKey present:", Boolean(externalKey), "len:", externalKey?.length ?? 0);
+  if (!externalKey || externalKey === "zpro-embedded") {
+    return {
+      success: false,
+      error: "External Key não configurada (preencha o campo External Key no painel do WhatsApp).",
+      debug: { endpoint: `${baseUrl}/url` },
+    };
+  }
   
   const targetUrl = `${baseUrl}/url`;
   console.log("Z-PRO image endpoint:", targetUrl);
