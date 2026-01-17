@@ -46,18 +46,20 @@ const zproProvider: ProviderConfig = {
         // Docs: https://www.postman.com/comunidade-zdg/z-pro/request/25151510
         console.log("Z-PRO sending image to:", phoneClean);
         console.log("Image URL:", imageUrl.substring(0, 100) + "...");
-        
+        const targetUrl = `${baseUrl}/url`;
+        console.log("Z-PRO image endpoint:", targetUrl);
+
         // The ZPRO API endpoint for images via URL: {baseUrl}/url
-        response = await fetch(`${baseUrl}/url`, {
+        response = await fetch(targetUrl, {
           method: "POST",
-          headers: { 
+          headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
             phone: phoneClean,
             url: imageUrl,
             caption: message,
-            externalKey: config.apiKey
+            externalKey: config.apiKey,
           }),
         });
       } else {
