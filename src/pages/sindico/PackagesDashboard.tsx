@@ -295,12 +295,7 @@ const PackagesDashboard = () => {
       </Helmet>
 
       <div className="space-y-6 animate-fade-up">
-        <SindicoBreadcrumbs
-          items={[
-            { label: "Dashboard", href: "/dashboard" },
-            { label: "Encomendas" },
-          ]}
-        />
+        <SindicoBreadcrumbs items={[{ label: "Encomendas" }]} />
 
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
