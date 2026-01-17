@@ -508,8 +508,8 @@ export function SubscriptionsMonitor() {
                         )}
                       </div>
 
-                      {/* Period */}
-                      {sub.current_period_start && sub.current_period_end && (
+                      {/* Period - hidden for lifetime subscriptions */}
+                      {sub.current_period_start && sub.current_period_end && !sub.is_lifetime && (
                         <div className="text-xs text-muted-foreground bg-secondary/50 rounded-md px-3 py-2">
                           <span className="font-medium text-foreground">{formatDate(sub.current_period_start)}</span>
                           <span> até </span>
