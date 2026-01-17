@@ -23,7 +23,8 @@ import {
   Phone,
   Settings,
   Link,
-  Key
+  Key,
+  Image
 } from "lucide-react";
 import { z } from "zod";
 
@@ -65,6 +66,7 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [isSendingTest, setIsSendingTest] = useState(false);
+  const [isSendingImageTest, setIsSendingImageTest] = useState(false);
   const [testResult, setTestResult] = useState<"success" | "error" | null>(null);
   const [showToken, setShowToken] = useState(false);
   const [testPhone, setTestPhone] = useState("");
@@ -274,6 +276,46 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
     }
   };
 
+  const handleSendImageTest = async () => {
+    if (!testPhone) {
+      toast({
+        title: "Número obrigatório",
+        description: "Digite um número de telefone para enviar o teste de imagem.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSendingImageTest(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("send-whatsapp-image-test", {
+        body: { phone: testPhone },
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast({ title: "Imagem enviada! Verifique seu WhatsApp." });
+      } else {
+        toast({
+          title: "Erro ao enviar imagem",
+          description: data.error,
+          variant: "destructive",
+        });
+        console.error("Image test debug:", data.debug);
+      }
+    } catch (error) {
+      toast({
+        title: "Erro ao enviar imagem",
+        description: "Não foi possível enviar a imagem de teste.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingImageTest(false);
+    }
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
@@ -451,7 +493,20 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
                   ) : (
                     <Send className="h-4 w-4" />
                   )}
-                  Enviar
+                  Texto
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleSendImageTest}
+                  disabled={isSendingImageTest || !testPhone}
+                  className="shrink-0 gap-2"
+                >
+                  {isSendingImageTest ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Image className="h-4 w-4" />
+                  )}
+                  Imagem
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
