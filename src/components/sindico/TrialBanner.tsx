@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 interface TrialSubscription {
   id: string;
   is_trial: boolean;
+  is_lifetime: boolean;
   trial_ends_at: string | null;
   plan: string;
   condominium: {
@@ -31,12 +32,14 @@ const TrialBanner = () => {
         .select(`
           id,
           is_trial,
+          is_lifetime,
           trial_ends_at,
           plan,
           condominium:condominiums!inner(id, name, owner_id)
         `)
         .eq("condominiums.owner_id", user.id)
-        .eq("is_trial", true);
+        .eq("is_trial", true)
+        .eq("is_lifetime", false);
 
       if (error) throw error;
       return (data || []) as TrialSubscription[];
@@ -64,7 +67,8 @@ const TrialBanner = () => {
       {trialSubscriptions.map((sub) => {
         const { daysLeft, hoursLeft, isUrgent, isExpired } = getTrialInfo(sub.trial_ends_at);
 
-        if (isExpired) return null;
+        // Skip expired trials and lifetime subscriptions
+        if (isExpired || sub.is_lifetime) return null;
 
         return (
           <div

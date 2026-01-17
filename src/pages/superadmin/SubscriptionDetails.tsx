@@ -61,6 +61,7 @@ import {
   ArrowRightLeft,
   Search,
   Info,
+  Sparkles,
 } from "lucide-react";
 import {
   Tooltip,
@@ -137,6 +138,7 @@ export default function SubscriptionDetails() {
     notifications_limit: number;
     warnings_limit: number;
     fines_limit: number;
+    is_lifetime: boolean;
   } | null>(null);
 
   const { data, isLoading, error } = useQuery({
@@ -254,6 +256,7 @@ export default function SubscriptionDetails() {
           notifications_limit: updateData.notifications_limit,
           warnings_limit: updateData.warnings_limit,
           fines_limit: updateData.fines_limit,
+          is_lifetime: updateData.is_lifetime,
         })
         .eq("id", id);
 
@@ -868,6 +871,7 @@ export default function SubscriptionDetails() {
         notifications_limit: data.subscription.notifications_limit,
         warnings_limit: data.subscription.warnings_limit,
         fines_limit: data.subscription.fines_limit,
+        is_lifetime: data.subscription.is_lifetime || false,
       });
       setIsEditing(true);
     }
@@ -1032,12 +1036,48 @@ export default function SubscriptionDetails() {
             <CardContent className="space-y-6">
               {isEditing && editedData ? (
                 <div className="space-y-4">
+                  {/* Lifetime Toggle */}
+                  <div className="p-4 rounded-lg bg-gradient-to-r from-amber-500/10 via-yellow-500/10 to-amber-500/10 border border-amber-500/30">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-amber-500/20">
+                          <Sparkles className="w-5 h-5 text-amber-500" />
+                        </div>
+                        <div>
+                          <Label className="text-base font-semibold">Plano Vitalício</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Sem expiração, sem cobranças e sem limitações
+                          </p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={editedData.is_lifetime}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setEditedData({
+                              ...editedData,
+                              is_lifetime: true,
+                              plan: "enterprise",
+                              active: true,
+                              notifications_limit: 999999,
+                              warnings_limit: 999999,
+                              fines_limit: 999999,
+                            });
+                          } else {
+                            setEditedData({ ...editedData, is_lifetime: false });
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Plano</Label>
                       <Select
                         value={editedData.plan}
                         onValueChange={(v) => handlePlanChange(v as PlanType)}
+                        disabled={editedData.is_lifetime}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -1059,6 +1099,7 @@ export default function SubscriptionDetails() {
                           onCheckedChange={(checked) =>
                             setEditedData({ ...editedData, active: checked })
                           }
+                          disabled={editedData.is_lifetime}
                         />
                         <span className="text-sm text-muted-foreground">
                           {editedData.active ? "Ativo" : "Inativo"}
@@ -1081,6 +1122,7 @@ export default function SubscriptionDetails() {
                             notifications_limit: parseInt(e.target.value) || 0,
                           })
                         }
+                        disabled={editedData.is_lifetime}
                       />
                     </div>
                     <div className="space-y-2">
@@ -1094,6 +1136,7 @@ export default function SubscriptionDetails() {
                             warnings_limit: parseInt(e.target.value) || 0,
                           })
                         }
+                        disabled={editedData.is_lifetime}
                       />
                     </div>
                     <div className="space-y-2">
@@ -1107,6 +1150,7 @@ export default function SubscriptionDetails() {
                             fines_limit: parseInt(e.target.value) || 0,
                           })
                         }
+                        disabled={editedData.is_lifetime}
                       />
                     </div>
                   </div>
@@ -1114,15 +1158,25 @@ export default function SubscriptionDetails() {
               ) : (
                 <div className="flex items-start gap-6">
                   <div
-                    className={`w-16 h-16 rounded-2xl ${planInfo.color} flex items-center justify-center shrink-0`}
+                    className={`w-16 h-16 rounded-2xl ${subscription.is_lifetime ? "bg-gradient-to-br from-amber-500 to-yellow-400" : planInfo.color} flex items-center justify-center shrink-0`}
                   >
-                    <CreditCard className="w-8 h-8 text-white" />
+                    {subscription.is_lifetime ? (
+                      <Sparkles className="w-8 h-8 text-black" />
+                    ) : (
+                      <CreditCard className="w-8 h-8 text-white" />
+                    )}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="text-2xl font-bold text-foreground">
                         {planInfo.name}
                       </h3>
+                      {subscription.is_lifetime && (
+                        <Badge className="bg-gradient-to-r from-amber-500 to-yellow-400 text-black font-bold border-0">
+                          <Sparkles className="w-3 h-3 mr-1" />
+                          VITALÍCIO
+                        </Badge>
+                      )}
                       <Badge
                         variant="outline"
                         className={

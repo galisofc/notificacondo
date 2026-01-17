@@ -1621,6 +1621,7 @@ export type Database = {
           fines_limit: number
           fines_used: number
           id: string
+          is_lifetime: boolean
           is_trial: boolean
           mercado_pago_subscription_id: string | null
           mercadopago_preapproval_id: string | null
@@ -1641,6 +1642,7 @@ export type Database = {
           fines_limit?: number
           fines_used?: number
           id?: string
+          is_lifetime?: boolean
           is_trial?: boolean
           mercado_pago_subscription_id?: string | null
           mercadopago_preapproval_id?: string | null
@@ -1661,6 +1663,7 @@ export type Database = {
           fines_limit?: number
           fines_used?: number
           id?: string
+          is_lifetime?: boolean
           is_trial?: boolean
           mercado_pago_subscription_id?: string | null
           mercadopago_preapproval_id?: string | null
