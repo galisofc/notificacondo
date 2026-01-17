@@ -694,7 +694,7 @@ const SindicoSubscriptions = () => {
                         </div>
                       </div>
 
-                      {currentPlan && (
+                      {currentPlan && !sub.is_lifetime && (
                         <p className="text-lg font-bold text-foreground mb-1">
                           {formatCurrency(currentPlan.price)}<span className="text-sm font-normal text-muted-foreground">/mês</span>
                         </p>
