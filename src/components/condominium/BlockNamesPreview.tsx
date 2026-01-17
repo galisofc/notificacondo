@@ -29,7 +29,7 @@ export function BlockNamesPreview({ blockNames, className }: BlockNamesPreviewPr
               className="flex items-center gap-2 px-3 py-2 bg-primary/10 text-primary rounded-md text-sm font-medium"
             >
               <Building2 className="h-4 w-4 shrink-0" />
-              <span className="truncate">{name}</span>
+              <span className="truncate">{name.toUpperCase()}</span>
             </div>
           ))}
         </div>
