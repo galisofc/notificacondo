@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Check, Sparkles, Loader2, MessageCircle, Clock, Flame } from "lucide-react";
+import { Check, Sparkles, Loader2, MessageCircle, Clock, Flame, Scale, Package, PartyPopper } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -104,16 +104,34 @@ const Pricing = () => {
           <Clock className="w-4 h-4 text-orange-500" />
         </div>
 
-        <div className="text-center max-w-2xl mx-auto mb-16">
+        <div className="text-center max-w-2xl mx-auto mb-8">
           <span className="text-primary text-sm font-semibold uppercase tracking-wider">Planos</span>
           <h2 className="font-display text-3xl md:text-5xl font-bold mt-4 mb-6">
             Escolha o plano ideal para{" "}
             <span className="text-gradient">seu condomínio</span>
           </h2>
           <p className="text-muted-foreground text-lg">
-            <span className="text-primary font-semibold">7 dias grátis para testar!</span> Todos os planos incluem integração WhatsApp, registro de ciência e conformidade LGPD.
-            Cancele quando quiser.
+            <span className="text-primary font-semibold">7 dias grátis para testar!</span> Cancele quando quiser.
           </p>
+        </div>
+
+        {/* Modules Included Badge */}
+        <div className="flex flex-col items-center gap-4 mb-12">
+          <p className="text-sm font-medium text-muted-foreground">Todos os planos incluem os 3 módulos:</p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/30">
+              <Scale className="w-4 h-4 text-amber-500" />
+              <span className="text-sm font-medium text-amber-600 dark:text-amber-400">Ocorrências & Multas</span>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/30">
+              <Package className="w-4 h-4 text-blue-500" />
+              <span className="text-sm font-medium text-blue-600 dark:text-blue-400">Encomendas</span>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/10 border border-purple-500/30">
+              <PartyPopper className="w-4 h-4 text-purple-500" />
+              <span className="text-sm font-medium text-purple-600 dark:text-purple-400">Salão de Festas</span>
+            </div>
+          </div>
         </div>
 
         {isLoading ? (
@@ -168,6 +186,12 @@ const Pricing = () => {
                       <span className="text-muted-foreground text-sm">/mês</span>
                     </>
                   )}
+                </div>
+
+                {/* All Modules Included Badge */}
+                <div className="flex items-center gap-2 mb-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20">
+                  <Check className="w-4 h-4 text-primary" />
+                  <span className="text-xs text-primary font-medium">3 módulos inclusos</span>
                 </div>
 
                 {/* WhatsApp Integration Badge */}
