@@ -386,7 +386,7 @@ const CondominiumDetails = () => {
           .from("apartments")
           .update({
             block_id: apartmentForm.block_id,
-            number: apartmentForm.number,
+            number: apartmentForm.number.toUpperCase(),
             floor: apartmentForm.floor ? parseInt(apartmentForm.floor) : null,
             monthly_fee: apartmentForm.monthly_fee ? parseFloat(apartmentForm.monthly_fee) : null,
           })
@@ -396,7 +396,7 @@ const CondominiumDetails = () => {
       } else {
         const { error } = await supabase.from("apartments").insert({
           block_id: apartmentForm.block_id,
-          number: apartmentForm.number,
+          number: apartmentForm.number.toUpperCase(),
           floor: apartmentForm.floor ? parseInt(apartmentForm.floor) : null,
           monthly_fee: apartmentForm.monthly_fee ? parseFloat(apartmentForm.monthly_fee) : null,
         });
