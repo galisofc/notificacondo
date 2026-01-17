@@ -130,17 +130,19 @@ const PackagesHistory = () => {
     enabled: !!user,
   });
 
-  // Fetch blocks for selected condominium
+  // Fetch blocks for selected condominium (natural sort for "BLOCO 1", "BLOCO 10", etc.)
   const { data: blocks = [] } = useQuery({
     queryKey: ["blocks", selectedCondominium],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("blocks")
         .select("id, name, condominium_id")
-        .eq("condominium_id", selectedCondominium)
-        .order("name");
+        .eq("condominium_id", selectedCondominium);
       if (error) throw error;
-      return data as Block[];
+      // Natural sort to handle "BLOCO 1", "BLOCO 2", "BLOCO 10" correctly
+      return (data as Block[]).sort((a, b) => 
+        a.name.localeCompare(b.name, 'pt-BR', { numeric: true, sensitivity: 'base' })
+      );
     },
     enabled: !!selectedCondominium,
   });
