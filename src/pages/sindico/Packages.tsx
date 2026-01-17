@@ -12,6 +12,16 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -48,6 +58,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
+  Trash2,
   ChevronsRight,
   Eye,
   Image as ImageIcon,
@@ -115,6 +126,7 @@ const SindicoPackages = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useItemsPerPagePreference("sindico-packages-items-per-page", 10);
   const [selectedPackage, setSelectedPackage] = useState<PackageWithRelations | null>(null);
+  const [packageToDelete, setPackageToDelete] = useState<PackageWithRelations | null>(null);
 
   // Fetch condominiums
   const { data: condominiums = [] } = useQuery({
@@ -266,6 +278,38 @@ const SindicoPackages = () => {
   const handleRefresh = () => {
     refetch();
     toast({ title: "Lista atualizada", description: "As encomendas foram atualizadas." });
+  };
+
+  // Delete package mutation
+  const deletePackageMutation = useMutation({
+    mutationFn: async (packageId: string) => {
+      const { error } = await supabase
+        .from("packages")
+        .delete()
+        .eq("id", packageId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sindico-packages"] });
+      toast({
+        title: "Encomenda excluída",
+        description: "A encomenda foi removida com sucesso.",
+      });
+      setPackageToDelete(null);
+      setSelectedPackage(null);
+    },
+    onError: (error) => {
+      console.error("Erro ao excluir encomenda:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir a encomenda. Tente novamente.",
+      });
+    },
+  });
+
+  const handleDeletePackage = (pkg: PackageWithRelations) => {
+    setPackageToDelete(pkg);
   };
 
   const StatCard = ({
@@ -538,13 +582,28 @@ const SindicoPackages = () => {
                               )}
                             </TableCell>
                             <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setSelectedPackage(pkg)}
-                              >
-                                <Eye className="w-4 h-4" />
-                              </Button>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => setSelectedPackage(pkg)}
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                                {pkg.status === "pendente" && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeletePackage(pkg);
+                                    }}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
                         );
@@ -742,10 +801,49 @@ const SindicoPackages = () => {
                   </div>
                 </div>
               )}
+
+              {/* Botão de excluir para encomendas pendentes */}
+              {selectedPackage.status === "pendente" && (
+                <div className="pt-2 border-t">
+                  <Button
+                    variant="destructive"
+                    className="w-full"
+                    onClick={() => handleDeletePackage(selectedPackage)}
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Excluir Encomenda
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!packageToDelete} onOpenChange={() => setPackageToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir encomenda?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir a encomenda com código{" "}
+              <strong>{packageToDelete?.pickup_code}</strong>?
+              <br /><br />
+              Esta ação não pode ser desfeita. A encomenda será removida permanentemente do sistema.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => packageToDelete && deletePackageMutation.mutate(packageToDelete.id)}
+              disabled={deletePackageMutation.isPending}
+            >
+              {deletePackageMutation.isPending ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 };
