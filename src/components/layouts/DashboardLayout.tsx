@@ -40,6 +40,7 @@ import {
   Scale,
   Receipt,
   ChevronRight,
+  ChevronDown,
   Clock,
   PartyPopper,
   Mail,
@@ -47,7 +48,11 @@ import {
   PackageCheck,
   PackagePlus,
   DoorOpen,
+  Wrench,
+  Wallet,
+  ClipboardList,
 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 
 interface DashboardLayoutProps {
@@ -61,29 +66,59 @@ interface NavItem {
   badge?: number;
 }
 
-const getBaseSuperAdminNavItems = (): NavItem[] => [
+interface NavGroup {
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  items: NavItem[];
+}
+
+type NavStructure = (NavItem | NavGroup)[];
+
+const isNavGroup = (item: NavItem | NavGroup): item is NavGroup => {
+  return 'items' in item;
+};
+
+const getBaseSuperAdminNavItems = (): NavStructure => [
   { title: "Início", url: "/superadmin", icon: Home },
-  { title: "Síndicos", url: "/superadmin/sindicos", icon: Users },
-  { title: "Condomínios", url: "/superadmin/condominiums", icon: Building2 },
-  { title: "Assinaturas", url: "/superadmin/subscriptions", icon: CreditCard },
-  { title: "Faturas", url: "/superadmin/invoices", icon: Receipt },
-  { title: "Transferências", url: "/superadmin/transfers", icon: Scale },
-  { title: "Tipos de Encomenda", url: "/superadmin/package-types", icon: Package },
-  { title: "Mensagens", url: "/superadmin/contact-messages", icon: Mail },
-  { title: "Logs", url: "/superadmin/logs", icon: FileText },
-  { title: "Cron Jobs", url: "/superadmin/cron-jobs", icon: Clock },
-  { title: "WhatsApp", url: "/superadmin/whatsapp", icon: MessageCircle },
+  {
+    title: "Gestão",
+    icon: Users,
+    items: [
+      { title: "Síndicos", url: "/superadmin/sindicos", icon: Users },
+      { title: "Condomínios", url: "/superadmin/condominiums", icon: Building2 },
+      { title: "Transferências", url: "/superadmin/transfers", icon: Scale },
+    ],
+  },
+  {
+    title: "Financeiro",
+    icon: Wallet,
+    items: [
+      { title: "Assinaturas", url: "/superadmin/subscriptions", icon: CreditCard },
+      { title: "Faturas", url: "/superadmin/invoices", icon: Receipt },
+    ],
+  },
+  {
+    title: "Sistema",
+    icon: Wrench,
+    items: [
+      { title: "Tipos de Encomenda", url: "/superadmin/package-types", icon: Package },
+      { title: "Mensagens", url: "/superadmin/contact-messages", icon: Mail },
+      { title: "Logs", url: "/superadmin/logs", icon: FileText },
+      { title: "Cron Jobs", url: "/superadmin/cron-jobs", icon: Clock },
+      { title: "WhatsApp", url: "/superadmin/whatsapp", icon: MessageCircle },
+    ],
+  },
   { title: "Configurações", url: "/superadmin/settings", icon: Settings },
 ];
 
-const residentNavItems: NavItem[] = [
+const residentNavItems: NavStructure = [
   { title: "Início", url: "/resident", icon: Home },
   { title: "Minhas Ocorrências", url: "/resident/occurrences", icon: FileText },
   { title: "Minhas Encomendas", url: "/resident/packages", icon: Package },
   { title: "Meu Perfil", url: "/resident/profile", icon: User },
 ];
 
-const getPorteiroNavItems = (pendingPackages: number): NavItem[] => [
+const getPorteiroNavItems = (pendingPackages: number): NavStructure => [
   { title: "Início", url: "/porteiro", icon: Home },
   { title: "Registrar Encomenda", url: "/porteiro/registrar", icon: PackagePlus },
   { title: "Retirar Encomenda", url: "/porteiro/encomendas", icon: PackageCheck, badge: pendingPackages },
@@ -334,32 +369,54 @@ function SidebarNavigation() {
     navigate("/");
   };
 
-  const getSuperAdminNavItems = (): NavItem[] => {
-    const items = getBaseSuperAdminNavItems();
-    const messagesIndex = items.findIndex(item => item.url === "/superadmin/contact-messages");
-    if (messagesIndex !== -1 && unreadMessages > 0) {
-      items[messagesIndex] = { ...items[messagesIndex], badge: unreadMessages };
+  const getSuperAdminNavItems = (): NavStructure => {
+    const items = JSON.parse(JSON.stringify(getBaseSuperAdminNavItems())) as NavStructure;
+    // Find and update messages badge in Sistema group
+    for (const item of items) {
+      if (isNavGroup(item)) {
+        const messagesItem = item.items.find(i => i.url === "/superadmin/contact-messages");
+        if (messagesItem && unreadMessages > 0) {
+          messagesItem.badge = unreadMessages;
+        }
+      }
     }
     return items;
   };
 
-  const getSindicoNavItems = (): NavItem[] => [
+  const getSindicoNavItems = (): NavStructure => [
     { title: "Início", url: "/dashboard", icon: Home },
-    { title: "Condomínios", url: "/condominiums", icon: Building2 },
-    { title: "Ocorrências", url: "/occurrences", icon: FileText },
-    { title: "Análise de Defesas", url: "/defenses", icon: Scale, badge: pendingDefenses },
-    { title: "Encomendas", url: "/sindico/encomendas", icon: Package },
-    { title: "Salão de Festas", url: "/party-hall", icon: PartyPopper },
-    { title: "Porteiros", url: "/sindico/porteiros", icon: DoorOpen },
+    {
+      title: "Gestão",
+      icon: ClipboardList,
+      items: [
+        { title: "Condomínios", url: "/condominiums", icon: Building2 },
+        { title: "Ocorrências", url: "/occurrences", icon: FileText },
+        { title: "Análise de Defesas", url: "/defenses", icon: Scale, badge: pendingDefenses },
+      ],
+    },
+    {
+      title: "Serviços",
+      icon: Package,
+      items: [
+        { title: "Encomendas", url: "/sindico/encomendas", icon: Package },
+        { title: "Salão de Festas", url: "/party-hall", icon: PartyPopper },
+        { title: "Porteiros", url: "/sindico/porteiros", icon: DoorOpen },
+      ],
+    },
     { title: "Notificações", url: "/notifications", icon: Bell },
     { title: "Relatórios", url: "/reports", icon: BarChart3 },
-    
-    { title: "Assinaturas", url: "/sindico/subscriptions", icon: CreditCard },
-    { title: "Faturas", url: "/sindico/invoices", icon: Receipt },
+    {
+      title: "Financeiro",
+      icon: Wallet,
+      items: [
+        { title: "Assinaturas", url: "/sindico/subscriptions", icon: CreditCard },
+        { title: "Faturas", url: "/sindico/invoices", icon: Receipt },
+      ],
+    },
     { title: "Configurações", url: "/sindico/settings", icon: Settings },
   ];
 
-  const navItems =
+  const navItems: NavStructure =
     role === "super_admin"
       ? getSuperAdminNavItems()
       : role === "sindico"
@@ -480,6 +537,84 @@ function SidebarNavigation() {
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
               {navItems.map((item) => {
+                if (isNavGroup(item)) {
+                  // Check if any child is active
+                  const hasActiveChild = item.items.some(child => location.pathname === child.url);
+                  const groupBadgeCount = item.items.reduce((acc, child) => acc + (child.badge || 0), 0);
+                  
+                  return (
+                    <Collapsible key={item.title} defaultOpen={hasActiveChild} className="group/collapsible">
+                      <SidebarMenuItem>
+                        <CollapsibleTrigger asChild>
+                          <SidebarMenuButton
+                            tooltip={collapsed ? item.title : undefined}
+                            className={cn(
+                              "w-full h-11 rounded-full transition-all duration-300 ease-out",
+                              hasActiveChild
+                                ? "bg-primary/10 text-primary"
+                                : "text-muted-foreground hover:text-foreground hover:bg-secondary hover:scale-[1.01]"
+                            )}
+                          >
+                            <div className={cn(
+                              "flex w-full items-center py-2.5",
+                              collapsed ? "justify-center px-0 gap-0" : "gap-3 px-3"
+                            )}>
+                              <item.icon className={cn("w-5 h-5 shrink-0", collapsed && "mx-auto")} />
+                              {!collapsed && (
+                                <>
+                                  <span className="font-medium flex-1 text-sm">{item.title}</span>
+                                  {groupBadgeCount > 0 && (
+                                    <span className="flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-xs font-bold mr-1">
+                                      {groupBadgeCount > 99 ? "99+" : groupBadgeCount}
+                                    </span>
+                                  )}
+                                  <ChevronDown className="w-4 h-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
+                                </>
+                              )}
+                            </div>
+                          </SidebarMenuButton>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className={cn("mt-1 space-y-1", collapsed && "hidden")}>
+                          {item.items.map((subItem) => {
+                            const isSubActive = location.pathname === subItem.url;
+                            return (
+                              <SidebarMenuButton
+                                key={subItem.title}
+                                asChild
+                                isActive={isSubActive}
+                                className={cn(
+                                  "w-full h-10 rounded-full transition-all duration-300 ease-out ml-4",
+                                  isSubActive
+                                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                                )}
+                              >
+                                <NavLink
+                                  to={subItem.url}
+                                  className="flex w-full items-center gap-3 px-3 py-2"
+                                  activeClassName=""
+                                >
+                                  <subItem.icon className="w-4 h-4 shrink-0" />
+                                  <span className="font-medium flex-1 text-sm">{subItem.title}</span>
+                                  {subItem.badge !== undefined && subItem.badge > 0 && (
+                                    <span className="flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-xs font-bold">
+                                      {subItem.badge > 99 ? "99+" : subItem.badge}
+                                    </span>
+                                  )}
+                                  {isSubActive && (
+                                    <ChevronRight className="w-4 h-4 text-sidebar-primary" />
+                                  )}
+                                </NavLink>
+                              </SidebarMenuButton>
+                            );
+                          })}
+                        </CollapsibleContent>
+                      </SidebarMenuItem>
+                    </Collapsible>
+                  );
+                }
+                
+                // Regular nav item
                 const isActive = location.pathname === item.url;
                 return (
                   <SidebarMenuItem key={item.title}>
