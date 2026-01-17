@@ -61,6 +61,7 @@ interface PackageWithRelations {
   id: string;
   status: "pendente" | "retirada" | "expirada";
   received_at: string;
+  received_by: string;
   picked_up_at: string | null;
   pickup_code: string;
   photo_url: string;
@@ -71,6 +72,7 @@ interface PackageWithRelations {
   condominium: { id: string; name: string } | null;
   resident: { id: string; full_name: string; phone: string | null } | null;
   package_type: { id: string; name: string; icon: string | null } | null;
+  received_by_profile: { full_name: string } | null;
 }
 
 interface Condominium {
@@ -141,6 +143,7 @@ const SindicoPackages = () => {
           id,
           status,
           received_at,
+          received_by,
           picked_up_at,
           pickup_code,
           photo_url,
@@ -156,7 +159,29 @@ const SindicoPackages = () => {
         .order("received_at", { ascending: false });
 
       if (error) throw error;
-      return data as PackageWithRelations[];
+
+      // Fetch profiles for received_by users
+      const receivedByIds = [...new Set(data?.map((p) => p.received_by).filter(Boolean) || [])];
+      let profilesMap: Record<string, { full_name: string }> = {};
+      
+      if (receivedByIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("user_id, full_name")
+          .in("user_id", receivedByIds);
+        
+        if (profiles) {
+          profilesMap = profiles.reduce((acc, p) => {
+            acc[p.user_id] = { full_name: p.full_name };
+            return acc;
+          }, {} as Record<string, { full_name: string }>);
+        }
+      }
+
+      return (data || []).map((pkg) => ({
+        ...pkg,
+        received_by_profile: profilesMap[pkg.received_by] || null,
+      })) as PackageWithRelations[];
     },
     enabled: !!user && condominiums.length > 0,
   });
@@ -609,6 +634,10 @@ const SindicoPackages = () => {
                 <div>
                   <p className="text-sm text-muted-foreground">Recebida em</p>
                   <p className="font-medium">{formatDateTime(selectedPackage.received_at)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Cadastrada por</p>
+                  <p className="font-medium">{selectedPackage.received_by_profile?.full_name || "N/A"}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Status</p>
