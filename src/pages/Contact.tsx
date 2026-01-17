@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Shield, Send, CheckCircle2, Mail, Phone, MessageSquare, ArrowLeft, Sparkles } from "lucide-react";
+import { Send, CheckCircle2, Mail, Phone, MessageSquare, ArrowLeft, Sparkles } from "lucide-react";
+import logoImage from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MaskedInput } from "@/components/ui/masked-input";
@@ -142,13 +143,12 @@ const Contact = () => {
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/60 backdrop-blur-xl border-b border-border/30">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
-            <Link to="/" className="flex items-center gap-3 group">
-              <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow transition-transform duration-300 group-hover:scale-105">
-                <Shield className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <span className="font-display text-xl font-bold text-foreground">
-                Notifica<span className="text-gradient">Condo</span>
-              </span>
+            <Link to="/" className="flex items-center group">
+              <img 
+                src={logoImage} 
+                alt="NotificaCondo" 
+                className="h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+              />
             </Link>
             <Button asChild variant="ghost" className="gap-2 hover:bg-secondary/80">
               <Link to="/">
