@@ -34,7 +34,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import { CreditCard, AlertCircle, Eye, Search, Clock, AlertTriangle } from "lucide-react";
+import { CreditCard, AlertCircle, Eye, Search, Clock, AlertTriangle, Sparkles } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 interface SubscriptionWithCondominium {
@@ -43,6 +43,7 @@ interface SubscriptionWithCondominium {
   plan: string;
   active: boolean;
   is_trial: boolean;
+  is_lifetime: boolean;
   trial_ends_at: string | null;
   notifications_limit: number;
   warnings_limit: number;
@@ -256,6 +257,7 @@ export function SubscriptionsMonitor() {
         if (statusFilter === "ativo") return sub.active && !sub.is_trial;
         if (statusFilter === "inativo") return !sub.active;
         if (statusFilter === "trial") return sub.is_trial;
+        if (statusFilter === "vitalicio") return sub.is_lifetime;
         return true;
       });
     }
@@ -383,6 +385,7 @@ export function SubscriptionsMonitor() {
                   <SelectItem value="ativo">Ativos</SelectItem>
                   <SelectItem value="inativo">Inativos</SelectItem>
                   <SelectItem value="trial">Trial</SelectItem>
+                  <SelectItem value="vitalicio">Vitalício</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={planFilter} onValueChange={setPlanFilter}>
@@ -446,9 +449,17 @@ export function SubscriptionsMonitor() {
                             </p>
                           )}
                         </div>
-                        <Badge variant="outline" className={getPlanBadge(sub.plan)}>
-                          {sub.plan.toUpperCase()}
-                        </Badge>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant="outline" className={getPlanBadge(sub.plan)}>
+                            {sub.plan.toUpperCase()}
+                          </Badge>
+                          {sub.is_lifetime && (
+                            <Badge className="bg-gradient-to-r from-amber-500 to-yellow-400 text-black font-bold border-0 gap-1">
+                              <Sparkles className="h-3 w-3" />
+                              VITALÍCIO
+                            </Badge>
+                          )}
+                        </div>
                       </div>
 
                       {/* Síndico Info */}
