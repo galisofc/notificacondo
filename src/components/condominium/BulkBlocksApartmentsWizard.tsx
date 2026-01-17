@@ -13,11 +13,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, ArrowLeft, ArrowRight, Check, Wand2, Building2, Home, Users, SkipForward } from "lucide-react";
+import { Loader2, ArrowLeft, ArrowRight, Check, Wand2, Building2, Home } from "lucide-react";
 import { WizardStepIndicator } from "./WizardStepIndicator";
 import { ApartmentPreviewGrid } from "./ApartmentPreviewGrid";
 import { BlockNamesPreview } from "./BlockNamesPreview";
-import { BulkResidentCSVImport } from "./BulkResidentCSVImport";
 
 interface BulkBlocksApartmentsWizardProps {
   open: boolean;
@@ -29,17 +28,10 @@ interface BulkBlocksApartmentsWizardProps {
 
 type BlockNamingPattern = "numeric" | "alpha" | "custom";
 
-interface CreatedBlock {
-  id: string;
-  name: string;
-  apartments: { id: string; number: string }[];
-}
-
 const WIZARD_STEPS = [
   { id: 1, name: "Apartamentos" },
   { id: 2, name: "Blocos" },
   { id: 3, name: "Confirmar" },
-  { id: 4, name: "Moradores" },
 ];
 
 export function BulkBlocksApartmentsWizard({
@@ -54,7 +46,6 @@ export function BulkBlocksApartmentsWizard({
   // Step state
   const [currentStep, setCurrentStep] = useState(1);
   const [saving, setSaving] = useState(false);
-  const [createdBlocks, setCreatedBlocks] = useState<CreatedBlock[]>([]);
 
   // Step 1: Apartments structure
   const [apartmentsInput, setApartmentsInput] = useState("01,02,03,04");
@@ -165,7 +156,7 @@ export function BulkBlocksApartmentsWizard({
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep((prev) => Math.min(prev + 1, 4));
+      setCurrentStep((prev) => Math.min(prev + 1, 3));
     }
   };
 
@@ -212,7 +203,7 @@ export function BulkBlocksApartmentsWizard({
         floors: autoDetectFloor ? Math.max(...apartmentPreviews.map((a) => a.floor || 1)) : 1,
       }));
 
-      const { data: blocksData, error: blocksError } = await supabase
+      const { data: createdBlocks, error: blocksError } = await supabase
         .from("blocks")
         .insert(blocksToInsert)
         .select();
@@ -220,7 +211,7 @@ export function BulkBlocksApartmentsWizard({
       if (blocksError) throw blocksError;
 
       // 2. Create apartments for each block in batch (numbers in uppercase)
-      const apartmentsToInsert = blocksData.flatMap((block) =>
+      const apartmentsToInsert = createdBlocks.flatMap((block) =>
         apartmentPreviews.map((apt) => ({
           block_id: block.id,
           number: apt.number.toUpperCase(),
@@ -228,31 +219,17 @@ export function BulkBlocksApartmentsWizard({
         }))
       );
 
-      const { data: apartmentsData, error: aptsError } = await supabase
-        .from("apartments")
-        .insert(apartmentsToInsert)
-        .select();
+      const { error: aptsError } = await supabase.from("apartments").insert(apartmentsToInsert);
 
       if (aptsError) throw aptsError;
-
-      // 3. Store created blocks with their apartments for step 4
-      const blocksWithApartments: CreatedBlock[] = blocksData.map((block) => ({
-        id: block.id,
-        name: block.name,
-        apartments: apartmentsData
-          .filter((apt) => apt.block_id === block.id)
-          .map((apt) => ({ id: apt.id, number: apt.number })),
-      }));
-
-      setCreatedBlocks(blocksWithApartments);
 
       toast({
         title: "Sucesso!",
         description: `Criados ${blockNames.length} blocos com ${apartmentNumbers.length * blockNames.length} apartamentos.`,
       });
 
-      // Move to step 4 (residents import)
-      setCurrentStep(4);
+      onOpenChange(false);
+      onSuccess();
     } catch (error: any) {
       console.error("Error creating blocks and apartments:", error);
       toast({
@@ -265,12 +242,6 @@ export function BulkBlocksApartmentsWizard({
     }
   };
 
-  // Finish wizard (skip residents or after import)
-  const handleFinish = () => {
-    onOpenChange(false);
-    onSuccess();
-  };
-
   // Reset state when dialog closes
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
@@ -280,7 +251,6 @@ export function BulkBlocksApartmentsWizard({
       setBlockCount(1);
       setBlockNamingPattern("numeric");
       setCustomBlockNames([]);
-      setCreatedBlocks([]);
     }
     onOpenChange(isOpen);
   };
@@ -496,58 +466,26 @@ export function BulkBlocksApartmentsWizard({
               </div>
             </div>
           )}
-
-          {/* Step 4: Residents Import */}
-          {currentStep === 4 && (
-            <div className="space-y-4">
-              <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 mb-4">
-                <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-                  <Check className="w-5 h-5" />
-                  <span className="font-medium">
-                    Blocos e apartamentos criados com sucesso!
-                  </span>
-                </div>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Agora você pode importar moradores via CSV ou pular esta etapa.
-                </p>
-              </div>
-
-              <BulkResidentCSVImport
-                blocks={createdBlocks}
-                condominiumName={condominiumName}
-                onSuccess={() => {
-                  toast({
-                    title: "Moradores importados!",
-                    description: "A importação foi concluída com sucesso.",
-                  });
-                }}
-              />
-            </div>
-          )}
         </div>
 
         {/* Navigation buttons */}
         <div className="flex items-center justify-between pt-4 border-t border-border mt-4">
-          {currentStep < 4 ? (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleBack}
-              disabled={currentStep === 1 || saving}
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Voltar
-            </Button>
-          ) : (
-            <div /> // Empty spacer for step 4
-          )}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleBack}
+            disabled={currentStep === 1 || saving}
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Voltar
+          </Button>
 
           {currentStep < 3 ? (
             <Button type="button" onClick={handleNext}>
               Próximo
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
-          ) : currentStep === 3 ? (
+          ) : (
             <Button
               type="button"
               variant="hero"
@@ -565,11 +503,6 @@ export function BulkBlocksApartmentsWizard({
                   Criar Blocos e Apartamentos
                 </>
               )}
-            </Button>
-          ) : (
-            <Button type="button" variant="hero" onClick={handleFinish}>
-              <SkipForward className="w-4 h-4 mr-2" />
-              Concluir
             </Button>
           )}
         </div>
