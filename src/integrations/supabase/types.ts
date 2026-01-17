@@ -1056,6 +1056,9 @@ export type Database = {
           description: string | null
           expires_at: string | null
           id: string
+          notification_count: number | null
+          notification_sent: boolean | null
+          notification_sent_at: string | null
           package_type_id: string | null
           photo_url: string
           picked_up_at: string | null
@@ -1076,6 +1079,9 @@ export type Database = {
           description?: string | null
           expires_at?: string | null
           id?: string
+          notification_count?: number | null
+          notification_sent?: boolean | null
+          notification_sent_at?: string | null
           package_type_id?: string | null
           photo_url: string
           picked_up_at?: string | null
@@ -1096,6 +1102,9 @@ export type Database = {
           description?: string | null
           expires_at?: string | null
           id?: string
+          notification_count?: number | null
+          notification_sent?: boolean | null
+          notification_sent_at?: string | null
           package_type_id?: string | null
           photo_url?: string
           picked_up_at?: string | null

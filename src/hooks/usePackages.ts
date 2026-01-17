@@ -19,6 +19,10 @@ export interface Package {
   picked_up_by_name: string | null;
   expires_at: string | null;
   created_at: string;
+  // Notification tracking
+  notification_sent: boolean | null;
+  notification_sent_at: string | null;
+  notification_count: number | null;
   // Joined data
   condominium?: { name: string };
   block?: { name: string };
