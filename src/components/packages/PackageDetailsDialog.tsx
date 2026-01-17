@@ -194,13 +194,46 @@ export function PackageDetailsDialog({
               Notificação WhatsApp
             </h4>
 
-            {/* Status feedback */}
+            {/* Current notification status from database */}
+            {package_.notification_sent ? (
+              <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 space-y-1">
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
+                  <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700">
+                    Notificado
+                  </Badge>
+                </div>
+                {package_.notification_sent_at && (
+                  <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    {format(new Date(package_.notification_sent_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                  </p>
+                )}
+                {package_.notification_count !== null && package_.notification_count > 0 && (
+                  <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                    <User className="w-3 h-3" />
+                    {package_.notification_count} morador(es) notificado(s)
+                  </p>
+                )}
+              </div>
+            ) : package_.status === "pendente" ? (
+              <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+                  <Badge variant="outline" className="bg-yellow-100 text-yellow-700 border-yellow-300 dark:bg-yellow-900/40 dark:text-yellow-300 dark:border-yellow-700">
+                    Não notificado
+                  </Badge>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Session feedback for resend */}
             {notificationStatus === "success" && notificationResult && (
               <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
                 <Check className="w-5 h-5 text-green-600 dark:text-green-400" />
                 <div className="flex-1">
                   <p className="text-sm font-medium text-green-700 dark:text-green-300">
-                    Notificação enviada com sucesso!
+                    Notificação reenviada com sucesso!
                   </p>
                   <p className="text-xs text-green-600 dark:text-green-400">
                     {notificationResult.notifications_sent} morador(es) notificado(s)
@@ -248,6 +281,11 @@ export function PackageDetailsDialog({
                   <>
                     <RefreshCw className="w-4 h-4" />
                     Tentar Novamente
+                  </>
+                ) : package_.notification_sent ? (
+                  <>
+                    <RefreshCw className="w-4 h-4" />
+                    Reenviar Notificação via WhatsApp
                   </>
                 ) : (
                   <>

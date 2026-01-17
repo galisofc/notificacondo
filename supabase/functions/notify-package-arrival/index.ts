@@ -474,6 +474,24 @@ _Mensagem automática - NotificaCondo_`;
 
     console.log(`Notifications complete: ${successCount} sent, ${failCount} failed`);
 
+    // Update package notification status in database
+    if (successCount > 0) {
+      const { error: updateError } = await supabase
+        .from("packages")
+        .update({
+          notification_sent: true,
+          notification_sent_at: new Date().toISOString(),
+          notification_count: successCount,
+        })
+        .eq("id", package_id);
+
+      if (updateError) {
+        console.error("Error updating package notification status:", updateError);
+      } else {
+        console.log(`Package ${package_id} notification status updated`);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
