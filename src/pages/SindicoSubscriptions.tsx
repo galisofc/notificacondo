@@ -845,18 +845,19 @@ const SindicoSubscriptions = () => {
                         </div>
                       </TooltipProvider>
 
-                      <div className="flex flex-col gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="w-full"
-                          onClick={() => openChangePlanDialog(sub)}
-                        >
-                          <ArrowUpCircle className="h-4 w-4 mr-2" />
-                          Alterar Plano
-                        </Button>
-                        
-                      </div>
+                      {!sub.is_lifetime && (
+                        <div className="flex flex-col gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="w-full"
+                            onClick={() => openChangePlanDialog(sub)}
+                          >
+                            <ArrowUpCircle className="h-4 w-4 mr-2" />
+                            Alterar Plano
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
