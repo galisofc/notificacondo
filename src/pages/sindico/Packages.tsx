@@ -63,6 +63,7 @@ interface PackageWithRelations {
   received_at: string;
   received_by: string;
   picked_up_at: string | null;
+  picked_up_by_name: string | null;
   pickup_code: string;
   photo_url: string;
   description: string | null;
@@ -145,6 +146,7 @@ const SindicoPackages = () => {
           received_at,
           received_by,
           picked_up_at,
+          picked_up_by_name,
           pickup_code,
           photo_url,
           description,
@@ -456,6 +458,7 @@ const SindicoPackages = () => {
                         <TableHead>Código</TableHead>
                         <TableHead>Recebida</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>Retirada por</TableHead>
                         <TableHead className="w-[50px]"></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -508,6 +511,20 @@ const SindicoPackages = () => {
                                 <StatusIcon className="w-3 h-3 mr-1" />
                                 {statusConfig.label}
                               </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {pkg.status === "retirada" && pkg.picked_up_by_name ? (
+                                <div>
+                                  <p className="text-sm font-medium">{pkg.picked_up_by_name}</p>
+                                  {pkg.picked_up_at && (
+                                    <p className="text-xs text-muted-foreground">
+                                      {formatDateTime(pkg.picked_up_at)}
+                                    </p>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
                             </TableCell>
                             <TableCell>
                               <Button
