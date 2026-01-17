@@ -1809,6 +1809,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      confirm_package_pickup: {
+        Args: {
+          p_package_id: string
+          p_picked_up_by: string
+          p_picked_up_by_name: string
+        }
+        Returns: undefined
+      }
       get_apartment_condominium_id: {
         Args: { _apartment_id: string }
         Returns: string

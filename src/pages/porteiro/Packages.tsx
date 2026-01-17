@@ -211,15 +211,27 @@ export default function PorteiroPackages() {
     }
 
     try {
-      const { error } = await supabase
-        .from("packages")
-        .update({
-          status: "retirada" as PackageStatus,
-          picked_up_at: new Date().toISOString(),
-          picked_up_by: user.id,
-          picked_up_by_name: pickedUpByName,
-        })
-        .eq("id", selectedPackage.id);
+      // Usa RPC para garantir que o timestamp seja do servidor
+      const { error } = await supabase.rpc('confirm_package_pickup' as any, {
+        p_package_id: selectedPackage.id,
+        p_picked_up_by: user.id,
+        p_picked_up_by_name: pickedUpByName,
+      });
+
+      if (error) {
+        // Fallback para update direto se RPC não existir
+        const { error: updateError } = await supabase
+          .from("packages")
+          .update({
+            status: "retirada" as PackageStatus,
+            picked_up_at: new Date().toISOString(),
+            picked_up_by: user.id,
+            picked_up_by_name: pickedUpByName,
+          })
+          .eq("id", selectedPackage.id);
+        
+        if (updateError) throw updateError;
+      }
 
       if (error) throw error;
 
