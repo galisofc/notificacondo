@@ -42,12 +42,14 @@ import {
   MoreVertical,
   MapPin,
   FileSpreadsheet,
+  Wand2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { isValidCPF, formatCNPJ, formatCEP } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import ResidentCSVImportDialog from "@/components/condominium/ResidentCSVImportDialog";
+import { BulkBlocksApartmentsWizard } from "@/components/condominium/BulkBlocksApartmentsWizard";
 
 interface Condominium {
   id: string;
@@ -110,6 +112,7 @@ const CondominiumDetails = () => {
   const [apartmentDialog, setApartmentDialog] = useState(false);
   const [residentDialog, setResidentDialog] = useState(false);
   const [csvImportDialog, setCsvImportDialog] = useState(false);
+  const [bulkWizardDialog, setBulkWizardDialog] = useState(false);
   const [csvImportApartment, setCsvImportApartment] = useState<{ id: string; number: string; blockName: string } | null>(null);
 
   // Editing states
@@ -561,18 +564,27 @@ const CondominiumDetails = () => {
               )}
             </div>
           </div>
-          <Button
-            variant="hero"
-            onClick={() => {
-              setEditingBlock(null);
-              setBlockForm({ name: "", description: "", floors: "1" });
-              setBlockDialog(true);
-            }}
-            className="shrink-0"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Novo Bloco
-          </Button>
+          <div className="flex gap-2 shrink-0">
+            <Button
+              variant="outline"
+              onClick={() => setBulkWizardDialog(true)}
+              className="gap-2"
+            >
+              <Wand2 className="w-4 h-4" />
+              <span className="hidden sm:inline">Cadastro Rápido</span>
+            </Button>
+            <Button
+              variant="hero"
+              onClick={() => {
+                setEditingBlock(null);
+                setBlockForm({ name: "", description: "", floors: "1" });
+                setBlockDialog(true);
+              }}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Novo Bloco
+            </Button>
+          </div>
         </div>
 
         {/* Stats Badges */}
@@ -615,20 +627,30 @@ const CondominiumDetails = () => {
               <h3 className="font-display text-lg font-semibold text-foreground mb-2">
                 Nenhum bloco cadastrado
               </h3>
-              <p className="text-muted-foreground mb-4">
-                Cadastre blocos para organizar os apartamentos.
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                Cadastre blocos e apartamentos para organizar seu condomínio. Use o cadastro rápido para criar vários de uma só vez.
               </p>
-              <Button
-                variant="hero"
-                onClick={() => {
-                  setEditingBlock(null);
-                  setBlockForm({ name: "", description: "", floors: "1" });
-                  setBlockDialog(true);
-                }}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Cadastrar Primeiro Bloco
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button
+                  variant="hero"
+                  onClick={() => setBulkWizardDialog(true)}
+                  className="gap-2"
+                >
+                  <Wand2 className="w-4 h-4" />
+                  Cadastro Rápido
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setEditingBlock(null);
+                    setBlockForm({ name: "", description: "", floors: "1" });
+                    setBlockDialog(true);
+                  }}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Cadastrar Bloco Individual
+                </Button>
+              </div>
             </div>
           ) : filteredBlocks.length === 0 ? (
             <div className="text-center py-12 rounded-xl bg-card border border-border">
@@ -1139,6 +1161,15 @@ const CondominiumDetails = () => {
             onSuccess={fetchData}
           />
         )}
+
+        {/* Bulk Blocks & Apartments Wizard */}
+        <BulkBlocksApartmentsWizard
+          open={bulkWizardDialog}
+          onOpenChange={setBulkWizardDialog}
+          condominiumId={id!}
+          condominiumName={condominium?.name || ""}
+          onSuccess={fetchData}
+        />
       </div>
     </DashboardLayout>
   );
