@@ -51,6 +51,7 @@ import {
   ChevronsRight,
   Eye,
   Image as ImageIcon,
+  History,
 } from "lucide-react";
 import { format, parseISO, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -324,10 +325,14 @@ const SindicoPackages = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button variant="outline" size="sm" onClick={handleRefresh}>
               <RefreshCw className="w-4 h-4 mr-2" />
               Atualizar
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate("/sindico/packages/historico")}>
+              <History className="w-4 h-4 mr-2" />
+              Histórico
             </Button>
             <Button variant="outline" size="sm" onClick={() => navigate("/sindico/packages/dashboard")}>
               <BarChart3 className="w-4 h-4 mr-2" />
