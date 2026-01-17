@@ -298,9 +298,13 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
       if (data.success) {
         toast({ title: "Imagem enviada! Verifique seu WhatsApp." });
       } else {
+        const debugSuffix = data?.debug?.status
+          ? ` (HTTP ${data.debug.status}${data.debug.endpoint ? ` • ${data.debug.endpoint}` : ""})`
+          : "";
+
         toast({
           title: "Erro ao enviar imagem",
-          description: data.error,
+          description: `${data.error || "Falha ao enviar"}${debugSuffix}`,
           variant: "destructive",
         });
         console.error("Image test debug:", data.debug);
