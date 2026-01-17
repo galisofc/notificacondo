@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Mail, Lock, User, ArrowLeft, Loader2, Check, Building2, Phone, MapPin, ChevronRight, ChevronLeft, RefreshCw, FileText } from "lucide-react";
+import { Mail, Lock, User, ArrowLeft, Loader2, Check, Building2, Phone, MapPin, ChevronRight, ChevronLeft, RefreshCw, FileText } from "lucide-react";
+import logoImage from "@/assets/logo.png";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { Database } from "@/integrations/supabase/types";
@@ -485,13 +486,12 @@ const Auth = () => {
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse-slow" />
         
         <div className="relative z-10 flex flex-col justify-center p-12">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow">
-              <Shield className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <span className="font-display text-2xl font-bold text-foreground">
-              Notifica<span className="text-gradient">Condo</span>
-            </span>
+          <div className="flex items-center mb-8">
+            <img 
+              src={logoImage} 
+              alt="NotificaCondo" 
+              className="h-16 w-auto object-contain"
+            />
           </div>
 
           <h1 className="font-display text-4xl font-bold mb-6 text-foreground">
@@ -534,13 +534,12 @@ const Auth = () => {
           </button>
 
           {/* Mobile Logo */}
-          <div className="lg:hidden flex items-center gap-2 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow">
-              <Shield className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="font-display text-xl font-bold text-foreground">
-              Notifica<span className="text-gradient">Condo</span>
-            </span>
+          <div className="lg:hidden flex items-center mb-8">
+            <img 
+              src={logoImage} 
+              alt="NotificaCondo" 
+              className="h-12 w-auto object-contain"
+            />
           </div>
 
           {/* Selected Plan Display */}
