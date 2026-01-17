@@ -73,17 +73,40 @@ const BulkResidentCSVImportDialog = ({
   
   const [step, setStep] = useState<"upload" | "preview" | "importing" | "done">("upload");
   const [parsedResidents, setParsedResidents] = useState<ParsedResident[]>([]);
-  const [importResults, setImportResults] = useState<{ success: number; failed: number }>({ success: 0, failed: 0 });
+  const [existingResidents, setExistingResidents] = useState<{ apartment_id: string; email: string }[]>([]);
+  const [importResults, setImportResults] = useState<{ success: number; failed: number; skipped: number }>({ success: 0, failed: 0, skipped: 0 });
   const [importing, setImporting] = useState(false);
 
   const resetState = () => {
     setStep("upload");
     setParsedResidents([]);
-    setImportResults({ success: 0, failed: 0 });
+    setExistingResidents([]);
+    setImportResults({ success: 0, failed: 0, skipped: 0 });
     setImporting(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+  };
+
+  // Fetch existing residents when dialog opens
+  const fetchExistingResidents = async () => {
+    if (apartments.length === 0) return;
+    
+    const apartmentIds = apartments.map(a => a.id);
+    const { data } = await supabase
+      .from("residents")
+      .select("apartment_id, email")
+      .in("apartment_id", apartmentIds);
+    
+    setExistingResidents(data || []);
+  };
+
+  // Check if a resident already exists
+  const isResidentDuplicate = (apartmentId: string, email: string): boolean => {
+    const normalizedEmail = email.toLowerCase().trim();
+    return existingResidents.some(
+      r => r.apartment_id === apartmentId && r.email.toLowerCase().trim() === normalizedEmail
+    );
   };
 
   const handleClose = () => {
@@ -202,7 +225,7 @@ BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
     }).filter(r => r.full_name || r.email || r.block_name || r.apartment_number); // Filter out completely empty rows
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -214,6 +237,9 @@ BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
       });
       return;
     }
+
+    // Fetch existing residents first
+    await fetchExistingResidents();
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -229,7 +255,22 @@ BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
         return;
       }
 
-      setParsedResidents(parsed);
+      // Mark duplicates as invalid
+      const parsedWithDuplicateCheck = parsed.map(resident => {
+        if (resident.apartment_id && resident.email) {
+          const isDuplicate = isResidentDuplicate(resident.apartment_id, resident.email);
+          if (isDuplicate) {
+            return {
+              ...resident,
+              errors: [...resident.errors, "Morador já cadastrado neste apartamento"],
+              isValid: false,
+            };
+          }
+        }
+        return resident;
+      });
+
+      setParsedResidents(parsedWithDuplicateCheck);
       setStep("preview");
     };
     reader.readAsText(file);
@@ -276,7 +317,7 @@ BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
       }
     }
 
-    setImportResults({ success, failed });
+    setImportResults({ success, failed, skipped: 0 });
     setStep("done");
     setImporting(false);
 
