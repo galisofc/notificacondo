@@ -437,45 +437,19 @@ export function SubscriptionsMonitor() {
                     onClick={() => navigate(`/superadmin/subscriptions/${sub.id}`)}
                   >
                     <CardContent className="p-4 space-y-4">
-                      {/* Header: Condominium + Plan Badge */}
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-foreground truncate">
-                            {sub.condominium?.name || "—"}
-                          </h4>
-                          {sub.condominium?.cnpj && (
-                            <p className="text-xs text-muted-foreground">
-                              {formatCNPJ(sub.condominium.cnpj)}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant="outline" className={getPlanBadge(sub.plan)}>
-                            {sub.plan.toUpperCase()}
-                          </Badge>
-                          {sub.is_lifetime && (
-                            <Badge className="bg-gradient-to-r from-amber-500 to-yellow-400 text-black font-bold border-0 gap-1">
-                              <Sparkles className="h-3 w-3" />
-                              VITALÍCIO
-                            </Badge>
-                          )}
-                        </div>
+                      {/* Header: Condominium name - first line */}
+                      <div>
+                        <h4 className="font-semibold text-foreground truncate">
+                          {sub.condominium?.name || "—"}
+                        </h4>
+                        {sub.condominium?.cnpj && (
+                          <p className="text-xs text-muted-foreground">
+                            {formatCNPJ(sub.condominium.cnpj)}
+                          </p>
+                        )}
                       </div>
 
-                      {/* Síndico Info */}
-                      <div className="flex items-center gap-2 text-sm">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <span className="text-xs font-medium text-primary">
-                            {sub.owner_profile?.full_name?.charAt(0)?.toUpperCase() || "?"}
-                          </span>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium truncate">{sub.owner_profile?.full_name || "—"}</p>
-                          <p className="text-xs text-muted-foreground truncate">{sub.owner_profile?.email}</p>
-                        </div>
-                      </div>
-
-                      {/* Status Badges */}
+                      {/* Badges - second line */}
                       <div className="flex flex-wrap gap-2">
                         <Badge
                           variant="outline"
@@ -487,6 +461,15 @@ export function SubscriptionsMonitor() {
                         >
                           {sub.active ? "Ativo" : "Inativo"}
                         </Badge>
+                        <Badge variant="outline" className={getPlanBadge(sub.plan)}>
+                          {sub.plan.toUpperCase()}
+                        </Badge>
+                        {sub.is_lifetime && (
+                          <Badge className="bg-gradient-to-r from-amber-500 to-yellow-400 text-black font-bold border-0 gap-1">
+                            <Sparkles className="h-3 w-3" />
+                            VITALÍCIO
+                          </Badge>
+                        )}
                         {sub.is_trial && trialStatus && (
                           <Badge 
                             variant="outline" 
@@ -506,6 +489,19 @@ export function SubscriptionsMonitor() {
                             Trial ({trialStatus.label})
                           </Badge>
                         )}
+                      </div>
+
+                      {/* Síndico Info */}
+                      <div className="flex items-center gap-2 text-sm">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <span className="text-xs font-medium text-primary">
+                            {sub.owner_profile?.full_name?.charAt(0)?.toUpperCase() || "?"}
+                          </span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium truncate">{sub.owner_profile?.full_name || "—"}</p>
+                          <p className="text-xs text-muted-foreground truncate">{sub.owner_profile?.email}</p>
+                        </div>
                       </div>
 
                       {/* Period - hidden for lifetime subscriptions */}
