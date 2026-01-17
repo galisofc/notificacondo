@@ -122,18 +122,28 @@ export function usePackages(options: UsePackagesOptions = {}) {
     };
   }, [options.realtime, fetchPackages]);
 
-  const markAsPickedUp = useCallback(async (packageId: string, userId: string) => {
+  const markAsPickedUp = useCallback(async (packageId: string, userId: string, pickedUpByName?: string) => {
     try {
-      const { error } = await supabase
-        .from("packages")
-        .update({
-          status: "retirada" as PackageStatus,
-          picked_up_at: new Date().toISOString(),
-          picked_up_by: userId,
-        })
-        .eq("id", packageId);
+      // Usa RPC para garantir que o timestamp seja do servidor
+      const { error } = await supabase.rpc('confirm_package_pickup' as any, {
+        p_package_id: packageId,
+        p_picked_up_by: userId,
+        p_picked_up_by_name: pickedUpByName || '',
+      });
 
-      if (error) throw error;
+      if (error) {
+        // Fallback para update direto
+        const { error: updateError } = await supabase
+          .from("packages")
+          .update({
+            status: "retirada" as PackageStatus,
+            picked_up_at: new Date().toISOString(),
+            picked_up_by: userId,
+          })
+          .eq("id", packageId);
+        
+        if (updateError) throw updateError;
+      }
 
       // Refresh packages
       await fetchPackages();
