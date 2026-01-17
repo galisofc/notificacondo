@@ -15,7 +15,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { DoorOpen, Plus, Trash2, Building2, Mail, Phone, Search, UserPlus, MessageCircle, Copy, Check, Key, AlertCircle, UserX, RefreshCw, Loader2, Pencil, ArrowLeft, ShieldCheck } from "lucide-react";
+import { DoorOpen, Plus, Trash2, Building2, Mail, Phone, Search, UserPlus, MessageCircle, Copy, Check, Key, AlertCircle, UserX, RefreshCw, Loader2, Pencil, ArrowLeft, ShieldCheck, Send } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -92,6 +93,15 @@ export default function Porteiros() {
   const [isLoadingOrphans, setIsLoadingOrphans] = useState(false);
   const [isDeletingOrphans, setIsDeletingOrphans] = useState(false);
   const [selectedOrphans, setSelectedOrphans] = useState<Set<string>>(new Set());
+  
+  // Resend credentials state
+  const [resendingCredentials, setResendingCredentials] = useState<string | null>(null);
+  const [resendDialogOpen, setResendDialogOpen] = useState(false);
+  const [resendResult, setResendResult] = useState<{
+    success: boolean;
+    password?: string;
+    message: string;
+  } | null>(null);
 
   // Fetch síndico's condominiums
   useEffect(() => {
@@ -565,6 +575,54 @@ export default function Porteiros() {
     }
   };
 
+  const handleResendCredentials = async (porter: Porter) => {
+    if (!porter.profile?.phone) {
+      toast({
+        title: "Telefone não cadastrado",
+        description: "O porteiro não possui telefone. Edite o cadastro para adicionar um telefone.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setResendingCredentials(porter.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("resend-porter-credentials", {
+        body: {
+          porter_user_id: porter.user_id,
+          condominium_id: porter.condominium_id,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      if (data?.whatsapp_sent) {
+        toast({
+          title: "Credenciais enviadas!",
+          description: "As novas credenciais foram enviadas por WhatsApp",
+        });
+      } else {
+        // WhatsApp failed, show password dialog
+        setResendResult({
+          success: true,
+          password: data?.password,
+          message: data?.message || "Senha resetada. Anote a nova senha.",
+        });
+        setResendDialogOpen(true);
+      }
+    } catch (error: any) {
+      console.error("Error resending credentials:", error);
+      toast({
+        title: "Erro ao reenviar credenciais",
+        description: error.message || "Tente novamente mais tarde",
+        variant: "destructive",
+      });
+    } finally {
+      setResendingCredentials(null);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -892,6 +950,29 @@ export default function Porteiros() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon"
+                                    onClick={() => handleResendCredentials(porter)}
+                                    disabled={resendingCredentials === porter.id || !porter.profile?.phone}
+                                  >
+                                    {resendingCredentials === porter.id ? (
+                                      <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                      <Send className="w-4 h-4" />
+                                    )}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {porter.profile?.phone 
+                                    ? "Reenviar credenciais por WhatsApp" 
+                                    : "Adicione um telefone para enviar credenciais"}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                             <Button 
                               variant="ghost" 
                               size="icon"
@@ -941,6 +1022,64 @@ export default function Porteiros() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Resend Credentials Result Dialog */}
+      <Dialog open={resendDialogOpen} onOpenChange={setResendDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Key className="w-5 h-5 text-primary" />
+              Novas Credenciais
+            </DialogTitle>
+            <DialogDescription>
+              {resendResult?.message}
+            </DialogDescription>
+          </DialogHeader>
+
+          {resendResult?.password && (
+            <div className="space-y-4 py-4">
+              <Alert variant="destructive" className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20">
+                <AlertCircle className="h-4 w-4 text-yellow-600" />
+                <AlertTitle className="text-yellow-800 dark:text-yellow-200">Atenção</AlertTitle>
+                <AlertDescription className="text-yellow-700 dark:text-yellow-300">
+                  Não foi possível enviar as credenciais via WhatsApp. Anote a senha abaixo!
+                </AlertDescription>
+              </Alert>
+
+              <div className="flex items-center gap-3 text-sm">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Key className="w-4 h-4 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-muted-foreground">Nova Senha</p>
+                  <div className="flex items-center gap-2">
+                    <code className="text-lg font-mono font-bold text-primary bg-primary/10 px-3 py-1 rounded">
+                      {resendResult.password}
+                    </code>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        navigator.clipboard.writeText(resendResult.password!);
+                        toast({
+                          title: "Copiado!",
+                          description: "Senha copiada para a área de transferência",
+                        });
+                      }}
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button onClick={() => setResendDialogOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Success Dialog with Password */}
       <Dialog open={successDialogOpen} onOpenChange={setSuccessDialogOpen}>
