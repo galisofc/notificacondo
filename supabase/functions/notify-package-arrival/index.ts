@@ -42,23 +42,22 @@ const zproProvider: ProviderConfig = {
       let response;
       
       if (imageUrl) {
-        // Send image with caption via POST /send-image (endpoint includes instance_id in baseUrl)
+        // Send image with caption via POST /url endpoint
+        // Docs: https://www.postman.com/comunidade-zdg/z-pro/request/25151510
         console.log("Z-PRO sending image to:", phoneClean);
         console.log("Image URL:", imageUrl.substring(0, 100) + "...");
         
-        // The ZPRO API endpoint for images: {baseUrl}/send-image
-        // baseUrl already includes the instance path like: https://api.z-pro.io/v2/api/external/{instanceId}
-        response = await fetch(`${baseUrl}/send-image`, {
+        // The ZPRO API endpoint for images via URL: {baseUrl}/url
+        response = await fetch(`${baseUrl}/url`, {
           method: "POST",
           headers: { 
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
             phone: phoneClean,
-            image: imageUrl,
+            url: imageUrl,
             caption: message,
-            externalKey: config.apiKey,
-            viewOnce: false
+            externalKey: config.apiKey
           }),
         });
       } else {
