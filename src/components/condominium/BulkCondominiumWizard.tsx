@@ -395,11 +395,11 @@ export function BulkCondominiumWizard({
 
       if (blocksError) throw blocksError;
 
-      // 4. Create apartments for each block in batch
+      // 4. Create apartments for each block in batch (numbers in uppercase)
       const apartmentsToInsert = createdBlocks.flatMap((block) =>
         apartmentPreviews.map((apt) => ({
           block_id: block.id,
-          number: apt.number,
+          number: apt.number.toUpperCase(),
           floor: apt.floor,
         }))
       );
