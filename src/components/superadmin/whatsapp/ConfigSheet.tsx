@@ -67,6 +67,7 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
   const [isTesting, setIsTesting] = useState(false);
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [isSendingImageTest, setIsSendingImageTest] = useState(false);
+  const [isSendingImageTestCustom, setIsSendingImageTestCustom] = useState(false);
   const [testResult, setTestResult] = useState<"success" | "error" | null>(null);
   const [showToken, setShowToken] = useState(false);
   const [testPhone, setTestPhone] = useState("");
@@ -285,7 +286,7 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
     }
   };
 
-  const handleSendImageTest = async () => {
+  const handleSendImageTest = async (mode: "token" | "custom") => {
     if (!testPhone) {
       toast({
         title: "Número obrigatório",
@@ -295,24 +296,30 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
       return;
     }
 
-    setIsSendingImageTest(true);
+    if (mode === "token") {
+      setIsSendingImageTest(true);
+    } else {
+      setIsSendingImageTestCustom(true);
+    }
 
     try {
       const { data, error } = await supabase.functions.invoke("send-whatsapp-image-test", {
-        body: { phone: testPhone },
+        body: { phone: testPhone, external_key_mode: mode },
       });
 
       if (error) throw error;
 
+      const modeLabel = mode === "token" ? "externalKey=token" : "externalKey=custom";
+
       if (data.success) {
-        toast({ title: "Imagem enviada! Verifique seu WhatsApp." });
+        toast({ title: `✅ Sucesso (${modeLabel})`, description: "Imagem enviada! Verifique seu WhatsApp." });
       } else {
         const debugSuffix = data?.debug?.status
           ? ` (HTTP ${data.debug.status}${data.debug.endpoint ? ` • ${data.debug.endpoint}` : ""})`
           : "";
 
         toast({
-          title: "Erro ao enviar imagem",
+          title: `❌ Falhou (${modeLabel})`,
           description: `${data.error || "Falha ao enviar"}${debugSuffix}`,
           variant: "destructive",
         });
@@ -326,6 +333,7 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
       });
     } finally {
       setIsSendingImageTest(false);
+      setIsSendingImageTestCustom(false);
     }
   };
 
@@ -515,17 +523,34 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={handleSendImageTest}
+                  onClick={() => handleSendImageTest("token")}
                   disabled={isSendingImageTest || !testPhone}
                   className="shrink-0 gap-2"
+                  title="Usa o Bearer Token também como externalKey"
                 >
                   {isSendingImageTest ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Image className="h-4 w-4" />
                   )}
-                  Imagem
+                  Img (token)
                 </Button>
+                {config.instance_id && config.instance_id !== "zpro-embedded" && (
+                  <Button
+                    variant="outline"
+                    onClick={() => handleSendImageTest("custom")}
+                    disabled={isSendingImageTestCustom || !testPhone}
+                    className="shrink-0 gap-2"
+                    title="Usa o campo External Key informado"
+                  >
+                    {isSendingImageTestCustom ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Image className="h-4 w-4" />
+                    )}
+                    Img (custom)
+                  </Button>
+                )}
               </div>
               <p className="text-xs text-muted-foreground">
                 Formato: código do país + DDD + número (sem espaços ou traços)

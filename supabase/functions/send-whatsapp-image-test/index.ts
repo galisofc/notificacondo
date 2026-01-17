@@ -228,6 +228,8 @@ async function sendWppconnectImage(phone: string, imageUrl: string, caption: str
 interface SendImageTestRequest {
   phone: string;
   image_url?: string;
+  /** Force externalKey mode: "token" uses api_key, "custom" uses instance_id */
+  external_key_mode?: "token" | "custom";
 }
 
 serve(async (req) => {
@@ -266,7 +268,7 @@ serve(async (req) => {
       );
     }
 
-    const { phone, image_url }: SendImageTestRequest = await req.json();
+    const { phone, image_url, external_key_mode }: SendImageTestRequest = await req.json();
 
     if (!phone) {
       return new Response(
@@ -292,11 +294,22 @@ Se você recebeu esta imagem, o envio de fotos de encomendas está funcionando c
 
 _Enviado em: ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}_`;
 
-    const providerSettings: ProviderSettings = {
+    let providerSettings: ProviderSettings = {
       apiUrl: typedConfig.api_url,
       apiKey: typedConfig.api_key,
       instanceId: typedConfig.instance_id,
     };
+
+    // Override instanceId based on mode for Z-PRO comparison tests
+    if (whatsappProvider === "zpro" && external_key_mode) {
+      if (external_key_mode === "token") {
+        providerSettings.instanceId = typedConfig.api_key; // use token as externalKey
+        console.log("Z-PRO mode: externalKey = token (api_key)");
+      } else if (external_key_mode === "custom") {
+        providerSettings.instanceId = typedConfig.instance_id || "";
+        console.log("Z-PRO mode: externalKey = custom (instance_id)");
+      }
+    }
 
     let result: SendResult;
 
@@ -324,6 +337,7 @@ _Enviado em: ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo
           success: true,
           message: "Imagem de teste enviada com sucesso!",
           message_id: result.messageId,
+          mode: external_key_mode || "auto",
           debug: result.debug,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -334,6 +348,7 @@ _Enviado em: ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo
         JSON.stringify({
           success: false,
           error: result.error || "Falha ao enviar imagem de teste",
+          mode: external_key_mode || "auto",
           debug: result.debug,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
