@@ -198,8 +198,9 @@ export default function PackageTypes() {
       if (countError) throw countError;
 
       if (count && count > 0) {
+        const plural = count > 1;
         throw new Error(
-          `Não é possível excluir este tipo. Existem ${count} encomenda(s) associada(s). Desative o tipo em vez de excluí-lo.`
+          `Não é possível excluir este tipo. ${plural ? "Existem" : "Existe"} ${count} encomenda${plural ? "s associadas" : " associada"}. Desative o tipo em vez de excluí-lo.`
         );
       }
 
