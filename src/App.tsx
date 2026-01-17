@@ -30,7 +30,7 @@ import SindicoInvoices from "./pages/SindicoInvoices";
 import SindicoSubscriptions from "./pages/SindicoSubscriptions";
 import SindicoPorteiros from "./pages/sindico/Porteiros";
 import PackagesDashboard from "./pages/sindico/PackagesDashboard";
-
+import SindicoPackages from "./pages/sindico/Packages";
 import PartyHall from "./pages/PartyHall";
 import PartyHallSettings from "./pages/PartyHallSettings";
 import PartyHallNotifications from "./pages/PartyHallNotifications";
@@ -203,10 +203,26 @@ const App = () => (
                 }
               />
               <Route
-                path="/sindico/packages"
+                path="/sindico/encomendas"
+                element={
+                  <ProtectedRoute requiredRole={["sindico", "super_admin"]}>
+                    <SindicoPackages />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/sindico/packages/dashboard"
                 element={
                   <ProtectedRoute requiredRole={["sindico", "super_admin"]}>
                     <PackagesDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/sindico/packages"
+                element={
+                  <ProtectedRoute requiredRole={["sindico", "super_admin"]}>
+                    <SindicoPackages />
                   </ProtectedRoute>
                 }
               />
