@@ -137,12 +137,28 @@ const DefenseAnalysis = () => {
     try {
       setLoading(true);
       
-      // Fetch defenses where occurrence status is "analisando"
+      // First, get occurrences with status "em_defesa" (smaller query)
+      const { data: occurrencesData, error: occError } = await supabase
+        .from("occurrences")
+        .select("id")
+        .eq("status", "em_defesa")
+        .limit(100);
+      
+      if (occError) throw occError;
+      
+      if (!occurrencesData || occurrencesData.length === 0) {
+        setDefenses([]);
+        return;
+      }
+      
+      const occurrenceIds = occurrencesData.map(o => o.id);
+      
+      // Then fetch defenses for those occurrences
       const { data, error } = await supabase
         .from("defenses")
         .select(`
           *,
-          occurrences!inner (
+          occurrences (
             id,
             title,
             description,
@@ -171,8 +187,9 @@ const DefenseAnalysis = () => {
             file_type
           )
         `)
-        .eq("occurrences.status", "em_defesa")
-        .order("submitted_at", { ascending: false });
+        .in("occurrence_id", occurrenceIds)
+        .order("submitted_at", { ascending: false })
+        .limit(100);
 
       if (error) throw error;
       setDefenses((data as DefenseWithDetails[]) || []);
