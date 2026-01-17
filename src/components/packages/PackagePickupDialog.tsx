@@ -162,15 +162,21 @@ export function PackagePickupDialog({
                   <Input
                     ref={inputRef}
                     id="pickup-code"
-                    placeholder="Digite o código..."
+                    placeholder="000000"
                     value={inputCode}
-                    onChange={(e) => setInputCode(e.target.value.toUpperCase())}
+                    onChange={(e) => {
+                      // Apenas números
+                      const numericValue = e.target.value.replace(/\D/g, '');
+                      setInputCode(numericValue);
+                    }}
                     className={cn(
-                      "font-mono text-lg tracking-widest text-center uppercase pr-10",
+                      "font-mono text-2xl tracking-[0.5em] text-center pr-10",
                       codeValid === true && "border-green-500 focus-visible:ring-green-500",
                       codeValid === false && "border-destructive focus-visible:ring-destructive"
                     )}
                     maxLength={6}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                   />
                   {codeValid !== null && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2">
