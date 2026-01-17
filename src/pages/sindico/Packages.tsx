@@ -617,7 +617,7 @@ const SindicoPackages = () => {
 
       {/* Package Details Dialog */}
       <Dialog open={!!selectedPackage} onOpenChange={() => setSelectedPackage(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Package className="w-5 h-5 text-primary" />
@@ -629,7 +629,7 @@ const SindicoPackages = () => {
           </DialogHeader>
 
           {selectedPackage && (
-            <div className="space-y-4">
+            <div className="space-y-3 overflow-y-auto pr-2">
               {/* Photo */}
               {selectedPackage.photo_url && (
                 <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
