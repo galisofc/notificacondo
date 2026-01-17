@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Package, CheckCircle2, Loader2, MessageCircle, AlertCircle, MapPin, User, Phone, UserPlus, Check, ChevronsUpDown, Search } from "lucide-react";
+import { ArrowLeft, Package, CheckCircle2, Loader2, MessageCircle, AlertCircle, MapPin, User, Phone, UserPlus, Check, ChevronsUpDown, Search, icons } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -623,9 +623,23 @@ export default function RegisterPackage() {
                         !selectedPackageType && "text-muted-foreground"
                       )}
                     >
-                      {selectedPackageType
-                        ? packageTypes.find((type) => type.id === selectedPackageType)?.name
-                        : "Selecione o tipo"}
+                      {selectedPackageType ? (
+                        <span className="flex items-center gap-2">
+                          {(() => {
+                            const selectedType = packageTypes.find((type) => type.id === selectedPackageType);
+                            const iconName = selectedType?.icon as keyof typeof icons;
+                            const IconComponent = iconName && icons[iconName] ? icons[iconName] : Package;
+                            return (
+                              <>
+                                <IconComponent className="h-4 w-4 text-muted-foreground" />
+                                {selectedType?.name}
+                              </>
+                            );
+                          })()}
+                        </span>
+                      ) : (
+                        "Selecione o tipo"
+                      )}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -635,23 +649,28 @@ export default function RegisterPackage() {
                       <CommandList>
                         <CommandEmpty>Nenhum tipo encontrado.</CommandEmpty>
                         <CommandGroup>
-                          {packageTypes.map((type) => (
-                            <CommandItem
-                              key={type.id}
-                              value={type.name}
-                              onSelect={() => {
-                                setSelectedPackageType(type.id);
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  selectedPackageType === type.id ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                              {type.name}
-                            </CommandItem>
-                          ))}
+                          {packageTypes.map((type) => {
+                            const iconName = type.icon as keyof typeof icons;
+                            const IconComponent = iconName && icons[iconName] ? icons[iconName] : Package;
+                            return (
+                              <CommandItem
+                                key={type.id}
+                                value={type.name}
+                                onSelect={() => {
+                                  setSelectedPackageType(type.id);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    selectedPackageType === type.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <IconComponent className="mr-2 h-4 w-4 text-muted-foreground" />
+                                {type.name}
+                              </CommandItem>
+                            );
+                          })}
                         </CommandGroup>
                       </CommandList>
                     </Command>
