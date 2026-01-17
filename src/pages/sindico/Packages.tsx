@@ -641,70 +641,90 @@ const SindicoPackages = () => {
                 </div>
               )}
 
-              {/* Info Grid */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Morador</p>
-                  <p className="font-medium">{selectedPackage.resident?.full_name || "N/A"}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Unidade</p>
-                  <BlockApartmentDisplay
-                    blockName={selectedPackage.block?.name}
-                    apartmentNumber={selectedPackage.apartment?.number}
-                    variant="inline"
-                    className="font-medium"
-                  />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Condomínio</p>
-                  <p className="font-medium">{selectedPackage.condominium?.name}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Tipo</p>
-                  <p className="font-medium">{selectedPackage.package_type?.name || "Encomenda"}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Recebida em</p>
-                  <p className="font-medium">{formatDateTime(selectedPackage.received_at)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Cadastrada por</p>
-                  <p className="font-medium">{selectedPackage.received_by_profile?.full_name || "N/A"}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Status</p>
-                  <Badge variant="outline" className={STATUS_CONFIG[selectedPackage.status].color}>
-                    {STATUS_CONFIG[selectedPackage.status].label}
-                  </Badge>
-                </div>
-                {selectedPackage.picked_up_at && (
+              {/* Destinatário */}
+              <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Destinatário</h4>
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-sm text-muted-foreground">Retirada em</p>
-                    <p className="font-medium">{formatDateTime(selectedPackage.picked_up_at)}</p>
+                    <p className="text-xs text-muted-foreground">Morador</p>
+                    <p className="font-medium">{selectedPackage.resident?.full_name || "N/A"}</p>
                   </div>
-                )}
-                {selectedPackage.picked_up_by_name && (
                   <div>
-                    <p className="text-sm text-muted-foreground">Retirado por</p>
-                    <p className="font-medium">{selectedPackage.picked_up_by_name}</p>
+                    <p className="text-xs text-muted-foreground">Unidade</p>
+                    <BlockApartmentDisplay
+                      blockName={selectedPackage.block?.name}
+                      apartmentNumber={selectedPackage.apartment?.number}
+                      variant="inline"
+                      className="font-medium"
+                    />
                   </div>
-                )}
-                {selectedPackage.tracking_code && (
-                  <div className="col-span-2">
-                    <p className="text-sm text-muted-foreground">Código de Rastreio</p>
-                    <code className="text-sm bg-muted px-2 py-1 rounded font-mono">
-                      {selectedPackage.tracking_code}
-                    </code>
-                  </div>
-                )}
-                {selectedPackage.description && (
-                  <div className="col-span-2">
-                    <p className="text-sm text-muted-foreground">Descrição</p>
-                    <p className="font-medium">{selectedPackage.description}</p>
-                  </div>
-                )}
+                </div>
               </div>
+
+              {/* Informações da Encomenda */}
+              <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Encomenda</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Tipo</p>
+                    <p className="font-medium">{selectedPackage.package_type?.name || "Encomenda"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Status</p>
+                    <Badge variant="outline" className={STATUS_CONFIG[selectedPackage.status].color}>
+                      {STATUS_CONFIG[selectedPackage.status].label}
+                    </Badge>
+                  </div>
+                  {selectedPackage.tracking_code && (
+                    <div className="col-span-2">
+                      <p className="text-xs text-muted-foreground">Código de Rastreio</p>
+                      <code className="text-sm bg-background px-2 py-1 rounded font-mono">
+                        {selectedPackage.tracking_code}
+                      </code>
+                    </div>
+                  )}
+                  {selectedPackage.description && (
+                    <div className="col-span-2">
+                      <p className="text-xs text-muted-foreground">Descrição</p>
+                      <p className="font-medium">{selectedPackage.description}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Recebimento */}
+              <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Recebimento</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Recebida em</p>
+                    <p className="font-medium">{formatDateTime(selectedPackage.received_at)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Cadastrada por</p>
+                    <p className="font-medium">{selectedPackage.received_by_profile?.full_name || "N/A"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Retirada - só mostra se foi retirada */}
+              {selectedPackage.picked_up_at && (
+                <div className="space-y-3 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                  <h4 className="text-sm font-semibold text-green-600 uppercase tracking-wide">Retirada</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Retirada em</p>
+                      <p className="font-medium">{formatDateTime(selectedPackage.picked_up_at)}</p>
+                    </div>
+                    {selectedPackage.picked_up_by_name && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Retirado por</p>
+                        <p className="font-medium">{selectedPackage.picked_up_by_name}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
