@@ -522,27 +522,15 @@ function SidebarNavigation() {
     >
       {/* Header with Logo */}
       <SidebarHeader className="p-4 pb-6">
-        <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
-          <div className="shrink-0">
-            <img 
-              src={logoImage} 
-              alt="NotificaCondo" 
-              className={cn(
-                "object-contain",
-                collapsed ? "w-10 h-10" : "w-12 h-12"
-              )} 
-            />
-          </div>
-          {!collapsed && (
-            <div className="overflow-hidden">
-              <span className="font-display text-lg font-bold text-sidebar-foreground block tracking-tight">
-                {config.title}
-              </span>
-              <span className="text-xs text-sidebar-primary font-semibold uppercase tracking-wider">
-                {config.subtitle}
-              </span>
-            </div>
-          )}
+        <div className="flex items-center justify-center">
+          <img 
+            src={logoImage} 
+            alt="NotificaCondo" 
+            className={cn(
+              "object-contain",
+              collapsed ? "w-10 h-10" : "h-12 max-w-full"
+            )} 
+          />
         </div>
       </SidebarHeader>
 
