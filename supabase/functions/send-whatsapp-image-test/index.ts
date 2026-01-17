@@ -40,22 +40,25 @@ async function sendZproImage(phone: string, imageUrl: string, caption: string, c
   const baseUrl = config.apiUrl.replace(/\/$/, "");
   const phoneClean = phone.replace(/\D/g, "");
 
-  // Z-PRO Postman: BearerToken (auth header) + externalKey (body)
+  // Z-PRO: Authorization: Bearer <token> (header) + externalKey (body)
   const bearerToken = config.apiKey;
-  
-  // If instance_id is empty or placeholder, fallback to api_key (common case: both are same)
+
+  // In our app: instanceId stores the externalKey for Z-PRO (unless the UI is testing modes)
   let externalKey = config.instanceId || "";
   if (!externalKey || externalKey === "zpro-embedded") {
+    // Fallback for legacy/empty configs to help diagnostics
     externalKey = config.apiKey;
     console.log("Z-PRO: using api_key as externalKey fallback");
   }
-  
+
   const targetUrl = `${baseUrl}/url`;
   console.log("Z-PRO image endpoint:", targetUrl);
   console.log("Phone:", phoneClean);
   console.log("Image URL:", imageUrl.substring(0, 100) + "...");
-  
+
   try {
+    // According to provider docs:
+    // POST /url { mediaUrl, body, number, externalKey, isClosed }
     const response = await fetch(targetUrl, {
       method: "POST",
       headers: {
@@ -63,10 +66,11 @@ async function sendZproImage(phone: string, imageUrl: string, caption: string, c
         "Authorization": `Bearer ${bearerToken}`,
       },
       body: JSON.stringify({
-        phone: phoneClean,
-        url: imageUrl,
-        caption: caption,
+        mediaUrl: imageUrl,
+        body: caption,
+        number: phoneClean,
         externalKey,
+        isClosed: false,
       }),
     });
     
