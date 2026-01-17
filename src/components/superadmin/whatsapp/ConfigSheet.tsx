@@ -124,11 +124,13 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
       newErrors.api_key = tokenResult.error.errors[0].message;
     }
 
-    if (config.provider !== "zpro") {
-      const instanceResult = instanceIdSchema.safeParse(config.instance_id);
-      if (!instanceResult.success) {
-        newErrors.instance_id = instanceResult.error.errors[0].message;
-      }
+    // Instance ID / External Key validation
+    // - Z-PRO: instance_id will be used as External Key (required)
+    // - Other providers: instance_id is the Instance ID (required)
+    const instanceResult = instanceIdSchema.safeParse(config.instance_id);
+    if (!instanceResult.success) {
+      newErrors.instance_id =
+        config.provider === "zpro" ? "External Key é obrigatória" : instanceResult.error.errors[0].message;
     }
 
     setErrors(newErrors);
@@ -147,7 +149,7 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
 
     setIsSaving(true);
     try {
-      const instanceId = config.provider === "zpro" ? "zpro-embedded" : config.instance_id.trim();
+      const instanceId = config.instance_id.trim();
 
       if (config.id) {
         const { error } = await supabase
@@ -407,22 +409,27 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
               )}
             </div>
 
-            {/* Instance ID (not for Z-PRO) */}
-            {config.provider !== "zpro" && (
-              <div className="space-y-2">
-                <Label htmlFor="instance_id">ID da Instância</Label>
-                <Input
-                  id="instance_id"
-                  value={config.instance_id}
-                  onChange={(e) => setConfig(prev => ({ ...prev, instance_id: e.target.value }))}
-                  placeholder="Identificador da instância"
-                  className={errors.instance_id ? "border-red-500" : ""}
-                />
-                {errors.instance_id && (
-                  <p className="text-xs text-red-500">{errors.instance_id}</p>
-                )}
-              </div>
-            )}
+            {/* Instance ID / External Key */}
+            <div className="space-y-2">
+              <Label htmlFor="instance_id">
+                {config.provider === "zpro" ? "External Key" : "ID da Instância"}
+              </Label>
+              <Input
+                id="instance_id"
+                value={config.instance_id}
+                onChange={(e) => setConfig(prev => ({ ...prev, instance_id: e.target.value }))}
+                placeholder={config.provider === "zpro" ? "Sua externalKey..." : "Identificador da instância"}
+                className={errors.instance_id ? "border-red-500" : ""}
+              />
+              {errors.instance_id && (
+                <p className="text-xs text-red-500">{errors.instance_id}</p>
+              )}
+              {config.provider === "zpro" && (
+                <p className="text-xs text-muted-foreground">
+                  No Z-PRO, este campo é a <strong>externalKey</strong> (diferente do Bearer Token).
+                </p>
+              )}
+            </div>
 
             {/* App URL */}
             <div className="space-y-2">

@@ -39,6 +39,10 @@ interface SendResult {
 async function sendZproImage(phone: string, imageUrl: string, caption: string, config: ProviderSettings): Promise<SendResult> {
   const baseUrl = config.apiUrl.replace(/\/$/, "");
   const phoneClean = phone.replace(/\D/g, "");
+
+  // Z-PRO Postman: BearerToken (auth header) + externalKey (body)
+  const bearerToken = config.apiKey;
+  const externalKey = config.instanceId || "";
   
   const targetUrl = `${baseUrl}/url`;
   console.log("Z-PRO image endpoint:", targetUrl);
@@ -46,38 +50,25 @@ async function sendZproImage(phone: string, imageUrl: string, caption: string, c
   console.log("Image URL:", imageUrl.substring(0, 100) + "...");
   
   try {
+    if (!externalKey) {
+      return {
+        success: false,
+        error: "External Key não configurada (preencha o campo External Key no painel).",
+        debug: { endpoint: targetUrl },
+      };
+    }
+
     const response = await fetch(targetUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        // Z-PRO commonly expects a Bearer token header
-        "Authorization": `Bearer ${config.apiKey}`,
-        // ...and some installations use custom header names
-        "externalKey": config.apiKey,
-        "bearertoken": config.apiKey,
-        "token": config.apiKey,
-        "apikey": config.apiKey,
+        "Authorization": `Bearer ${bearerToken}`,
       },
       body: JSON.stringify({
         phone: phoneClean,
-        // Some Z-PRO versions expect different field names for the media URL
         url: imageUrl,
-        image: imageUrl,
-        media: imageUrl,
-
-        // Some Z-PRO versions expect the caption field to be called body/message
         caption: caption,
-        body: caption,
-        message: caption,
-
-        // optional filename hints
-        fileName: "notificacondo-teste.png",
-        filename: "notificacondo-teste.png",
-
-        // keep compatibility with installations that validate token via body
-        externalKey: config.apiKey,
-        bearertoken: config.apiKey,
-        token: config.apiKey,
+        externalKey,
       }),
     });
     
