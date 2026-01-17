@@ -305,8 +305,59 @@ const PackagesHistory = () => {
     return "-";
   };
 
-  // Export to PDF
-  const exportToPDF = () => {
+  // Helper function to convert image URL to Base64
+  const getBase64FromUrl = (url: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      
+      const timeout = setTimeout(() => {
+        resolve(""); // Timeout after 5 seconds
+      }, 5000);
+      
+      img.onload = () => {
+        clearTimeout(timeout);
+        try {
+          const canvas = document.createElement("canvas");
+          const maxSize = 100; // Max dimension for thumbnail
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > height) {
+            if (width > maxSize) {
+              height *= maxSize / width;
+              width = maxSize;
+            }
+          } else {
+            if (height > maxSize) {
+              width *= maxSize / height;
+              height = maxSize;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL("image/jpeg", 0.7)); // 70% quality
+        } catch {
+          resolve("");
+        }
+      };
+      
+      img.onerror = () => {
+        clearTimeout(timeout);
+        resolve("");
+      };
+      
+      img.src = url;
+    });
+  };
+
+  // Export to PDF with thumbnails
+  const [isExporting, setIsExporting] = useState(false);
+
+  const exportToPDF = async () => {
     if (packages.length === 0) {
       toast({
         title: "Nenhum dado para exportar",
@@ -315,6 +366,28 @@ const PackagesHistory = () => {
       });
       return;
     }
+
+    setIsExporting(true);
+    
+    toast({
+      title: "Gerando PDF...",
+      description: "Carregando imagens das encomendas, aguarde...",
+    });
+
+    // Pre-load all images as Base64
+    const imagesBase64: Record<string, string> = {};
+    
+    await Promise.all(
+      packages.map(async (pkg) => {
+        if (pkg.photo_url) {
+          try {
+            imagesBase64[pkg.id] = await getBase64FromUrl(pkg.photo_url);
+          } catch {
+            imagesBase64[pkg.id] = "";
+          }
+        }
+      })
+    );
 
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -394,7 +467,7 @@ const PackagesHistory = () => {
       margin: { left: 14, right: 14 },
     });
 
-    // Packages Table
+    // Packages Table with Thumbnails
     const tableStartY = (doc as any).lastAutoTable.finalY + 12;
 
     doc.setFont("helvetica", "bold");
@@ -402,21 +475,45 @@ const PackagesHistory = () => {
 
     autoTable(doc, {
       startY: tableStartY + 4,
-      head: [["Data/Hora", "Tipo", "Status", "Código", "Recebido por", "Retirado por", "Tempo Espera"]],
+      head: [["Foto", "Data/Hora", "Tipo", "Status", "Código", "Recebido", "Tempo"]],
       body: packages.map((pkg) => [
+        "", // Empty cell for photo - will be filled by didDrawCell
         format(parseISO(pkg.received_at), "dd/MM/yyyy HH:mm"),
         pkg.package_type?.name || "Encomenda",
         STATUS_CONFIG[pkg.status].label,
         pkg.pickup_code,
-        pkg.received_by_profile?.full_name || "-",
         pkg.picked_up_by_name || pkg.picked_up_by_profile?.full_name || "-",
         getWaitingTime(pkg),
       ]),
       theme: "striped",
       headStyles: { fillColor: [59, 130, 246], fontSize: 8 },
-      bodyStyles: { fontSize: 8 },
+      bodyStyles: { fontSize: 8, minCellHeight: 18 },
+      columnStyles: {
+        0: { cellWidth: 20 }, // Photo column width
+      },
+      didDrawCell: (data) => {
+        // Draw image in the first column (Foto)
+        if (data.column.index === 0 && data.section === "body") {
+          const pkg = packages[data.row.index];
+          if (pkg) {
+            const base64 = imagesBase64[pkg.id];
+            if (base64) {
+              const imgSize = 15; // 15mm x 15mm
+              const x = data.cell.x + (data.cell.width - imgSize) / 2;
+              const y = data.cell.y + (data.cell.height - imgSize) / 2;
+              
+              try {
+                doc.addImage(base64, "JPEG", x, y, imgSize, imgSize);
+              } catch {
+                // Silent fail if image can't be added
+              }
+            }
+          }
+        }
+      },
       didParseCell: (data) => {
-        if (data.column.index === 2 && data.section === "body") {
+        // Color status column (now index 3 instead of 2)
+        if (data.column.index === 3 && data.section === "body") {
           const status = packages[data.row.index]?.status;
           if (status) {
             const [r, g, b] = STATUS_CONFIG[status].pdfColor;
@@ -445,6 +542,8 @@ const PackagesHistory = () => {
     const fileName = `historico-encomendas-${selectedBlk?.name}-${selectedApt?.number}-${format(new Date(), "yyyyMMdd-HHmm")}.pdf`;
     doc.save(fileName);
 
+    setIsExporting(false);
+    
     toast({
       title: "PDF gerado com sucesso!",
       description: `Arquivo: ${fileName}`,
@@ -508,9 +607,9 @@ const PackagesHistory = () => {
           </div>
 
           {selectedApartment && packages.length > 0 && (
-            <Button onClick={exportToPDF}>
+            <Button onClick={exportToPDF} disabled={isExporting}>
               <Download className="w-4 h-4 mr-2" />
-              Exportar PDF
+              {isExporting ? "Gerando..." : "Exportar PDF"}
             </Button>
           )}
         </div>
