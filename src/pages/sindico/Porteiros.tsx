@@ -190,7 +190,9 @@ export default function Porteiros() {
     return matchesCondominium && matchesSearch;
   });
 
-  const handleGoToConfirmStep = () => {
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+
+  const handleGoToConfirmStep = async () => {
     if (!newPorter.full_name || !newPorter.email || !newPorter.condominium_id) {
       toast({
         title: "Campos obrigatórios",
@@ -199,16 +201,12 @@ export default function Porteiros() {
       });
       return;
     }
-    setDialogStep("confirm");
-  };
 
-  const handleAddPorter = async () => {
-
-    setIsSubmitting(true);
-
+    setIsCheckingEmail(true);
     try {
-      // Check if email already exists in profiles
       const emailLower = newPorter.email.toLowerCase().trim();
+      
+      // Check if email already exists
       const { data: existingProfile, error: profileError } = await supabase
         .from("profiles")
         .select("id, user_id")
@@ -216,25 +214,25 @@ export default function Porteiros() {
         .maybeSingle();
 
       if (profileError) {
-        console.error("Error checking existing profile:", profileError);
+        console.error("Error checking email:", profileError);
+        throw profileError;
       }
 
-      // If profile exists, check if user is a sindico or super_admin (cannot be registered as porter)
       if (existingProfile) {
+        // Check if user is sindico or super_admin
         const { data: existingRoles } = await supabase
           .from("user_roles")
           .select("role")
           .eq("user_id", existingProfile.user_id);
 
         const roles = (existingRoles || []).map((r) => r.role);
-        
+
         if (roles.includes("sindico") || roles.includes("super_admin")) {
           toast({
             title: "E-mail não permitido",
             description: "Este e-mail pertence a um síndico ou administrador e não pode ser cadastrado como porteiro",
             variant: "destructive",
           });
-          setIsSubmitting(false);
           return;
         }
 
@@ -252,11 +250,27 @@ export default function Porteiros() {
             description: "Este e-mail já está vinculado a um porteiro neste condomínio",
             variant: "destructive",
           });
-          setIsSubmitting(false);
           return;
         }
       }
 
+      setDialogStep("confirm");
+    } catch (error: any) {
+      console.error("Error validating email:", error);
+      toast({
+        title: "Erro ao validar e-mail",
+        description: "Tente novamente",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCheckingEmail(false);
+    }
+  };
+
+  const handleAddPorter = async () => {
+    setIsSubmitting(true);
+
+    try {
       // Call edge function to create porter
       const { data, error } = await supabase.functions.invoke("create-porteiro", {
         body: {
@@ -671,8 +685,15 @@ export default function Porteiros() {
                       >
                         Cancelar
                       </Button>
-                      <Button onClick={handleGoToConfirmStep}>
-                        Continuar
+                      <Button onClick={handleGoToConfirmStep} disabled={isCheckingEmail}>
+                        {isCheckingEmail ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Validando...
+                          </>
+                        ) : (
+                          "Continuar"
+                        )}
                       </Button>
                     </DialogFooter>
                   </>
