@@ -58,7 +58,11 @@ import {
   Eye,
   EyeOff,
   Clock,
+  UserX,
+  Users,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { MercadoPagoSettings } from "@/components/superadmin/MercadoPagoSettings";
 import { MercadoPagoWebhookLogs } from "@/components/superadmin/MercadoPagoWebhookLogs";
@@ -91,11 +95,27 @@ const COLOR_OPTIONS = [
   { value: "bg-indigo-500", label: "Índigo" },
 ];
 
+interface OrphanUser {
+  id: string;
+  email: string | null;
+  created_at: string;
+  has_profile: boolean;
+  has_role: boolean;
+  has_condominium: boolean;
+}
+
 export default function SuperAdminSettings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  
+  // Orphan users state
+  const [orphanDialogOpen, setOrphanDialogOpen] = useState(false);
+  const [orphanUsers, setOrphanUsers] = useState<OrphanUser[]>([]);
+  const [selectedOrphans, setSelectedOrphans] = useState<Set<string>>(new Set());
+  const [isLoadingOrphans, setIsLoadingOrphans] = useState(false);
+  const [isDeletingOrphans, setIsDeletingOrphans] = useState(false);
   
   // Password change state
   const [currentPassword, setCurrentPassword] = useState("");
@@ -294,6 +314,91 @@ export default function SuperAdminSettings() {
       });
     },
   });
+
+  // Orphan users functions
+  const handleLoadOrphanUsers = async () => {
+    setIsLoadingOrphans(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("cleanup-orphan-users", {
+        body: { action: "list" },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      setOrphanUsers(data.orphan_users || []);
+      setSelectedOrphans(new Set());
+      setOrphanDialogOpen(true);
+    } catch (error: any) {
+      console.error("Error loading orphan users:", error);
+      toast({
+        title: "Erro ao carregar usuários órfãos",
+        description: error.message || "Tente novamente mais tarde",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingOrphans(false);
+    }
+  };
+
+  const handleDeleteOrphans = async () => {
+    if (selectedOrphans.size === 0) {
+      toast({
+        title: "Nenhum usuário selecionado",
+        description: "Selecione pelo menos um usuário para remover",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsDeletingOrphans(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("cleanup-orphan-users", {
+        body: { 
+          action: "delete",
+          user_ids: Array.from(selectedOrphans),
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast({
+        title: "Usuários removidos",
+        description: `${data.deleted?.length || 0} usuário(s) órfão(s) removido(s) com sucesso`,
+      });
+
+      // Refresh the list
+      await handleLoadOrphanUsers();
+    } catch (error: any) {
+      console.error("Error deleting orphan users:", error);
+      toast({
+        title: "Erro ao remover usuários",
+        description: error.message || "Tente novamente mais tarde",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeletingOrphans(false);
+    }
+  };
+
+  const toggleOrphanSelection = (userId: string) => {
+    const newSelected = new Set(selectedOrphans);
+    if (newSelected.has(userId)) {
+      newSelected.delete(userId);
+    } else {
+      newSelected.add(userId);
+    }
+    setSelectedOrphans(newSelected);
+  };
+
+  const toggleAllOrphans = () => {
+    if (selectedOrphans.size === orphanUsers.length) {
+      setSelectedOrphans(new Set());
+    } else {
+      setSelectedOrphans(new Set(orphanUsers.map(u => u.id)));
+    }
+  };
 
   const resetForm = () => {
     setFormData({
@@ -596,8 +701,133 @@ export default function SuperAdminSettings() {
                     )}
                   </Button>
                 </div>
+
+                <div className="flex items-center justify-between p-4 rounded-lg border border-border/50">
+                  <div>
+                    <p className="font-medium text-foreground flex items-center gap-2">
+                      <UserX className="w-4 h-4 text-destructive" />
+                      Limpar Usuários Órfãos
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Remove usuários que existem no Auth mas não possuem perfil, role ou condomínio associado
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={handleLoadOrphanUsers}
+                    disabled={isLoadingOrphans}
+                    className="gap-2"
+                  >
+                    {isLoadingOrphans ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Users className="w-4 h-4" />
+                        Verificar
+                      </>
+                    )}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
+
+            {/* Dialog para Usuários Órfãos */}
+            <Dialog open={orphanDialogOpen} onOpenChange={setOrphanDialogOpen}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <UserX className="w-5 h-5 text-destructive" />
+                    Usuários Órfãos ({orphanUsers.length})
+                  </DialogTitle>
+                  <DialogDescription>
+                    Usuários que existem no sistema de autenticação mas não possuem dados associados.
+                    Selecione os usuários que deseja remover permanentemente.
+                  </DialogDescription>
+                </DialogHeader>
+
+                {orphanUsers.length === 0 ? (
+                  <div className="py-8 text-center text-muted-foreground">
+                    <CheckCircle2 className="w-12 h-12 mx-auto mb-4 text-green-500" />
+                    <p className="text-lg font-medium">Nenhum usuário órfão encontrado!</p>
+                    <p className="text-sm">O sistema está limpo.</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between mb-4 p-2 bg-muted/50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          checked={selectedOrphans.size === orphanUsers.length && orphanUsers.length > 0}
+                          onCheckedChange={toggleAllOrphans}
+                        />
+                        <span className="text-sm font-medium">Selecionar todos</span>
+                      </div>
+                      <Badge variant="secondary">
+                        {selectedOrphans.size} selecionado(s)
+                      </Badge>
+                    </div>
+
+                    <ScrollArea className="h-[300px] rounded-md border">
+                      <div className="p-4 space-y-2">
+                        {orphanUsers.map((user) => (
+                          <div
+                            key={user.id}
+                            className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                              selectedOrphans.has(user.id)
+                                ? "bg-destructive/10 border-destructive/30"
+                                : "bg-muted/30 border-border/50"
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Checkbox
+                                checked={selectedOrphans.has(user.id)}
+                                onCheckedChange={() => toggleOrphanSelection(user.id)}
+                              />
+                              <div>
+                                <p className="font-medium text-sm">
+                                  {user.email || "Sem email"}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Criado: {new Date(user.created_at).toLocaleDateString("pt-BR")}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex gap-1">
+                              {!user.has_profile && (
+                                <Badge variant="outline" className="text-xs">Sem perfil</Badge>
+                              )}
+                              {!user.has_role && (
+                                <Badge variant="outline" className="text-xs">Sem role</Badge>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </>
+                )}
+
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setOrphanDialogOpen(false)}>
+                    Cancelar
+                  </Button>
+                  {orphanUsers.length > 0 && (
+                    <Button
+                      variant="destructive"
+                      onClick={handleDeleteOrphans}
+                      disabled={isDeletingOrphans || selectedOrphans.size === 0}
+                      className="gap-2"
+                    >
+                      {isDeletingOrphans ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
+                      Remover Selecionados ({selectedOrphans.size})
+                    </Button>
+                  )}
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           {/* General Settings Tab */}
