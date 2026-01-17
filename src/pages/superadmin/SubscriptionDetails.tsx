@@ -248,16 +248,25 @@ export default function SubscriptionDetails() {
     mutationFn: async (updateData: typeof editedData) => {
       if (!id || !updateData) throw new Error("Dados inválidos");
 
+      // When setting as lifetime, also disable trial and clear trial dates
+      const updatePayload: Record<string, any> = {
+        plan: updateData.plan,
+        active: updateData.active,
+        notifications_limit: updateData.notifications_limit,
+        warnings_limit: updateData.warnings_limit,
+        fines_limit: updateData.fines_limit,
+        is_lifetime: updateData.is_lifetime,
+      };
+
+      // If marking as lifetime, ensure trial is disabled
+      if (updateData.is_lifetime) {
+        updatePayload.is_trial = false;
+        updatePayload.trial_ends_at = null;
+      }
+
       const { error } = await supabase
         .from("subscriptions")
-        .update({
-          plan: updateData.plan,
-          active: updateData.active,
-          notifications_limit: updateData.notifications_limit,
-          warnings_limit: updateData.warnings_limit,
-          fines_limit: updateData.fines_limit,
-          is_lifetime: updateData.is_lifetime,
-        })
+        .update(updatePayload)
         .eq("id", id);
 
       if (error) throw error;
