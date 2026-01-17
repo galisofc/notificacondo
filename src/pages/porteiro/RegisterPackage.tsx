@@ -344,7 +344,7 @@ export default function RegisterPackage() {
         .from("residents")
         .insert({
           apartment_id: selectedApartment,
-          full_name: newResidentName.trim(),
+          full_name: newResidentName.trim().toUpperCase(),
           phone: newResidentPhone.replace(/\D/g, ''),
           email: newResidentEmail.trim() || `morador_${Date.now()}@temp.com`,
           is_responsible: true,

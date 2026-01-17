@@ -89,7 +89,7 @@ const ResidentProfile = () => {
       const { error } = await supabase
         .from("residents")
         .update({
-          full_name: formData.full_name.trim(),
+          full_name: formData.full_name.trim().toUpperCase(),
           email: formData.email.trim(),
           phone: formData.phone.trim() || null,
         })

@@ -331,7 +331,7 @@ export default function PorteiroCondominio() {
       }
 
       const residentData = {
-        full_name: formData.full_name.trim(),
+        full_name: formData.full_name.trim().toUpperCase(),
         email: formData.email.trim().toLowerCase(),
         phone: formData.phone || null,
         cpf: formData.cpf || null,

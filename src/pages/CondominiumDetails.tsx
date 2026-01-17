@@ -459,7 +459,7 @@ const CondominiumDetails = () => {
           .from("residents")
           .update({
             apartment_id: residentForm.apartment_id,
-            full_name: residentForm.full_name,
+            full_name: residentForm.full_name.toUpperCase(),
             email: residentForm.email,
             phone: residentForm.phone || null,
             cpf: residentForm.cpf || null,
@@ -472,7 +472,7 @@ const CondominiumDetails = () => {
       } else {
         const { error } = await supabase.from("residents").insert({
           apartment_id: residentForm.apartment_id,
-          full_name: residentForm.full_name,
+          full_name: residentForm.full_name.toUpperCase(),
           email: residentForm.email,
           phone: residentForm.phone || null,
           cpf: residentForm.cpf || null,

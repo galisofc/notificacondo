@@ -209,7 +209,7 @@ Maria Santos,maria@email.com,11988888888,,não,não`;
       try {
         const { error } = await supabase.from("residents").insert({
           apartment_id: apartmentId,
-          full_name: resident.full_name,
+          full_name: resident.full_name.toUpperCase(),
           email: resident.email,
           phone: resident.phone || null,
           cpf: resident.cpf || null,
