@@ -255,7 +255,7 @@ const Dashboard = () => {
       </Helmet>
 
       <div className="space-y-8 animate-fade-up">
-        <SindicoBreadcrumbs items={[{ label: "Dashboard" }]} />
+        <SindicoBreadcrumbs items={[]} />
 
         {/* Trial Banner */}
         <TrialBanner />
