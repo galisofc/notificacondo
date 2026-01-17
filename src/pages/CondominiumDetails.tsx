@@ -312,7 +312,7 @@ const CondominiumDetails = () => {
         const { error } = await supabase
           .from("blocks")
           .update({ 
-            name: blockForm.name, 
+            name: blockForm.name.toUpperCase(), 
             description: blockForm.description || null,
             floors: parseInt(blockForm.floors) || 1,
           })
@@ -322,7 +322,7 @@ const CondominiumDetails = () => {
       } else {
         const { error } = await supabase.from("blocks").insert({
           condominium_id: id,
-          name: blockForm.name,
+          name: blockForm.name.toUpperCase(),
           description: blockForm.description || null,
           floors: parseInt(blockForm.floors) || 1,
         });
