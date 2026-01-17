@@ -58,6 +58,7 @@ import PackageTypes from "./pages/superadmin/PackageTypes";
 import PorteiroDashboard from "./pages/porteiro/Dashboard";
 import RegisterPackage from "./pages/porteiro/RegisterPackage";
 import PorteiroPackages from "./pages/porteiro/Packages";
+import PorteiroCondominio from "./pages/porteiro/Condominio";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -305,6 +306,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole="porteiro">
                     <PorteiroSettings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/porteiro/condominio"
+                element={
+                  <ProtectedRoute requiredRole="porteiro">
+                    <PorteiroCondominio />
                   </ProtectedRoute>
                 }
               />
