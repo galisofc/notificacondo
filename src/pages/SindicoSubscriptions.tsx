@@ -4,7 +4,8 @@ import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { differenceInDays, differenceInHours, addDays, isPast, startOfDay, parseISO } from "date-fns";
+import { addDays, isPast, startOfDay, parseISO, differenceInDays } from "date-fns";
+import { calculateRemainingTime } from "@/hooks/useRemainingTime";
 import { useDateFormatter } from "@/hooks/useFormattedDate";
 import { addBusinessDays } from "@/lib/utils";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -696,15 +697,7 @@ const SindicoSubscriptions = () => {
                             className="bg-amber-500/10 text-amber-600 border-amber-500/20"
                           >
                             <Clock className="h-3 w-3 mr-1" />
-                            Trial - {(() => {
-                              const now = startOfDay(new Date());
-                              const endDate = startOfDay(parseISO(sub.trial_ends_at));
-                              const daysRemaining = differenceInDays(endDate, now);
-                              const hoursRemaining = differenceInHours(parseISO(sub.trial_ends_at), new Date());
-                              return daysRemaining <= 0 && hoursRemaining > 0
-                                ? `${hoursRemaining}h restantes`
-                                : `${Math.max(0, daysRemaining)}d restantes`;
-                            })()}
+                            Trial - {calculateRemainingTime(sub.trial_ends_at).displayText}
                           </Badge>
                           <Button
                             variant="outline"

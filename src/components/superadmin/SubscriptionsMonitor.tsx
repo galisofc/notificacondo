@@ -2,7 +2,8 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { differenceInHours, differenceInDays, isPast, startOfDay, parseISO } from "date-fns";
+import { differenceInHours } from "date-fns";
+import { calculateRemainingTime } from "@/hooks/useRemainingTime";
 import { useDateFormatter } from "@/hooks/useFormattedDate";
 import { formatCNPJ } from "@/components/ui/masked-input";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
@@ -233,29 +234,14 @@ export function SubscriptionsMonitor() {
   const getTrialStatus = (trialEndsAt: string | null) => {
     if (!trialEndsAt) return null;
     
-    const now = startOfDay(new Date());
-    const endDate = startOfDay(parseISO(trialEndsAt));
-    const daysRemaining = differenceInDays(endDate, now);
-    const hoursRemaining = differenceInHours(parseISO(trialEndsAt), new Date());
+    const result = calculateRemainingTime(trialEndsAt);
     
-    if (isPast(parseISO(trialEndsAt))) {
-      return { status: "expired", daysRemaining: 0, hoursRemaining: 0, label: "Expirado" };
-    }
-    
-    // Show hours when less than 1 day remaining
-    if (daysRemaining <= 0 && hoursRemaining > 0) {
-      return { 
-        status: "critical", 
-        daysRemaining: 0, 
-        hoursRemaining, 
-        label: `${hoursRemaining}h restante${hoursRemaining !== 1 ? 's' : ''}` 
-      };
-    }
-    
-    if (daysRemaining <= 2) {
-      return { status: "critical", daysRemaining, hoursRemaining, label: `${daysRemaining}d restante${daysRemaining !== 1 ? 's' : ''}` };
-    }
-    return { status: "normal", daysRemaining, hoursRemaining, label: `${daysRemaining}d` };
+    return { 
+      status: result.status, 
+      daysRemaining: result.daysRemaining, 
+      hoursRemaining: result.hoursRemaining, 
+      label: result.isExpired ? "Expirado" : result.displayText 
+    };
   };
 
   // Filter subscriptions based on search term (CNPJ or email) and status

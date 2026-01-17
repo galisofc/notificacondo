@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { startOfDay, differenceInDays, differenceInHours } from "date-fns";
+import { calculateRemainingTime } from "@/hooks/useRemainingTime";
 import { useDateFormatter } from "@/hooks/useFormattedDate";
 import { useParams, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
@@ -664,17 +664,11 @@ const ResidentOccurrenceDetails = () => {
                     const deadlineDate = new Date(createdAt);
                     deadlineDate.setDate(deadlineDate.getDate() + deadlineDays);
                     
-                    const now = startOfDay(new Date());
-                    const deadlineEnd = startOfDay(deadlineDate);
                     const totalMs = deadlineDate.getTime() - createdAt.getTime();
                     const elapsedMs = new Date().getTime() - createdAt.getTime();
-                    const remainingMs = deadlineDate.getTime() - new Date().getTime();
-                    
                     const progressPercent = Math.min(100, Math.max(0, (elapsedMs / totalMs) * 100));
-                    const remainingDays = differenceInDays(deadlineEnd, now);
-                    const remainingHours = differenceInHours(deadlineDate, new Date());
-                    const isExpired = remainingMs <= 0;
-                    const isUrgent = remainingDays <= 2 && remainingDays > 0;
+                    
+                    const deadlineInfo = calculateRemainingTime(deadlineDate);
                     const hasDefense = defenses.length > 0;
 
                     if (hasDefense) {
@@ -697,18 +691,14 @@ const ResidentOccurrenceDetails = () => {
                       <div className="space-y-3">
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">Progresso do prazo</span>
-                          <span className={`font-medium ${isExpired ? 'text-red-500' : isUrgent ? 'text-orange-500' : 'text-foreground'}`}>
-                            {isExpired 
-                              ? 'Prazo encerrado' 
-                              : remainingDays <= 0 && remainingHours > 0
-                                ? `${remainingHours} hora${remainingHours !== 1 ? 's' : ''} restante${remainingHours !== 1 ? 's' : ''}`
-                                : `${remainingDays} dia${remainingDays !== 1 ? 's' : ''} restante${remainingDays !== 1 ? 's' : ''}`}
+                          <span className={`font-medium ${deadlineInfo.isExpired ? 'text-red-500' : deadlineInfo.isUrgent ? 'text-orange-500' : 'text-foreground'}`}>
+                            {deadlineInfo.isExpired ? 'Prazo encerrado' : deadlineInfo.displayText}
                           </span>
                         </div>
                         
                         <Progress 
                           value={progressPercent} 
-                          className={`h-3 ${isExpired ? '[&>div]:bg-red-500' : isUrgent ? '[&>div]:bg-orange-500' : '[&>div]:bg-primary'}`}
+                          className={`h-3 ${deadlineInfo.isExpired ? '[&>div]:bg-red-500' : deadlineInfo.isUrgent ? '[&>div]:bg-orange-500' : '[&>div]:bg-primary'}`}
                         />
                         
                         <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -716,7 +706,7 @@ const ResidentOccurrenceDetails = () => {
                           <span>{formatDate(deadlineDate.toISOString())}</span>
                         </div>
 
-                        {isExpired ? (
+                        {deadlineInfo.isExpired ? (
                           <div className="flex items-center gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20 mt-2">
                             <XCircle className="w-6 h-6 text-red-500" />
                             <div>
@@ -726,7 +716,7 @@ const ResidentOccurrenceDetails = () => {
                               </p>
                             </div>
                           </div>
-                        ) : isUrgent ? (
+                        ) : deadlineInfo.isUrgent || deadlineInfo.isLastDay ? (
                           <div className="flex items-center gap-3 p-4 rounded-xl bg-orange-500/10 border border-orange-500/20 mt-2">
                             <AlertTriangle className="w-6 h-6 text-orange-500" />
                             <div>

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { differenceInDays, differenceInHours, startOfDay, parseISO } from "date-fns";
+import { calculateRemainingTime } from "@/hooks/useRemainingTime";
 import { Clock, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -49,18 +49,13 @@ const TrialBanner = () => {
   }
 
   const getTrialInfo = (trialEndsAt: string | null) => {
-    if (!trialEndsAt) return { daysLeft: 0, hoursLeft: 0, isUrgent: false, isExpired: false };
-    
-    const now = startOfDay(new Date());
-    const endDate = startOfDay(parseISO(trialEndsAt));
-    const daysLeft = differenceInDays(endDate, now);
-    const hoursLeft = differenceInHours(parseISO(trialEndsAt), new Date());
-    
+    const result = calculateRemainingTime(trialEndsAt);
     return {
-      daysLeft: Math.max(0, daysLeft),
-      hoursLeft: Math.max(0, hoursLeft),
-      isUrgent: daysLeft <= 2,
-      isExpired: now >= endDate,
+      daysLeft: result.daysRemaining,
+      hoursLeft: result.hoursRemaining,
+      isUrgent: result.isUrgent || result.isLastDay,
+      isExpired: result.isExpired,
+      shortText: result.shortText,
     };
   };
 

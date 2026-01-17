@@ -4,7 +4,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { differenceInHours, differenceInDays, isPast, format, startOfDay, parseISO } from "date-fns";
+import { isPast, format, parseISO, startOfDay } from "date-fns";
+import { calculateRemainingTime } from "@/hooks/useRemainingTime";
 import { useDateFormatter } from "@/hooks/useFormattedDate";
 
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -1161,26 +1162,22 @@ export default function SubscriptionDetails() {
                         const trialEndsAt = subscription.trial_ends_at;
                         if (!trialEndsAt) return null;
                         
-                        const now = startOfDay(new Date());
-                        const endDate = startOfDay(parseISO(trialEndsAt));
-                        const daysRemaining = differenceInDays(endDate, now);
-                        const hoursRemaining = differenceInHours(parseISO(trialEndsAt), new Date());
-                        const isExpired = isPast(parseISO(trialEndsAt));
-                        const isUrgent = daysRemaining <= 2 && daysRemaining > 0;
+                        const trialInfo = calculateRemainingTime(trialEndsAt);
+                        const endDate = parseISO(trialEndsAt);
                         
                         return (
                           <>
                             <div className={`p-2 rounded-lg ${
-                              isExpired 
+                              trialInfo.isExpired 
                                 ? "bg-destructive/10" 
-                                : isUrgent 
+                                : trialInfo.isUrgent 
                                   ? "bg-orange-500/10" 
                                   : "bg-amber-500/10"
                             }`}>
                               <Clock className={`w-5 h-5 ${
-                                isExpired 
+                                trialInfo.isExpired 
                                   ? "text-destructive" 
-                                  : isUrgent 
+                                  : trialInfo.isUrgent 
                                     ? "text-orange-500 animate-pulse" 
                                     : "text-amber-500"
                               }`} />
@@ -1191,23 +1188,18 @@ export default function SubscriptionDetails() {
                                 <Badge 
                                   variant="outline" 
                                   className={`${
-                                    isExpired 
+                                    trialInfo.isExpired 
                                       ? "bg-destructive/10 text-destructive border-destructive/20" 
-                                      : isUrgent 
+                                      : trialInfo.isUrgent 
                                         ? "bg-orange-500/10 text-orange-600 border-orange-500/20 animate-pulse" 
                                         : "bg-amber-500/10 text-amber-600 border-amber-500/20"
                                   }`}
                                 >
-                                  {isExpired 
-                                    ? "Expirado" 
-                                    : daysRemaining <= 0 && hoursRemaining > 0
-                                      ? `${hoursRemaining}h restante${hoursRemaining !== 1 ? 's' : ''}`
-                                      : `${daysRemaining}d restante${daysRemaining !== 1 ? 's' : ''}`
-                                  }
+                                  {trialInfo.displayText}
                                 </Badge>
                               </div>
                               <p className="text-sm text-muted-foreground">
-                                {isExpired ? "Expirou em" : "Expira em"}: {formatDateTime(endDate.toISOString())}
+                                {trialInfo.isExpired ? "Expirou em" : "Expira em"}: {formatDateTime(endDate.toISOString())}
                               </p>
                             </div>
                           </>
