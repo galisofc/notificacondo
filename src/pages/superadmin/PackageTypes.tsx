@@ -189,6 +189,20 @@ export default function PackageTypes() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      // Check if there are packages using this type
+      const { count, error: countError } = await supabase
+        .from("packages")
+        .select("*", { count: "exact", head: true })
+        .eq("package_type_id", id);
+
+      if (countError) throw countError;
+
+      if (count && count > 0) {
+        throw new Error(
+          `Não é possível excluir este tipo. Existem ${count} encomenda(s) associada(s). Desative o tipo em vez de excluí-lo.`
+        );
+      }
+
       const { error } = await supabase
         .from("package_types")
         .delete()
