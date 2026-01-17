@@ -14,6 +14,7 @@ interface Subscription {
   current_period_end: string | null;
   is_trial: boolean;
   trial_ends_at: string | null;
+  is_lifetime: boolean;
 }
 
 const PLAN_PRICES: Record<string, number> = {
@@ -350,8 +351,9 @@ Deno.serve(async (req) => {
     // Fetch all active subscriptions that need invoice generation
     const { data: subscriptions, error: fetchError } = await supabase
       .from("subscriptions")
-      .select("id, condominium_id, plan, active, current_period_start, current_period_end, is_trial, trial_ends_at")
-      .eq("active", true);
+      .select("id, condominium_id, plan, active, current_period_start, current_period_end, is_trial, trial_ends_at, is_lifetime")
+      .eq("active", true)
+      .eq("is_lifetime", false);
 
     if (fetchError) {
       console.error("Error fetching subscriptions:", fetchError);
