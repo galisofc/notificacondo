@@ -149,6 +149,7 @@ const SindicoPackages = () => {
           photo_url,
           description,
           tracking_code,
+          apartment_id,
           block:blocks(id, name),
           apartment:apartments(id, number),
           condominium:condominiums(id, name),
@@ -160,7 +161,7 @@ const SindicoPackages = () => {
 
       if (error) throw error;
 
-      // Fetch profiles for received_by users
+      // Fetch profiles for received_by users (porteiros)
       const receivedByIds = [...new Set(data?.map((p) => p.received_by).filter(Boolean) || [])];
       let profilesMap: Record<string, { full_name: string }> = {};
       
@@ -178,9 +179,29 @@ const SindicoPackages = () => {
         }
       }
 
+      // Fetch residents by apartment_id for packages without resident_id
+      const apartmentIds = [...new Set(data?.filter(p => !p.resident).map(p => p.apartment_id).filter(Boolean) || [])];
+      let residentsMap: Record<string, { id: string; full_name: string; phone: string | null }> = {};
+      
+      if (apartmentIds.length > 0) {
+        const { data: residents } = await supabase
+          .from("residents")
+          .select("id, full_name, phone, apartment_id")
+          .in("apartment_id", apartmentIds)
+          .eq("is_responsible", true);
+        
+        if (residents) {
+          residentsMap = residents.reduce((acc, r) => {
+            acc[r.apartment_id] = { id: r.id, full_name: r.full_name, phone: r.phone };
+            return acc;
+          }, {} as Record<string, { id: string; full_name: string; phone: string | null }>);
+        }
+      }
+
       return (data || []).map((pkg) => ({
         ...pkg,
         received_by_profile: profilesMap[pkg.received_by] || null,
+        resident: pkg.resident || residentsMap[pkg.apartment_id] || null,
       })) as PackageWithRelations[];
     },
     enabled: !!user && condominiums.length > 0,
