@@ -697,11 +697,13 @@ const SindicoSubscriptions = () => {
                           >
                             <Clock className="h-3 w-3 mr-1" />
                             Trial - {(() => {
-                              const hoursRemaining = differenceInHours(new Date(sub.trial_ends_at), new Date());
-                              const daysRemaining = Math.ceil(hoursRemaining / 24);
-                              return hoursRemaining < 24 
+                              const now = startOfDay(new Date());
+                              const endDate = startOfDay(parseISO(sub.trial_ends_at));
+                              const daysRemaining = differenceInDays(endDate, now);
+                              const hoursRemaining = differenceInHours(parseISO(sub.trial_ends_at), new Date());
+                              return daysRemaining <= 0 && hoursRemaining > 0
                                 ? `${hoursRemaining}h restantes`
-                                : `${daysRemaining}d restantes`;
+                                : `${Math.max(0, daysRemaining)}d restantes`;
                             })()}
                           </Badge>
                           <Button
