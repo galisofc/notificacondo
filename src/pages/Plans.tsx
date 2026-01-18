@@ -31,6 +31,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion } from "framer-motion";
+import { useTrialDays } from "@/hooks/useTrialDays";
 
 // Animation variants
 const containerVariants = {
@@ -135,6 +136,7 @@ const featureCategories = [
 
 const Plans = () => {
   const navigate = useNavigate();
+  const { trialDays } = useTrialDays();
   
   // Countdown timer
   const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
@@ -203,7 +205,7 @@ const Plans = () => {
         <title>Planos e Preços | NotificaCondo</title>
         <meta 
           name="description" 
-          content="Compare os planos do NotificaCondo e escolha o melhor para seu condomínio. Trial grátis de 7 dias, sem cartão de crédito." 
+          content={`Compare os planos do NotificaCondo e escolha o melhor para seu condomínio. Trial grátis de ${trialDays} dias, sem cartão de crédito.`}
         />
       </Helmet>
       
@@ -241,7 +243,7 @@ const Plans = () => {
             <div className="text-center max-w-3xl mx-auto">
               <Badge variant="secondary" className="mb-4 px-4 py-1.5 text-sm bg-primary/10 text-primary border-primary/20">
                 <Sparkles className="w-4 h-4 mr-1.5" />
-                7 dias grátis para testar
+                {trialDays} dias grátis para testar
               </Badge>
               <h1 className="font-display text-4xl md:text-6xl font-bold mb-6">
                 Escolha o plano ideal para{" "}
@@ -392,7 +394,7 @@ const Plans = () => {
                               }
                             }}
                           >
-                            {plan.price === 0 ? "Fale Conosco" : "Começar 7 dias grátis"}
+                            {plan.price === 0 ? "Fale Conosco" : `Começar ${trialDays} dias grátis`}
                             <ArrowRight className="w-4 h-4 ml-2" />
                           </Button>
                         </CardContent>
@@ -463,9 +465,9 @@ const Plans = () => {
               
               <div className="space-y-4">
                 <Card className="p-6">
-                  <h3 className="font-semibold mb-2">Como funciona o trial de 7 dias?</h3>
+                  <h3 className="font-semibold mb-2">Como funciona o trial de {trialDays} dias?</h3>
                   <p className="text-muted-foreground text-sm">
-                    Você pode usar todas as funcionalidades do plano escolhido por 7 dias grátis, sem precisar cadastrar cartão de crédito. Após esse período, você pode escolher continuar com o plano ou cancelar.
+                    Você pode usar todas as funcionalidades do plano escolhido por {trialDays} dias grátis, sem precisar cadastrar cartão de crédito. Após esse período, você pode escolher continuar com o plano ou cancelar.
                   </p>
                 </Card>
                 
@@ -501,7 +503,7 @@ const Plans = () => {
                 Pronto para modernizar seu condomínio?
               </h2>
               <p className="text-muted-foreground text-lg mb-8 max-w-2xl mx-auto">
-                Comece hoje mesmo com 7 dias grátis. Sem cartão de crédito, sem compromisso.
+                Comece hoje mesmo com {trialDays} dias grátis. Sem cartão de crédito, sem compromisso.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <Button variant="hero" size="lg" onClick={() => navigate('/auth')}>

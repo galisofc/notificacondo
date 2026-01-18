@@ -14,6 +14,7 @@ import { z } from "zod";
 import { Database } from "@/integrations/supabase/types";
 import { MaskedInput } from "@/components/ui/masked-input";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTrialDays } from "@/hooks/useTrialDays";
 
 const loginSchema = z.object({
   email: z.string().email("Email inválido"),
@@ -71,6 +72,7 @@ const BRAZILIAN_STATES = [
 ];
 
 const Auth = () => {
+  const { trialDays } = useTrialDays();
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [isSearchingCnpj, setIsSearchingCnpj] = useState(false);
@@ -1236,7 +1238,7 @@ const Auth = () => {
                 <div className="flex items-center justify-center gap-4 mt-4">
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    7 dias grátis
+                    {trialDays} dias grátis
                   </div>
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
