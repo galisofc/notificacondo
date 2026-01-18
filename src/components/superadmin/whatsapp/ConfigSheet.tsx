@@ -413,13 +413,13 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
+      <SheetContent side="right" className="w-full max-w-full sm:max-w-lg overflow-y-auto">
+        <SheetHeader className="text-left">
+          <SheetTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Settings className="h-4 w-4 sm:h-5 sm:w-5" />
             Configuração WhatsApp
           </SheetTitle>
-          <SheetDescription>
+          <SheetDescription className="text-xs sm:text-sm">
             Configure as credenciais de acesso à API de WhatsApp
           </SheetDescription>
         </SheetHeader>
@@ -429,15 +429,15 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <div className="space-y-6 py-6">
+          <div className="space-y-4 sm:space-y-6 py-4 sm:py-6">
             {/* Provider Selection */}
-            <div className="space-y-2">
-              <Label>Provedor</Label>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label className="text-xs sm:text-sm">Provedor</Label>
               <Select
                 value={config.provider}
                 onValueChange={(value) => setConfig(prev => ({ ...prev, provider: value }))}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-9 sm:h-10 text-sm">
                   <SelectValue placeholder="Selecione o provedor" />
                 </SelectTrigger>
                 <SelectContent>
@@ -451,9 +451,9 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
             <Separator />
 
             {/* API URL */}
-            <div className="space-y-2">
-              <Label htmlFor="api_url" className="flex items-center gap-2">
-                <Link className="h-4 w-4" />
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="api_url" className="flex items-center gap-2 text-xs sm:text-sm">
+                <Link className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 URL da API
               </Label>
               <Input
@@ -461,17 +461,17 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
                 value={config.api_url}
                 onChange={(e) => setConfig(prev => ({ ...prev, api_url: e.target.value }))}
                 placeholder="https://api.z-api.io/..."
-                className={errors.api_url ? "border-red-500" : ""}
+                className={`h-9 sm:h-10 text-sm ${errors.api_url ? "border-red-500" : ""}`}
               />
               {errors.api_url && (
-                <p className="text-xs text-red-500">{errors.api_url}</p>
+                <p className="text-[10px] sm:text-xs text-red-500">{errors.api_url}</p>
               )}
             </div>
 
             {/* API Key / Token */}
-            <div className="space-y-2">
-              <Label htmlFor="api_key" className="flex items-center gap-2">
-                <Key className="h-4 w-4" />
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="api_key" className="flex items-center gap-2 text-xs sm:text-sm">
+                <Key className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 {config.provider === "zpro" ? "Bearer Token" : "Chave da API"}
               </Label>
               <div className="relative">
@@ -481,50 +481,51 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
                   value={config.api_key}
                   onChange={(e) => setConfig(prev => ({ ...prev, api_key: e.target.value }))}
                   placeholder="Sua chave de acesso..."
-                  className={errors.api_key ? "border-red-500 pr-10" : "pr-10"}
+                  className={`h-9 sm:h-10 text-sm pr-10 ${errors.api_key ? "border-red-500" : ""}`}
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="absolute right-0 top-0 h-full"
+                  className="absolute right-0 top-0 h-full w-9 sm:w-10"
                   onClick={() => setShowToken(!showToken)}
                 >
-                  {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showToken ? <EyeOff className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
                 </Button>
               </div>
               {errors.api_key && (
-                <p className="text-xs text-red-500">{errors.api_key}</p>
+                <p className="text-[10px] sm:text-xs text-red-500">{errors.api_key}</p>
               )}
             </div>
 
             {/* Instance ID - Only for non-Z-PRO providers */}
             {config.provider !== "zpro" && (
-              <div className="space-y-2">
-                <Label htmlFor="instance_id">ID da Instância</Label>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="instance_id" className="text-xs sm:text-sm">ID da Instância</Label>
                 <Input
                   id="instance_id"
                   value={config.instance_id}
                   onChange={(e) => setConfig(prev => ({ ...prev, instance_id: e.target.value }))}
                   placeholder="Identificador da instância"
-                  className={errors.instance_id ? "border-red-500" : ""}
+                  className={`h-9 sm:h-10 text-sm ${errors.instance_id ? "border-red-500" : ""}`}
                 />
                 {errors.instance_id && (
-                  <p className="text-xs text-red-500">{errors.instance_id}</p>
+                  <p className="text-[10px] sm:text-xs text-red-500">{errors.instance_id}</p>
                 )}
               </div>
             )}
 
             {/* App URL */}
-            <div className="space-y-2">
-              <Label htmlFor="app_url">URL do Aplicativo</Label>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="app_url" className="text-xs sm:text-sm">URL do Aplicativo</Label>
               <Input
                 id="app_url"
                 value={config.app_url}
                 onChange={(e) => setConfig(prev => ({ ...prev, app_url: e.target.value }))}
                 placeholder="https://seuapp.com.br"
+                className="h-9 sm:h-10 text-sm"
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
                 URL base usada nos links das mensagens
               </p>
             </div>
@@ -532,18 +533,18 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
             <Separator />
 
             {/* Test Connection */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-medium">Testar Conexão</h3>
+            <div className="space-y-3 sm:space-y-4">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="font-medium text-sm sm:text-base">Testar Conexão</h3>
                 {testResult === "success" && (
-                  <Badge className="bg-green-500/10 text-green-500 border-green-500/20 gap-1">
-                    <CheckCircle className="h-3 w-3" />
+                  <Badge className="bg-green-500/10 text-green-500 border-green-500/20 gap-1 text-[10px] sm:text-xs">
+                    <CheckCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                     Conectado
                   </Badge>
                 )}
                 {testResult === "error" && (
-                  <Badge className="bg-red-500/10 text-red-500 border-red-500/20 gap-1">
-                    <XCircle className="h-3 w-3" />
+                  <Badge className="bg-red-500/10 text-red-500 border-red-500/20 gap-1 text-[10px] sm:text-xs">
+                    <XCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                     Falha
                   </Badge>
                 )}
@@ -552,12 +553,12 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
                 variant="outline"
                 onClick={handleTest}
                 disabled={isTesting}
-                className="w-full gap-2"
+                className="w-full gap-2 h-9 sm:h-10 text-sm"
               >
                 {isTesting ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
                 ) : (
-                  <TestTube className="h-4 w-4" />
+                  <TestTube className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 )}
                 Testar Conexão
               </Button>
@@ -566,32 +567,32 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
             <Separator />
 
             {/* Send Test Message */}
-            <div className="space-y-4">
-              <h3 className="font-medium">Enviar Mensagem de Teste</h3>
-              <div className="flex gap-2">
+            <div className="space-y-3 sm:space-y-4">
+              <h3 className="font-medium text-sm sm:text-base">Enviar Mensagem de Teste</h3>
+              <div className="flex flex-col sm:flex-row gap-2">
                 <div className="relative flex-1">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                   <Input
                     value={testPhone}
                     onChange={(e) => setTestPhone(e.target.value)}
                     placeholder="5511999999999"
-                    className="pl-9"
+                    className="pl-9 h-9 sm:h-10 text-sm"
                   />
                 </div>
                 <Button
                   onClick={handleSendTest}
                   disabled={isSendingTest || !testPhone}
-                  className="shrink-0 gap-2"
+                  className="shrink-0 gap-2 h-9 sm:h-10 text-sm"
                 >
                   {isSendingTest ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
                   ) : (
-                    <Send className="h-4 w-4" />
+                    <Send className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   )}
-                  Texto
+                  Enviar Texto
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
                 Formato: código do país + DDD + número (sem espaços ou traços)
               </p>
             </div>
@@ -599,10 +600,10 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
             <Separator />
 
             {/* Status Toggle */}
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Integração Ativa</Label>
-                <p className="text-sm text-muted-foreground">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <Label className="text-xs sm:text-sm">Integração Ativa</Label>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
                   Ativar ou desativar o envio de mensagens
                 </p>
               </div>
@@ -613,11 +614,11 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
             </div>
 
             {/* Save Button */}
-            <Button onClick={handleSave} disabled={isSaving} className="w-full gap-2">
+            <Button onClick={handleSave} disabled={isSaving} className="w-full gap-2 h-9 sm:h-10 text-sm">
               {isSaving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
               ) : (
-                <Save className="h-4 w-4" />
+                <Save className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               )}
               Salvar Configurações
             </Button>
