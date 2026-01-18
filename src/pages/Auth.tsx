@@ -1060,6 +1060,11 @@ const Auth = () => {
                 {isLogin ? "Escolher um plano" : "Fazer login"}
               </button>
             </p>
+            {isLogin && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                ✨ Comece com 7 dias grátis, sem cartão de crédito
+              </p>
+            )}
           </div>
 
           {!isLogin && (
