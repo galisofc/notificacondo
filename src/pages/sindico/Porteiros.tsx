@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -15,7 +15,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { DoorOpen, Plus, Trash2, Building2, Mail, Phone, Search, UserPlus, MessageCircle, Copy, Check, Key, AlertCircle, UserX, RefreshCw, Loader2, Pencil, ArrowLeft, ShieldCheck, Send } from "lucide-react";
+import { DoorOpen, Plus, Trash2, Building2, Mail, Phone, Search, UserPlus, MessageCircle, Copy, Check, Key, AlertCircle, UserX, RefreshCw, Loader2, Pencil, ArrowLeft, ShieldCheck, Send, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
@@ -102,6 +103,123 @@ export default function Porteiros() {
     password?: string;
     message: string;
   } | null>(null);
+
+  // Email validation state
+  const [emailStatus, setEmailStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid" | "conflict">("idle");
+  const [emailCheckTimeout, setEmailCheckTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  // Função para validar formato de email
+  const isValidEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  // Função para verificar email em tempo real
+  const checkEmailAvailability = useCallback(async (email: string, condominiumId: string) => {
+    const trimmedEmail = email.trim().toLowerCase();
+    
+    // Validar formato do email
+    if (!isValidEmail(trimmedEmail)) {
+      setEmailStatus("invalid");
+      return;
+    }
+
+    setEmailStatus("checking");
+
+    try {
+      const { data: existingProfile } = await supabase
+        .from("profiles")
+        .select("id, user_id")
+        .eq("email", trimmedEmail)
+        .maybeSingle();
+
+      if (existingProfile) {
+        // Check if user is sindico or super_admin
+        const { data: existingRoles } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", existingProfile.user_id);
+
+        const roles = (existingRoles || []).map((r) => r.role);
+
+        if (roles.includes("sindico") || roles.includes("super_admin")) {
+          setEmailStatus("conflict");
+          return;
+        }
+
+        // Check if already linked to this condominium
+        if (condominiumId) {
+          const { data: existingLink } = await supabase
+            .from("user_condominiums")
+            .select("id")
+            .eq("user_id", existingProfile.user_id)
+            .eq("condominium_id", condominiumId)
+            .maybeSingle();
+
+          if (existingLink) {
+            setEmailStatus("taken");
+            return;
+          }
+        }
+
+        // User exists but can be linked to this condominium
+        setEmailStatus("available");
+      } else {
+        setEmailStatus("available");
+      }
+    } catch (error) {
+      console.error("Error checking email:", error);
+      setEmailStatus("idle");
+    }
+  }, []);
+
+  // Debounce para verificação do email
+  const handleEmailChange = useCallback((value: string) => {
+    setNewPorter(prev => ({ ...prev, email: value }));
+    
+    // Limpar timeout anterior
+    if (emailCheckTimeout) {
+      clearTimeout(emailCheckTimeout);
+    }
+
+    const trimmedEmail = value.trim();
+    
+    // Se email estiver vazio ou muito curto, resetar status
+    if (trimmedEmail.length < 5) {
+      setEmailStatus("idle");
+      return;
+    }
+
+    // Agendar verificação com debounce de 500ms
+    const timeout = setTimeout(() => {
+      checkEmailAvailability(value, newPorter.condominium_id);
+    }, 500);
+
+    setEmailCheckTimeout(timeout);
+  }, [emailCheckTimeout, checkEmailAvailability, newPorter.condominium_id]);
+
+  // Re-check email when condominium changes
+  useEffect(() => {
+    if (newPorter.email.trim().length >= 5 && newPorter.condominium_id) {
+      checkEmailAvailability(newPorter.email, newPorter.condominium_id);
+    }
+  }, [newPorter.condominium_id]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (emailCheckTimeout) {
+        clearTimeout(emailCheckTimeout);
+      }
+    };
+  }, [emailCheckTimeout]);
+
+  // Reset email status when dialog closes
+  useEffect(() => {
+    if (!isDialogOpen) {
+      setEmailStatus("idle");
+    }
+  }, [isDialogOpen]);
 
   // Fetch síndico's condominiums
   useEffect(() => {
@@ -715,16 +833,55 @@ export default function Porteiros() {
 
                       <div className="space-y-1.5 sm:space-y-2">
                         <Label htmlFor="email" className="text-xs sm:text-sm">E-mail *</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          placeholder="porteiro@email.com"
-                          value={newPorter.email}
-                          onChange={(e) =>
-                            setNewPorter((prev) => ({ ...prev, email: e.target.value }))
-                          }
-                          className="h-9 sm:h-10 text-sm"
-                        />
+                        <div className="relative">
+                          <Input
+                            id="email"
+                            type="email"
+                            placeholder="porteiro@email.com"
+                            value={newPorter.email}
+                            onChange={(e) => handleEmailChange(e.target.value)}
+                            className={cn(
+                              "h-9 sm:h-10 text-sm pr-10",
+                              emailStatus === "taken" || emailStatus === "conflict" ? "border-destructive" :
+                              emailStatus === "available" ? "border-emerald-500" :
+                              emailStatus === "invalid" ? "border-amber-500" : ""
+                            )}
+                          />
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                            {emailStatus === "checking" && (
+                              <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin text-muted-foreground" />
+                            )}
+                            {emailStatus === "available" && (
+                              <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-500" />
+                            )}
+                            {(emailStatus === "taken" || emailStatus === "conflict") && (
+                              <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-destructive" />
+                            )}
+                            {emailStatus === "invalid" && (
+                              <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-500" />
+                            )}
+                          </div>
+                        </div>
+                        {emailStatus === "taken" && (
+                          <p className="text-[10px] sm:text-xs text-destructive">
+                            Este e-mail já está vinculado a um porteiro neste condomínio.
+                          </p>
+                        )}
+                        {emailStatus === "conflict" && (
+                          <p className="text-[10px] sm:text-xs text-destructive">
+                            Este e-mail pertence a um síndico ou administrador.
+                          </p>
+                        )}
+                        {emailStatus === "available" && (
+                          <p className="text-[10px] sm:text-xs text-emerald-500">
+                            E-mail disponível para cadastro.
+                          </p>
+                        )}
+                        {emailStatus === "invalid" && (
+                          <p className="text-[10px] sm:text-xs text-amber-500">
+                            Formato de e-mail inválido.
+                          </p>
+                        )}
                       </div>
 
                       <div className="space-y-1.5 sm:space-y-2">
@@ -749,7 +906,7 @@ export default function Porteiros() {
                       >
                         Cancelar
                       </Button>
-                      <Button onClick={handleGoToConfirmStep} disabled={isCheckingEmail} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
+                      <Button onClick={handleGoToConfirmStep} disabled={isCheckingEmail || emailStatus === "taken" || emailStatus === "conflict" || emailStatus === "invalid" || emailStatus === "checking"} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
                         {isCheckingEmail ? (
                           <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
