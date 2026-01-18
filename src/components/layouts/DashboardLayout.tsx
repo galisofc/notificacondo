@@ -129,8 +129,9 @@ const getPorteiroNavItems = (pendingPackages: number): NavStructure => [
 ];
 
 function SidebarNavigation() {
-  const { state } = useSidebar();
-  const collapsed = state === "collapsed";
+  const { state, isMobile, setOpenMobile } = useSidebar();
+  // In mobile, sidebar is shown as a Sheet and should always show text labels
+  const collapsed = isMobile ? false : state === "collapsed";
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
@@ -601,6 +602,7 @@ function SidebarNavigation() {
                                   to={subItem.url}
                                   className="flex w-full items-center gap-3 px-3 py-2"
                                   activeClassName=""
+                                  onClick={() => isMobile && setOpenMobile(false)}
                                 >
                                   <subItem.icon className="w-4 h-4 shrink-0" />
                                   <span className="font-medium flex-1 text-sm">{subItem.title}</span>
@@ -647,6 +649,7 @@ function SidebarNavigation() {
                             : "gap-3 px-3"
                         )}
                         activeClassName=""
+                        onClick={() => isMobile && setOpenMobile(false)}
                       >
                         <item.icon className={cn("w-5 h-5 shrink-0", collapsed && "mx-auto")} />
                         {!collapsed && (
