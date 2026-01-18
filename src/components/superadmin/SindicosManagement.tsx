@@ -45,6 +45,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MaskedInput, formatPhone, formatCPF } from "@/components/ui/masked-input";
+import { ValidatedInput } from "@/components/ui/validated-input";
 import { isValidCPF, cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -54,7 +55,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, MoreHorizontal, Mail, Building2, Plus, Loader2, Eye, EyeOff, User, Phone, Calendar, CreditCard, CheckCircle, XCircle, Pencil, Save, X, Trash2, AlertTriangle, FileText } from "lucide-react";
+import { Search, MoreHorizontal, Mail, Building2, Plus, Loader2, User, Phone, Calendar, CreditCard, Pencil, Save, X, Trash2, FileText, Eye, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
@@ -112,7 +113,6 @@ export function SindicosManagement() {
     phone: "",
     cpf: "",
   });
-  const [showPassword, setShowPassword] = useState(false);
   // Use email validation hook
   const { 
     emailStatus, 
@@ -581,156 +581,62 @@ export function SindicosManagement() {
                   </div>
                   <div className="grid gap-1.5 sm:gap-2">
                     <Label htmlFor="email" className="text-xs sm:text-sm">Email *</Label>
-                    <div className="relative">
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="joao@email.com"
-                        value={formData.email}
-                        onChange={(e) => handleEmailChange(e.target.value)}
-                        className={cn(
-                          "h-9 sm:h-10 text-sm pr-10",
-                          emailStatus === "taken" ? "border-destructive" :
-                          emailStatus === "available" ? "border-emerald-500" :
-                          emailStatus === "invalid" ? "border-amber-500" : ""
-                        )}
-                      />
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                        {emailStatus === "checking" && (
-                          <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin text-muted-foreground" />
-                        )}
-                        {emailStatus === "available" && (
-                          <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-500" />
-                        )}
-                        {emailStatus === "taken" && (
-                          <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-destructive" />
-                        )}
-                        {emailStatus === "invalid" && (
-                          <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-500" />
-                        )}
-                      </div>
-                    </div>
-                    {emailStatus === "taken" && (
-                      <p className="text-[10px] sm:text-xs text-destructive">
-                        Este e-mail já está cadastrado no sistema.
-                      </p>
-                    )}
-                    {emailStatus === "available" && (
-                      <p className="text-[10px] sm:text-xs text-emerald-500">
-                        E-mail disponível para cadastro.
-                      </p>
-                    )}
-                    {emailStatus === "invalid" && (
-                      <p className="text-[10px] sm:text-xs text-amber-500">
-                        Formato de e-mail inválido.
-                      </p>
-                    )}
+                    <ValidatedInput
+                      id="email"
+                      type="email"
+                      placeholder="joao@email.com"
+                      value={formData.email}
+                      onChange={handleEmailChange}
+                      status={emailStatus}
+                      messages={{
+                        available: "E-mail disponível para cadastro.",
+                        taken: "Este e-mail já está cadastrado no sistema.",
+                        invalid: "Formato de e-mail inválido.",
+                      }}
+                    />
                   </div>
                   <div className="grid gap-1.5 sm:gap-2">
                     <Label htmlFor="password" className="text-xs sm:text-sm">Senha *</Label>
-                    <div className="relative">
-                      <Input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Mínimo 6 caracteres"
-                        value={formData.password}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        className="h-9 sm:h-10 text-sm pr-10"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                        tabIndex={-1}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
+                    <ValidatedInput
+                      id="password"
+                      type="password"
+                      placeholder="Mínimo 6 caracteres"
+                      value={formData.password}
+                      onChange={(value) => setFormData({ ...formData, password: value })}
+                      showPasswordToggle
+                    />
                     <PasswordStrengthIndicator password={formData.password} />
                   </div>
                   <div className="grid gap-1.5 sm:gap-2">
                     <Label htmlFor="cpf" className="text-xs sm:text-sm">CPF *</Label>
-                    <div className="relative">
-                      <MaskedInput
-                        id="cpf"
-                        mask="cpf"
-                        value={formData.cpf}
-                        onChange={handleCpfChange}
-                        className={cn(
-                          "h-9 sm:h-10 text-sm pr-10",
-                          cpfStatus === "taken" ? "border-destructive" :
-                          cpfStatus === "available" ? "border-emerald-500" :
-                          cpfStatus === "invalid" ? "border-amber-500" : ""
-                        )}
-                      />
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                        {cpfStatus === "checking" && (
-                          <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin text-muted-foreground" />
-                        )}
-                        {cpfStatus === "available" && (
-                          <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-500" />
-                        )}
-                        {cpfStatus === "taken" && (
-                          <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-destructive" />
-                        )}
-                        {cpfStatus === "invalid" && (
-                          <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-500" />
-                        )}
-                      </div>
-                    </div>
-                    {cpfStatus === "taken" && (
-                      <p className="text-[10px] sm:text-xs text-destructive">
-                        Este CPF já está cadastrado no sistema.
-                      </p>
-                    )}
-                    {cpfStatus === "available" && (
-                      <p className="text-[10px] sm:text-xs text-emerald-500">
-                        CPF disponível para cadastro.
-                      </p>
-                    )}
-                    {cpfStatus === "invalid" && (
-                      <p className="text-[10px] sm:text-xs text-amber-500">
-                        CPF inválido. Verifique os dígitos.
-                      </p>
-                    )}
+                    <ValidatedInput
+                      id="cpf"
+                      mask="cpf"
+                      value={formData.cpf}
+                      onChange={handleCpfChange}
+                      status={cpfStatus}
+                      messages={{
+                        available: "CPF disponível para cadastro.",
+                        taken: "Este CPF já está cadastrado no sistema.",
+                        invalid: "CPF inválido. Verifique os dígitos.",
+                      }}
+                    />
                   </div>
                   <div className="grid gap-1.5 sm:gap-2">
                     <Label htmlFor="phone" className="text-xs sm:text-sm">Telefone</Label>
-                    <div className="relative">
-                      <MaskedInput
-                        id="phone"
-                        mask="phone"
-                        value={formData.phone}
-                        onChange={handlePhoneChange}
-                        className={cn(
-                          "h-9 sm:h-10 text-sm pr-10",
-                          phoneStatus === "invalid" ? "border-amber-500" :
-                          phoneStatus === "valid" ? "border-emerald-500" : ""
-                        )}
-                      />
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                        {phoneStatus === "valid" && (
-                          <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-500" />
-                        )}
-                        {phoneStatus === "invalid" && (
-                          <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-500" />
-                        )}
-                      </div>
-                    </div>
-                    {phoneStatus === "invalid" && (
-                      <p className="text-[10px] sm:text-xs text-amber-500">
-                        Telefone inválido. Use DDD + número.
-                      </p>
-                    )}
-                    {phoneStatus === "incomplete" && formData.phone.replace(/\D/g, "").length > 0 && (
-                      <p className="text-[10px] sm:text-xs text-muted-foreground">
-                        Digite o telefone completo com DDD.
-                      </p>
-                    )}
+                    <ValidatedInput
+                      id="phone"
+                      mask="phone"
+                      value={formData.phone}
+                      onChange={handlePhoneChange}
+                      status={phoneStatus}
+                      messages={{
+                        valid: "",
+                        invalid: "Telefone inválido. Use DDD + número.",
+                        incomplete: "Digite o telefone completo com DDD.",
+                      }}
+                      showSuccessMessage={false}
+                    />
                   </div>
                 </div>
                 <DialogFooter className="flex-col-reverse sm:flex-row gap-2 mt-2 sm:mt-4">
