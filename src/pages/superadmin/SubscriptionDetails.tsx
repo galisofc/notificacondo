@@ -991,34 +991,34 @@ export default function SubscriptionDetails() {
         <title>Detalhes da Assinatura | Super Admin</title>
       </Helmet>
 
-      <div className="space-y-6 animate-fade-up">
+      <div className="space-y-4 sm:space-y-6 animate-fade-up">
         <SuperAdminBreadcrumbs items={[
           { label: "Assinaturas", href: "/superadmin/subscriptions" },
           { label: condominium?.name || "Detalhes" }
         ]} />
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="flex-shrink-0">
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <div>
-              <h1 className="font-display text-2xl font-bold text-foreground">
+            <div className="min-w-0 flex-1">
+              <h1 className="font-display text-lg sm:text-2xl font-bold text-foreground truncate">
                 {condominium.name}
               </h1>
-              <p className="text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">
                 {condominium.address && `${condominium.address}, `}
                 {condominium.city} - {condominium.state}
               </p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 ml-11 sm:ml-0">
             {isEditing ? (
               <>
-                <Button variant="outline" onClick={() => setIsEditing(false)}>
+                <Button variant="outline" onClick={() => setIsEditing(false)} className="flex-1 sm:flex-none text-sm h-9">
                   Cancelar
                 </Button>
-                <Button onClick={handleSave} disabled={updateMutation.isPending}>
+                <Button onClick={handleSave} disabled={updateMutation.isPending} className="flex-1 sm:flex-none text-sm h-9">
                   {updateMutation.isPending ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   ) : (
@@ -1028,21 +1028,21 @@ export default function SubscriptionDetails() {
                 </Button>
               </>
             ) : (
-              <Button onClick={handleStartEditing}>Editar Assinatura</Button>
+              <Button onClick={handleStartEditing} className="flex-1 sm:flex-none text-sm h-9">Editar</Button>
             )}
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
           {/* Plan Card */}
           <Card className="lg:col-span-2 bg-gradient-card border-border/50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="w-5 h-5 text-primary" />
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                 Plano de Assinatura
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0 space-y-4 sm:space-y-6">
               {isEditing && editedData ? (
                 <div className="space-y-4">
                   {/* Lifetime Toggle */}
@@ -1219,8 +1219,8 @@ export default function SubscriptionDetails() {
               {subscription.is_trial && (
                 <>
                   <Separator />
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3">
                       {(() => {
                         const trialEndsAt = subscription.trial_ends_at;
                         if (!trialEndsAt) return null;
@@ -1230,14 +1230,14 @@ export default function SubscriptionDetails() {
                         
                         return (
                           <>
-                            <div className={`p-2 rounded-lg ${
+                            <div className={`p-1.5 sm:p-2 rounded-lg flex-shrink-0 ${
                               trialInfo.isExpired 
                                 ? "bg-destructive/10" 
                                 : trialInfo.isUrgent 
                                   ? "bg-orange-500/10" 
                                   : "bg-amber-500/10"
                             }`}>
-                              <Clock className={`w-5 h-5 ${
+                              <Clock className={`w-4 h-4 sm:w-5 sm:h-5 ${
                                 trialInfo.isExpired 
                                   ? "text-destructive" 
                                   : trialInfo.isUrgent 
@@ -1245,12 +1245,12 @@ export default function SubscriptionDetails() {
                                     : "text-amber-500"
                               }`} />
                             </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">Período de Trial</span>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                                <span className="font-medium text-sm sm:text-base">Trial</span>
                                 <Badge 
                                   variant="outline" 
-                                  className={`${
+                                  className={`text-[10px] sm:text-xs ${
                                     trialInfo.isExpired 
                                       ? "bg-destructive/10 text-destructive border-destructive/20" 
                                       : trialInfo.isUrgent 
@@ -1261,32 +1261,32 @@ export default function SubscriptionDetails() {
                                   {trialInfo.displayText}
                                 </Badge>
                               </div>
-                              <p className="text-sm text-muted-foreground">
-                                {trialInfo.isExpired ? "Expirou em" : "Expira em"}: {formatDateTime(endDate.toISOString())}
+                              <p className="text-[10px] sm:text-sm text-muted-foreground truncate">
+                                {trialInfo.isExpired ? "Expirou:" : "Expira:"} {formatDateTime(endDate.toISOString())}
                               </p>
                             </div>
                           </>
                         );
                       })()}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 ml-7 sm:ml-0">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setIsExtendTrialDialogOpen(true)}
-                        className="border-amber-500/30 text-amber-600 hover:bg-amber-500/10"
+                        className="flex-1 sm:flex-none border-amber-500/30 text-amber-600 hover:bg-amber-500/10 text-xs sm:text-sm h-8 sm:h-9"
                       >
-                        <Clock className="w-4 h-4 mr-2" />
+                        <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                         Estender
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setIsEndTrialDialogOpen(true)}
-                        className="border-destructive/30 text-destructive hover:bg-destructive/10"
+                        className="flex-1 sm:flex-none border-destructive/30 text-destructive hover:bg-destructive/10 text-xs sm:text-sm h-8 sm:h-9"
                       >
-                        <XOctagon className="w-4 h-4 mr-2" />
-                        Encerrar Trial
+                        <XOctagon className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                        Encerrar
                       </Button>
                     </div>
                   </div>
@@ -1297,15 +1297,15 @@ export default function SubscriptionDetails() {
               {!subscription.is_trial && (
                 <>
                   <Separator />
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-muted">
-                        <Clock className="w-5 h-5 text-muted-foreground" />
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="p-1.5 sm:p-2 rounded-lg bg-muted flex-shrink-0">
+                        <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
                       </div>
                       <div>
-                        <span className="font-medium">Período de Trial</span>
-                        <p className="text-sm text-muted-foreground">
-                          Esta assinatura não está em período de trial
+                        <span className="font-medium text-sm sm:text-base">Período de Trial</span>
+                        <p className="text-[10px] sm:text-sm text-muted-foreground">
+                          Não está em período de trial
                         </p>
                       </div>
                     </div>
@@ -1313,9 +1313,9 @@ export default function SubscriptionDetails() {
                       variant="outline"
                       size="sm"
                       onClick={() => setIsActivateTrialDialogOpen(true)}
-                      className="border-amber-500/30 text-amber-600 hover:bg-amber-500/10"
+                      className="w-full sm:w-auto border-amber-500/30 text-amber-600 hover:bg-amber-500/10 text-xs sm:text-sm h-8 sm:h-9"
                     >
-                      <Clock className="w-4 h-4 mr-2" />
+                      <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                       Ativar Trial
                     </Button>
                   </div>
@@ -1325,10 +1325,10 @@ export default function SubscriptionDetails() {
               {(subscription.current_period_end || (subscription.is_trial && subscription.trial_ends_at)) && (
                 <>
                   <Separator />
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="w-4 h-4" />
-                      <span>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+                      <Calendar className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                      <span className="truncate">
                         Período: {" "}
                         {(() => {
                           // If in trial, use trial dates
@@ -1350,21 +1350,24 @@ export default function SubscriptionDetails() {
                         })()}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setIsAddDaysDialogOpen(true)}
+                        className="text-xs sm:text-sm h-7 sm:h-9 px-2 sm:px-3 whitespace-nowrap"
                       >
-                        <Calendar className="w-4 h-4 mr-2" />
-                        + Dias
+                        <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                        <span className="hidden xs:inline">+ Dias</span>
+                        <span className="xs:hidden">+</span>
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={handleOpenPeriodDialog}
+                        className="text-xs sm:text-sm h-7 sm:h-9 px-2 sm:px-3 whitespace-nowrap"
                       >
-                        <Calendar className="w-4 h-4 mr-2" />
+                        <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                         Alterar
                       </Button>
                       <Button
@@ -1372,9 +1375,10 @@ export default function SubscriptionDetails() {
                         size="sm"
                         onClick={() => setIsResetDialogOpen(true)}
                         disabled={resetUsageMutation.isPending}
+                        className="text-xs sm:text-sm h-7 sm:h-9 px-2 sm:px-3 whitespace-nowrap"
                       >
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Reiniciar
+                        <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                        <span className="hidden xs:inline">Reiniciar</span>
                       </Button>
                     </div>
                   </div>
@@ -1385,9 +1389,9 @@ export default function SubscriptionDetails() {
 
           {/* Owner Card */}
           <Card className="bg-gradient-card border-border/50">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-base">
+            <CardHeader className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
                   <User className="w-4 h-4 text-primary" />
                   Síndico Responsável
                 </CardTitle>
@@ -1395,24 +1399,25 @@ export default function SubscriptionDetails() {
                   variant="outline"
                   size="sm"
                   onClick={handleOpenTransferDialog}
+                  className="w-full sm:w-auto text-xs sm:text-sm h-8 sm:h-9"
                 >
-                  <ArrowRightLeft className="w-4 h-4 mr-2" />
+                  <ArrowRightLeft className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                   Transferir
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0 space-y-3 sm:space-y-4">
               <div>
-                <p className="text-sm text-muted-foreground">Nome</p>
-                <p className="font-medium">{owner?.full_name || "—"}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Nome</p>
+                <p className="font-medium text-sm sm:text-base truncate">{owner?.full_name || "—"}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Email</p>
-                <p className="font-medium">{owner?.email || "—"}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Email</p>
+                <p className="font-medium text-sm sm:text-base truncate">{owner?.email || "—"}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Telefone</p>
-                <p className="font-medium">{owner?.phone ? formatPhone(owner.phone) : "—"}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Telefone</p>
+                <p className="font-medium text-sm sm:text-base">{owner?.phone ? formatPhone(owner.phone) : "—"}</p>
               </div>
             </CardContent>
           </Card>
@@ -1525,24 +1530,24 @@ export default function SubscriptionDetails() {
 
         {/* Usage Stats */}
         <Card className="bg-gradient-card border-border/50">
-          <CardHeader>
-            <CardTitle>Uso do Período Atual</CardTitle>
-            <CardDescription>
-              Acompanhe o consumo de recursos neste período de assinatura
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-base sm:text-lg">Uso do Período Atual</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
+              Acompanhe o consumo de recursos neste período
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
             <TooltipProvider>
-              <div className="grid gap-6 md:grid-cols-3">
+              <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-3">
                 {/* Notifications */}
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Bell className="w-5 h-5 text-blue-500" />
-                      <span className="font-medium">Notificações</span>
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
+                      <span className="font-medium text-sm sm:text-base">Notificações</span>
                       <Tooltip>
                         <TooltipTrigger>
-                          <Info className="h-4 w-4 text-muted-foreground/50 cursor-help" />
+                          <Info className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground/50 cursor-help" />
                         </TooltipTrigger>
                         <TooltipContent side="top" className="max-w-[250px]">
                           <p>Conta ocorrências do tipo "Notificação" com status: notificado, arquivada, advertido ou multado</p>
@@ -1550,7 +1555,7 @@ export default function SubscriptionDetails() {
                       </Tooltip>
                     </div>
                     <span
-                      className={`text-sm font-medium ${getUsageColor(
+                      className={`text-xs sm:text-sm font-medium ${getUsageColor(
                         getUsagePercentage(realUsage.notifications, subscription.notifications_limit)
                       )}`}
                     >
@@ -1559,22 +1564,22 @@ export default function SubscriptionDetails() {
                   </div>
                   <Progress
                     value={getUsagePercentage(realUsage.notifications, subscription.notifications_limit)}
-                    className="h-2"
+                    className="h-1.5 sm:h-2"
                   />
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">
                     {Math.max(0, subscription.notifications_limit - realUsage.notifications)} restantes
                   </p>
                 </div>
 
                 {/* Warnings */}
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <AlertTriangle className="w-5 h-5 text-amber-500" />
-                      <span className="font-medium">Advertências</span>
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500" />
+                      <span className="font-medium text-sm sm:text-base">Advertências</span>
                       <Tooltip>
                         <TooltipTrigger>
-                          <Info className="h-4 w-4 text-muted-foreground/50 cursor-help" />
+                          <Info className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground/50 cursor-help" />
                         </TooltipTrigger>
                         <TooltipContent side="top" className="max-w-[250px]">
                           <p>Conta ocorrências do tipo "Advertência" com status: notificado, arquivada, advertido ou multado</p>
@@ -1582,7 +1587,7 @@ export default function SubscriptionDetails() {
                       </Tooltip>
                     </div>
                     <span
-                      className={`text-sm font-medium ${getUsageColor(
+                      className={`text-xs sm:text-sm font-medium ${getUsageColor(
                         getUsagePercentage(realUsage.warnings, subscription.warnings_limit)
                       )}`}
                     >
@@ -1591,22 +1596,22 @@ export default function SubscriptionDetails() {
                   </div>
                   <Progress
                     value={getUsagePercentage(realUsage.warnings, subscription.warnings_limit)}
-                    className="h-2"
+                    className="h-1.5 sm:h-2"
                   />
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">
                     {Math.max(0, subscription.warnings_limit - realUsage.warnings)} restantes
                   </p>
                 </div>
 
                 {/* Fines */}
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="w-5 h-5 text-red-500" />
-                      <span className="font-medium">Multas</span>
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
+                      <span className="font-medium text-sm sm:text-base">Multas</span>
                       <Tooltip>
                         <TooltipTrigger>
-                          <Info className="h-4 w-4 text-muted-foreground/50 cursor-help" />
+                          <Info className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground/50 cursor-help" />
                         </TooltipTrigger>
                         <TooltipContent side="top" className="max-w-[250px]">
                           <p>Conta ocorrências do tipo "Multa" com status: notificado, arquivada, advertido ou multado</p>
@@ -1614,7 +1619,7 @@ export default function SubscriptionDetails() {
                       </Tooltip>
                     </div>
                     <span
-                      className={`text-sm font-medium ${getUsageColor(
+                      className={`text-xs sm:text-sm font-medium ${getUsageColor(
                         getUsagePercentage(realUsage.fines, subscription.fines_limit)
                       )}`}
                     >
@@ -1623,9 +1628,9 @@ export default function SubscriptionDetails() {
                   </div>
                   <Progress
                     value={getUsagePercentage(realUsage.fines, subscription.fines_limit)}
-                    className="h-2"
+                    className="h-1.5 sm:h-2"
                   />
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">
                     {Math.max(0, subscription.fines_limit - realUsage.fines)} restantes
                   </p>
                 </div>
@@ -1636,72 +1641,97 @@ export default function SubscriptionDetails() {
 
         {/* Invoices */}
         <Card className="bg-gradient-card border-border/50">
-          <CardHeader>
-            <div className="flex items-center justify-between">
+          <CardHeader className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-primary" />
-                  Faturas do Condomínio
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                  Faturas
                 </CardTitle>
-                <CardDescription>
-                  Histórico das últimas faturas geradas
+                <CardDescription className="text-xs sm:text-sm">
+                  Histórico das últimas faturas
                 </CardDescription>
               </div>
               <Button 
                 variant="outline" 
                 size="sm"
                 onClick={() => navigate("/superadmin/invoices")}
+                className="w-full sm:w-auto text-xs sm:text-sm h-8 sm:h-9"
               >
                 Ver Todas
               </Button>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
             {invoices.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>Nenhuma fatura encontrada</p>
+              <div className="text-center py-6 sm:py-8 text-muted-foreground">
+                <FileText className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 sm:mb-3 opacity-50" />
+                <p className="text-sm">Nenhuma fatura encontrada</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Período</TableHead>
-                      <TableHead>Vencimento</TableHead>
-                      <TableHead>Valor</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Pagamento</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {invoices.map((invoice: any) => (
-                      <TableRow key={invoice.id}>
-                        <TableCell className="font-medium">
-                          {formatCustom(invoice.period_start, "dd/MM/yy")}
-                          {" - "}
-                          {formatCustom(invoice.period_end, "dd/MM/yy")}
-                        </TableCell>
-                        <TableCell>
-                          {formatDate(invoice.due_date)}
-                        </TableCell>
-                        <TableCell className="font-semibold">
-                          {formatCurrency(invoice.amount)}
-                        </TableCell>
-                        <TableCell>
-                          {getInvoiceStatusBadge(invoice.status, invoice.due_date)}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {invoice.paid_at 
-                            ? formatDate(invoice.paid_at)
-                            : "—"
-                          }
-                        </TableCell>
+              <>
+                {/* Mobile Cards */}
+                <div className="space-y-3 md:hidden">
+                  {invoices.map((invoice: any) => (
+                    <div key={invoice.id} className="p-3 rounded-lg border bg-card space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">
+                          {formatCustom(invoice.period_start, "dd/MM/yy")} - {formatCustom(invoice.period_end, "dd/MM/yy")}
+                        </span>
+                        {getInvoiceStatusBadge(invoice.status, invoice.due_date)}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-lg font-semibold">{formatCurrency(invoice.amount)}</span>
+                        <div className="text-right text-xs text-muted-foreground">
+                          <p>Venc: {formatDate(invoice.due_date)}</p>
+                          {invoice.paid_at && <p>Pago: {formatDate(invoice.paid_at)}</p>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Desktop Table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Período</TableHead>
+                        <TableHead>Vencimento</TableHead>
+                        <TableHead>Valor</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Pagamento</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {invoices.map((invoice: any) => (
+                        <TableRow key={invoice.id}>
+                          <TableCell className="font-medium">
+                            {formatCustom(invoice.period_start, "dd/MM/yy")}
+                            {" - "}
+                            {formatCustom(invoice.period_end, "dd/MM/yy")}
+                          </TableCell>
+                          <TableCell>
+                            {formatDate(invoice.due_date)}
+                          </TableCell>
+                          <TableCell className="font-semibold">
+                            {formatCurrency(invoice.amount)}
+                          </TableCell>
+                          <TableCell>
+                            {getInvoiceStatusBadge(invoice.status, invoice.due_date)}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {invoice.paid_at 
+                              ? formatDate(invoice.paid_at)
+                              : "—"
+                            }
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
@@ -1714,24 +1744,24 @@ export default function SubscriptionDetails() {
 
         {/* Metadata */}
         <Card className="bg-gradient-card border-border/50">
-          <CardHeader>
-            <CardTitle className="text-base">Informações da Assinatura</CardTitle>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-sm sm:text-base">Informações da Assinatura</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 sm:grid-cols-3">
+          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+            <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
               <div>
-                <p className="text-sm text-muted-foreground">ID da Assinatura</p>
-                <p className="font-mono text-xs">{subscription.id}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">ID da Assinatura</p>
+                <p className="font-mono text-[10px] sm:text-xs truncate">{subscription.id}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Criado em</p>
-                <p className="font-medium">
+                <p className="text-xs sm:text-sm text-muted-foreground">Criado em</p>
+                <p className="font-medium text-sm sm:text-base">
                   {formatDateTime(subscription.created_at)}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Última atualização</p>
-                <p className="font-medium">
+                <p className="text-xs sm:text-sm text-muted-foreground">Última atualização</p>
+                <p className="font-medium text-sm sm:text-base">
                   {formatDateTime(subscription.updated_at)}
                 </p>
               </div>
