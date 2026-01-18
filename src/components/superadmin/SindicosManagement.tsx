@@ -5,6 +5,7 @@ import { useDateFormatter } from "@/hooks/useFormattedDate";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useEmailValidation } from "@/hooks/useEmailValidation";
+import { useCpfValidation } from "@/hooks/useCpfValidation";
 import {
   Card,
   CardContent,
@@ -109,9 +110,6 @@ export function SindicosManagement() {
     phone: "",
     cpf: "",
   });
-  const [cpfStatus, setCpfStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
-  const [cpfCheckTimeout, setCpfCheckTimeout] = useState<NodeJS.Timeout | null>(null);
-  
   // Use email validation hook
   const { 
     emailStatus, 
@@ -119,45 +117,16 @@ export function SindicosManagement() {
     resetStatus: resetEmailStatus 
   } = useEmailValidation();
 
+  // Use CPF validation hook
+  const {
+    cpfStatus,
+    validateCpf,
+    resetStatus: resetCpfStatus
+  } = useCpfValidation();
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-
-  // Função para verificar CPF em tempo real
-  const checkCpfAvailability = useCallback(async (cpf: string) => {
-    const cleanCpf = cpf.replace(/\D/g, "");
-    
-    // CPF incompleto
-    if (cleanCpf.length < 11) {
-      setCpfStatus("idle");
-      return;
-    }
-
-    // Validar formato do CPF
-    if (!isValidCPF(cleanCpf)) {
-      setCpfStatus("invalid");
-      return;
-    }
-
-    setCpfStatus("checking");
-
-    try {
-      const { data: existingProfile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("cpf", cleanCpf)
-        .maybeSingle();
-
-      if (existingProfile) {
-        setCpfStatus("taken");
-      } else {
-        setCpfStatus("available");
-      }
-    } catch (error) {
-      console.error("Error checking CPF:", error);
-      setCpfStatus("idle");
-    }
-  }, []);
 
   // Handle email change with validation
   const handleEmailChange = useCallback((value: string) => {
@@ -165,47 +134,19 @@ export function SindicosManagement() {
     validateEmail(value);
   }, [validateEmail]);
 
-  // Debounce para verificação do CPF
+  // Handle CPF change with validation
   const handleCpfChange = useCallback((value: string) => {
     setFormData(prev => ({ ...prev, cpf: value }));
-    
-    // Limpar timeout anterior
-    if (cpfCheckTimeout) {
-      clearTimeout(cpfCheckTimeout);
-    }
-
-    const cleanCpf = value.replace(/\D/g, "");
-    
-    // Se CPF estiver incompleto, resetar status
-    if (cleanCpf.length < 11) {
-      setCpfStatus("idle");
-      return;
-    }
-
-    // Agendar verificação com debounce de 500ms
-    const timeout = setTimeout(() => {
-      checkCpfAvailability(value);
-    }, 500);
-
-    setCpfCheckTimeout(timeout);
-  }, [cpfCheckTimeout, checkCpfAvailability]);
-
-  // Limpar timeout ao desmontar
-  useEffect(() => {
-    return () => {
-      if (cpfCheckTimeout) {
-        clearTimeout(cpfCheckTimeout);
-      }
-    };
-  }, [cpfCheckTimeout]);
+    validateCpf(value);
+  }, [validateCpf]);
 
   // Resetar status do CPF e email quando o dialog fecha
   useEffect(() => {
     if (!isCreateDialogOpen) {
-      setCpfStatus("idle");
+      resetCpfStatus();
       resetEmailStatus();
     }
-  }, [isCreateDialogOpen, resetEmailStatus]);
+  }, [isCreateDialogOpen, resetEmailStatus, resetCpfStatus]);
 
 
   const { data: sindicos, isLoading } = useQuery({
