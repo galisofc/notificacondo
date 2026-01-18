@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, Lock, User, ArrowLeft, Loader2, Check, Building2, Phone, MapPin, ChevronRight, ChevronLeft, RefreshCw, FileText, Sparkles } from "lucide-react";
+import { Mail, Lock, User, ArrowLeft, ArrowRight, Loader2, Check, Building2, Phone, MapPin, ChevronRight, ChevronLeft, RefreshCw, FileText, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import logoImage from "@/assets/logo.png";
 import { useQuery } from "@tanstack/react-query";
@@ -1043,40 +1043,66 @@ const Auth = () => {
             )}
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-muted-foreground">
-              {isLogin ? "Não tem uma conta?" : "Já tem uma conta?"}{" "}
-              <button
-                type="button"
-                onClick={() => {
-                  if (isLogin) {
-                    navigate('/planos');
-                  } else {
+          {isLogin ? (
+            <div className="mt-8 relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-amber-500/10 to-primary/5 rounded-2xl blur-xl" />
+              <div className="relative bg-gradient-to-br from-card/80 to-card border border-primary/20 rounded-2xl p-6 backdrop-blur-sm">
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-amber-500/30 rounded-full blur-md animate-pulse" />
+                    <div className="relative bg-gradient-to-br from-amber-400 to-orange-500 p-2 rounded-full">
+                      <Sparkles className="w-4 h-4 text-white" />
+                    </div>
+                  </div>
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Novo por aqui?
+                  </span>
+                </div>
+                
+                <button
+                  type="button"
+                  onClick={() => navigate('/planos')}
+                  className="w-full group relative overflow-hidden bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary text-primary-foreground font-semibold py-3 px-6 rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-primary/25 hover:-translate-y-0.5"
+                >
+                  <span className="relative z-10 flex items-center justify-center gap-2">
+                    Começar Trial Gratuito
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </span>
+                </button>
+                
+                <div className="flex items-center justify-center gap-4 mt-4">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    7 dias grátis
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    Sem cartão
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    Cancele quando quiser
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-6 text-center">
+              <p className="text-muted-foreground">
+                Já tem uma conta?{" "}
+                <button
+                  type="button"
+                  onClick={() => {
                     setIsLogin(true);
                     resetForm();
-                  }
-                }}
-                className="inline-flex items-center gap-1.5 text-primary hover:underline font-medium group"
-              >
-                {isLogin ? (
-                  <>
-                    <Sparkles className="w-4 h-4 animate-pulse text-amber-500" />
-                    Escolher um plano
-                    <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30 animate-pulse">
-                      7 dias grátis
-                    </Badge>
-                  </>
-                ) : (
-                  "Fazer login"
-                )}
-              </button>
-            </p>
-            {isLogin && (
-              <p className="mt-2 text-xs text-muted-foreground">
-                Sem cartão de crédito necessário
+                  }}
+                  className="text-primary hover:underline font-medium"
+                >
+                  Fazer login
+                </button>
               </p>
-            )}
-          </div>
+            </div>
+          )}
 
           {!isLogin && (
             <p className="mt-6 text-xs text-muted-foreground text-center">
