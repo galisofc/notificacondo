@@ -57,6 +57,7 @@ import { Search, MoreHorizontal, Mail, Building2, Plus, Loader2, Eye, User, Phon
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
+import { PasswordStrengthIndicator } from "@/components/ui/password-strength-indicator";
 
 interface SindicoWithProfile {
   id: string;
@@ -619,6 +620,7 @@ export function SindicosManagement() {
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                       className="h-9 sm:h-10 text-sm"
                     />
+                    <PasswordStrengthIndicator password={formData.password} />
                   </div>
                   <div className="grid gap-1.5 sm:gap-2">
                     <Label htmlFor="cpf" className="text-xs sm:text-sm">CPF *</Label>
