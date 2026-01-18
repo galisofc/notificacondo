@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useEmailValidation } from "@/hooks/useEmailValidation";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -104,122 +105,36 @@ export default function Porteiros() {
     message: string;
   } | null>(null);
 
-  // Email validation state
-  const [emailStatus, setEmailStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid" | "conflict">("idle");
-  const [emailCheckTimeout, setEmailCheckTimeout] = useState<NodeJS.Timeout | null>(null);
+  // Use email validation hook with porter-specific options
+  const { 
+    emailStatus, 
+    validateEmail, 
+    resetStatus: resetEmailStatus,
+    setEmailStatus 
+  } = useEmailValidation({
+    conflictRoles: ["sindico", "super_admin"],
+    condominiumId: newPorter.condominium_id,
+  });
 
-  // Função para validar formato de email
-  const isValidEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
-  // Função para verificar email em tempo real
-  const checkEmailAvailability = useCallback(async (email: string, condominiumId: string) => {
-    const trimmedEmail = email.trim().toLowerCase();
-    
-    // Validar formato do email
-    if (!isValidEmail(trimmedEmail)) {
-      setEmailStatus("invalid");
-      return;
-    }
-
-    setEmailStatus("checking");
-
-    try {
-      const { data: existingProfile } = await supabase
-        .from("profiles")
-        .select("id, user_id")
-        .eq("email", trimmedEmail)
-        .maybeSingle();
-
-      if (existingProfile) {
-        // Check if user is sindico or super_admin
-        const { data: existingRoles } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", existingProfile.user_id);
-
-        const roles = (existingRoles || []).map((r) => r.role);
-
-        if (roles.includes("sindico") || roles.includes("super_admin")) {
-          setEmailStatus("conflict");
-          return;
-        }
-
-        // Check if already linked to this condominium
-        if (condominiumId) {
-          const { data: existingLink } = await supabase
-            .from("user_condominiums")
-            .select("id")
-            .eq("user_id", existingProfile.user_id)
-            .eq("condominium_id", condominiumId)
-            .maybeSingle();
-
-          if (existingLink) {
-            setEmailStatus("taken");
-            return;
-          }
-        }
-
-        // User exists but can be linked to this condominium
-        setEmailStatus("available");
-      } else {
-        setEmailStatus("available");
-      }
-    } catch (error) {
-      console.error("Error checking email:", error);
-      setEmailStatus("idle");
-    }
-  }, []);
-
-  // Debounce para verificação do email
+  // Handle email change with validation
   const handleEmailChange = useCallback((value: string) => {
     setNewPorter(prev => ({ ...prev, email: value }));
-    
-    // Limpar timeout anterior
-    if (emailCheckTimeout) {
-      clearTimeout(emailCheckTimeout);
-    }
-
-    const trimmedEmail = value.trim();
-    
-    // Se email estiver vazio ou muito curto, resetar status
-    if (trimmedEmail.length < 5) {
-      setEmailStatus("idle");
-      return;
-    }
-
-    // Agendar verificação com debounce de 500ms
-    const timeout = setTimeout(() => {
-      checkEmailAvailability(value, newPorter.condominium_id);
-    }, 500);
-
-    setEmailCheckTimeout(timeout);
-  }, [emailCheckTimeout, checkEmailAvailability, newPorter.condominium_id]);
+    validateEmail(value);
+  }, [validateEmail]);
 
   // Re-check email when condominium changes
   useEffect(() => {
     if (newPorter.email.trim().length >= 5 && newPorter.condominium_id) {
-      checkEmailAvailability(newPorter.email, newPorter.condominium_id);
+      validateEmail(newPorter.email);
     }
-  }, [newPorter.condominium_id]);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (emailCheckTimeout) {
-        clearTimeout(emailCheckTimeout);
-      }
-    };
-  }, [emailCheckTimeout]);
+  }, [newPorter.condominium_id, validateEmail]);
 
   // Reset email status when dialog closes
   useEffect(() => {
     if (!isDialogOpen) {
-      setEmailStatus("idle");
+      resetEmailStatus();
     }
-  }, [isDialogOpen]);
+  }, [isDialogOpen, resetEmailStatus]);
 
   // Fetch síndico's condominiums
   useEffect(() => {
