@@ -146,35 +146,33 @@ export function TemplatesList() {
             </div>
           </div>
 
-          {/* Category Tabs - Horizontal scroll on mobile */}
+          {/* Category Tabs - Wrapping layout */}
           <Tabs value={selectedCategory} onValueChange={setSelectedCategory}>
-            <div className="-mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto scrollbar-hide">
-              <TabsList className="inline-flex w-max sm:flex-wrap h-auto gap-1 bg-transparent p-0">
-                <TabsTrigger 
-                  value="all" 
-                  className="text-xs sm:text-sm px-3 py-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground whitespace-nowrap"
-                >
-                  Todos
-                </TabsTrigger>
-                {TEMPLATE_CATEGORIES.map((category) => {
-                  const Icon = category.icon;
-                  const count = templates?.filter(t => category.slugs.includes(t.slug)).length || 0;
-                  return (
-                    <TabsTrigger
-                      key={category.id}
-                      value={category.id}
-                      className="gap-1 sm:gap-1.5 text-xs sm:text-sm px-2 sm:px-3 py-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground whitespace-nowrap"
-                    >
-                      <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                      <span className="hidden xs:inline sm:inline">{category.name}</span>
-                      <Badge variant="secondary" className="ml-0.5 sm:ml-1 h-4 sm:h-5 px-1 sm:px-1.5 text-[10px] sm:text-xs">
-                        {count}
-                      </Badge>
-                    </TabsTrigger>
-                  );
-                })}
-              </TabsList>
-            </div>
+            <TabsList className="flex flex-wrap h-auto gap-1.5 sm:gap-2 bg-transparent p-0">
+              <TabsTrigger 
+                value="all" 
+                className="text-xs sm:text-sm px-2.5 sm:px-3 py-1.5 rounded-full border border-border bg-background hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary"
+              >
+                Todos
+              </TabsTrigger>
+              {TEMPLATE_CATEGORIES.map((category) => {
+                const Icon = category.icon;
+                const count = templates?.filter(t => category.slugs.includes(t.slug)).length || 0;
+                return (
+                  <TabsTrigger
+                    key={category.id}
+                    value={category.id}
+                    className="gap-1 sm:gap-1.5 text-xs sm:text-sm px-2 sm:px-3 py-1.5 rounded-full border border-border bg-background hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary"
+                  >
+                    <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                    <span>{category.name}</span>
+                    <Badge variant="secondary" className="ml-0.5 sm:ml-1 h-4 sm:h-5 px-1 sm:px-1.5 text-[10px] sm:text-xs">
+                      {count}
+                    </Badge>
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
 
             <TabsContent value="all" className="mt-4 sm:mt-6">
               {/* Show grouped by category */}
