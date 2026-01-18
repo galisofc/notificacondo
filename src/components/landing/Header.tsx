@@ -47,9 +47,9 @@ const Header = () => {
             <a href="#fluxo" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
               Como Funciona
             </a>
-            <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
+            <Link to="/planos" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
               Planos
-            </a>
+            </Link>
             <Link to="/contato" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
               Contato
             </Link>
@@ -100,13 +100,13 @@ const Header = () => {
               >
                 Como Funciona
               </a>
-              <a 
-                href="#pricing" 
+              <Link 
+                to="/planos" 
                 className="text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Planos
-              </a>
+              </Link>
               <Link 
                 to="/contato" 
                 className="text-muted-foreground hover:text-foreground transition-colors"
