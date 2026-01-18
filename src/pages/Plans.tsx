@@ -30,6 +30,58 @@ import Footer from "@/components/landing/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { motion } from "framer-motion";
+
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.2
+    }
+  }
+};
+
+const cardVariants = {
+  hidden: { 
+    opacity: 0, 
+    y: 30,
+    scale: 0.95
+  },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    scale: 1,
+    transition: {
+      type: "spring" as const,
+      stiffness: 100,
+      damping: 15
+    }
+  }
+};
+
+const fadeInUp = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: { duration: 0.5, ease: "easeOut" }
+  }
+};
+
+const tableVariants = {
+  hidden: { opacity: 0, y: 40 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: { 
+      duration: 0.6, 
+      ease: "easeOut"
+    }
+  }
+};
 
 // Feature comparison data
 const featureCategories = [
@@ -224,124 +276,150 @@ const Plans = () => {
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
             ) : (
-              <div className={`grid md:grid-cols-2 ${plans && plans.length >= 4 ? 'lg:grid-cols-4' : plans && plans.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-6 max-w-7xl mx-auto`}>
-                {plans?.map((plan) => {
+              <motion.div 
+                className={`grid md:grid-cols-2 ${plans && plans.length >= 4 ? 'lg:grid-cols-4' : plans && plans.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-6 max-w-7xl mx-auto`}
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                {plans?.map((plan, index) => {
                   const PlanIcon = getPlanIcon(plan.slug);
                   return (
-                    <Card 
+                    <motion.div
                       key={plan.id}
-                      className={`relative transition-all duration-300 hover:shadow-lg ${
-                        isPopular(plan.slug) 
-                          ? 'border-primary/50 shadow-glow ring-2 ring-primary/20' 
-                          : 'border-border/50 hover:border-primary/30'
-                      }`}
+                      variants={cardVariants}
+                      whileHover={{ 
+                        y: -8, 
+                        transition: { type: "spring", stiffness: 300, damping: 20 } 
+                      }}
                     >
-                      {isPopular(plan.slug) && (
-                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-primary text-xs font-semibold text-primary-foreground flex items-center gap-1">
-                          <Sparkles className="w-3 h-3" />
-                          Mais Popular
-                        </div>
-                      )}
+                      <Card 
+                        className={`relative h-full transition-all duration-300 hover:shadow-lg ${
+                          isPopular(plan.slug) 
+                            ? 'border-primary/50 shadow-glow ring-2 ring-primary/20' 
+                            : 'border-border/50 hover:border-primary/30'
+                        }`}
+                      >
+                        {isPopular(plan.slug) && (
+                          <motion.div 
+                            className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-primary text-xs font-semibold text-primary-foreground flex items-center gap-1"
+                            initial={{ scale: 0, y: -10 }}
+                            animate={{ scale: 1, y: 0 }}
+                            transition={{ delay: 0.5, type: "spring", stiffness: 200 }}
+                          >
+                            <Sparkles className="w-3 h-3" />
+                            Mais Popular
+                          </motion.div>
+                        )}
 
-                      <CardHeader className="text-center pb-4">
-                        <div 
-                          className="w-14 h-14 rounded-xl flex items-center justify-center mx-auto mb-4"
-                          style={{ background: `linear-gradient(135deg, ${plan.color}, ${plan.color}dd)` }}
-                        >
-                          <PlanIcon className="w-7 h-7 text-white" />
-                        </div>
+                        <CardHeader className="text-center pb-4">
+                          <motion.div 
+                            className="w-14 h-14 rounded-xl flex items-center justify-center mx-auto mb-4"
+                            style={{ background: `linear-gradient(135deg, ${plan.color}, ${plan.color}dd)` }}
+                            whileHover={{ rotate: [0, -10, 10, 0], scale: 1.1 }}
+                            transition={{ duration: 0.5 }}
+                          >
+                            <PlanIcon className="w-7 h-7 text-white" />
+                          </motion.div>
 
-                        <CardTitle className="font-display text-2xl mb-2">
-                          {plan.name}
-                        </CardTitle>
-                        <p className="text-sm text-muted-foreground">
-                          {plan.description || `Plano ${plan.name}`}
-                        </p>
-                      </CardHeader>
+                          <CardTitle className="font-display text-2xl mb-2">
+                            {plan.name}
+                          </CardTitle>
+                          <p className="text-sm text-muted-foreground">
+                            {plan.description || `Plano ${plan.name}`}
+                          </p>
+                        </CardHeader>
 
-                      <CardContent>
-                        <div className="text-center mb-6">
-                          {plan.price === 0 ? (
-                            <span className="font-display text-3xl font-bold text-foreground">
-                              Consulte
-                            </span>
-                          ) : (
-                            <div>
-                              <span className="text-muted-foreground text-sm">R$</span>
-                              <span className="font-display text-4xl font-bold text-foreground">
-                                {formatPrice(plan.price)}
+                        <CardContent>
+                          <div className="text-center mb-6">
+                            {plan.price === 0 ? (
+                              <span className="font-display text-3xl font-bold text-foreground">
+                                Consulte
                               </span>
-                              <span className="text-muted-foreground text-sm">/mês</span>
+                            ) : (
+                              <div>
+                                <span className="text-muted-foreground text-sm">R$</span>
+                                <span className="font-display text-4xl font-bold text-foreground">
+                                  {formatPrice(plan.price)}
+                                </span>
+                                <span className="text-muted-foreground text-sm">/mês</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Limits */}
+                          <div className="space-y-2 mb-6 p-4 rounded-lg bg-secondary/50">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Notificações</span>
+                              <span className="font-medium">
+                                {plan.notifications_limit === -1 ? 'Ilimitadas' : `${plan.notifications_limit}/mês`}
+                              </span>
                             </div>
-                          )}
-                        </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Advertências</span>
+                              <span className="font-medium">
+                                {plan.warnings_limit === -1 ? 'Ilimitadas' : `${plan.warnings_limit}/mês`}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Multas</span>
+                              <span className="font-medium">
+                                {plan.fines_limit === -1 ? 'Ilimitadas' : plan.fines_limit === 0 ? '—' : `${plan.fines_limit}/mês`}
+                              </span>
+                            </div>
+                          </div>
 
-                        {/* Limits */}
-                        <div className="space-y-2 mb-6 p-4 rounded-lg bg-secondary/50">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">Notificações</span>
-                            <span className="font-medium">
-                              {plan.notifications_limit === -1 ? 'Ilimitadas' : `${plan.notifications_limit}/mês`}
-                            </span>
+                          {/* Badges */}
+                          <div className="space-y-2 mb-6">
+                            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20">
+                              <Check className="w-4 h-4 text-primary" />
+                              <span className="text-xs text-primary font-medium">3 módulos inclusos</span>
+                            </div>
+                            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20">
+                              <MessageCircle className="w-4 h-4 text-green-500" />
+                              <span className="text-xs text-green-600 dark:text-green-400 font-medium">Integração WhatsApp</span>
+                            </div>
                           </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">Advertências</span>
-                            <span className="font-medium">
-                              {plan.warnings_limit === -1 ? 'Ilimitadas' : `${plan.warnings_limit}/mês`}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">Multas</span>
-                            <span className="font-medium">
-                              {plan.fines_limit === -1 ? 'Ilimitadas' : plan.fines_limit === 0 ? '—' : `${plan.fines_limit}/mês`}
-                            </span>
-                          </div>
-                        </div>
 
-                        {/* Badges */}
-                        <div className="space-y-2 mb-6">
-                          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20">
-                            <Check className="w-4 h-4 text-primary" />
-                            <span className="text-xs text-primary font-medium">3 módulos inclusos</span>
-                          </div>
-                          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20">
-                            <MessageCircle className="w-4 h-4 text-green-500" />
-                            <span className="text-xs text-green-600 dark:text-green-400 font-medium">Integração WhatsApp</span>
-                          </div>
-                        </div>
-
-                        <Button 
-                          variant={isPopular(plan.slug) ? "hero" : "outline"} 
-                          className="w-full"
-                          onClick={() => {
-                            if (plan.price === 0) {
-                              window.open('mailto:contato@notificacondo.com.br?subject=Interesse no plano Enterprise', '_blank');
-                            } else {
-                              navigate(`/auth?plano=${plan.slug}`);
-                            }
-                          }}
-                        >
-                          {plan.price === 0 ? "Fale Conosco" : "Começar 7 dias grátis"}
-                          <ArrowRight className="w-4 h-4 ml-2" />
-                        </Button>
-                      </CardContent>
-                    </Card>
+                          <Button 
+                            variant={isPopular(plan.slug) ? "hero" : "outline"} 
+                            className="w-full"
+                            onClick={() => {
+                              if (plan.price === 0) {
+                                window.open('mailto:contato@notificacondo.com.br?subject=Interesse no plano Enterprise', '_blank');
+                              } else {
+                                navigate(`/auth?plano=${plan.slug}`);
+                              }
+                            }}
+                          >
+                            {plan.price === 0 ? "Fale Conosco" : "Começar 7 dias grátis"}
+                            <ArrowRight className="w-4 h-4 ml-2" />
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
                   );
                 })}
-              </div>
+              </motion.div>
             )}
           </section>
 
           {/* Feature Comparison */}
           <section className="container mx-auto px-4 mb-20">
-            <div className="text-center mb-12">
+            <motion.div 
+              className="text-center mb-12"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.5 }}
+            >
               <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">
                 Compare todos os recursos
               </h2>
               <p className="text-muted-foreground text-lg">
                 Veja em detalhes o que cada plano oferece
               </p>
-            </div>
+            </motion.div>
 
             <Tabs defaultValue="all" className="max-w-6xl mx-auto">
               <TabsList className="grid grid-cols-2 md:grid-cols-5 w-full mb-8">
@@ -353,25 +431,25 @@ const Plans = () => {
               </TabsList>
 
               <TabsContent value="all" className="space-y-8">
-                {featureCategories.map((category) => (
-                  <FeatureCategoryTable key={category.name} category={category} plans={plans || []} hasFeature={hasFeature} />
+                {featureCategories.map((category, index) => (
+                  <FeatureCategoryTable key={category.name} category={category} plans={plans || []} hasFeature={hasFeature} index={index} />
                 ))}
               </TabsContent>
 
               <TabsContent value="ocorrencias">
-                <FeatureCategoryTable category={featureCategories[0]} plans={plans || []} hasFeature={hasFeature} />
+                <FeatureCategoryTable category={featureCategories[0]} plans={plans || []} hasFeature={hasFeature} index={0} />
               </TabsContent>
 
               <TabsContent value="encomendas">
-                <FeatureCategoryTable category={featureCategories[1]} plans={plans || []} hasFeature={hasFeature} />
+                <FeatureCategoryTable category={featureCategories[1]} plans={plans || []} hasFeature={hasFeature} index={0} />
               </TabsContent>
 
               <TabsContent value="salao">
-                <FeatureCategoryTable category={featureCategories[2]} plans={plans || []} hasFeature={hasFeature} />
+                <FeatureCategoryTable category={featureCategories[2]} plans={plans || []} hasFeature={hasFeature} index={0} />
               </TabsContent>
 
               <TabsContent value="geral">
-                <FeatureCategoryTable category={featureCategories[3]} plans={plans || []} hasFeature={hasFeature} />
+                <FeatureCategoryTable category={featureCategories[3]} plans={plans || []} hasFeature={hasFeature} index={0} />
               </TabsContent>
             </Tabs>
           </section>
@@ -449,59 +527,95 @@ interface FeatureCategoryTableProps {
   category: typeof featureCategories[0];
   plans: Array<{ slug: string; name: string }>;
   hasFeature: (feature: typeof featureCategories[0]['features'][0], planSlug: string) => boolean;
+  index?: number;
 }
 
-const FeatureCategoryTable = ({ category, plans, hasFeature }: FeatureCategoryTableProps) => {
+const FeatureCategoryTable = ({ category, plans, hasFeature, index = 0 }: FeatureCategoryTableProps) => {
   const CategoryIcon = category.icon;
   
   return (
-    <Card>
-      <CardHeader className="pb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-            <CategoryIcon className="w-5 h-5 text-primary" />
-          </div>
-          <CardTitle className="text-xl">{category.name}</CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left py-3 px-4 font-medium text-muted-foreground">Recurso</th>
-                {plans.map((plan) => (
-                  <th key={plan.slug} className="text-center py-3 px-4 font-medium">
-                    {plan.name}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {category.features.map((feature, idx) => (
-                <tr key={idx} className="border-b last:border-0">
-                  <td className="py-3 px-4">
-                    <div>
-                      <p className="font-medium text-sm">{feature.name}</p>
-                      <p className="text-xs text-muted-foreground">{feature.description}</p>
-                    </div>
-                  </td>
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-50px" }}
+      transition={{ duration: 0.5, delay: index * 0.1 }}
+    >
+      <Card className="overflow-hidden">
+        <CardHeader className="pb-4">
+          <motion.div 
+            className="flex items-center gap-3"
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+          >
+            <motion.div 
+              className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"
+              whileHover={{ scale: 1.1, rotate: 5 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            >
+              <CategoryIcon className="w-5 h-5 text-primary" />
+            </motion.div>
+            <CardTitle className="text-xl">{category.name}</CardTitle>
+          </motion.div>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-3 px-4 font-medium text-muted-foreground">Recurso</th>
                   {plans.map((plan) => (
-                    <td key={plan.slug} className="text-center py-3 px-4">
-                      {hasFeature(feature, plan.slug) ? (
-                        <Check className="w-5 h-5 text-green-500 mx-auto" />
-                      ) : (
-                        <X className="w-5 h-5 text-muted-foreground/30 mx-auto" />
-                      )}
-                    </td>
+                    <th key={plan.slug} className="text-center py-3 px-4 font-medium">
+                      {plan.name}
+                    </th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </CardContent>
-    </Card>
+              </thead>
+              <tbody>
+                {category.features.map((feature, idx) => (
+                  <motion.tr 
+                    key={idx} 
+                    className="border-b last:border-0"
+                    initial={{ opacity: 0, x: -10 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.3, delay: idx * 0.05 }}
+                  >
+                    <td className="py-3 px-4">
+                      <div>
+                        <p className="font-medium text-sm">{feature.name}</p>
+                        <p className="text-xs text-muted-foreground">{feature.description}</p>
+                      </div>
+                    </td>
+                    {plans.map((plan, planIdx) => (
+                      <td key={plan.slug} className="text-center py-3 px-4">
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          whileInView={{ scale: 1 }}
+                          viewport={{ once: true }}
+                          transition={{ 
+                            type: "spring", 
+                            stiffness: 300, 
+                            delay: idx * 0.05 + planIdx * 0.02 
+                          }}
+                        >
+                          {hasFeature(feature, plan.slug) ? (
+                            <Check className="w-5 h-5 text-green-500 mx-auto" />
+                          ) : (
+                            <X className="w-5 h-5 text-muted-foreground/30 mx-auto" />
+                          )}
+                        </motion.div>
+                      </td>
+                    ))}
+                  </motion.tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 };
 
