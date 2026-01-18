@@ -668,19 +668,92 @@ const Auth = () => {
             </p>
           </div>
 
-          {/* Step Indicator */}
+          {/* Animated Step Progress */}
           {!isLogin && (
-            <div className="flex items-center gap-2 mb-6">
-              <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold ${
-                step >= 1 ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
-              }`}>
-                {step > 1 ? <Check className="w-4 h-4" /> : '1'}
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <motion.div 
+                    className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-semibold transition-colors duration-300 ${
+                      step >= 1 ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
+                    }`}
+                    initial={{ scale: 0.8 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  >
+                    {step > 1 ? (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                      >
+                        <Check className="w-5 h-5" />
+                      </motion.div>
+                    ) : (
+                      <Building2 className="w-5 h-5" />
+                    )}
+                  </motion.div>
+                  <div className="flex flex-col">
+                    <span className={`text-xs font-medium ${step >= 1 ? 'text-primary' : 'text-muted-foreground'}`}>
+                      Etapa 1
+                    </span>
+                    <span className="text-sm font-semibold text-foreground">Condomínio</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="flex flex-col items-end">
+                    <span className={`text-xs font-medium ${step >= 2 ? 'text-primary' : 'text-muted-foreground'}`}>
+                      Etapa 2
+                    </span>
+                    <span className="text-sm font-semibold text-foreground">Síndico</span>
+                  </div>
+                  <motion.div 
+                    className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-semibold transition-colors duration-300 ${
+                      step >= 2 ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
+                    }`}
+                    animate={{ 
+                      scale: step >= 2 ? [1, 1.1, 1] : 1,
+                    }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <User className="w-5 h-5" />
+                  </motion.div>
+                </div>
               </div>
-              <div className={`flex-1 h-1 rounded ${step >= 2 ? 'bg-primary' : 'bg-secondary'}`} />
-              <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold ${
-                step >= 2 ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
-              }`}>
-                2
+
+              {/* Animated Progress Bar */}
+              <div className="relative h-2 bg-secondary rounded-full overflow-hidden">
+                <motion.div
+                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary via-primary to-primary/80 rounded-full"
+                  initial={{ width: "0%" }}
+                  animate={{ width: step === 1 ? "50%" : "100%" }}
+                  transition={{ 
+                    duration: 0.5, 
+                    ease: "easeInOut",
+                  }}
+                />
+                <motion.div
+                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 rounded-full"
+                  initial={{ x: "-100%" }}
+                  animate={{ x: "200%" }}
+                  transition={{ 
+                    duration: 1.5, 
+                    repeat: Infinity,
+                    ease: "linear",
+                  }}
+                  style={{ width: "50%" }}
+                />
+              </div>
+
+              {/* Step Labels */}
+              <div className="flex justify-between mt-2">
+                <span className={`text-xs ${step >= 1 ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
+                  Início
+                </span>
+                <span className={`text-xs ${step >= 2 ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
+                  Conclusão
+                </span>
               </div>
             </div>
           )}
