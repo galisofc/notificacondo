@@ -13,6 +13,7 @@ import Contact from "./pages/Contact";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfUse from "./pages/TermsOfUse";
 import CivilCode from "./pages/CivilCode";
+import Plans from "./pages/Plans";
 import Dashboard from "./pages/Dashboard";
 import ResidentDashboard from "./pages/ResidentDashboard";
 import ResidentOccurrences from "./pages/ResidentOccurrences";
@@ -75,6 +76,7 @@ const App = () => (
             <AuthProvider>
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/planos" element={<Plans />} />
               <Route path="/contato" element={<Contact />} />
               <Route path="/privacidade" element={<PrivacyPolicy />} />
               <Route path="/termos" element={<TermsOfUse />} />

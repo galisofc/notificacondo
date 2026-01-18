@@ -1050,7 +1050,7 @@ const Auth = () => {
                 type="button"
                 onClick={() => {
                   if (isLogin) {
-                    navigate('/#planos');
+                    navigate('/planos');
                   } else {
                     setIsLogin(true);
                     resetForm();
