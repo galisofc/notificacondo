@@ -886,58 +886,60 @@ export function SindicosManagement() {
 
         {/* View Sindico Dialog */}
         <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <User className="h-5 w-5 text-primary" />
+          <DialogContent className="w-[calc(100%-2rem)] max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+            <DialogHeader className="pb-2 sm:pb-4">
+              <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <User className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                 Detalhes do Síndico
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="text-xs sm:text-sm">
                 Informações completas e condomínios gerenciados
               </DialogDescription>
             </DialogHeader>
             
             {selectedSindico && (
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 {/* Sindico Info */}
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {isEditingProfile ? (
                     // Edit Mode
-                    <div className="space-y-4">
+                    <div className="space-y-3 sm:space-y-4">
                       <div className="flex items-center justify-between">
-                        <h4 className="font-medium">Editar Informações</h4>
+                        <h4 className="font-medium text-sm sm:text-base">Editar Informações</h4>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => setIsEditingProfile(false)}
+                          className="h-8 w-8 p-0"
                         >
                           <X className="h-4 w-4" />
                         </Button>
                       </div>
-                      <div className="grid gap-4">
-                        <div className="grid gap-2">
-                          <Label htmlFor="edit_full_name">Nome Completo</Label>
+                      <div className="grid gap-3 sm:gap-4">
+                        <div className="grid gap-1.5 sm:gap-2">
+                          <Label htmlFor="edit_full_name" className="text-xs sm:text-sm">Nome Completo</Label>
                           <Input
                             id="edit_full_name"
                             value={editProfileData.full_name}
                             onChange={(e) =>
                               setEditProfileData({ ...editProfileData, full_name: e.target.value })
                             }
+                            className="h-9 sm:h-10 text-sm"
                           />
                         </div>
-                        <div className="grid gap-2">
-                          <Label>Email</Label>
+                        <div className="grid gap-1.5 sm:gap-2">
+                          <Label className="text-xs sm:text-sm">Email</Label>
                           <Input
                             value={selectedSindico.profile?.email || ""}
                             disabled
-                            className="bg-muted"
+                            className="bg-muted h-9 sm:h-10 text-sm"
                           />
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-[10px] sm:text-xs text-muted-foreground">
                             O email não pode ser alterado
                           </p>
                         </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="edit_cpf">CPF</Label>
+                        <div className="grid gap-1.5 sm:gap-2">
+                          <Label htmlFor="edit_cpf" className="text-xs sm:text-sm">CPF</Label>
                           <MaskedInput
                             id="edit_cpf"
                             mask="cpf"
@@ -945,10 +947,11 @@ export function SindicosManagement() {
                             onChange={(value) =>
                               setEditProfileData({ ...editProfileData, cpf: value })
                             }
+                            className="h-9 sm:h-10 text-sm"
                           />
                         </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="edit_phone">Telefone</Label>
+                        <div className="grid gap-1.5 sm:gap-2">
+                          <Label htmlFor="edit_phone" className="text-xs sm:text-sm">Telefone</Label>
                           <MaskedInput
                             id="edit_phone"
                             mask="phone"
@@ -956,19 +959,22 @@ export function SindicosManagement() {
                             onChange={(value) =>
                               setEditProfileData({ ...editProfileData, phone: value })
                             }
+                            className="h-9 sm:h-10 text-sm"
                           />
                         </div>
                       </div>
-                      <div className="flex gap-2 justify-end">
+                      <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
                         <Button
                           variant="outline"
                           onClick={() => setIsEditingProfile(false)}
+                          className="w-full sm:w-auto h-9 sm:h-10 text-sm"
                         >
                           Cancelar
                         </Button>
                         <Button
                           onClick={handleSaveProfile}
                           disabled={updateProfileMutation.isPending || !editProfileData.full_name}
+                          className="w-full sm:w-auto h-9 sm:h-10 text-sm"
                         >
                           {updateProfileMutation.isPending ? (
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -982,42 +988,55 @@ export function SindicosManagement() {
                   ) : (
                     // View Mode
                     <>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                            <User className="h-8 w-8 text-primary" />
+                      {/* Mobile: Stacked layout */}
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                        <div className="flex items-center gap-3 sm:gap-4">
+                          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <User className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
                           </div>
-                          <div>
-                            <h3 className="text-lg font-semibold">{selectedSindico.profile?.full_name || "—"}</h3>
-                            <p className="text-muted-foreground">{selectedSindico.profile?.email}</p>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="text-base sm:text-lg font-semibold truncate">{selectedSindico.profile?.full_name || "—"}</h3>
+                            <p className="text-xs sm:text-sm text-muted-foreground truncate">{selectedSindico.profile?.email}</p>
                           </div>
                         </div>
-                        <Button variant="outline" size="sm" onClick={handleStartEditProfile}>
-                          <Pencil className="h-4 w-4 mr-2" />
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={handleStartEditProfile}
+                          className="w-full sm:w-auto h-8 sm:h-9 text-xs sm:text-sm"
+                        >
+                          <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                           Editar
                         </Button>
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-4 p-4 rounded-lg bg-secondary/50">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <p className="text-xs text-muted-foreground">CPF</p>
-                            <p className="font-medium">{selectedSindico.profile?.cpf ? formatCPF(selectedSindico.profile.cpf) : "Não informado"}</p>
+                      {/* Info Grid - Single column on mobile, 2 cols on desktop */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 sm:p-4 rounded-lg bg-secondary/50">
+                        <div className="flex items-center gap-2.5 sm:gap-3">
+                          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-background flex items-center justify-center flex-shrink-0">
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[10px] sm:text-xs text-muted-foreground">CPF</p>
+                            <p className="text-sm sm:text-base font-medium truncate">{selectedSindico.profile?.cpf ? formatCPF(selectedSindico.profile.cpf) : "Não informado"}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <p className="text-xs text-muted-foreground">Telefone</p>
-                            <p className="font-medium">{selectedSindico.profile?.phone ? formatPhone(selectedSindico.profile.phone) : "Não informado"}</p>
+                        <div className="flex items-center gap-2.5 sm:gap-3">
+                          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-background flex items-center justify-center flex-shrink-0">
+                            <Phone className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[10px] sm:text-xs text-muted-foreground">Telefone</p>
+                            <p className="text-sm sm:text-base font-medium truncate">{selectedSindico.profile?.phone ? formatPhone(selectedSindico.profile.phone) : "Não informado"}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <p className="text-xs text-muted-foreground">Cadastrado em</p>
-                            <p className="font-medium">
+                        <div className="flex items-center gap-2.5 sm:gap-3 sm:col-span-2">
+                          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-background flex items-center justify-center flex-shrink-0">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[10px] sm:text-xs text-muted-foreground">Cadastrado em</p>
+                            <p className="text-sm sm:text-base font-medium">
                               {formatDate(selectedSindico.created_at)}
                             </p>
                           </div>
@@ -1030,25 +1049,25 @@ export function SindicosManagement() {
                 <Separator />
 
                 {/* Condominiums */}
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-semibold flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-primary" />
-                      Condomínios Gerenciados ({selectedSindico.condominiums_count})
+                    <h4 className="font-semibold text-sm sm:text-base flex items-center gap-1.5 sm:gap-2">
+                      <Building2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
+                      Condomínios ({selectedSindico.condominiums_count})
                     </h4>
                   </div>
                   
                   {selectedSindico.condominiums.length === 0 ? (
-                    <div className="text-center py-6 rounded-lg bg-secondary/30">
-                      <Building2 className="h-10 w-10 mx-auto mb-2 text-muted-foreground opacity-50" />
-                      <p className="text-muted-foreground">Nenhum condomínio cadastrado</p>
+                    <div className="text-center py-4 sm:py-6 rounded-lg bg-secondary/30">
+                      <Building2 className="h-8 w-8 sm:h-10 sm:w-10 mx-auto mb-2 text-muted-foreground opacity-50" />
+                      <p className="text-xs sm:text-sm text-muted-foreground">Nenhum condomínio cadastrado</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
                       {selectedSindico.condominiums.map((condo) => (
                         <div 
                           key={condo.id} 
-                          className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-secondary/50 transition-colors cursor-pointer"
+                          className="flex items-center justify-between gap-2 p-2.5 sm:p-3 rounded-lg border bg-card hover:bg-secondary/50 transition-colors cursor-pointer"
                           onClick={() => {
                             setIsViewDialogOpen(false);
                             if (condo.subscription?.id) {
@@ -1056,33 +1075,31 @@ export function SindicosManagement() {
                             }
                           }}
                         >
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                              <Building2 className="h-5 w-5 text-primary" />
+                          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                              <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                             </div>
-                            <div>
-                              <p className="font-medium">{condo.name}</p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Badge 
-                                  variant="outline" 
-                                  className={getPlanBadge(condo.subscription?.plan || "start")}
-                                >
-                                  <CreditCard className="h-3 w-3 mr-1" />
-                                  {condo.subscription?.plan?.toUpperCase() || "START"}
-                                </Badge>
-                              </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm sm:text-base font-medium truncate">{condo.name}</p>
+                              <Badge 
+                                variant="outline" 
+                                className={`${getPlanBadge(condo.subscription?.plan || "start")} text-[10px] sm:text-xs mt-0.5 sm:mt-1`}
+                              >
+                                <CreditCard className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
+                                {condo.subscription?.plan?.toUpperCase() || "START"}
+                              </Badge>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex-shrink-0">
                             {condo.subscription?.active ? (
-                              <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
-                                <CheckCircle className="h-3 w-3 mr-1" />
-                                Ativo
+                              <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px] sm:text-xs px-1.5 sm:px-2">
+                                <CheckCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
+                                <span className="hidden xs:inline">Ativo</span>
                               </Badge>
                             ) : (
-                              <Badge className="bg-red-500/10 text-red-600 border-red-500/20">
-                                <XCircle className="h-3 w-3 mr-1" />
-                                Inativo
+                              <Badge className="bg-red-500/10 text-red-600 border-red-500/20 text-[10px] sm:text-xs px-1.5 sm:px-2">
+                                <XCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
+                                <span className="hidden xs:inline">Inativo</span>
                               </Badge>
                             )}
                           </div>
@@ -1094,20 +1111,24 @@ export function SindicosManagement() {
               </div>
             )}
             
-            <DialogFooter className="flex-col sm:flex-row gap-2">
+            <DialogFooter className="flex-col-reverse sm:flex-row gap-2 pt-2 sm:pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsViewDialogOpen(false)} 
+                className="w-full sm:w-auto h-9 sm:h-10 text-sm"
+              >
+                Fechar
+              </Button>
               {selectedSindico && (
                 <Button 
                   variant="destructive" 
                   onClick={() => handleDeleteClick(selectedSindico)}
-                  className="w-full sm:w-auto"
+                  className="w-full sm:w-auto h-9 sm:h-10 text-sm"
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Excluir Síndico
                 </Button>
               )}
-              <Button variant="outline" onClick={() => setIsViewDialogOpen(false)} className="w-full sm:w-auto">
-                Fechar
-              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
