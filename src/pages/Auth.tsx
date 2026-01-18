@@ -13,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { Database } from "@/integrations/supabase/types";
 import { MaskedInput } from "@/components/ui/masked-input";
+import { motion, AnimatePresence } from "framer-motion";
 
 const loginSchema = z.object({
   email: z.string().email("Email inválido"),
@@ -741,305 +742,394 @@ const Auth = () => {
                   )}
                 </Button>
               </>
-            ) : step === 1 ? (
-              <>
-                {/* Step 1: Condominium Data */}
-                <div className="space-y-2">
-                  <Label htmlFor="cnpj" className="text-foreground">
-                    CNPJ do Condomínio
-                  </Label>
-                  <div className="relative">
-                    <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <MaskedInput
-                      id="cnpj"
-                      name="cnpj"
-                      mask="cnpj"
-                      value={formData.cnpj}
-                      onChange={handleCnpjChange}
-                      className="pl-10 bg-secondary/50 border-border"
-                    />
-                    {isSearchingCnpj && (
-                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-primary" />
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Digite o CNPJ para preencher os dados automaticamente
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="condominiumName" className="text-foreground">
-                    Nome do condomínio <span className="text-destructive">*</span>
-                  </Label>
-                  <div className="relative">
-                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="condominiumName"
-                      name="condominiumName"
-                      type="text"
-                      placeholder="Ex: Residencial das Flores"
-                      value={formData.condominiumName}
-                      onChange={handleChange}
-                      className="pl-10 bg-secondary/50 border-border"
-                    />
-                  </div>
-                  {errors.condominiumName && (
-                    <p className="text-sm text-destructive">{errors.condominiumName}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="condominiumPhone" className="text-foreground">Telefone</Label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <MaskedInput
-                      id="condominiumPhone"
-                      name="condominiumPhone"
-                      mask="phone"
-                      value={formData.condominiumPhone}
-                      onChange={handleMaskedChange('condominiumPhone')}
-                      className="pl-10 bg-secondary/50 border-border"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="zipCode" className="text-foreground">CEP</Label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <MaskedInput
-                      id="zipCode"
-                      name="zipCode"
-                      mask="cep"
-                      value={formData.zipCode}
-                      onChange={handleMaskedChange('zipCode')}
-                      className="pl-10 bg-secondary/50 border-border"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="col-span-2 space-y-2">
-                    <Label htmlFor="address" className="text-foreground">Endereço</Label>
-                    <Input
-                      id="address"
-                      name="address"
-                      type="text"
-                      placeholder="Rua, Avenida..."
-                      value={formData.address}
-                      onChange={handleChange}
-                      className="bg-secondary/50 border-border"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="addressNumber" className="text-foreground">Número</Label>
-                    <Input
-                      id="addressNumber"
-                      name="addressNumber"
-                      type="text"
-                      placeholder="123"
-                      value={formData.addressNumber}
-                      onChange={handleChange}
-                      className="bg-secondary/50 border-border"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="neighborhood" className="text-foreground">Bairro</Label>
-                  <Input
-                    id="neighborhood"
-                    name="neighborhood"
-                    type="text"
-                    placeholder="Nome do bairro"
-                    value={formData.neighborhood}
-                    onChange={handleChange}
-                    className="bg-secondary/50 border-border"
-                  />
-                </div>
-
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="col-span-2 space-y-2">
-                    <Label htmlFor="city" className="text-foreground">Cidade</Label>
-                    <Input
-                      id="city"
-                      name="city"
-                      type="text"
-                      placeholder="Nome da cidade"
-                      value={formData.city}
-                      onChange={handleChange}
-                      className="bg-secondary/50 border-border"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="state" className="text-foreground">UF</Label>
-                    <select
-                      id="state"
-                      name="state"
-                      value={formData.state}
-                      onChange={handleChange}
-                      className="flex h-10 w-full rounded-md border border-border bg-secondary/50 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    >
-                      <option value="">UF</option>
-                      {BRAZILIAN_STATES.map((state) => (
-                        <option key={state} value={state}>{state}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <Button
-                  type="button"
-                  variant="hero"
-                  className="w-full"
-                  onClick={handleNextStep}
-                >
-                  Próximo
-                  <ChevronRight className="w-4 h-4 ml-2" />
-                </Button>
-              </>
             ) : (
-              <>
-                {/* Step 2: Síndico Data */}
-                <div className="space-y-2">
-                  <Label htmlFor="fullName" className="text-foreground">
-                    Nome completo <span className="text-destructive">*</span>
-                  </Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="fullName"
-                      name="fullName"
-                      type="text"
-                      placeholder="Seu nome completo"
-                      value={formData.fullName}
-                      onChange={handleChange}
-                      className="pl-10 bg-secondary/50 border-border"
-                    />
-                  </div>
-                  {errors.fullName && (
-                    <p className="text-sm text-destructive">{errors.fullName}</p>
-                  )}
-                </div>
+              <AnimatePresence mode="wait">
+                {step === 1 ? (
+                  <motion.div
+                    key="step1"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                    className="space-y-4"
+                  >
+                    {/* Step 1: Condominium Data */}
+                    <motion.div 
+                      className="space-y-2"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 }}
+                    >
+                      <Label htmlFor="cnpj" className="text-foreground">
+                        CNPJ do Condomínio
+                      </Label>
+                      <div className="relative">
+                        <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <MaskedInput
+                          id="cnpj"
+                          name="cnpj"
+                          mask="cnpj"
+                          value={formData.cnpj}
+                          onChange={handleCnpjChange}
+                          className="pl-10 bg-secondary/50 border-border"
+                        />
+                        {isSearchingCnpj && (
+                          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-primary" />
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Digite o CNPJ para preencher os dados automaticamente
+                      </p>
+                    </motion.div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="cpf" className="text-foreground">CPF</Label>
-                    <MaskedInput
-                      id="cpf"
-                      name="cpf"
-                      mask="cpf"
-                      value={formData.cpf}
-                      onChange={handleMaskedChange('cpf')}
-                      className="bg-secondary/50 border-border"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-foreground">Telefone</Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <MaskedInput
-                        id="phone"
-                        name="phone"
-                        mask="phone"
-                        value={formData.phone}
-                        onChange={handleMaskedChange('phone')}
-                        className="pl-10 bg-secondary/50 border-border"
+                    <motion.div 
+                      className="space-y-2"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.15 }}
+                    >
+                      <Label htmlFor="condominiumName" className="text-foreground">
+                        Nome do condomínio <span className="text-destructive">*</span>
+                      </Label>
+                      <div className="relative">
+                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          id="condominiumName"
+                          name="condominiumName"
+                          type="text"
+                          placeholder="Ex: Residencial das Flores"
+                          value={formData.condominiumName}
+                          onChange={handleChange}
+                          className="pl-10 bg-secondary/50 border-border"
+                        />
+                      </div>
+                      {errors.condominiumName && (
+                        <p className="text-sm text-destructive">{errors.condominiumName}</p>
+                      )}
+                    </motion.div>
+
+                    <motion.div 
+                      className="space-y-2"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                    >
+                      <Label htmlFor="condominiumPhone" className="text-foreground">Telefone</Label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <MaskedInput
+                          id="condominiumPhone"
+                          name="condominiumPhone"
+                          mask="phone"
+                          value={formData.condominiumPhone}
+                          onChange={handleMaskedChange('condominiumPhone')}
+                          className="pl-10 bg-secondary/50 border-border"
+                        />
+                      </div>
+                    </motion.div>
+
+                    <motion.div 
+                      className="space-y-2"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.25 }}
+                    >
+                      <Label htmlFor="zipCode" className="text-foreground">CEP</Label>
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <MaskedInput
+                          id="zipCode"
+                          name="zipCode"
+                          mask="cep"
+                          value={formData.zipCode}
+                          onChange={handleMaskedChange('zipCode')}
+                          className="pl-10 bg-secondary/50 border-border"
+                        />
+                      </div>
+                    </motion.div>
+
+                    <motion.div 
+                      className="grid grid-cols-3 gap-4"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 }}
+                    >
+                      <div className="col-span-2 space-y-2">
+                        <Label htmlFor="address" className="text-foreground">Endereço</Label>
+                        <Input
+                          id="address"
+                          name="address"
+                          type="text"
+                          placeholder="Rua, Avenida..."
+                          value={formData.address}
+                          onChange={handleChange}
+                          className="bg-secondary/50 border-border"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="addressNumber" className="text-foreground">Número</Label>
+                        <Input
+                          id="addressNumber"
+                          name="addressNumber"
+                          type="text"
+                          placeholder="123"
+                          value={formData.addressNumber}
+                          onChange={handleChange}
+                          className="bg-secondary/50 border-border"
+                        />
+                      </div>
+                    </motion.div>
+
+                    <motion.div 
+                      className="space-y-2"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.35 }}
+                    >
+                      <Label htmlFor="neighborhood" className="text-foreground">Bairro</Label>
+                      <Input
+                        id="neighborhood"
+                        name="neighborhood"
+                        type="text"
+                        placeholder="Nome do bairro"
+                        value={formData.neighborhood}
+                        onChange={handleChange}
+                        className="bg-secondary/50 border-border"
                       />
-                    </div>
-                  </div>
-                </div>
+                    </motion.div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-foreground">
-                    Email <span className="text-destructive">*</span>
-                  </Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      placeholder="seu@email.com"
-                      value={formData.email}
-                      onChange={handleChange}
-                      className="pl-10 bg-secondary/50 border-border"
-                    />
-                  </div>
-                  {errors.email && (
-                    <p className="text-sm text-destructive">{errors.email}</p>
-                  )}
-                </div>
+                    <motion.div 
+                      className="grid grid-cols-3 gap-4"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.4 }}
+                    >
+                      <div className="col-span-2 space-y-2">
+                        <Label htmlFor="city" className="text-foreground">Cidade</Label>
+                        <Input
+                          id="city"
+                          name="city"
+                          type="text"
+                          placeholder="Nome da cidade"
+                          value={formData.city}
+                          onChange={handleChange}
+                          className="bg-secondary/50 border-border"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="state" className="text-foreground">UF</Label>
+                        <select
+                          id="state"
+                          name="state"
+                          value={formData.state}
+                          onChange={handleChange}
+                          className="flex h-10 w-full rounded-md border border-border bg-secondary/50 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        >
+                          <option value="">UF</option>
+                          {BRAZILIAN_STATES.map((state) => (
+                            <option key={state} value={state}>{state}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </motion.div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-foreground">
-                    Senha <span className="text-destructive">*</span>
-                  </Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="password"
-                      name="password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={formData.password}
-                      onChange={handleChange}
-                      className="pl-10 bg-secondary/50 border-border"
-                    />
-                  </div>
-                  {errors.password && (
-                    <p className="text-sm text-destructive">{errors.password}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-foreground">
-                    Confirmar senha <span className="text-destructive">*</span>
-                  </Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="confirmPassword"
-                      name="confirmPassword"
-                      type="password"
-                      placeholder="••••••••"
-                      value={formData.confirmPassword}
-                      onChange={handleChange}
-                      className="pl-10 bg-secondary/50 border-border"
-                    />
-                  </div>
-                  {errors.confirmPassword && (
-                    <p className="text-sm text-destructive">{errors.confirmPassword}</p>
-                  )}
-                </div>
-
-                <div className="flex gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="flex-1"
-                    onClick={handlePrevStep}
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.45 }}
+                    >
+                      <Button
+                        type="button"
+                        variant="hero"
+                        className="w-full"
+                        onClick={handleNextStep}
+                      >
+                        Próximo
+                        <ChevronRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    </motion.div>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="step2"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                    className="space-y-4"
                   >
-                    <ChevronLeft className="w-4 h-4 mr-2" />
-                    Voltar
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="hero"
-                    className="flex-1"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Criando...
-                      </>
-                    ) : (
-                      "Criar conta"
-                    )}
-                  </Button>
-                </div>
-              </>
+                    {/* Step 2: Síndico Data */}
+                    <motion.div 
+                      className="space-y-2"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 }}
+                    >
+                      <Label htmlFor="fullName" className="text-foreground">
+                        Nome completo <span className="text-destructive">*</span>
+                      </Label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          id="fullName"
+                          name="fullName"
+                          type="text"
+                          placeholder="Seu nome completo"
+                          value={formData.fullName}
+                          onChange={handleChange}
+                          className="pl-10 bg-secondary/50 border-border"
+                        />
+                      </div>
+                      {errors.fullName && (
+                        <p className="text-sm text-destructive">{errors.fullName}</p>
+                      )}
+                    </motion.div>
+
+                    <motion.div 
+                      className="grid grid-cols-2 gap-4"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.15 }}
+                    >
+                      <div className="space-y-2">
+                        <Label htmlFor="cpf" className="text-foreground">CPF</Label>
+                        <MaskedInput
+                          id="cpf"
+                          name="cpf"
+                          mask="cpf"
+                          value={formData.cpf}
+                          onChange={handleMaskedChange('cpf')}
+                          className="bg-secondary/50 border-border"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="phone" className="text-foreground">Telefone</Label>
+                        <div className="relative">
+                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <MaskedInput
+                            id="phone"
+                            name="phone"
+                            mask="phone"
+                            value={formData.phone}
+                            onChange={handleMaskedChange('phone')}
+                            className="pl-10 bg-secondary/50 border-border"
+                          />
+                        </div>
+                      </div>
+                    </motion.div>
+
+                    <motion.div 
+                      className="space-y-2"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                    >
+                      <Label htmlFor="email" className="text-foreground">
+                        Email <span className="text-destructive">*</span>
+                      </Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          id="email"
+                          name="email"
+                          type="email"
+                          placeholder="seu@email.com"
+                          value={formData.email}
+                          onChange={handleChange}
+                          className="pl-10 bg-secondary/50 border-border"
+                        />
+                      </div>
+                      {errors.email && (
+                        <p className="text-sm text-destructive">{errors.email}</p>
+                      )}
+                    </motion.div>
+
+                    <motion.div 
+                      className="space-y-2"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.25 }}
+                    >
+                      <Label htmlFor="password" className="text-foreground">
+                        Senha <span className="text-destructive">*</span>
+                      </Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          id="password"
+                          name="password"
+                          type="password"
+                          placeholder="••••••••"
+                          value={formData.password}
+                          onChange={handleChange}
+                          className="pl-10 bg-secondary/50 border-border"
+                        />
+                      </div>
+                      {errors.password && (
+                        <p className="text-sm text-destructive">{errors.password}</p>
+                      )}
+                    </motion.div>
+
+                    <motion.div 
+                      className="space-y-2"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 }}
+                    >
+                      <Label htmlFor="confirmPassword" className="text-foreground">
+                        Confirmar senha <span className="text-destructive">*</span>
+                      </Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          id="confirmPassword"
+                          name="confirmPassword"
+                          type="password"
+                          placeholder="••••••••"
+                          value={formData.confirmPassword}
+                          onChange={handleChange}
+                          className="pl-10 bg-secondary/50 border-border"
+                        />
+                      </div>
+                      {errors.confirmPassword && (
+                        <p className="text-sm text-destructive">{errors.confirmPassword}</p>
+                      )}
+                    </motion.div>
+
+                    <motion.div 
+                      className="flex gap-3"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.35 }}
+                    >
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={handlePrevStep}
+                      >
+                        <ChevronLeft className="w-4 h-4 mr-2" />
+                        Voltar
+                      </Button>
+                      <Button
+                        type="submit"
+                        variant="hero"
+                        className="flex-1"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Criando...
+                          </>
+                        ) : (
+                          "Criar conta"
+                        )}
+                      </Button>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             )}
           </form>
 
