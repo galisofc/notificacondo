@@ -248,7 +248,7 @@ export function TemplatesList() {
 
       {/* Template Editor Sheet */}
       <Sheet open={!!editingTemplate} onOpenChange={() => setEditingTemplate(null)}>
-        <SheetContent side="right" className="w-full sm:max-w-2xl lg:max-w-4xl p-0">
+        <SheetContent side="right" className="w-full max-w-full sm:max-w-2xl lg:max-w-4xl p-0">
           {editingTemplate && (
             <TemplateEditor
               template={editingTemplate}
