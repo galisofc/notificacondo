@@ -296,14 +296,14 @@ export default function PackageTypes() {
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="font-display text-3xl font-bold text-foreground">
+            <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">
               Tipos de Encomenda
             </h1>
-            <p className="text-muted-foreground mt-1">
-              Gerencie os tipos de encomenda disponíveis para registro
+            <p className="text-sm text-muted-foreground mt-1">
+              Gerencie os tipos de encomenda disponíveis
             </p>
           </div>
-          <Button onClick={() => handleOpenDialog()} className="gap-2">
+          <Button onClick={() => handleOpenDialog()} className="gap-2 w-full sm:w-auto">
             <Plus className="w-4 h-4" />
             Novo Tipo
           </Button>
@@ -325,55 +325,112 @@ export default function PackageTypes() {
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
               </div>
             ) : packageTypes && packageTypes.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">Ordem</TableHead>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead>Ícone</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="w-12"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <>
+                {/* Desktop Table - hidden on mobile */}
+                <div className="hidden md:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12">Ordem</TableHead>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Descrição</TableHead>
+                        <TableHead>Ícone</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="w-12"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {packageTypes.map((type) => {
+                        const IconComponent = getIconComponent(type.icon);
+                        return (
+                          <TableRow key={type.id}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <GripVertical className="w-4 h-4 text-muted-foreground" />
+                                <span className="font-mono text-sm">
+                                  {type.display_order}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              {type.name}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground max-w-xs truncate">
+                              {type.description || "-"}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <IconComponent className="w-4 h-4" />
+                                <span className="text-xs text-muted-foreground">
+                                  {type.icon}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={type.is_active ? "default" : "secondary"}
+                              >
+                                {type.is_active ? "Ativo" : "Inativo"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => handleOpenDialog(type)}
+                                  >
+                                    <Pencil className="w-4 h-4 mr-2" />
+                                    Editar
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setTypeToDelete(type);
+                                      setDeleteDialogOpen(true);
+                                    }}
+                                    className="text-destructive"
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Excluir
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile Cards - visible only on mobile */}
+                <div className="md:hidden space-y-3">
                   {packageTypes.map((type) => {
                     const IconComponent = getIconComponent(type.icon);
                     return (
-                      <TableRow key={type.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <GripVertical className="w-4 h-4 text-muted-foreground" />
-                            <span className="font-mono text-sm">
-                              {type.display_order}
-                            </span>
+                      <div
+                        key={type.id}
+                        className="border rounded-lg p-4 space-y-3"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                              <IconComponent className="w-5 h-5 text-primary" />
+                            </div>
+                            <div className="min-w-0">
+                              <h3 className="font-medium truncate">{type.name}</h3>
+                              <p className="text-xs text-muted-foreground">
+                                Ordem: {type.display_order}
+                              </p>
+                            </div>
                           </div>
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {type.name}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground max-w-xs truncate">
-                          {type.description || "-"}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <IconComponent className="w-4 h-4" />
-                            <span className="text-xs text-muted-foreground">
-                              {type.icon}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={type.is_active ? "default" : "secondary"}
-                          >
-                            {type.is_active ? "Ativo" : "Inativo"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
+                              <Button variant="ghost" size="icon" className="shrink-0">
                                 <MoreHorizontal className="w-4 h-4" />
                               </Button>
                             </DropdownMenuTrigger>
@@ -396,12 +453,30 @@ export default function PackageTypes() {
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
+                        </div>
+
+                        {type.description && (
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {type.description}
+                          </p>
+                        )}
+
+                        <div className="flex items-center justify-between pt-2 border-t">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <IconComponent className="w-3.5 h-3.5" />
+                            <span>{type.icon}</span>
+                          </div>
+                          <Badge
+                            variant={type.is_active ? "default" : "secondary"}
+                          >
+                            {type.is_active ? "Ativo" : "Inativo"}
+                          </Badge>
+                        </div>
+                      </div>
                     );
                   })}
-                </TableBody>
-              </Table>
+                </div>
+              </>
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <Package className="w-12 h-12 text-muted-foreground/50 mb-4" />
@@ -421,9 +496,8 @@ export default function PackageTypes() {
         </Card>
       </div>
 
-      {/* Create/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingType ? "Editar Tipo" : "Novo Tipo de Encomenda"}
@@ -466,7 +540,7 @@ export default function PackageTypes() {
 
             <div className="space-y-2">
               <Label>Ícone</Label>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                 {ICON_OPTIONS.map((opt) => {
                   const Icon = opt.icon;
                   const isSelected = formData.icon === opt.value;
@@ -521,11 +595,11 @@ export default function PackageTypes() {
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={handleCloseDialog}>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={handleCloseDialog} className="w-full sm:w-auto">
               Cancelar
             </Button>
-            <Button onClick={handleSubmit} disabled={isSubmitting}>
+            <Button onClick={handleSubmit} disabled={isSubmitting} className="w-full sm:w-auto">
               {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {editingType ? "Salvar Alterações" : "Criar Tipo"}
             </Button>
