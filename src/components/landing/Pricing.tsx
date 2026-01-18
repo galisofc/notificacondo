@@ -21,6 +21,7 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion } from "framer-motion";
+import { useTrialDays } from "@/hooks/useTrialDays";
 
 // Animation variants
 const containerVariants = {
@@ -54,6 +55,7 @@ const cardVariants = {
 
 const Pricing = () => {
   const navigate = useNavigate();
+  const { trialDays } = useTrialDays();
   
   // Countdown timer - ends at midnight
   const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
@@ -139,7 +141,7 @@ const Pricing = () => {
             <span className="text-gradient">seu condomínio</span>
           </h2>
           <p className="text-muted-foreground text-lg">
-            <span className="text-primary font-semibold">7 dias grátis para testar!</span> Cancele quando quiser.
+            <span className="text-primary font-semibold">{trialDays} dias grátis para testar!</span> Cancele quando quiser.
           </p>
         </div>
 
@@ -284,7 +286,7 @@ const Pricing = () => {
                           }
                         }}
                       >
-                        {plan.price === 0 ? "Fale Conosco" : "Começar 7 dias grátis"}
+                        {plan.price === 0 ? "Fale Conosco" : `Começar ${trialDays} dias grátis`}
                         <ArrowRight className="w-4 h-4 ml-2" />
                       </Button>
                     </CardContent>

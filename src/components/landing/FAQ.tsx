@@ -5,6 +5,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { AlertTriangle, Package, PartyPopper, HelpCircle } from "lucide-react";
+import { useTrialDays } from "@/hooks/useTrialDays";
 
 const faqCategories = [
   {
@@ -84,26 +85,28 @@ const faqCategories = [
   }
 ];
 
-const generalFAQ = [
-  {
-    question: "Preciso instalar algum aplicativo?",
-    answer: "Não! O NotificaCondo é 100% web e funciona em qualquer dispositivo com navegador. Os moradores recebem as notificações diretamente no WhatsApp, sem precisar instalar nada."
-  },
-  {
-    question: "O sistema está em conformidade com a LGPD?",
-    answer: "Sim! Todos os dados são tratados de acordo com a Lei Geral de Proteção de Dados. Oferecemos criptografia, controle de acesso, logs de auditoria e ferramentas para atender solicitações de titulares."
-  },
-  {
-    question: "Como funciona o período de teste?",
-    answer: "Oferecemos 14 dias grátis para você testar todas as funcionalidades do plano escolhido. Não pedimos cartão de crédito para iniciar o teste. Ao final, você decide se quer continuar."
-  },
-  {
-    question: "Posso migrar meus dados de outro sistema?",
-    answer: "Sim! Nossa equipe pode auxiliar na importação de dados de moradores, apartamentos e histórico de ocorrências. Entre em contato para avaliarmos seu caso específico."
-  }
-];
-
 const FAQ = () => {
+  const { trialDays } = useTrialDays();
+
+  const generalFAQ = [
+    {
+      question: "Preciso instalar algum aplicativo?",
+      answer: "Não! O NotificaCondo é 100% web e funciona em qualquer dispositivo com navegador. Os moradores recebem as notificações diretamente no WhatsApp, sem precisar instalar nada."
+    },
+    {
+      question: "O sistema está em conformidade com a LGPD?",
+      answer: "Sim! Todos os dados são tratados de acordo com a Lei Geral de Proteção de Dados. Oferecemos criptografia, controle de acesso, logs de auditoria e ferramentas para atender solicitações de titulares."
+    },
+    {
+      question: "Como funciona o período de teste?",
+      answer: `Oferecemos ${trialDays} dias grátis para você testar todas as funcionalidades do plano escolhido. Não pedimos cartão de crédito para iniciar o teste. Ao final, você decide se quer continuar.`
+    },
+    {
+      question: "Posso migrar meus dados de outro sistema?",
+      answer: "Sim! Nossa equipe pode auxiliar na importação de dados de moradores, apartamentos e histórico de ocorrências. Entre em contato para avaliarmos seu caso específico."
+    }
+  ];
+
   return (
     <section id="faq" className="py-24 bg-secondary/30">
       <div className="container mx-auto px-4">
