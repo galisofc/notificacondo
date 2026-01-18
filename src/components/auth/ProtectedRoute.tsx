@@ -30,6 +30,19 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
+  // Se há usuário mas role ainda é null após loading, aguardar determinação do role
+  // Isso evita redirecionamentos incorretos durante a restauração da sessão
+  if (role === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Verificando permissões...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Check role requirements if specified
   if (requiredRole) {
     const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
@@ -46,8 +59,8 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
       } else if (isResident) {
         return <Navigate to="/resident" replace />;
       }
-      // Fallback
-      return <Navigate to="/" replace />;
+      // Fallback para auth em vez de home
+      return <Navigate to="/auth" replace />;
     }
   }
 
