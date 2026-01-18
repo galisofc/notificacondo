@@ -625,23 +625,23 @@ export default function Porteiros() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <DoorOpen className="w-6 h-6 text-primary" />
+            <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+              <DoorOpen className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
               Gestão de Porteiros
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm sm:text-base text-muted-foreground">
               Gerencie os porteiros dos seus condomínios
             </p>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-col xs:flex-row gap-2">
             <Button 
               variant="outline" 
-              className="gap-2" 
+              className="gap-2 h-9 sm:h-10 text-xs sm:text-sm" 
               onClick={handleLoadOrphanUsers}
               disabled={isLoadingOrphans}
             >
@@ -650,7 +650,8 @@ export default function Porteiros() {
               ) : (
                 <UserX className="w-4 h-4" />
               )}
-              Limpar Órfãos
+              <span className="hidden xs:inline">Limpar Órfãos</span>
+              <span className="xs:hidden">Órfãos</span>
             </Button>
 
             <Dialog open={isDialogOpen} onOpenChange={(open) => {
@@ -661,31 +662,32 @@ export default function Porteiros() {
               }
             }}>
               <DialogTrigger asChild>
-                <Button className="gap-2">
+                <Button className="gap-2 h-9 sm:h-10 text-xs sm:text-sm">
                   <UserPlus className="w-4 h-4" />
-                  Adicionar Porteiro
+                  <span className="hidden xs:inline">Adicionar Porteiro</span>
+                  <span className="xs:hidden">Adicionar</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="w-[calc(100%-2rem)] max-w-md p-4 sm:p-6">
                 {dialogStep === "form" ? (
                   <>
-                    <DialogHeader>
-                      <DialogTitle>Adicionar Novo Porteiro</DialogTitle>
-                      <DialogDescription>
+                    <DialogHeader className="space-y-1 sm:space-y-2">
+                      <DialogTitle className="text-base sm:text-lg">Adicionar Novo Porteiro</DialogTitle>
+                      <DialogDescription className="text-xs sm:text-sm">
                         O porteiro receberá um e-mail para acessar o sistema
                       </DialogDescription>
                     </DialogHeader>
 
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="condominium">Condomínio *</Label>
+                    <div className="space-y-3 sm:space-y-4 py-3 sm:py-4">
+                      <div className="space-y-1.5 sm:space-y-2">
+                        <Label htmlFor="condominium" className="text-xs sm:text-sm">Condomínio *</Label>
                         <Select
                           value={newPorter.condominium_id}
                           onValueChange={(value) =>
                             setNewPorter((prev) => ({ ...prev, condominium_id: value }))
                           }
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className="h-9 sm:h-10 text-sm">
                             <SelectValue placeholder="Selecione o condomínio" />
                           </SelectTrigger>
                           <SelectContent>
@@ -698,8 +700,8 @@ export default function Porteiros() {
                         </Select>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="full_name">Nome Completo *</Label>
+                      <div className="space-y-1.5 sm:space-y-2">
+                        <Label htmlFor="full_name" className="text-xs sm:text-sm">Nome Completo *</Label>
                         <Input
                           id="full_name"
                           placeholder="Nome do porteiro"
@@ -707,11 +709,12 @@ export default function Porteiros() {
                           onChange={(e) =>
                             setNewPorter((prev) => ({ ...prev, full_name: e.target.value }))
                           }
+                          className="h-9 sm:h-10 text-sm"
                         />
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="email">E-mail *</Label>
+                      <div className="space-y-1.5 sm:space-y-2">
+                        <Label htmlFor="email" className="text-xs sm:text-sm">E-mail *</Label>
                         <Input
                           id="email"
                           type="email"
@@ -720,11 +723,12 @@ export default function Porteiros() {
                           onChange={(e) =>
                             setNewPorter((prev) => ({ ...prev, email: e.target.value }))
                           }
+                          className="h-9 sm:h-10 text-sm"
                         />
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="phone">Telefone</Label>
+                      <div className="space-y-1.5 sm:space-y-2">
+                        <Label htmlFor="phone" className="text-xs sm:text-sm">Telefone</Label>
                         <MaskedInput
                           id="phone"
                           mask="phone"
@@ -732,18 +736,20 @@ export default function Porteiros() {
                           onChange={(value) =>
                             setNewPorter((prev) => ({ ...prev, phone: value }))
                           }
+                          className="h-9 sm:h-10 text-sm"
                         />
                       </div>
                     </div>
 
-                    <DialogFooter>
+                    <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-2">
                       <Button
                         variant="outline"
                         onClick={() => setIsDialogOpen(false)}
+                        className="w-full sm:w-auto h-9 sm:h-10 text-sm"
                       >
                         Cancelar
                       </Button>
-                      <Button onClick={handleGoToConfirmStep} disabled={isCheckingEmail}>
+                      <Button onClick={handleGoToConfirmStep} disabled={isCheckingEmail} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
                         {isCheckingEmail ? (
                           <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -757,34 +763,34 @@ export default function Porteiros() {
                   </>
                 ) : (
                   <>
-                    <DialogHeader>
-                      <DialogTitle>Confirmar Cadastro</DialogTitle>
-                      <DialogDescription>
+                    <DialogHeader className="space-y-1 sm:space-y-2">
+                      <DialogTitle className="text-base sm:text-lg">Confirmar Cadastro</DialogTitle>
+                      <DialogDescription className="text-xs sm:text-sm">
                         Revise os dados antes de confirmar
                       </DialogDescription>
                     </DialogHeader>
 
-                    <div className="py-4 space-y-4">
-                      <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-                        <div className="flex items-center gap-3">
-                          <div className="bg-primary/10 p-2 rounded-full">
-                            <ShieldCheck className="w-5 h-5 text-primary" />
+                    <div className="py-3 sm:py-4 space-y-3 sm:space-y-4">
+                      <div className="bg-muted/50 rounded-lg p-3 sm:p-4 space-y-2 sm:space-y-3">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="bg-primary/10 p-1.5 sm:p-2 rounded-full">
+                            <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                           </div>
                           <div>
-                            <p className="text-xs text-muted-foreground">Tipo de Acesso</p>
-                            <p className="font-semibold text-primary">Porteiro</p>
+                            <p className="text-[10px] sm:text-xs text-muted-foreground">Tipo de Acesso</p>
+                            <p className="text-sm sm:text-base font-semibold text-primary">Porteiro</p>
                           </div>
                         </div>
 
                         <Separator />
 
-                        <div className="flex items-center gap-3">
-                          <div className="bg-secondary p-2 rounded-full">
-                            <Building2 className="w-5 h-5 text-muted-foreground" />
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="bg-secondary p-1.5 sm:p-2 rounded-full">
+                            <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
                           </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Condomínio Vinculado</p>
-                            <p className="font-medium">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[10px] sm:text-xs text-muted-foreground">Condomínio Vinculado</p>
+                            <p className="text-sm sm:text-base font-medium truncate">
                               {condominiums.find(c => c.id === newPorter.condominium_id)?.name || "-"}
                             </p>
                           </div>
@@ -792,28 +798,28 @@ export default function Porteiros() {
 
                         <Separator />
 
-                        <div className="grid gap-2">
+                        <div className="grid gap-1.5 sm:gap-2">
                           <div>
-                            <p className="text-xs text-muted-foreground">Nome</p>
-                            <p className="font-medium">{newPorter.full_name}</p>
+                            <p className="text-[10px] sm:text-xs text-muted-foreground">Nome</p>
+                            <p className="text-sm sm:text-base font-medium">{newPorter.full_name}</p>
                           </div>
                           <div>
-                            <p className="text-xs text-muted-foreground">E-mail</p>
-                            <p className="font-medium">{newPorter.email}</p>
+                            <p className="text-[10px] sm:text-xs text-muted-foreground">E-mail</p>
+                            <p className="text-sm sm:text-base font-medium break-all">{newPorter.email}</p>
                           </div>
                           {newPorter.phone && (
                             <div>
-                              <p className="text-xs text-muted-foreground">Telefone</p>
-                              <p className="font-medium">{newPorter.phone}</p>
+                              <p className="text-[10px] sm:text-xs text-muted-foreground">Telefone</p>
+                              <p className="text-sm sm:text-base font-medium">{newPorter.phone}</p>
                             </div>
                           )}
                         </div>
                       </div>
 
-                      <Alert>
-                        <MessageCircle className="h-4 w-4" />
-                        <AlertTitle>Notificação</AlertTitle>
-                        <AlertDescription>
+                      <Alert className="py-2 sm:py-3">
+                        <MessageCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                        <AlertTitle className="text-xs sm:text-sm">Notificação</AlertTitle>
+                        <AlertDescription className="text-[10px] sm:text-xs">
                           {newPorter.phone
                             ? "As credenciais de acesso serão enviadas via WhatsApp."
                             : "As credenciais serão exibidas após o cadastro para você informar manualmente."}
@@ -821,18 +827,18 @@ export default function Porteiros() {
                       </Alert>
                     </div>
 
-                    <DialogFooter className="flex gap-2">
+                    <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-2">
                       <Button
                         variant="outline"
                         onClick={() => setDialogStep("form")}
                         disabled={isSubmitting}
-                        className="gap-2"
+                        className="w-full sm:w-auto h-9 sm:h-10 text-sm gap-2"
                       >
                         <ArrowLeft className="w-4 h-4" />
                         Voltar
                       </Button>
-                      <Button onClick={handleAddPorter} disabled={isSubmitting}>
-                        {isSubmitting ? "Cadastrando..." : "Confirmar Cadastro"}
+                      <Button onClick={handleAddPorter} disabled={isSubmitting} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
+                        {isSubmitting ? "Cadastrando..." : "Confirmar"}
                       </Button>
                     </DialogFooter>
                   </>
@@ -844,8 +850,8 @@ export default function Porteiros() {
 
         {/* Filters */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col gap-4 sm:flex-row">
+          <CardContent className="pt-4 sm:pt-6 p-3 sm:p-6">
+            <div className="flex flex-col gap-3 sm:gap-4 sm:flex-row">
               <div className="flex-1">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -853,12 +859,12 @@ export default function Porteiros() {
                     placeholder="Buscar por nome ou e-mail..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 h-9 sm:h-10 text-sm"
                   />
                 </div>
               </div>
               <Select value={selectedCondominium} onValueChange={setSelectedCondominium}>
-                <SelectTrigger className="w-full sm:w-[250px]">
+                <SelectTrigger className="w-full sm:w-[250px] h-9 sm:h-10 text-sm">
                   <SelectValue placeholder="Filtrar por condomínio" />
                 </SelectTrigger>
                 <SelectContent>
@@ -876,13 +882,13 @@ export default function Porteiros() {
 
         {/* Porters List */}
         <Card>
-          <CardHeader>
-            <CardTitle>Porteiros Cadastrados</CardTitle>
-            <CardDescription>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-base sm:text-lg">Porteiros Cadastrados</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
               {filteredPorters.length} porteiro(s) encontrado(s)
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-6 pt-0">
             {loading ? (
               <div className="space-y-3">
                 {[1, 2, 3].map((i) => (
@@ -890,61 +896,151 @@ export default function Porteiros() {
                 ))}
               </div>
             ) : filteredPorters.length === 0 ? (
-              <div className="text-center py-12">
-                <DoorOpen className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium mb-2">Nenhum porteiro encontrado</h3>
-                <p className="text-muted-foreground mb-4">
+              <div className="text-center py-8 sm:py-12">
+                <DoorOpen className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-muted-foreground mb-3 sm:mb-4" />
+                <h3 className="text-base sm:text-lg font-medium mb-2">Nenhum porteiro encontrado</h3>
+                <p className="text-sm text-muted-foreground mb-4">
                   {porters.length === 0
                     ? "Adicione porteiros para gerenciar as encomendas"
                     : "Tente ajustar os filtros de busca"}
                 </p>
                 {porters.length === 0 && (
-                  <Button onClick={() => setIsDialogOpen(true)} className="gap-2">
+                  <Button onClick={() => setIsDialogOpen(true)} className="gap-2 h-9 sm:h-10 text-sm">
                     <Plus className="w-4 h-4" />
                     Adicionar Primeiro Porteiro
                   </Button>
                 )}
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Contato</TableHead>
-                      <TableHead>Condomínio</TableHead>
-                      <TableHead>Cadastrado em</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredPorters.map((porter) => (
-                      <TableRow key={porter.id}>
-                        <TableCell>
-                          <div className="font-medium">
+              <>
+                {/* Mobile Card View */}
+                <div className="space-y-3 md:hidden">
+                  {filteredPorters.map((porter) => (
+                    <div key={porter.id} className="border rounded-lg p-3 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-sm truncate">
                             {porter.profile?.full_name || "Nome não informado"}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-1.5 text-sm">
-                              <Mail className="w-3.5 h-3.5 text-muted-foreground" />
-                              {porter.profile?.email || "-"}
-                            </div>
-                            {porter.profile?.phone && (
-                              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                                <Phone className="w-3.5 h-3.5" />
-                                {porter.profile.phone}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary" className="gap-1">
-                            <Building2 className="w-3 h-3" />
+                          </p>
+                          <Badge variant="secondary" className="gap-1 mt-1 text-[10px]">
+                            <Building2 className="w-2.5 h-2.5" />
                             {porter.condominium?.name || "N/A"}
                           </Badge>
-                        </TableCell>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => handleResendCredentials(porter)}
+                                  disabled={resendingCredentials === porter.id}
+                                >
+                                  {resendingCredentials === porter.id ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  ) : (
+                                    <Send className="w-3.5 h-3.5" />
+                                  )}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Reenviar credenciais</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleOpenEditDialog(porter)}
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="w-[calc(100%-2rem)] max-w-sm p-4">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle className="text-base">Remover porteiro?</AlertDialogTitle>
+                                <AlertDialogDescription className="text-xs">
+                                  O porteiro perderá acesso ao sistema. Esta ação não pode ser desfeita.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-2">
+                                <AlertDialogCancel className="w-full sm:w-auto h-9 text-sm mt-0">Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleRemovePorter(porter.id, porter.user_id, porter.profile?.full_name || "Porteiro")}
+                                  className="w-full sm:w-auto h-9 text-sm bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Remover
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5 text-xs">
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <Mail className="w-3 h-3 flex-shrink-0" />
+                          <span className="truncate">{porter.profile?.email || "-"}</span>
+                        </div>
+                        {porter.profile?.phone && (
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <Phone className="w-3 h-3 flex-shrink-0" />
+                            <span>{porter.profile.phone}</span>
+                          </div>
+                        )}
+                        <div className="text-[10px] text-muted-foreground pt-1">
+                          Cadastrado em {format(new Date(porter.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Contato</TableHead>
+                        <TableHead>Condomínio</TableHead>
+                        <TableHead>Cadastrado em</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredPorters.map((porter) => (
+                        <TableRow key={porter.id}>
+                          <TableCell>
+                            <div className="font-medium">
+                              {porter.profile?.full_name || "Nome não informado"}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1.5 text-sm">
+                                <Mail className="w-3.5 h-3.5 text-muted-foreground" />
+                                {porter.profile?.email || "-"}
+                              </div>
+                              {porter.profile?.phone && (
+                                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                  <Phone className="w-3.5 h-3.5" />
+                                  {porter.profile.phone}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="gap-1">
+                              <Building2 className="w-3 h-3" />
+                              {porter.condominium?.name || "N/A"}
+                            </Badge>
+                          </TableCell>
                         <TableCell className="text-muted-foreground">
                           {format(new Date(porter.created_at), "dd/MM/yyyy", { locale: ptBR })}
                         </TableCell>
@@ -1014,10 +1110,11 @@ export default function Porteiros() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
@@ -1025,40 +1122,41 @@ export default function Porteiros() {
 
       {/* Resend Credentials Result Dialog */}
       <Dialog open={resendDialogOpen} onOpenChange={setResendDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Key className="w-5 h-5 text-primary" />
+        <DialogContent className="w-[calc(100%-2rem)] max-w-md p-4 sm:p-6">
+          <DialogHeader className="space-y-1 sm:space-y-2">
+            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <Key className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
               Novas Credenciais
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs sm:text-sm">
               {resendResult?.message}
             </DialogDescription>
           </DialogHeader>
 
           {resendResult?.password && (
-            <div className="space-y-4 py-4">
-              <Alert variant="destructive" className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20">
-                <AlertCircle className="h-4 w-4 text-yellow-600" />
-                <AlertTitle className="text-yellow-800 dark:text-yellow-200">Atenção</AlertTitle>
-                <AlertDescription className="text-yellow-700 dark:text-yellow-300">
+            <div className="space-y-3 sm:space-y-4 py-3 sm:py-4">
+              <Alert variant="destructive" className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20 py-2 sm:py-3">
+                <AlertCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-yellow-600" />
+                <AlertTitle className="text-xs sm:text-sm text-yellow-800 dark:text-yellow-200">Atenção</AlertTitle>
+                <AlertDescription className="text-[10px] sm:text-xs text-yellow-700 dark:text-yellow-300">
                   Não foi possível enviar as credenciais via WhatsApp. Anote a senha abaixo!
                 </AlertDescription>
               </Alert>
 
-              <div className="flex items-center gap-3 text-sm">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <Key className="w-4 h-4 text-primary" />
+              <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
+                <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10">
+                  <Key className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
                 </div>
-                <div className="flex-1">
-                  <p className="text-muted-foreground">Nova Senha</p>
-                  <div className="flex items-center gap-2">
-                    <code className="text-lg font-mono font-bold text-primary bg-primary/10 px-3 py-1 rounded">
+                <div className="flex-1 min-w-0">
+                  <p className="text-muted-foreground text-[10px] sm:text-xs">Nova Senha</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <code className="text-base sm:text-lg font-mono font-bold text-primary bg-primary/10 px-2 sm:px-3 py-1 rounded">
                       {resendResult.password}
                     </code>
                     <Button
                       variant="ghost"
                       size="icon"
+                      className="h-7 w-7 sm:h-8 sm:w-8"
                       onClick={() => {
                         navigator.clipboard.writeText(resendResult.password!);
                         toast({
@@ -1067,7 +1165,7 @@ export default function Porteiros() {
                         });
                       }}
                     >
-                      <Copy className="w-4 h-4" />
+                      <Copy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </Button>
                   </div>
                 </div>
@@ -1076,73 +1174,73 @@ export default function Porteiros() {
           )}
 
           <DialogFooter>
-            <Button onClick={() => setResendDialogOpen(false)}>Fechar</Button>
+            <Button onClick={() => setResendDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Success Dialog with Password */}
       <Dialog open={successDialogOpen} onOpenChange={setSuccessDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Key className="w-5 h-5 text-primary" />
+        <DialogContent className="w-[calc(100%-2rem)] max-w-md p-4 sm:p-6">
+          <DialogHeader className="space-y-1 sm:space-y-2">
+            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <Key className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
               Porteiro Cadastrado
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs sm:text-sm">
               O WhatsApp não foi enviado. Anote as credenciais abaixo para informar ao porteiro.
             </DialogDescription>
           </DialogHeader>
 
           {successData && (
-            <div className="space-y-4 py-4">
-              <Alert variant="destructive" className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20">
-                <AlertCircle className="h-4 w-4 text-yellow-600" />
-                <AlertTitle className="text-yellow-800 dark:text-yellow-200">Atenção</AlertTitle>
-                <AlertDescription className="text-yellow-700 dark:text-yellow-300">
+            <div className="space-y-3 sm:space-y-4 py-3 sm:py-4">
+              <Alert variant="destructive" className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20 py-2 sm:py-3">
+                <AlertCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-yellow-600" />
+                <AlertTitle className="text-xs sm:text-sm text-yellow-800 dark:text-yellow-200">Atenção</AlertTitle>
+                <AlertDescription className="text-[10px] sm:text-xs text-yellow-700 dark:text-yellow-300">
                   {successData.password 
                     ? "Não foi possível enviar as credenciais via WhatsApp. Anote a senha abaixo!"
                     : "O porteiro foi vinculado ao condomínio."}
                 </AlertDescription>
               </Alert>
 
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 text-sm">
-                  <div className="p-2 rounded-lg bg-muted">
-                    <Mail className="w-4 h-4 text-muted-foreground" />
+              <div className="space-y-2 sm:space-y-3">
+                <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
+                  <div className="p-1.5 sm:p-2 rounded-lg bg-muted">
+                    <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
                   </div>
-                  <div>
-                    <p className="text-muted-foreground">E-mail</p>
-                    <p className="font-medium">{successData.email}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-muted-foreground text-[10px] sm:text-xs">E-mail</p>
+                    <p className="font-medium text-sm sm:text-base truncate">{successData.email}</p>
                   </div>
                 </div>
 
                 {successData.password && (
-                  <div className="flex items-center gap-3 text-sm">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <Key className="w-4 h-4 text-primary" />
+                  <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
+                    <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10">
+                      <Key className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
                     </div>
-                    <div className="flex-1">
-                      <p className="text-muted-foreground">Senha</p>
-                      <div className="flex items-center gap-2">
-                        <code className="text-lg font-mono font-bold text-primary bg-primary/10 px-3 py-1 rounded">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-muted-foreground text-[10px] sm:text-xs">Senha</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <code className="text-base sm:text-lg font-mono font-bold text-primary bg-primary/10 px-2 sm:px-3 py-1 rounded">
                           {successData.password}
                         </code>
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={handleCopyPassword}
-                          className="gap-1"
+                          className="gap-1 h-7 sm:h-8 text-xs"
                         >
                           {passwordCopied ? (
                             <>
                               <Check className="w-3 h-3" />
-                              Copiado
+                              <span className="hidden xs:inline">Copiado</span>
                             </>
                           ) : (
                             <>
                               <Copy className="w-3 h-3" />
-                              Copiar
+                              <span className="hidden xs:inline">Copiar</span>
                             </>
                           )}
                         </Button>
@@ -1161,6 +1259,7 @@ export default function Porteiros() {
                 setSuccessData(null);
                 setPasswordCopied(false);
               }}
+              className="w-full sm:w-auto h-9 sm:h-10 text-sm"
             >
               Entendi
             </Button>
@@ -1170,39 +1269,39 @@ export default function Porteiros() {
 
       {/* Orphan Users Cleanup Dialog */}
       <Dialog open={orphanDialogOpen} onOpenChange={setOrphanDialogOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <UserX className="w-5 h-5 text-destructive" />
+        <DialogContent className="w-[calc(100%-2rem)] max-w-2xl max-h-[85vh] sm:max-h-[80vh] overflow-hidden flex flex-col p-4 sm:p-6">
+          <DialogHeader className="space-y-1 sm:space-y-2">
+            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <UserX className="w-4 h-4 sm:w-5 sm:h-5 text-destructive" />
               Usuários Órfãos
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs sm:text-sm">
               Usuários que existem na autenticação mas não possuem perfil ou papel definido no sistema.
-              Estes usuários podem causar conflitos ao adicionar novos porteiros.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto py-4">
+          <div className="flex-1 overflow-y-auto py-2 sm:py-4">
             {orphanUsers.length === 0 ? (
-              <div className="text-center py-12">
-                <Check className="w-12 h-12 mx-auto text-green-500 mb-4" />
-                <h3 className="text-lg font-medium mb-2">Nenhum usuário órfão encontrado</h3>
-                <p className="text-muted-foreground">
+              <div className="text-center py-8 sm:py-12">
+                <Check className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-green-500 mb-3 sm:mb-4" />
+                <h3 className="text-base sm:text-lg font-medium mb-2">Nenhum usuário órfão encontrado</h3>
+                <p className="text-sm text-muted-foreground">
                   O sistema está limpo!
                 </p>
               </div>
             ) : (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">
-                    {orphanUsers.length} usuário(s) órfão(s) encontrado(s)
+              <div className="space-y-3 sm:space-y-4">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    {orphanUsers.length} usuário(s) órfão(s)
                   </p>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={toggleAllOrphans}
+                    className="h-7 sm:h-8 text-xs sm:text-sm"
                   >
-                    {selectedOrphans.size === orphanUsers.length ? "Desmarcar todos" : "Selecionar todos"}
+                    {selectedOrphans.size === orphanUsers.length ? "Desmarcar" : "Selecionar"} todos
                   </Button>
                 </div>
 
@@ -1210,7 +1309,7 @@ export default function Porteiros() {
                   {orphanUsers.map((orphan) => (
                     <div
                       key={orphan.id}
-                      className={`flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/50 transition-colors ${
+                      className={`flex items-center gap-2 sm:gap-3 p-2 sm:p-3 cursor-pointer hover:bg-muted/50 transition-colors ${
                         selectedOrphans.has(orphan.id) ? "bg-muted" : ""
                       }`}
                       onClick={() => toggleOrphanSelection(orphan.id)}
@@ -1219,27 +1318,27 @@ export default function Porteiros() {
                         type="checkbox"
                         checked={selectedOrphans.has(orphan.id)}
                         onChange={() => toggleOrphanSelection(orphan.id)}
-                        className="h-4 w-4 rounded border-gray-300"
+                        className="h-4 w-4 rounded border-gray-300 flex-shrink-0"
                         onClick={(e) => e.stopPropagation()}
                       />
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                          <span className="font-medium truncate">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
+                          <span className="font-medium text-xs sm:text-sm truncate">
                             {orphan.email || "E-mail não definido"}
                           </span>
                         </div>
-                        <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
-                          <span>ID: {orphan.id.slice(0, 8)}...</span>
-                          <span>Criado em: {format(new Date(orphan.created_at), "dd/MM/yyyy", { locale: ptBR })}</span>
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-1 text-[10px] sm:text-xs text-muted-foreground">
+                          <span className="hidden xs:inline">ID: {orphan.id.slice(0, 8)}...</span>
+                          <span>{format(new Date(orphan.created_at), "dd/MM/yyyy", { locale: ptBR })}</span>
                         </div>
                       </div>
-                      <div className="flex gap-1">
+                      <div className="flex flex-col sm:flex-row gap-1 flex-shrink-0">
                         {!orphan.has_profile && (
-                          <Badge variant="secondary" className="text-xs">Sem perfil</Badge>
+                          <Badge variant="secondary" className="text-[9px] sm:text-xs px-1 sm:px-2">Sem perfil</Badge>
                         )}
                         {!orphan.has_role && (
-                          <Badge variant="secondary" className="text-xs">Sem papel</Badge>
+                          <Badge variant="secondary" className="text-[9px] sm:text-xs px-1 sm:px-2">Sem papel</Badge>
                         )}
                       </div>
                     </div>
@@ -1249,11 +1348,12 @@ export default function Porteiros() {
             )}
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-2 mt-2">
             <Button
               variant="outline"
               onClick={() => handleLoadOrphanUsers()}
               disabled={isLoadingOrphans || isDeletingOrphans}
+              className="w-full sm:w-auto h-9 sm:h-10 text-sm"
             >
               {isLoadingOrphans ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -1266,6 +1366,7 @@ export default function Porteiros() {
               variant="destructive"
               onClick={handleDeleteOrphans}
               disabled={selectedOrphans.size === 0 || isDeletingOrphans}
+              className="w-full sm:w-auto h-9 sm:h-10 text-sm"
             >
               {isDeletingOrphans ? (
                 <>
@@ -1285,54 +1386,56 @@ export default function Porteiros() {
 
       {/* Edit Porter Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Pencil className="w-5 h-5 text-primary" />
+        <DialogContent className="w-[calc(100%-2rem)] max-w-md p-4 sm:p-6">
+          <DialogHeader className="space-y-1 sm:space-y-2">
+            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <Pencil className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
               Editar Porteiro
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs sm:text-sm">
               Atualize os dados do porteiro
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit_full_name">Nome completo *</Label>
+          <div className="space-y-3 sm:space-y-4 py-3 sm:py-4">
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="edit_full_name" className="text-xs sm:text-sm">Nome completo *</Label>
               <Input
                 id="edit_full_name"
                 value={editForm.full_name}
                 onChange={(e) => setEditForm((prev) => ({ ...prev, full_name: e.target.value }))}
                 placeholder="Nome do porteiro"
+                className="h-9 sm:h-10 text-sm"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="edit_phone">Telefone</Label>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="edit_phone" className="text-xs sm:text-sm">Telefone</Label>
               <MaskedInput
                 id="edit_phone"
                 mask="phone"
                 value={editForm.phone}
                 onChange={(value) => setEditForm((prev) => ({ ...prev, phone: value }))}
+                className="h-9 sm:h-10 text-sm"
               />
             </div>
 
             {editingPorter?.profile?.email && (
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">E-mail (não editável)</Label>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted px-3 py-2 rounded-md">
-                  <Mail className="w-4 h-4" />
-                  {editingPorter.profile.email}
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label className="text-muted-foreground text-xs sm:text-sm">E-mail (não editável)</Label>
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground bg-muted px-2 sm:px-3 py-2 rounded-md">
+                  <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                  <span className="truncate">{editingPorter.profile.email}</span>
                 </div>
               </div>
             )}
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+          <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
               Cancelar
             </Button>
-            <Button onClick={handleUpdatePorter} disabled={isUpdating}>
+            <Button onClick={handleUpdatePorter} disabled={isUpdating} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
               {isUpdating ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
