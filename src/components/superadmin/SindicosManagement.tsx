@@ -1140,78 +1140,81 @@ export function SindicosManagement() {
             setDeletePreviewData(null);
           }
         }}>
-          <AlertDialogContent className="max-w-lg">
-            <AlertDialogHeader>
-              <AlertDialogTitle className="flex items-center gap-2 text-destructive">
-                <AlertTriangle className="h-5 w-5" />
-                Atenção: Exclusão Permanente
+          <AlertDialogContent className="w-[calc(100%-2rem)] max-w-lg p-4 sm:p-6">
+            <AlertDialogHeader className="space-y-2 sm:space-y-3">
+              <AlertDialogTitle className="flex items-center gap-2 text-destructive text-base sm:text-lg">
+                <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                <span>Atenção: Exclusão Permanente</span>
               </AlertDialogTitle>
-              <div className="space-y-4 text-left">
-                <p className="text-sm text-muted-foreground">
+              <div className="space-y-3 sm:space-y-4 text-left">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   Tem certeza que deseja excluir o síndico{" "}
                   <span className="font-semibold text-foreground">{sindicoToDelete?.profile?.full_name}</span>?
                 </p>
 
                 {/* Data Preview */}
                 {deletePreviewData?.isLoading ? (
-                  <div className="flex items-center gap-2 p-4 bg-muted/50 rounded-lg">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="text-sm">Calculando dados a serem removidos...</span>
+                  <div className="flex items-center gap-2 p-3 sm:p-4 bg-muted/50 rounded-lg">
+                    <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
+                    <span className="text-xs sm:text-sm">Calculando dados a serem removidos...</span>
                   </div>
                 ) : deletePreviewData && (deletePreviewData.condominiums > 0 || deletePreviewData.residents > 0) ? (
-                  <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg space-y-3">
-                    <p className="text-sm font-medium text-destructive">
-                      Os seguintes dados serão removidos permanentemente:
+                  <div className="p-3 sm:p-4 bg-destructive/10 border border-destructive/20 rounded-lg space-y-2 sm:space-y-3">
+                    <p className="text-xs sm:text-sm font-medium text-destructive">
+                      Os seguintes dados serão removidos:
                     </p>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                        <span><strong>{deletePreviewData.condominiums}</strong> condomínio(s)</span>
+                    <div className="grid grid-cols-2 gap-1.5 sm:gap-2 text-xs sm:text-sm">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <Building2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
+                        <span><strong>{deletePreviewData.condominiums}</strong> cond.</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <Building2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
                         <span><strong>{deletePreviewData.blocks}</strong> bloco(s)</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                        <span><strong>{deletePreviewData.apartments}</strong> apartamento(s)</span>
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <Building2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
+                        <span><strong>{deletePreviewData.apartments}</strong> apto(s)</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <User className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
                         <span><strong>{deletePreviewData.residents}</strong> morador(es)</span>
                       </div>
-                      <div className="flex items-center gap-2 col-span-2">
-                        <FileText className="h-4 w-4 text-muted-foreground" />
+                      <div className="flex items-center gap-1.5 sm:gap-2 col-span-2">
+                        <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
                         <span><strong>{deletePreviewData.occurrences}</strong> ocorrência(s)</span>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="p-4 bg-muted/50 rounded-lg">
-                    <p className="text-sm text-muted-foreground">
+                  <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       Este síndico não possui condomínios vinculados.
                     </p>
                   </div>
                 )}
 
-                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-                  <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">
+                <div className="p-2.5 sm:p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                  <p className="text-xs sm:text-sm text-amber-600 dark:text-amber-400 font-medium">
                     ⚠️ Esta ação é irreversível!
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
                     Todos os dados listados acima serão permanentemente removidos do sistema.
                   </p>
                 </div>
               </div>
             </AlertDialogHeader>
-            <AlertDialogFooter className="gap-2 sm:gap-0">
-              <AlertDialogCancel disabled={deleteSindicoMutation.isPending}>
+            <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-2 mt-2 sm:mt-4">
+              <AlertDialogCancel 
+                disabled={deleteSindicoMutation.isPending}
+                className="w-full sm:w-auto h-9 sm:h-10 text-sm mt-0"
+              >
                 Cancelar
               </AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleConfirmDelete}
                 disabled={deleteSindicoMutation.isPending || deletePreviewData?.isLoading}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                className="w-full sm:w-auto h-9 sm:h-10 text-sm bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 {deleteSindicoMutation.isPending ? (
                   <>
@@ -1221,7 +1224,7 @@ export function SindicosManagement() {
                 ) : (
                   <>
                     <Trash2 className="h-4 w-4 mr-2" />
-                    Confirmar Exclusão
+                    Confirmar
                   </>
                 )}
               </AlertDialogAction>
