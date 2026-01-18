@@ -58,7 +58,7 @@ const Footer = () => {
         {/* Bottom */}
         <div className="pt-8 border-t border-border/50 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            © 2024 NotificaCondo. Todos os direitos reservados.
+            © {new Date().getFullYear()} NotificaCondo. Todos os direitos reservados.
           </p>
           <p className="text-xs text-muted-foreground max-w-xl text-center md:text-right">
             O NotificaCondo é uma plataforma de apoio à gestão condominial. As decisões 
