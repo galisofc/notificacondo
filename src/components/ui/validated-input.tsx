@@ -1,5 +1,5 @@
-import React from "react";
-import { Loader2, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
+import React, { useState } from "react";
+import { Loader2, CheckCircle, XCircle, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { MaskedInput, MaskType } from "@/components/ui/masked-input";
 import { cn } from "@/lib/utils";
@@ -24,11 +24,10 @@ interface ValidatedInputProps {
   id: string;
   value: string;
   onChange: (value: string) => void;
-  status: ValidationStatus;
+  status?: ValidationStatus;
   placeholder?: string;
-  type?: string;
+  type?: "text" | "email" | "password";
   mask?: MaskType;
-  label?: string;
   disabled?: boolean;
   className?: string;
   messages?: {
@@ -40,7 +39,8 @@ interface ValidatedInputProps {
     incomplete?: string;
   };
   showSuccessMessage?: boolean;
-  rightElement?: React.ReactNode;
+  /** For password fields - enables show/hide toggle */
+  showPasswordToggle?: boolean;
 }
 
 const defaultMessages = {
@@ -104,7 +104,7 @@ export function ValidatedInput({
   id,
   value,
   onChange,
-  status,
+  status = "idle",
   placeholder,
   type = "text",
   mask,
@@ -112,15 +112,24 @@ export function ValidatedInput({
   className,
   messages = {},
   showSuccessMessage = true,
-  rightElement,
+  showPasswordToggle = false,
 }: ValidatedInputProps) {
+  const [showPassword, setShowPassword] = useState(false);
+  
   const mergedMessages = { ...defaultMessages, ...messages };
   const config = getStatusConfig(status, mergedMessages);
   
-  const hasIcon = config.icon !== null || rightElement !== undefined;
+  const isPasswordField = type === "password";
+  const hasStatusIcon = config.icon !== null;
+  const hasPasswordToggle = isPasswordField && showPasswordToggle;
+  const hasRightElement = hasStatusIcon || hasPasswordToggle;
+  
+  // Calculate right padding based on elements
+  const rightPadding = hasStatusIcon && hasPasswordToggle ? "pr-16" : hasRightElement ? "pr-10" : "";
+  
   const inputClassName = cn(
     "h-9 sm:h-10 text-sm",
-    hasIcon && "pr-10",
+    rightPadding,
     config.borderClass,
     className
   );
@@ -146,6 +155,9 @@ export function ValidatedInput({
     onChange(newValue);
   };
 
+  // Determine actual input type for password fields
+  const actualType = isPasswordField ? (showPassword ? "text" : "password") : type;
+
   return (
     <div className="space-y-1">
       <div className="relative">
@@ -162,7 +174,7 @@ export function ValidatedInput({
         ) : (
           <Input
             id={id}
-            type={type}
+            type={actualType}
             value={value}
             onChange={handleChange}
             placeholder={placeholder}
@@ -171,9 +183,23 @@ export function ValidatedInput({
           />
         )}
         
-        {hasIcon && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-            {rightElement}
+        {hasRightElement && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+            {hasPasswordToggle && (
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="text-muted-foreground hover:text-foreground transition-colors focus:outline-none"
+                tabIndex={-1}
+                aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            )}
             {config.icon}
           </div>
         )}
