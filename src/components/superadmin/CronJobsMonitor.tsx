@@ -205,14 +205,14 @@ export function CronJobsMonitor() {
       {/* Overall Status */}
       <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
         <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary/10">
                 <Activity className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <CardTitle className="text-lg">Monitoramento em Tempo Real</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-base md:text-lg">Monitoramento em Tempo Real</CardTitle>
+                <CardDescription className="text-xs md:text-sm">
                   Atualização automática a cada 30 segundos
                 </CardDescription>
               </div>
@@ -224,28 +224,28 @@ export function CronJobsMonitor() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div className="text-center p-3 rounded-lg bg-background/50 border">
-              <div className="text-2xl font-bold text-primary">{availableFunctions.length}</div>
-              <div className="text-xs text-muted-foreground">Total de Jobs</div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 md:gap-4">
+            <div className="text-center p-2 md:p-3 rounded-lg bg-background/50 border">
+              <div className="text-xl md:text-2xl font-bold text-primary">{availableFunctions.length}</div>
+              <div className="text-[10px] md:text-xs text-muted-foreground">Total</div>
             </div>
-            <div className="text-center p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-              <div className="text-2xl font-bold text-emerald-500">{overallStats.activeJobs}</div>
-              <div className="text-xs text-muted-foreground">Jobs Ativos</div>
+            <div className="text-center p-2 md:p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+              <div className="text-xl md:text-2xl font-bold text-emerald-500">{overallStats.activeJobs}</div>
+              <div className="text-[10px] md:text-xs text-muted-foreground">Ativos</div>
             </div>
-            <div className="text-center p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-              <div className="text-2xl font-bold text-amber-500">{overallStats.pausedJobs}</div>
-              <div className="text-xs text-muted-foreground">Jobs Pausados</div>
+            <div className="text-center p-2 md:p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <div className="text-xl md:text-2xl font-bold text-amber-500">{overallStats.pausedJobs}</div>
+              <div className="text-[10px] md:text-xs text-muted-foreground">Pausados</div>
             </div>
-            <div className="text-center p-3 rounded-lg bg-background/50 border">
-              <div className={`text-2xl font-bold ${getSuccessRateColor(overallStats.successRate)}`}>
+            <div className="text-center p-2 md:p-3 rounded-lg bg-background/50 border">
+              <div className={`text-xl md:text-2xl font-bold ${getSuccessRateColor(overallStats.successRate)}`}>
                 {overallStats.successRate}%
               </div>
-              <div className="text-xs text-muted-foreground">Taxa de Sucesso</div>
+              <div className="text-[10px] md:text-xs text-muted-foreground">Sucesso</div>
             </div>
-            <div className="text-center p-3 rounded-lg bg-background/50 border">
-              <div className="text-2xl font-bold text-muted-foreground">{overallStats.total}</div>
-              <div className="text-xs text-muted-foreground">Execuções (últ. 100)</div>
+            <div className="text-center p-2 md:p-3 rounded-lg bg-background/50 border col-span-2 sm:col-span-1">
+              <div className="text-xl md:text-2xl font-bold text-muted-foreground">{overallStats.total}</div>
+              <div className="text-[10px] md:text-xs text-muted-foreground">Execuções</div>
             </div>
           </div>
         </CardContent>

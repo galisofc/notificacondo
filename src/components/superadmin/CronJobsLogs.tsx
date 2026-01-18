@@ -354,21 +354,21 @@ export function CronJobsLogs() {
 
       {/* Quick Actions Card */}
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-3">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-primary/10">
               <Zap className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <CardTitle>Execução Manual</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-base md:text-lg">Execução Manual</CardTitle>
+              <CardDescription className="text-xs md:text-sm">
                 Dispare funções agendadas manualmente
               </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-2 md:gap-3">
             {availableFunctions.map((fn) => (
               <TooltipProvider key={fn.name}>
                 <Tooltip>
@@ -380,14 +380,15 @@ export function CronJobsLogs() {
                         setIsRunDialogOpen(true);
                       }}
                       disabled={triggerMutation.isPending}
-                      className="gap-2"
+                      className="gap-2 w-full sm:w-auto justify-start sm:justify-center text-sm"
+                      size="sm"
                     >
                       {triggerMutation.isPending && triggerMutation.variables === fn.name ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin shrink-0" />
                       ) : (
-                        <Play className="h-4 w-4" />
+                        <Play className="h-4 w-4 shrink-0" />
                       )}
-                      {fn.label}
+                      <span className="truncate">{fn.label}</span>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="max-w-[250px]">
@@ -402,15 +403,15 @@ export function CronJobsLogs() {
 
       {/* Scheduled Jobs Card */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-blue-500/10">
                 <Calendar className="h-5 w-5 text-blue-500" />
               </div>
               <div>
-                <CardTitle>Cron Jobs Agendados</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-base md:text-lg">Cron Jobs Agendados</CardTitle>
+                <CardDescription className="text-xs md:text-sm">
                   Tarefas agendadas para execução automática
                 </CardDescription>
               </div>
@@ -419,7 +420,7 @@ export function CronJobsLogs() {
               variant="outline"
               size="sm"
               onClick={refreshAll}
-              className="gap-2"
+              className="gap-2 w-full sm:w-auto"
             >
               <RefreshCw className="h-4 w-4" />
               Atualizar
@@ -434,87 +435,144 @@ export function CronJobsLogs() {
               ))}
             </div>
           ) : cronJobs && cronJobs.length > 0 ? (
-            <div className="rounded-md border overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[50px]">Ação</TableHead>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Agendamento</TableHead>
-                    <TableHead>Função</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {cronJobs.map((job) => {
-                    const functionName = getJobNameFromCommand(job.command);
-                    const paused = isPaused(functionName);
-                    const effectivelyActive = job.active && !paused;
-                    
-                    return (
-                      <TableRow key={job.jobid}>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleTogglePause(functionName)}
-                            disabled={togglePauseMutation.isPending}
-                            title={paused ? "Reativar job" : "Pausar job"}
-                          >
-                            {togglePauseMutation.isPending && togglePauseMutation.variables === functionName ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : paused ? (
-                              <PlayCircle className="h-4 w-4 text-emerald-500" />
-                            ) : (
-                              <Pause className="h-4 w-4 text-amber-500" />
-                            )}
-                          </Button>
-                        </TableCell>
-                        <TableCell className="font-medium">{translateJobName(job.jobname)}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">{formatSchedule(job.schedule)}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <code className="text-xs bg-muted px-2 py-1 rounded">
-                            {translateFunctionName(functionName)}
-                          </code>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Badge
-                              variant="outline"
-                              className={
-                                effectivelyActive
-                                  ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-                                  : "bg-amber-500/10 text-amber-500 border-amber-500/20"
-                              }
+            <>
+              {/* Desktop Table */}
+              <div className="hidden md:block rounded-md border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[50px]">Ação</TableHead>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Agendamento</TableHead>
+                      <TableHead>Função</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {cronJobs.map((job) => {
+                      const functionName = getJobNameFromCommand(job.command);
+                      const paused = isPaused(functionName);
+                      const effectivelyActive = job.active && !paused;
+                      
+                      return (
+                        <TableRow key={job.jobid}>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleTogglePause(functionName)}
+                              disabled={togglePauseMutation.isPending}
+                              title={paused ? "Reativar job" : "Pausar job"}
                             >
-                              {effectivelyActive ? "Ativo" : "Pausado"}
-                            </Badge>
-                            {paused && (
-                              <Badge variant="outline" className="bg-violet-500/10 text-violet-500 border-violet-500/20 text-xs">
-                                via painel
+                              {togglePauseMutation.isPending && togglePauseMutation.variables === functionName ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : paused ? (
+                                <PlayCircle className="h-4 w-4 text-emerald-500" />
+                              ) : (
+                                <Pause className="h-4 w-4 text-amber-500" />
+                              )}
+                            </Button>
+                          </TableCell>
+                          <TableCell className="font-medium">{translateJobName(job.jobname)}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm">{formatSchedule(job.schedule)}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <code className="text-xs bg-muted px-2 py-1 rounded">
+                              {translateFunctionName(functionName)}
+                            </code>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Badge
+                                variant="outline"
+                                className={
+                                  effectivelyActive
+                                    ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                                    : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                                }
+                              >
+                                {effectivelyActive ? "Ativo" : "Pausado"}
                               </Badge>
-                            )}
+                              {paused && (
+                                <Badge variant="outline" className="bg-violet-500/10 text-violet-500 border-violet-500/20 text-xs">
+                                  via painel
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile Cards */}
+              <div className="md:hidden space-y-3">
+                {cronJobs.map((job) => {
+                  const functionName = getJobNameFromCommand(job.command);
+                  const paused = isPaused(functionName);
+                  const effectivelyActive = job.active && !paused;
+                  
+                  return (
+                    <div key={job.jobid} className="border rounded-lg p-4 space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1 min-w-0 flex-1">
+                          <h4 className="font-medium text-sm truncate">{translateJobName(job.jobname)}</h4>
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Clock className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate">{formatSchedule(job.schedule)}</span>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleTogglePause(functionName)}
+                          disabled={togglePauseMutation.isPending}
+                          className="shrink-0"
+                        >
+                          {togglePauseMutation.isPending && togglePauseMutation.variables === functionName ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : paused ? (
+                            <PlayCircle className="h-5 w-5 text-emerald-500" />
+                          ) : (
+                            <Pause className="h-5 w-5 text-amber-500" />
+                          )}
+                        </Button>
+                      </div>
+                      
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <code className="text-xs bg-muted px-2 py-1 rounded truncate max-w-[60%]">
+                          {translateFunctionName(functionName)}
+                        </code>
+                        <div className="flex items-center gap-1.5">
+                          <Badge
+                            variant="outline"
+                            className={
+                              effectivelyActive
+                                ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-xs"
+                                : "bg-amber-500/10 text-amber-500 border-amber-500/20 text-xs"
+                            }
+                          >
+                            {effectivelyActive ? "Ativo" : "Pausado"}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           ) : (
             <div className="text-center py-8">
               <AlertTriangle className="h-12 w-12 mx-auto text-amber-500/50 mb-4" />
               <p className="text-muted-foreground mb-2">Nenhum cron job encontrado</p>
               <p className="text-sm text-muted-foreground">
                 Os cron jobs podem estar configurados mas não visíveis via RPC.
-                <br />
-                O job <code className="bg-muted px-1 rounded">notify-trial-ending-daily</code> está agendado para 9h UTC diariamente.
               </p>
             </div>
           )}
@@ -523,15 +581,15 @@ export function CronJobsLogs() {
 
       {/* Execution History Card */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-violet-500/10">
                 <Clock className="h-5 w-5 text-violet-500" />
               </div>
               <div>
-                <CardTitle>Histórico de Execuções</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-base md:text-lg">Histórico de Execuções</CardTitle>
+                <CardDescription className="text-xs md:text-sm">
                   Últimas 50 execuções (manuais e agendadas)
                 </CardDescription>
               </div>
@@ -540,7 +598,7 @@ export function CronJobsLogs() {
               variant="outline"
               size="sm"
               onClick={refreshAll}
-              className="gap-2"
+              className="gap-2 w-full sm:w-auto"
             >
               <RefreshCw className="h-4 w-4" />
               Atualizar
@@ -549,9 +607,9 @@ export function CronJobsLogs() {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="all" className="w-full">
-            <TabsList className="mb-4">
-              <TabsTrigger value="all">Todos</TabsTrigger>
-              <TabsTrigger value="cron">Agendados (pg_cron)</TabsTrigger>
+            <TabsList className="mb-4 w-full sm:w-auto grid grid-cols-2 sm:flex">
+              <TabsTrigger value="all" className="text-xs sm:text-sm">Todos</TabsTrigger>
+              <TabsTrigger value="cron" className="text-xs sm:text-sm">Agendados</TabsTrigger>
             </TabsList>
             
             <TabsContent value="all">
@@ -562,45 +620,82 @@ export function CronJobsLogs() {
                   ))}
                 </div>
               ) : edgeFunctionLogs && edgeFunctionLogs.length > 0 ? (
-                <div className="rounded-md border overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Função</TableHead>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead>Início</TableHead>
-                        <TableHead>Duração</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Detalhes</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {edgeFunctionLogs.map((log) => (
-                        <TableRow key={log.id}>
-                          <TableCell>
-                            <code className="text-xs bg-muted px-2 py-1 rounded">
-                              {translateFunctionName(log.function_name)}
-                            </code>
-                          </TableCell>
-                          <TableCell>{getTriggerTypeBadge(log.trigger_type)}</TableCell>
-                          <TableCell className="text-sm">
-                            {log.started_at
-                              ? formatCustom(log.started_at, "dd/MM/yyyy HH:mm:ss")
-                              : "—"}
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {log.duration_ms ? `${log.duration_ms}ms` : "—"}
-                          </TableCell>
-                          <TableCell>{getStatusBadge(log.status)}</TableCell>
-                          <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
-                            {log.error_message || 
-                              (log.result ? JSON.stringify(log.result).substring(0, 50) + "..." : "—")}
-                          </TableCell>
+                <>
+                  {/* Desktop Table */}
+                  <div className="hidden md:block rounded-md border overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Função</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead>Início</TableHead>
+                          <TableHead>Duração</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Detalhes</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                      </TableHeader>
+                      <TableBody>
+                        {edgeFunctionLogs.map((log) => (
+                          <TableRow key={log.id}>
+                            <TableCell>
+                              <code className="text-xs bg-muted px-2 py-1 rounded">
+                                {translateFunctionName(log.function_name)}
+                              </code>
+                            </TableCell>
+                            <TableCell>{getTriggerTypeBadge(log.trigger_type)}</TableCell>
+                            <TableCell className="text-sm">
+                              {log.started_at
+                                ? formatCustom(log.started_at, "dd/MM/yyyy HH:mm:ss")
+                                : "—"}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {log.duration_ms ? `${log.duration_ms}ms` : "—"}
+                            </TableCell>
+                            <TableCell>{getStatusBadge(log.status)}</TableCell>
+                            <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
+                              {log.error_message || 
+                                (log.result ? JSON.stringify(log.result).substring(0, 50) + "..." : "—")}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Mobile Cards */}
+                  <div className="md:hidden space-y-3">
+                    {edgeFunctionLogs.map((log) => (
+                      <div key={log.id} className="border rounded-lg p-3 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <code className="text-xs bg-muted px-2 py-1 rounded truncate flex-1">
+                            {translateFunctionName(log.function_name)}
+                          </code>
+                          {getStatusBadge(log.status)}
+                        </div>
+                        
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>
+                            {log.started_at
+                              ? formatCustom(log.started_at, "dd/MM HH:mm:ss")
+                              : "—"}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            {getTriggerTypeBadge(log.trigger_type)}
+                            {log.duration_ms && (
+                              <span className="text-muted-foreground">{log.duration_ms}ms</span>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {log.error_message && (
+                          <p className="text-xs text-destructive bg-destructive/10 p-2 rounded truncate">
+                            {log.error_message}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </>
               ) : (
                 <div className="text-center py-8">
                   <Clock className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
@@ -620,46 +715,77 @@ export function CronJobsLogs() {
                   ))}
                 </div>
               ) : cronRuns && cronRuns.length > 0 ? (
-                <div className="rounded-md border overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>ID</TableHead>
-                        <TableHead>Função</TableHead>
-                        <TableHead>Início</TableHead>
-                        <TableHead>Fim</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Mensagem</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {cronRuns.map((run) => (
-                        <TableRow key={run.runid}>
-                          <TableCell className="font-mono text-xs">{run.runid}</TableCell>
-                          <TableCell>
-                            <code className="text-xs bg-muted px-2 py-1 rounded">
-                              {translateFunctionName(getJobNameFromCommand(run.command))}
-                            </code>
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {run.start_time
-                              ? formatCustom(run.start_time, "dd/MM/yyyy HH:mm:ss")
-                              : "—"}
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {run.end_time
-                              ? formatCustom(run.end_time, "dd/MM/yyyy HH:mm:ss")
-                              : "—"}
-                          </TableCell>
-                          <TableCell>{getStatusBadge(run.status)}</TableCell>
-                          <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
-                            {run.return_message || "—"}
-                          </TableCell>
+                <>
+                  {/* Desktop Table */}
+                  <div className="hidden md:block rounded-md border overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>ID</TableHead>
+                          <TableHead>Função</TableHead>
+                          <TableHead>Início</TableHead>
+                          <TableHead>Fim</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Mensagem</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                      </TableHeader>
+                      <TableBody>
+                        {cronRuns.map((run) => (
+                          <TableRow key={run.runid}>
+                            <TableCell className="font-mono text-xs">{run.runid}</TableCell>
+                            <TableCell>
+                              <code className="text-xs bg-muted px-2 py-1 rounded">
+                                {translateFunctionName(getJobNameFromCommand(run.command))}
+                              </code>
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {run.start_time
+                                ? formatCustom(run.start_time, "dd/MM/yyyy HH:mm:ss")
+                                : "—"}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {run.end_time
+                                ? formatCustom(run.end_time, "dd/MM/yyyy HH:mm:ss")
+                                : "—"}
+                            </TableCell>
+                            <TableCell>{getStatusBadge(run.status)}</TableCell>
+                            <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
+                              {run.return_message || "—"}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Mobile Cards */}
+                  <div className="md:hidden space-y-3">
+                    {cronRuns.map((run) => (
+                      <div key={run.runid} className="border rounded-lg p-3 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <code className="text-xs bg-muted px-2 py-1 rounded truncate flex-1">
+                            {translateFunctionName(getJobNameFromCommand(run.command))}
+                          </code>
+                          {getStatusBadge(run.status)}
+                        </div>
+                        
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <div className="space-y-0.5">
+                            <div>Início: {run.start_time ? formatCustom(run.start_time, "dd/MM HH:mm") : "—"}</div>
+                            <div>Fim: {run.end_time ? formatCustom(run.end_time, "dd/MM HH:mm") : "—"}</div>
+                          </div>
+                          <span className="font-mono text-[10px]">#{run.runid}</span>
+                        </div>
+                        
+                        {run.return_message && (
+                          <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded truncate">
+                            {run.return_message}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </>
               ) : (
                 <div className="text-center py-8">
                   <Clock className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
@@ -671,9 +797,8 @@ export function CronJobsLogs() {
         </CardContent>
       </Card>
 
-      {/* Manual Trigger Dialog */}
       <Dialog open={isRunDialogOpen} onOpenChange={setIsRunDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Executar Função Manualmente</DialogTitle>
             <DialogDescription>
@@ -685,14 +810,14 @@ export function CronJobsLogs() {
               Esta ação irá disparar a função imediatamente, independente do agendamento configurado.
             </p>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsRunDialogOpen(false)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setIsRunDialogOpen(false)} className="w-full sm:w-auto">
               Cancelar
             </Button>
             <Button
               onClick={() => selectedJob && handleManualTrigger(selectedJob.jobname)}
               disabled={triggerMutation.isPending}
-              className="gap-2"
+              className="gap-2 w-full sm:w-auto"
             >
               {triggerMutation.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
