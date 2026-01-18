@@ -110,6 +110,8 @@ export function SindicosManagement() {
   });
   const [cpfStatus, setCpfStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [cpfCheckTimeout, setCpfCheckTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [emailStatus, setEmailStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
+  const [emailCheckTimeout, setEmailCheckTimeout] = useState<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -150,6 +152,67 @@ export function SindicosManagement() {
     }
   }, []);
 
+  // Função para validar formato de email
+  const isValidEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  // Função para verificar email em tempo real
+  const checkEmailAvailability = useCallback(async (email: string) => {
+    const trimmedEmail = email.trim().toLowerCase();
+    
+    // Validar formato do email
+    if (!isValidEmail(trimmedEmail)) {
+      setEmailStatus("invalid");
+      return;
+    }
+
+    setEmailStatus("checking");
+
+    try {
+      const { data: existingProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", trimmedEmail)
+        .maybeSingle();
+
+      if (existingProfile) {
+        setEmailStatus("taken");
+      } else {
+        setEmailStatus("available");
+      }
+    } catch (error) {
+      console.error("Error checking email:", error);
+      setEmailStatus("idle");
+    }
+  }, []);
+
+  // Debounce para verificação do email
+  const handleEmailChange = useCallback((value: string) => {
+    setFormData(prev => ({ ...prev, email: value }));
+    
+    // Limpar timeout anterior
+    if (emailCheckTimeout) {
+      clearTimeout(emailCheckTimeout);
+    }
+
+    const trimmedEmail = value.trim();
+    
+    // Se email estiver vazio ou muito curto, resetar status
+    if (trimmedEmail.length < 5) {
+      setEmailStatus("idle");
+      return;
+    }
+
+    // Agendar verificação com debounce de 500ms
+    const timeout = setTimeout(() => {
+      checkEmailAvailability(value);
+    }, 500);
+
+    setEmailCheckTimeout(timeout);
+  }, [emailCheckTimeout, checkEmailAvailability]);
+
   // Debounce para verificação do CPF
   const handleCpfChange = useCallback((value: string) => {
     setFormData(prev => ({ ...prev, cpf: value }));
@@ -175,21 +238,26 @@ export function SindicosManagement() {
     setCpfCheckTimeout(timeout);
   }, [cpfCheckTimeout, checkCpfAvailability]);
 
-  // Limpar timeout ao desmontar
+  // Limpar timeouts ao desmontar
   useEffect(() => {
     return () => {
       if (cpfCheckTimeout) {
         clearTimeout(cpfCheckTimeout);
       }
+      if (emailCheckTimeout) {
+        clearTimeout(emailCheckTimeout);
+      }
     };
-  }, [cpfCheckTimeout]);
+  }, [cpfCheckTimeout, emailCheckTimeout]);
 
-  // Resetar status do CPF quando o dialog fecha
+  // Resetar status do CPF e email quando o dialog fecha
   useEffect(() => {
     if (!isCreateDialogOpen) {
       setCpfStatus("idle");
+      setEmailStatus("idle");
     }
   }, [isCreateDialogOpen]);
+
 
   const { data: sindicos, isLoading } = useQuery({
     queryKey: ["superadmin-sindicos"],
@@ -606,14 +674,50 @@ export function SindicosManagement() {
                   </div>
                   <div className="grid gap-1.5 sm:gap-2">
                     <Label htmlFor="email" className="text-xs sm:text-sm">Email *</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="joao@email.com"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="h-9 sm:h-10 text-sm"
-                    />
+                    <div className="relative">
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="joao@email.com"
+                        value={formData.email}
+                        onChange={(e) => handleEmailChange(e.target.value)}
+                        className={cn(
+                          "h-9 sm:h-10 text-sm pr-10",
+                          emailStatus === "taken" ? "border-destructive" :
+                          emailStatus === "available" ? "border-emerald-500" :
+                          emailStatus === "invalid" ? "border-amber-500" : ""
+                        )}
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        {emailStatus === "checking" && (
+                          <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin text-muted-foreground" />
+                        )}
+                        {emailStatus === "available" && (
+                          <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-500" />
+                        )}
+                        {emailStatus === "taken" && (
+                          <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-destructive" />
+                        )}
+                        {emailStatus === "invalid" && (
+                          <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-500" />
+                        )}
+                      </div>
+                    </div>
+                    {emailStatus === "taken" && (
+                      <p className="text-[10px] sm:text-xs text-destructive">
+                        Este e-mail já está cadastrado no sistema.
+                      </p>
+                    )}
+                    {emailStatus === "available" && (
+                      <p className="text-[10px] sm:text-xs text-emerald-500">
+                        E-mail disponível para cadastro.
+                      </p>
+                    )}
+                    {emailStatus === "invalid" && (
+                      <p className="text-[10px] sm:text-xs text-amber-500">
+                        Formato de e-mail inválido.
+                      </p>
+                    )}
                   </div>
                   <div className="grid gap-1.5 sm:gap-2">
                     <Label htmlFor="password" className="text-xs sm:text-sm">Senha *</Label>
@@ -695,7 +799,7 @@ export function SindicosManagement() {
                   </Button>
                   <Button 
                     type="submit" 
-                    disabled={createSindicoMutation.isPending || cpfStatus === "taken" || cpfStatus === "invalid" || cpfStatus === "checking"} 
+                    disabled={createSindicoMutation.isPending || cpfStatus === "taken" || cpfStatus === "invalid" || cpfStatus === "checking" || emailStatus === "taken" || emailStatus === "invalid" || emailStatus === "checking"} 
                     className="w-full sm:w-auto h-9 sm:h-10 text-sm"
                   >
                     {createSindicoMutation.isPending ? (
