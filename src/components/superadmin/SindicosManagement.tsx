@@ -53,7 +53,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, MoreHorizontal, Mail, Building2, Plus, Loader2, Eye, User, Phone, Calendar, CreditCard, CheckCircle, XCircle, Pencil, Save, X, Trash2, AlertTriangle, FileText } from "lucide-react";
+import { Search, MoreHorizontal, Mail, Building2, Plus, Loader2, Eye, EyeOff, User, Phone, Calendar, CreditCard, CheckCircle, XCircle, Pencil, Save, X, Trash2, AlertTriangle, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
@@ -111,6 +111,7 @@ export function SindicosManagement() {
     phone: "",
     cpf: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
   // Use email validation hook
   const { 
     emailStatus, 
@@ -612,14 +613,28 @@ export function SindicosManagement() {
                   </div>
                   <div className="grid gap-1.5 sm:gap-2">
                     <Label htmlFor="password" className="text-xs sm:text-sm">Senha *</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="Mínimo 6 caracteres"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className="h-9 sm:h-10 text-sm"
-                    />
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Mínimo 6 caracteres"
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        className="h-9 sm:h-10 text-sm pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        tabIndex={-1}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
                     <PasswordStrengthIndicator password={formData.password} />
                   </div>
                   <div className="grid gap-1.5 sm:gap-2">
