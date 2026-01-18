@@ -1048,12 +1048,16 @@ const Auth = () => {
               <button
                 type="button"
                 onClick={() => {
-                  setIsLogin(!isLogin);
-                  resetForm();
+                  if (isLogin) {
+                    navigate('/#planos');
+                  } else {
+                    setIsLogin(true);
+                    resetForm();
+                  }
                 }}
                 className="text-primary hover:underline font-medium"
               >
-                {isLogin ? "Criar conta" : "Fazer login"}
+                {isLogin ? "Escolher um plano" : "Fazer login"}
               </button>
             </p>
           </div>
