@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useEmailValidation } from "@/hooks/useEmailValidation";
+import { usePhoneValidation } from "@/hooks/usePhoneValidation";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -116,11 +117,24 @@ export default function Porteiros() {
     condominiumId: newPorter.condominium_id,
   });
 
+  // Use phone validation hook
+  const {
+    phoneStatus,
+    validatePhone,
+    resetStatus: resetPhoneStatus
+  } = usePhoneValidation();
+
   // Handle email change with validation
   const handleEmailChange = useCallback((value: string) => {
     setNewPorter(prev => ({ ...prev, email: value }));
     validateEmail(value);
   }, [validateEmail]);
+
+  // Handle phone change with validation
+  const handlePhoneChange = useCallback((value: string) => {
+    setNewPorter(prev => ({ ...prev, phone: value }));
+    validatePhone(value);
+  }, [validatePhone]);
 
   // Re-check email when condominium changes
   useEffect(() => {
@@ -129,12 +143,13 @@ export default function Porteiros() {
     }
   }, [newPorter.condominium_id, validateEmail]);
 
-  // Reset email status when dialog closes
+  // Reset status when dialog closes
   useEffect(() => {
     if (!isDialogOpen) {
       resetEmailStatus();
+      resetPhoneStatus();
     }
-  }, [isDialogOpen, resetEmailStatus]);
+  }, [isDialogOpen, resetEmailStatus, resetPhoneStatus]);
 
   // Fetch síndico's condominiums
   useEffect(() => {
@@ -801,15 +816,37 @@ export default function Porteiros() {
 
                       <div className="space-y-1.5 sm:space-y-2">
                         <Label htmlFor="phone" className="text-xs sm:text-sm">Telefone</Label>
-                        <MaskedInput
-                          id="phone"
-                          mask="phone"
-                          value={newPorter.phone}
-                          onChange={(value) =>
-                            setNewPorter((prev) => ({ ...prev, phone: value }))
-                          }
-                          className="h-9 sm:h-10 text-sm"
-                        />
+                        <div className="relative">
+                          <MaskedInput
+                            id="phone"
+                            mask="phone"
+                            value={newPorter.phone}
+                            onChange={handlePhoneChange}
+                            className={cn(
+                              "h-9 sm:h-10 text-sm pr-10",
+                              phoneStatus === "invalid" ? "border-amber-500" :
+                              phoneStatus === "valid" ? "border-emerald-500" : ""
+                            )}
+                          />
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                            {phoneStatus === "valid" && (
+                              <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-500" />
+                            )}
+                            {phoneStatus === "invalid" && (
+                              <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-500" />
+                            )}
+                          </div>
+                        </div>
+                        {phoneStatus === "invalid" && (
+                          <p className="text-[10px] sm:text-xs text-amber-500">
+                            Telefone inválido. Use DDD + número.
+                          </p>
+                        )}
+                        {phoneStatus === "incomplete" && newPorter.phone.replace(/\D/g, "").length > 0 && (
+                          <p className="text-[10px] sm:text-xs text-muted-foreground">
+                            Digite o telefone completo com DDD.
+                          </p>
+                        )}
                       </div>
                     </div>
 

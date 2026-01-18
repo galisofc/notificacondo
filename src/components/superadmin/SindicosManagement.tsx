@@ -6,6 +6,7 @@ import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useEmailValidation } from "@/hooks/useEmailValidation";
 import { useCpfValidation } from "@/hooks/useCpfValidation";
+import { usePhoneValidation } from "@/hooks/usePhoneValidation";
 import {
   Card,
   CardContent,
@@ -126,6 +127,13 @@ export function SindicosManagement() {
     resetStatus: resetCpfStatus
   } = useCpfValidation();
 
+  // Use phone validation hook
+  const {
+    phoneStatus,
+    validatePhone,
+    resetStatus: resetPhoneStatus
+  } = usePhoneValidation();
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -142,13 +150,20 @@ export function SindicosManagement() {
     validateCpf(value);
   }, [validateCpf]);
 
-  // Resetar status do CPF e email quando o dialog fecha
+  // Handle phone change with validation
+  const handlePhoneChange = useCallback((value: string) => {
+    setFormData(prev => ({ ...prev, phone: value }));
+    validatePhone(value);
+  }, [validatePhone]);
+
+  // Resetar status quando o dialog fecha
   useEffect(() => {
     if (!isCreateDialogOpen) {
       resetCpfStatus();
       resetEmailStatus();
+      resetPhoneStatus();
     }
-  }, [isCreateDialogOpen, resetEmailStatus, resetCpfStatus]);
+  }, [isCreateDialogOpen, resetEmailStatus, resetCpfStatus, resetPhoneStatus]);
 
 
   const { data: sindicos, isLoading } = useQuery({
@@ -685,13 +700,37 @@ export function SindicosManagement() {
                   </div>
                   <div className="grid gap-1.5 sm:gap-2">
                     <Label htmlFor="phone" className="text-xs sm:text-sm">Telefone</Label>
-                    <MaskedInput
-                      id="phone"
-                      mask="phone"
-                      value={formData.phone}
-                      onChange={(value) => setFormData({ ...formData, phone: value })}
-                      className="h-9 sm:h-10 text-sm"
-                    />
+                    <div className="relative">
+                      <MaskedInput
+                        id="phone"
+                        mask="phone"
+                        value={formData.phone}
+                        onChange={handlePhoneChange}
+                        className={cn(
+                          "h-9 sm:h-10 text-sm pr-10",
+                          phoneStatus === "invalid" ? "border-amber-500" :
+                          phoneStatus === "valid" ? "border-emerald-500" : ""
+                        )}
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        {phoneStatus === "valid" && (
+                          <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-500" />
+                        )}
+                        {phoneStatus === "invalid" && (
+                          <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-500" />
+                        )}
+                      </div>
+                    </div>
+                    {phoneStatus === "invalid" && (
+                      <p className="text-[10px] sm:text-xs text-amber-500">
+                        Telefone inválido. Use DDD + número.
+                      </p>
+                    )}
+                    {phoneStatus === "incomplete" && formData.phone.replace(/\D/g, "").length > 0 && (
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">
+                        Digite o telefone completo com DDD.
+                      </p>
+                    )}
                   </div>
                 </div>
                 <DialogFooter className="flex-col-reverse sm:flex-row gap-2 mt-2 sm:mt-4">
