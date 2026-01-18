@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, Lock, User, ArrowLeft, Loader2, Check, Building2, Phone, MapPin, ChevronRight, ChevronLeft, RefreshCw, FileText } from "lucide-react";
+import { Mail, Lock, User, ArrowLeft, Loader2, Check, Building2, Phone, MapPin, ChevronRight, ChevronLeft, RefreshCw, FileText, Sparkles } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import logoImage from "@/assets/logo.png";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
@@ -1055,14 +1056,24 @@ const Auth = () => {
                     resetForm();
                   }
                 }}
-                className="text-primary hover:underline font-medium"
+                className="inline-flex items-center gap-1.5 text-primary hover:underline font-medium group"
               >
-                {isLogin ? "Escolher um plano" : "Fazer login"}
+                {isLogin ? (
+                  <>
+                    <Sparkles className="w-4 h-4 animate-pulse text-amber-500" />
+                    Escolher um plano
+                    <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30 animate-pulse">
+                      7 dias grátis
+                    </Badge>
+                  </>
+                ) : (
+                  "Fazer login"
+                )}
               </button>
             </p>
             {isLogin && (
               <p className="mt-2 text-xs text-muted-foreground">
-                ✨ Comece com 7 dias grátis, sem cartão de crédito
+                Sem cartão de crédito necessário
               </p>
             )}
           </div>
