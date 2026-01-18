@@ -86,26 +86,56 @@ const Header = () => {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-border/50">
             <nav className="flex flex-col gap-4">
-              <a href="#funcionalidades" className="text-muted-foreground hover:text-foreground transition-colors">
+              <a 
+                href="#funcionalidades" 
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
                 Funcionalidades
               </a>
-              <a href="#fluxo" className="text-muted-foreground hover:text-foreground transition-colors">
+              <a 
+                href="#fluxo" 
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
                 Como Funciona
               </a>
-              <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
+              <a 
+                href="#pricing" 
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
                 Planos
               </a>
-              <Link to="/contato" className="text-muted-foreground hover:text-foreground transition-colors">
+              <Link 
+                to="/contato" 
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
                 Contato
               </Link>
               <div className="flex flex-col gap-2 pt-4">
                 {user ? (
-                  <Button variant="hero" className="w-full justify-center" onClick={() => navigate("/dashboard")}>
+                  <Button 
+                    variant="hero" 
+                    className="w-full justify-center" 
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      navigate("/dashboard");
+                    }}
+                  >
                     Painel
                   </Button>
                 ) : (
                   <>
-                    <Button variant="ghost" className="w-full justify-center" onClick={() => navigate("/auth")}>
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-center" 
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        navigate("/auth");
+                      }}
+                    >
                       Entrar
                     </Button>
                     <Button variant="hero" className="w-full justify-center" onClick={goToPricing}>
