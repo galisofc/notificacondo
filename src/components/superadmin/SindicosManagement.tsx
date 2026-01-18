@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useDateFormatter } from "@/hooks/useFormattedDate";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useEmailValidation } from "@/hooks/useEmailValidation";
 import {
   Card,
   CardContent,
@@ -110,8 +111,14 @@ export function SindicosManagement() {
   });
   const [cpfStatus, setCpfStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [cpfCheckTimeout, setCpfCheckTimeout] = useState<NodeJS.Timeout | null>(null);
-  const [emailStatus, setEmailStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
-  const [emailCheckTimeout, setEmailCheckTimeout] = useState<NodeJS.Timeout | null>(null);
+  
+  // Use email validation hook
+  const { 
+    emailStatus, 
+    validateEmail, 
+    resetStatus: resetEmailStatus 
+  } = useEmailValidation();
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -152,66 +159,11 @@ export function SindicosManagement() {
     }
   }, []);
 
-  // Função para validar formato de email
-  const isValidEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
-  // Função para verificar email em tempo real
-  const checkEmailAvailability = useCallback(async (email: string) => {
-    const trimmedEmail = email.trim().toLowerCase();
-    
-    // Validar formato do email
-    if (!isValidEmail(trimmedEmail)) {
-      setEmailStatus("invalid");
-      return;
-    }
-
-    setEmailStatus("checking");
-
-    try {
-      const { data: existingProfile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("email", trimmedEmail)
-        .maybeSingle();
-
-      if (existingProfile) {
-        setEmailStatus("taken");
-      } else {
-        setEmailStatus("available");
-      }
-    } catch (error) {
-      console.error("Error checking email:", error);
-      setEmailStatus("idle");
-    }
-  }, []);
-
-  // Debounce para verificação do email
+  // Handle email change with validation
   const handleEmailChange = useCallback((value: string) => {
     setFormData(prev => ({ ...prev, email: value }));
-    
-    // Limpar timeout anterior
-    if (emailCheckTimeout) {
-      clearTimeout(emailCheckTimeout);
-    }
-
-    const trimmedEmail = value.trim();
-    
-    // Se email estiver vazio ou muito curto, resetar status
-    if (trimmedEmail.length < 5) {
-      setEmailStatus("idle");
-      return;
-    }
-
-    // Agendar verificação com debounce de 500ms
-    const timeout = setTimeout(() => {
-      checkEmailAvailability(value);
-    }, 500);
-
-    setEmailCheckTimeout(timeout);
-  }, [emailCheckTimeout, checkEmailAvailability]);
+    validateEmail(value);
+  }, [validateEmail]);
 
   // Debounce para verificação do CPF
   const handleCpfChange = useCallback((value: string) => {
@@ -238,25 +190,22 @@ export function SindicosManagement() {
     setCpfCheckTimeout(timeout);
   }, [cpfCheckTimeout, checkCpfAvailability]);
 
-  // Limpar timeouts ao desmontar
+  // Limpar timeout ao desmontar
   useEffect(() => {
     return () => {
       if (cpfCheckTimeout) {
         clearTimeout(cpfCheckTimeout);
       }
-      if (emailCheckTimeout) {
-        clearTimeout(emailCheckTimeout);
-      }
     };
-  }, [cpfCheckTimeout, emailCheckTimeout]);
+  }, [cpfCheckTimeout]);
 
   // Resetar status do CPF e email quando o dialog fecha
   useEffect(() => {
     if (!isCreateDialogOpen) {
       setCpfStatus("idle");
-      setEmailStatus("idle");
+      resetEmailStatus();
     }
-  }, [isCreateDialogOpen]);
+  }, [isCreateDialogOpen, resetEmailStatus]);
 
 
   const { data: sindicos, isLoading } = useQuery({
