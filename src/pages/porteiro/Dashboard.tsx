@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Package, PackagePlus, PackageCheck, Clock, Search, QrCode, Calendar, TrendingUp } from "lucide-react";
+import { Package, PackagePlus, PackageCheck, Clock, Search, QrCode, Calendar, TrendingUp, FileText } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -433,7 +433,7 @@ export default function PorteiroDashboard() {
         {/* Quick Actions */}
         <div>
           <h2 className="text-lg font-semibold mb-4">Ações Rápidas</h2>
-          <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+          <div className="grid gap-4 grid-cols-2 md:grid-cols-5">
             <Card 
               className="cursor-pointer hover:bg-muted/50 transition-colors"
               onClick={() => navigate("/porteiro/registrar")}
@@ -484,6 +484,18 @@ export default function PorteiroDashboard() {
                   <QrCode className="w-6 h-6 text-green-500" />
                 </div>
                 <p className="font-medium text-sm text-center">Confirmar Retirada</p>
+              </CardContent>
+            </Card>
+
+            <Card 
+              className="cursor-pointer hover:bg-muted/50 transition-colors"
+              onClick={() => navigate("/porteiro/historico")}
+            >
+              <CardContent className="flex flex-col items-center justify-center py-6">
+                <div className="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center mb-3">
+                  <FileText className="w-6 h-6 text-purple-500" />
+                </div>
+                <p className="font-medium text-sm text-center">Histórico</p>
               </CardContent>
             </Card>
           </div>
