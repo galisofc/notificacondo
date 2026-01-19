@@ -1,14 +1,16 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Package, PackagePlus, PackageCheck, Clock, Search, QrCode, Calendar } from "lucide-react";
+import { Package, PackagePlus, PackageCheck, Clock, Search, QrCode, Calendar, TrendingUp } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend } from "recharts";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfDay, endOfDay, subDays } from "date-fns";
+import { format, startOfDay, endOfDay, subDays, eachDayOfInterval, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 type PeriodFilter = "today" | "7days" | "15days" | "custom";
@@ -17,6 +19,13 @@ interface Stats {
   registeredToday: number;
   totalPending: number;
   pickedUpToday: number;
+}
+
+interface ChartDataPoint {
+  date: string;
+  label: string;
+  cadastradas: number;
+  retiradas: number;
 }
 
 export default function PorteiroDashboard() {
@@ -30,7 +39,9 @@ export default function PorteiroDashboard() {
     pickedUpToday: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("today");
+  const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
+  const [loadingChart, setLoadingChart] = useState(true);
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("7days");
   const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
     from: undefined,
     to: undefined,
@@ -138,6 +149,70 @@ export default function PorteiroDashboard() {
     fetchStats();
   }, [condominiumIds, startDate, endDate]);
 
+  // Fetch chart data
+  useEffect(() => {
+    const fetchChartData = async () => {
+      if (!condominiumIds.length) return;
+
+      setLoadingChart(true);
+      try {
+        // Get all days in the range
+        const days = eachDayOfInterval({ start: startDate, end: endDate });
+
+        // Fetch all packages in the period
+        const { data: registeredPackages } = await supabase
+          .from("packages")
+          .select("received_at")
+          .in("condominium_id", condominiumIds)
+          .gte("received_at", startDate.toISOString())
+          .lte("received_at", endDate.toISOString());
+
+        const { data: pickedUpPackages } = await supabase
+          .from("packages")
+          .select("picked_up_at")
+          .in("condominium_id", condominiumIds)
+          .eq("status", "retirada")
+          .gte("picked_up_at", startDate.toISOString())
+          .lte("picked_up_at", endDate.toISOString());
+
+        // Group by date
+        const registeredByDate: Record<string, number> = {};
+        const pickedUpByDate: Record<string, number> = {};
+
+        registeredPackages?.forEach((pkg) => {
+          const date = format(parseISO(pkg.received_at), "yyyy-MM-dd");
+          registeredByDate[date] = (registeredByDate[date] || 0) + 1;
+        });
+
+        pickedUpPackages?.forEach((pkg) => {
+          if (pkg.picked_up_at) {
+            const date = format(parseISO(pkg.picked_up_at), "yyyy-MM-dd");
+            pickedUpByDate[date] = (pickedUpByDate[date] || 0) + 1;
+          }
+        });
+
+        // Build chart data
+        const data: ChartDataPoint[] = days.map((day) => {
+          const dateKey = format(day, "yyyy-MM-dd");
+          return {
+            date: dateKey,
+            label: format(day, "dd/MM", { locale: ptBR }),
+            cadastradas: registeredByDate[dateKey] || 0,
+            retiradas: pickedUpByDate[dateKey] || 0,
+          };
+        });
+
+        setChartData(data);
+      } catch (error) {
+        console.error("Error fetching chart data:", error);
+      } finally {
+        setLoadingChart(false);
+      }
+    };
+
+    fetchChartData();
+  }, [condominiumIds, startDate, endDate]);
+
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Bom dia";
@@ -161,6 +236,17 @@ export default function PorteiroDashboard() {
       default:
         return "";
     }
+  };
+
+  const chartConfig = {
+    cadastradas: {
+      label: "Cadastradas",
+      color: "hsl(var(--primary))",
+    },
+    retiradas: {
+      label: "Retiradas",
+      color: "hsl(142, 76%, 36%)",
+    },
   };
 
   return (
@@ -278,6 +364,71 @@ export default function PorteiroDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Chart */}
+        {periodFilter !== "today" && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Evolução de Encomendas
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadingChart ? (
+                <div className="h-[250px] flex items-center justify-center text-muted-foreground">
+                  Carregando gráfico...
+                </div>
+              ) : chartData.length > 0 ? (
+                <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis 
+                        dataKey="label" 
+                        tick={{ fontSize: 12 }} 
+                        tickLine={false}
+                        axisLine={false}
+                        className="text-muted-foreground"
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 12 }} 
+                        tickLine={false}
+                        axisLine={false}
+                        allowDecimals={false}
+                        className="text-muted-foreground"
+                      />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey="cadastradas"
+                        name="Cadastradas"
+                        stroke="hsl(var(--primary))"
+                        strokeWidth={2}
+                        dot={{ r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="retiradas"
+                        name="Retiradas"
+                        stroke="hsl(142, 76%, 36%)"
+                        strokeWidth={2}
+                        dot={{ r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              ) : (
+                <div className="h-[250px] flex items-center justify-center text-muted-foreground">
+                  Nenhum dado disponível para o período selecionado
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Quick Actions */}
         <div>
