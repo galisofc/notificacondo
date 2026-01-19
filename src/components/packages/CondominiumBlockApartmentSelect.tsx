@@ -20,6 +20,7 @@ interface Condominium {
 interface Block {
   id: string;
   name: string;
+  short_code: string | null;
 }
 
 interface Apartment {
@@ -105,7 +106,7 @@ export function CondominiumBlockApartmentSelect({
       try {
         const { data, error } = await supabase
           .from("blocks")
-          .select("id, name")
+          .select("id, name, short_code")
           .eq("condominium_id", selectedCondominium)
           .order("name");
 
@@ -200,22 +201,29 @@ export function CondominiumBlockApartmentSelect({
       // Fetch all blocks for this condominium
       const { data: blocksData, error: blocksError } = await supabase
         .from("blocks")
-        .select("id, name")
+        .select("id, name, short_code")
         .eq("condominium_id", selectedCondominium);
 
       if (blocksError) throw blocksError;
 
-      // Find block with flexible matching strategy
+      // Find block with flexible matching strategy (priority order)
       const matchedBlock = blocksData?.find((block) => {
         const blockName = block.name.toUpperCase();
+        const shortCode = block.short_code?.toUpperCase() || "";
         
-        // 1. Exact match
+        // 1. Exact short_code match (highest priority)
+        if (shortCode && shortCode === blockSearch) return true;
+        
+        // 2. Exact block name match
         if (blockName === blockSearch) return true;
         
-        // 2. Partial match (block name starts with search term)
+        // 3. Short code starts with search term
+        if (shortCode && shortCode.startsWith(blockSearch)) return true;
+        
+        // 4. Block name starts with search term
         if (blockName.startsWith(blockSearch)) return true;
         
-        // 3. Numeric match (for "BLOCO 03", "03", etc.)
+        // 5. Numeric match (for "BLOCO 03", "03", etc.)
         const numericPart = blockName.replace(/\D/g, "");
         if (numericPart && /^\d+$/.test(blockSearch)) {
           return numericPart.padStart(2, "0") === blockSearch.padStart(2, "0");
