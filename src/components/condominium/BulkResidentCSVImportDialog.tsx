@@ -78,6 +78,7 @@ const BulkResidentCSVImportDialog = ({
   const [importResults, setImportResults] = useState<{ success: number; failed: number; skipped: number }>({ success: 0, failed: 0, skipped: 0 });
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
+  const [failedImports, setFailedImports] = useState<{ resident: ParsedResident; error: string }[]>([]);
 
   const resetState = () => {
     setStep("upload");
@@ -86,6 +87,7 @@ const BulkResidentCSVImportDialog = ({
     setImportResults({ success: 0, failed: 0, skipped: 0 });
     setImporting(false);
     setImportProgress({ current: 0, total: 0 });
+    setFailedImports([]);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -293,9 +295,11 @@ BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
     setImporting(true);
     setStep("importing");
     setImportProgress({ current: 0, total: validResidents.length });
+    setFailedImports([]);
 
     let success = 0;
     let failed = 0;
+    const failures: { resident: ParsedResident; error: string }[] = [];
 
     for (let i = 0; i < validResidents.length; i++) {
       const resident = validResidents[i];
@@ -314,16 +318,25 @@ BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
 
         if (error) {
           failed++;
+          const errorMessage = error.message.includes("duplicate") 
+            ? "E-mail já cadastrado" 
+            : error.message.includes("violates") 
+              ? "Violação de regra do banco de dados" 
+              : error.message;
+          failures.push({ resident, error: errorMessage });
           console.error("Error inserting resident:", error);
         } else {
           success++;
         }
       } catch (error) {
         failed++;
+        const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+        failures.push({ resident, error: errorMessage });
         console.error("Error inserting resident:", error);
       }
     }
 
+    setFailedImports(failures);
     setImportResults({ success, failed, skipped: 0 });
     setStep("done");
     setImporting(false);
@@ -479,8 +492,8 @@ BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
         )}
 
         {step === "done" && (
-          <div className="py-8 text-center space-y-6">
-            <div className="space-y-2">
+          <div className="py-6 space-y-6">
+            <div className="text-center space-y-2">
               {importResults.success > 0 && (
                 <div className="flex items-center justify-center gap-2 text-green-600">
                   <CheckCircle2 className="w-6 h-6" />
@@ -498,7 +511,47 @@ BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
                 </div>
               )}
             </div>
-            <Button onClick={handleClose}>Fechar</Button>
+
+            {failedImports.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="font-medium text-sm flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-destructive" />
+                  Detalhes das falhas:
+                </h4>
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="max-h-[200px] overflow-auto">
+                    <Table>
+                      <TableHeader className="sticky top-0 bg-background z-10">
+                        <TableRow>
+                          <TableHead>Bloco</TableHead>
+                          <TableHead>Apto</TableHead>
+                          <TableHead>Nome</TableHead>
+                          <TableHead>E-mail</TableHead>
+                          <TableHead>Motivo</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {failedImports.map((failure, index) => (
+                          <TableRow key={index} className="bg-destructive/5">
+                            <TableCell className="font-medium">{failure.resident.block_name}</TableCell>
+                            <TableCell>{failure.resident.apartment_number}</TableCell>
+                            <TableCell>{failure.resident.full_name}</TableCell>
+                            <TableCell className="text-xs">{failure.resident.email}</TableCell>
+                            <TableCell className="text-xs text-destructive font-medium">
+                              {failure.error}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="text-center">
+              <Button onClick={handleClose}>Fechar</Button>
+            </div>
           </div>
         )}
       </DialogContent>
