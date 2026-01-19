@@ -163,21 +163,33 @@ export function CondominiumBlockApartmentSelect({
     }
   }, [selectedBlock]);
 
-  // Quick search handler - format BBAA (Block + Apartment)
+  // Quick search handler - flexible format: 0344, A44, ARM44, etc.
   const handleQuickSearch = async () => {
     if (!selectedCondominium) {
       setQuickSearchError("Selecione o condomínio primeiro");
       return;
     }
 
-    const code = quickSearchCode.trim();
-    if (code.length < 3 || code.length > 6) {
-      setQuickSearchError("Digite de 3 a 6 dígitos (ex: 0344)");
+    const code = quickSearchCode.trim().toUpperCase();
+    if (code.length < 2) {
+      setQuickSearchError("Digite pelo menos 2 caracteres");
       return;
     }
 
-    if (!/^\d+$/.test(code)) {
-      setQuickSearchError("Digite apenas números");
+    // Parse: separate block part from apartment part
+    // Formats supported: "0344" (numeric), "A44" (letter+num), "ARM44" (text+num)
+    const match = code.match(/^([A-Z]+|\d{1,2})(\d+)$/);
+    
+    if (!match) {
+      setQuickSearchError("Formato inválido. Ex: 0344, A44, ARM44");
+      return;
+    }
+
+    const blockSearch = match[1];
+    const apartmentSearch = match[2];
+
+    if (!apartmentSearch) {
+      setQuickSearchError("Inclua o número do apartamento");
       return;
     }
 
@@ -185,11 +197,7 @@ export function CondominiumBlockApartmentSelect({
     setQuickSearchError("");
 
     try {
-      // Parse code - first 2 digits = block, rest = apartment
-      const blockCode = code.substring(0, 2);
-      const apartmentCode = code.substring(2);
-
-      // Search for block by name containing the block code
+      // Fetch all blocks for this condominium
       const { data: blocksData, error: blocksError } = await supabase
         .from("blocks")
         .select("id, name")
@@ -197,17 +205,27 @@ export function CondominiumBlockApartmentSelect({
 
       if (blocksError) throw blocksError;
 
-      // Find block that matches the code (e.g., "03" matches "Bloco 03" or just "03")
+      // Find block with flexible matching strategy
       const matchedBlock = blocksData?.find((block) => {
-        const blockName = block.name.toLowerCase();
+        const blockName = block.name.toUpperCase();
+        
+        // 1. Exact match
+        if (blockName === blockSearch) return true;
+        
+        // 2. Partial match (block name starts with search term)
+        if (blockName.startsWith(blockSearch)) return true;
+        
+        // 3. Numeric match (for "BLOCO 03", "03", etc.)
         const numericPart = blockName.replace(/\D/g, "");
-        return numericPart === blockCode || 
-               numericPart.padStart(2, "0") === blockCode ||
-               blockCode === numericPart.padStart(2, "0");
+        if (numericPart && /^\d+$/.test(blockSearch)) {
+          return numericPart.padStart(2, "0") === blockSearch.padStart(2, "0");
+        }
+        
+        return false;
       });
 
       if (!matchedBlock) {
-        setQuickSearchError(`Bloco "${blockCode}" não encontrado`);
+        setQuickSearchError(`Bloco "${blockSearch}" não encontrado`);
         setIsSearching(false);
         return;
       }
@@ -223,12 +241,13 @@ export function CondominiumBlockApartmentSelect({
       // Find apartment that matches
       const matchedApartment = apartmentsData?.find((apt) => {
         const aptNumber = apt.number.replace(/\D/g, "");
-        return aptNumber === apartmentCode || 
-               aptNumber.padStart(2, "0") === apartmentCode.padStart(2, "0");
+        return aptNumber === apartmentSearch || 
+               aptNumber.padStart(2, "0") === apartmentSearch.padStart(2, "0") ||
+               aptNumber.padStart(3, "0") === apartmentSearch.padStart(3, "0");
       });
 
       if (!matchedApartment) {
-        setQuickSearchError(`Apartamento "${apartmentCode}" não encontrado no ${matchedBlock.name}`);
+        setQuickSearchError(`Apartamento "${apartmentSearch}" não encontrado no ${matchedBlock.name}`);
         setIsSearching(false);
         return;
       }
@@ -279,16 +298,16 @@ export function CondominiumBlockApartmentSelect({
       <div className="space-y-2">
         <Label htmlFor="quick-search" className="flex items-center gap-2">
           <Search className="w-4 h-4" />
-          Busca Rápida (BBAA)
+          Busca Rápida (Bloco + Apt)
         </Label>
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Input
               id="quick-search"
-              placeholder="Ex: 0344 = Bloco 03, Ap 44"
+              placeholder="Ex: 0344, A44, ARM44"
               value={quickSearchCode}
               onChange={(e) => {
-                const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+                const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10);
                 setQuickSearchCode(val);
                 setQuickSearchError("");
               }}
@@ -300,7 +319,7 @@ export function CondominiumBlockApartmentSelect({
               }}
               disabled={disabled || !selectedCondominium}
               className={quickSearchError ? "border-destructive" : ""}
-              maxLength={6}
+              maxLength={10}
             />
             {quickSearchCode && (
               <Button
