@@ -44,6 +44,7 @@ import {
   Timer,
   Layers,
   TrendingUp,
+  Copy,
 } from "lucide-react";
 import { format, parseISO, differenceInMinutes } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -961,9 +962,26 @@ const PackagesCondominiumHistory = () => {
               <span className="text-sm font-medium text-amber-600">
                 Total: {pendingPackages.length} pendentes
               </span>
-              <Button variant="outline" onClick={() => setShowPendingSummaryModal(false)}>
-                Fechar
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    const text = pendingSummary
+                      .map(item => `${item.blockName} / ${item.apartmentNumber} - ${item.count} ${item.count === 1 ? 'encomenda' : 'encomendas'}`)
+                      .join('\n') + `\n\nTotal: ${pendingPackages.length} pendentes`;
+                    navigator.clipboard.writeText(text);
+                    toast({ title: "Lista copiada para área de transferência" });
+                  }}
+                  disabled={pendingSummary.length === 0}
+                  className="gap-2"
+                >
+                  <Copy className="w-4 h-4" />
+                  Copiar
+                </Button>
+                <Button variant="outline" onClick={() => setShowPendingSummaryModal(false)}>
+                  Fechar
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
