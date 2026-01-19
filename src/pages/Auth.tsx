@@ -85,7 +85,7 @@ const Auth = () => {
   const [isSearchingCnpj, setIsSearchingCnpj] = useState(false);
   const [step, setStep] = useState(1);
   const [showPasswordRecovery, setShowPasswordRecovery] = useState(false);
-  const [recoveryPhone, setRecoveryPhone] = useState("");
+  const [recoveryEmail, setRecoveryEmail] = useState("");
   const [isRecovering, setIsRecovering] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     condominiumName: "",
@@ -1309,21 +1309,21 @@ const Auth = () => {
               Recuperar Senha via WhatsApp
             </DialogTitle>
             <DialogDescription>
-              Digite o número do WhatsApp cadastrado na sua conta. Você receberá um link para redefinir sua senha.
+              Digite seu email cadastrado. Enviaremos um link de recuperação para o WhatsApp vinculado à sua conta.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-4">
             <div className="space-y-2">
-              <Label htmlFor="recoveryPhone">WhatsApp</Label>
+              <Label htmlFor="recoveryEmail">Email</Label>
               <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <MaskedInput
-                  id="recoveryPhone"
-                  name="recoveryPhone"
-                  mask="phone"
-                  placeholder="(11) 99999-9999"
-                  value={recoveryPhone}
-                  onChange={(value) => setRecoveryPhone(value)}
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="recoveryEmail"
+                  name="recoveryEmail"
+                  type="email"
+                  placeholder="seu@email.com"
+                  value={recoveryEmail}
+                  onChange={(e) => setRecoveryEmail(e.target.value)}
                   className="pl-10"
                 />
               </div>
@@ -1331,25 +1331,22 @@ const Auth = () => {
             <Button
               variant="hero"
               className="w-full"
-              disabled={isRecovering || recoveryPhone.replace(/\D/g, '').length < 10}
+              disabled={isRecovering || !recoveryEmail.includes('@')}
               onClick={async () => {
                 setIsRecovering(true);
                 try {
-                  const phoneDigits = recoveryPhone.replace(/\D/g, '');
-                  const formattedPhone = phoneDigits.startsWith('55') ? phoneDigits : `55${phoneDigits}`;
-                  
                   const { data, error } = await supabase.functions.invoke('send-password-recovery', {
-                    body: { phone: formattedPhone }
+                    body: { email: recoveryEmail.trim().toLowerCase() }
                   });
                   
                   if (error) throw error;
                   
                   toast({
                     title: "Link enviado!",
-                    description: "Verifique seu WhatsApp para redefinir sua senha.",
+                    description: "Se o email estiver cadastrado, você receberá o link no WhatsApp vinculado.",
                   });
                   setShowPasswordRecovery(false);
-                  setRecoveryPhone("");
+                  setRecoveryEmail("");
                 } catch (error: any) {
                   toast({
                     title: "Erro ao enviar",
@@ -1374,7 +1371,7 @@ const Auth = () => {
               )}
             </Button>
             <p className="text-xs text-muted-foreground text-center">
-              Certifique-se de que o número informado está vinculado à sua conta de síndico.
+              O link será enviado para o WhatsApp vinculado ao seu email de síndico.
             </p>
           </div>
         </DialogContent>
