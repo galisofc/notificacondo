@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, X, Mail, CreditCard, Pencil } from "lucide-react";
+import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, X, Mail, CreditCard, Pencil, Trash2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -352,6 +352,11 @@ BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
     });
   }, [validateResident]);
 
+  // Função para remover um residente da lista
+  const removeResident = useCallback((index: number) => {
+    setParsedResidents(prev => prev.filter((_, i) => i !== index));
+  }, []);
+
   const handleImport = async () => {
     const validResidents = parsedResidents.filter(r => r.isValid && r.apartment_id);
     if (validResidents.length === 0) {
@@ -503,6 +508,7 @@ BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
                       <TableHead>Telefone</TableHead>
                       <TableHead className="w-16">Prop.</TableHead>
                       <TableHead className="w-16">Resp.</TableHead>
+                      <TableHead className="w-10"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -639,6 +645,23 @@ BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
                             checked={resident.is_responsible} 
                             onCheckedChange={(checked) => updateResident(index, "is_responsible", !!checked)}
                           />
+                        </TableCell>
+                        <TableCell className="p-1">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                  onClick={() => removeResident(index)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Remover linha</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </TableCell>
                       </TableRow>
                     ))}
