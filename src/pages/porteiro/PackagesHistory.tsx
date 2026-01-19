@@ -35,6 +35,8 @@ import {
   Timer,
   Layers,
   ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { format, parseISO, differenceInMinutes } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -109,6 +111,8 @@ const PorteiroPackagesHistory = () => {
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
   const [isExporting, setIsExporting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
 
   // Fetch porter's condominiums
   useEffect(() => {
@@ -165,10 +169,52 @@ const PorteiroPackagesHistory = () => {
     enabled: !!selectedCondominium,
   });
 
-  // Fetch packages for selected condominium
-  const { data: packages = [], isLoading } = useQuery({
-    queryKey: ["porteiro-condominium-packages", selectedCondominium, selectedBlock, statusFilter, dateFrom, dateTo],
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCondominium, selectedBlock, statusFilter, dateFrom, dateTo]);
+
+  // Fetch total count for pagination
+  const { data: totalCount = 0 } = useQuery({
+    queryKey: ["porteiro-packages-count", selectedCondominium, selectedBlock, statusFilter, dateFrom, dateTo],
     queryFn: async () => {
+      let query = supabase
+        .from("packages")
+        .select("id", { count: "exact", head: true })
+        .eq("condominium_id", selectedCondominium);
+
+      if (selectedBlock !== "all") {
+        query = query.eq("block_id", selectedBlock);
+      }
+
+      if (statusFilter !== "all") {
+        query = query.eq("status", statusFilter as "pendente" | "retirada");
+      }
+
+      if (dateFrom) {
+        query = query.gte("received_at", dateFrom);
+      }
+
+      if (dateTo) {
+        query = query.lte("received_at", `${dateTo}T23:59:59`);
+      }
+
+      const { count, error } = await query;
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!selectedCondominium,
+  });
+
+  const totalPages = Math.ceil(totalCount / pageSize);
+
+  // Fetch packages for selected condominium with pagination
+  const { data: packages = [], isLoading } = useQuery({
+    queryKey: ["porteiro-condominium-packages", selectedCondominium, selectedBlock, statusFilter, dateFrom, dateTo, currentPage],
+    queryFn: async () => {
+      const from = (currentPage - 1) * pageSize;
+      const to = from + pageSize - 1;
+
       let query = supabase
         .from("packages")
         .select(`
@@ -190,7 +236,8 @@ const PorteiroPackagesHistory = () => {
           package_type:package_types(id, name, icon)
         `)
         .eq("condominium_id", selectedCondominium)
-        .order("received_at", { ascending: false });
+        .order("received_at", { ascending: false })
+        .range(from, to);
 
       if (selectedBlock !== "all") {
         query = query.eq("block_id", selectedBlock);
@@ -879,6 +926,60 @@ const PorteiroPackagesHistory = () => {
                       ))}
                     </TableBody>
                   </Table>
+                </div>
+              )}
+              
+              {/* Pagination */}
+              {totalPages > 1 && packages.length > 0 && (
+                <div className="flex items-center justify-between px-6 py-4 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    Mostrando {((currentPage - 1) * pageSize) + 1} a {Math.min(currentPage * pageSize, totalCount)} de {totalCount} registros
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="w-4 h-4 mr-1" />
+                      Anterior
+                    </Button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let page: number;
+                        if (totalPages <= 5) {
+                          page = i + 1;
+                        } else if (currentPage <= 3) {
+                          page = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          page = totalPages - 4 + i;
+                        } else {
+                          page = currentPage - 2 + i;
+                        }
+                        return (
+                          <Button
+                            key={page}
+                            variant={page === currentPage ? "default" : "outline"}
+                            size="sm"
+                            className="w-9 h-9 p-0"
+                            onClick={() => setCurrentPage(page)}
+                          >
+                            {page}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Próximo
+                      <ChevronRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  </div>
                 </div>
               )}
             </CardContent>
