@@ -120,7 +120,8 @@ serve(async (req) => {
     // Send WhatsApp message
     const message = `🔐 *NotificaCondo - Recuperação de Senha*\n\nOlá, ${profile.full_name}!\n\nVocê solicitou a recuperação de senha da sua conta.\n\nClique no link abaixo para criar uma nova senha:\n${resetLink}\n\n⚠️ Este link é válido por 1 hora.\n\nSe você não solicitou esta recuperação, ignore esta mensagem.`;
 
-    const { api_url, api_key, instance_id } = whatsappConfig;
+    const { api_url, api_key, instance_id, provider } = whatsappConfig;
+    const baseUrl = api_url.replace(/\/$/, "");
 
     // Apply externalKey fallback logic
     let externalKey = instance_id || "";
@@ -128,25 +129,46 @@ serve(async (req) => {
       externalKey = api_key;
     }
 
-    const params = new URLSearchParams({
-      phone: formattedPhone,
-      message: message,
-      externalKey: externalKey,
-    });
-
-    const whatsappUrl = `${api_url}/send-text?${params.toString()}`;
-
     console.log("Sending WhatsApp message to:", formattedPhone);
+    console.log("Using provider:", provider || "zpro");
 
-    const whatsappResponse = await fetch(whatsappUrl, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${api_key}`,
-      },
-    });
+    let whatsappResponse: Response;
+
+    if (provider === "zpro" || !provider) {
+      // Z-PRO uses /params/ endpoint with query parameters
+      const params = new URLSearchParams({
+        body: message,
+        number: formattedPhone,
+        externalKey: externalKey,
+        bearertoken: api_key,
+        isClosed: "false"
+      });
+
+      const whatsappUrl = `${baseUrl}/params/?${params.toString()}`;
+      console.log("Z-PRO URL:", whatsappUrl.substring(0, 100) + "...");
+
+      whatsappResponse = await fetch(whatsappUrl, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+    } else {
+      // Other providers (fallback)
+      whatsappResponse = await fetch(`${baseUrl}/send-text`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${api_key}`,
+        },
+        body: JSON.stringify({
+          phone: formattedPhone,
+          message: message,
+        }),
+      });
+    }
 
     const responseText = await whatsappResponse.text();
-    console.log("WhatsApp API response:", responseText);
+    console.log("WhatsApp API response status:", whatsappResponse.status);
+    console.log("WhatsApp API response:", responseText.substring(0, 200));
 
     let responseData;
     try {
@@ -155,6 +177,7 @@ serve(async (req) => {
       responseData = { raw: responseText };
     }
 
+    // For Z-PRO, status 200 means success even without explicit success field
     if (!whatsappResponse.ok) {
       console.error("WhatsApp API error:", responseData);
       return new Response(
