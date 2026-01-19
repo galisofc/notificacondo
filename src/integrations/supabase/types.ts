@@ -1468,6 +1468,30 @@ export type Database = {
           },
         ]
       }
+      password_recovery_attempts: {
+        Row: {
+          attempted_at: string
+          email: string
+          id: string
+          ip_address: string | null
+          success: boolean | null
+        }
+        Insert: {
+          attempted_at?: string
+          email: string
+          id?: string
+          ip_address?: string | null
+          success?: boolean | null
+        }
+        Update: {
+          attempted_at?: string
+          email?: string
+          id?: string
+          ip_address?: string | null
+          success?: boolean | null
+        }
+        Relationships: []
+      }
       plans: {
         Row: {
           color: string
@@ -1818,6 +1842,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_old_password_recovery_attempts: {
+        Args: never
+        Returns: undefined
+      }
       confirm_package_pickup: {
         Args: {
           p_package_id: string
