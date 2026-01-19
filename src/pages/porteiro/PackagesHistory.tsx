@@ -26,6 +26,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
   Package,
   PackageCheck,
   Clock,
@@ -112,6 +120,7 @@ const PorteiroPackagesHistory = () => {
   const [dateTo, setDateTo] = useState<string>("");
   const [isExporting, setIsExporting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [showPendingSummaryModal, setShowPendingSummaryModal] = useState(false);
   const pageSize = 20;
 
   // Fetch porter's condominiums
@@ -286,6 +295,54 @@ const PorteiroPackagesHistory = () => {
     },
     enabled: !!selectedCondominium,
   });
+
+  // Fetch pending packages for summary modal
+  const { data: pendingPackages = [] } = useQuery({
+    queryKey: ["pending-packages-summary", selectedCondominium],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("packages")
+        .select(`
+          id,
+          block:blocks(id, name),
+          apartment:apartments(id, number)
+        `)
+        .eq("condominium_id", selectedCondominium)
+        .eq("status", "pendente");
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!selectedCondominium && showPendingSummaryModal,
+  });
+
+  // Group pending packages by block/apartment
+  const pendingSummary = useMemo(() => {
+    const grouped: Record<string, { 
+      blockName: string;
+      apartmentNumber: string; 
+      count: number;
+    }> = {};
+    
+    pendingPackages.forEach(pkg => {
+      const key = `${pkg.block?.id}-${pkg.apartment?.id}`;
+      if (!grouped[key]) {
+        grouped[key] = {
+          blockName: pkg.block?.name || "-",
+          apartmentNumber: pkg.apartment?.number || "-",
+          count: 0
+        };
+      }
+      grouped[key].count++;
+    });
+    
+    return Object.values(grouped)
+      .sort((a, b) => {
+        const blockCompare = a.blockName.localeCompare(b.blockName, 'pt-BR', { numeric: true });
+        if (blockCompare !== 0) return blockCompare;
+        return a.apartmentNumber.localeCompare(b.apartmentNumber, 'pt-BR', { numeric: true });
+      });
+  }, [pendingPackages]);
 
   // Statistics
   const stats = useMemo(() => {
@@ -689,11 +746,23 @@ const PorteiroPackagesHistory = () => {
             </div>
           </div>
 
-          {selectedCondominium && packages.length > 0 && (
-            <Button onClick={exportToPDF} disabled={isExporting}>
-              <Download className="w-4 h-4 mr-2" />
-              {isExporting ? "Gerando..." : "Exportar PDF"}
-            </Button>
+          {selectedCondominium && (
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowPendingSummaryModal(true)}
+                className="gap-2"
+              >
+                <Clock className="w-4 h-4" />
+                Pendentes por Apto
+              </Button>
+              {packages.length > 0 && (
+                <Button onClick={exportToPDF} disabled={isExporting}>
+                  <Download className="w-4 h-4 mr-2" />
+                  {isExporting ? "Gerando..." : "Exportar PDF"}
+                </Button>
+              )}
+            </div>
           )}
         </div>
 
@@ -997,6 +1066,54 @@ const PorteiroPackagesHistory = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Pending Packages Summary Modal */}
+        <Dialog open={showPendingSummaryModal} onOpenChange={setShowPendingSummaryModal}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-amber-500" />
+                Encomendas Pendentes
+              </DialogTitle>
+              <DialogDescription>
+                Encomendas aguardando retirada por apartamento
+              </DialogDescription>
+            </DialogHeader>
+            
+            <ScrollArea className="max-h-[400px]">
+              {pendingSummary.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">
+                  Nenhuma encomenda pendente de retirada
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {pendingSummary.map((item, idx) => (
+                    <div 
+                      key={idx} 
+                      className="flex items-center justify-between p-3 rounded-lg border"
+                    >
+                      <Badge variant="outline" className="font-medium">
+                        {item.blockName} / {item.apartmentNumber}
+                      </Badge>
+                      <span className="text-sm text-muted-foreground">
+                        {item.count} {item.count === 1 ? 'encomenda' : 'encomendas'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+            
+            <div className="flex justify-between items-center pt-4 border-t">
+              <span className="text-sm font-medium text-amber-600">
+                Total: {pendingPackages.length} pendentes
+              </span>
+              <Button variant="outline" onClick={() => setShowPendingSummaryModal(false)}>
+                Fechar
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
