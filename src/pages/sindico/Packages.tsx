@@ -370,7 +370,11 @@ const SindicoPackages = () => {
             </Button>
             <Button variant="outline" size="sm" onClick={() => navigate("/sindico/packages/historico")}>
               <History className="w-4 h-4 mr-2" />
-              Histórico
+              Por Apartamento
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate("/sindico/packages/historico-condominio")}>
+              <Building2 className="w-4 h-4 mr-2" />
+              Por Condomínio
             </Button>
             <Button variant="outline" size="sm" onClick={() => navigate("/sindico/packages/dashboard")}>
               <BarChart3 className="w-4 h-4 mr-2" />
