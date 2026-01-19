@@ -728,14 +728,16 @@ const CondominiumDetails = () => {
                           <div className="flex items-center gap-2">
                             <h4 className="font-semibold text-foreground">{block.name.toUpperCase()}</h4>
                             {block.short_code && (
-                              <TooltipProvider>
+                              <TooltipProvider delayDuration={0}>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <Badge variant="outline" className="text-xs font-mono cursor-help">
-                                      {block.short_code}
-                                    </Badge>
+                                    <span className="inline-flex cursor-help">
+                                      <Badge variant="outline" className="text-xs font-mono">
+                                        {block.short_code}
+                                      </Badge>
+                                    </span>
                                   </TooltipTrigger>
-                                  <TooltipContent>
+                                  <TooltipContent side="top" className="z-50">
                                     <p>Código curto para busca rápida</p>
                                     <p className="text-xs text-muted-foreground">Ex: {block.short_code}44 = {block.name}, Apt 44</p>
                                   </TooltipContent>
