@@ -303,17 +303,17 @@ Maria Santos,maria@email.com,11988888888,,não,não`;
               )}
             </div>
 
-            <ScrollArea className="flex-1 border rounded-lg">
+            <ScrollArea className="h-[300px] border rounded-lg">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-10">Status</TableHead>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>E-mail</TableHead>
-                    <TableHead>Telefone</TableHead>
-                    <TableHead>CPF</TableHead>
-                    <TableHead className="w-20">Prop.</TableHead>
-                    <TableHead className="w-20">Resp.</TableHead>
+                    <TableHead className="w-10 sticky top-0 bg-background z-10">Status</TableHead>
+                    <TableHead className="sticky top-0 bg-background z-10">Nome</TableHead>
+                    <TableHead className="sticky top-0 bg-background z-10">E-mail</TableHead>
+                    <TableHead className="sticky top-0 bg-background z-10">Telefone</TableHead>
+                    <TableHead className="sticky top-0 bg-background z-10">CPF</TableHead>
+                    <TableHead className="w-20 sticky top-0 bg-background z-10">Prop.</TableHead>
+                    <TableHead className="w-20 sticky top-0 bg-background z-10">Resp.</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -325,7 +325,7 @@ Maria Santos,maria@email.com,11988888888,,não,não`;
                         ) : (
                           <div className="relative group">
                             <AlertCircle className="w-4 h-4 text-destructive" />
-                            <div className="absolute left-0 top-6 z-10 hidden group-hover:block bg-popover border rounded p-2 text-xs whitespace-nowrap shadow-lg">
+                            <div className="absolute left-0 top-6 z-20 hidden group-hover:block bg-popover border rounded p-2 text-xs whitespace-nowrap shadow-lg">
                               {resident.errors.join(", ")}
                             </div>
                           </div>
