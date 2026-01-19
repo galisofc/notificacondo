@@ -561,14 +561,13 @@ const PorteiroPackagesHistory = () => {
 
     autoTable(doc, {
       startY: tableStartY + 4,
-      head: [["Foto", "Data/Hora", "Bloco/Apt", "Tipo", "Status", "Código", "Recebido", "Tempo"]],
+      head: [["Foto", "Data/Hora", "Bloco/Apt", "Tipo", "Status", "Retirado por", "Tempo"]],
       body: packages.map((pkg) => [
         "",
         format(parseISO(pkg.received_at), "dd/MM/yyyy HH:mm"),
         `${pkg.block?.name || "-"} / ${pkg.apartment?.number || "-"}`,
         pkg.package_type?.name || "Encomenda",
         STATUS_CONFIG[pkg.status].label,
-        pkg.pickup_code,
         pkg.picked_up_by_name || pkg.picked_up_by_profile?.full_name || "-",
         getWaitingTime(pkg),
       ]),
