@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -76,6 +77,7 @@ const BulkResidentCSVImportDialog = ({
   const [existingResidents, setExistingResidents] = useState<{ apartment_id: string; email: string }[]>([]);
   const [importResults, setImportResults] = useState<{ success: number; failed: number; skipped: number }>({ success: 0, failed: 0, skipped: 0 });
   const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
 
   const resetState = () => {
     setStep("upload");
@@ -83,6 +85,7 @@ const BulkResidentCSVImportDialog = ({
     setExistingResidents([]);
     setImportResults({ success: 0, failed: 0, skipped: 0 });
     setImporting(false);
+    setImportProgress({ current: 0, total: 0 });
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -289,11 +292,15 @@ BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
 
     setImporting(true);
     setStep("importing");
+    setImportProgress({ current: 0, total: validResidents.length });
 
     let success = 0;
     let failed = 0;
 
-    for (const resident of validResidents) {
+    for (let i = 0; i < validResidents.length; i++) {
+      const resident = validResidents[i];
+      setImportProgress({ current: i + 1, total: validResidents.length });
+      
       try {
         const { error } = await supabase.from("residents").insert({
           apartment_id: resident.apartment_id!,
@@ -454,9 +461,20 @@ BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
         )}
 
         {step === "importing" && (
-          <div className="py-12 text-center space-y-4">
+          <div className="py-12 text-center space-y-6">
             <Loader2 className="w-12 h-12 mx-auto animate-spin text-primary" />
-            <p className="text-muted-foreground">Importando moradores...</p>
+            <div className="space-y-3 max-w-md mx-auto">
+              <p className="text-muted-foreground">
+                Importando moradores... {importProgress.current} de {importProgress.total}
+              </p>
+              <Progress 
+                value={(importProgress.current / importProgress.total) * 100} 
+                className="h-3"
+              />
+              <p className="text-sm text-muted-foreground">
+                {Math.round((importProgress.current / importProgress.total) * 100)}% concluído
+              </p>
+            </div>
           </div>
         )}
 
