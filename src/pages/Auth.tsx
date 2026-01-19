@@ -6,7 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, Lock, User, ArrowLeft, ArrowRight, Loader2, Check, Building2, Phone, MapPin, ChevronRight, ChevronLeft, RefreshCw, FileText, Sparkles } from "lucide-react";
+import { Mail, Lock, User, ArrowLeft, ArrowRight, Loader2, Check, Building2, Phone, MapPin, ChevronRight, ChevronLeft, RefreshCw, FileText, Sparkles, MessageCircle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import logoImage from "@/assets/logo.png";
 import { useQuery } from "@tanstack/react-query";
@@ -77,6 +84,9 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSearchingCnpj, setIsSearchingCnpj] = useState(false);
   const [step, setStep] = useState(1);
+  const [showPasswordRecovery, setShowPasswordRecovery] = useState(false);
+  const [recoveryPhone, setRecoveryPhone] = useState("");
+  const [isRecovering, setIsRecovering] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     condominiumName: "",
     cnpj: "",
@@ -816,6 +826,17 @@ const Auth = () => {
                     "Entrar"
                   )}
                 </Button>
+
+                <div className="text-center">
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="text-sm text-muted-foreground hover:text-primary"
+                    onClick={() => setShowPasswordRecovery(true)}
+                  >
+                    Esqueceu sua senha?
+                  </Button>
+                </div>
               </>
             ) : (
               <AnimatePresence mode="wait">
@@ -1278,6 +1299,86 @@ const Auth = () => {
           )}
         </div>
       </div>
+
+      {/* Password Recovery Modal */}
+      <Dialog open={showPasswordRecovery} onOpenChange={setShowPasswordRecovery}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageCircle className="w-5 h-5 text-primary" />
+              Recuperar Senha via WhatsApp
+            </DialogTitle>
+            <DialogDescription>
+              Digite o número do WhatsApp cadastrado na sua conta. Você receberá um link para redefinir sua senha.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="recoveryPhone">WhatsApp</Label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <MaskedInput
+                  id="recoveryPhone"
+                  name="recoveryPhone"
+                  mask="phone"
+                  placeholder="(11) 99999-9999"
+                  value={recoveryPhone}
+                  onChange={(value) => setRecoveryPhone(value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            <Button
+              variant="hero"
+              className="w-full"
+              disabled={isRecovering || recoveryPhone.replace(/\D/g, '').length < 10}
+              onClick={async () => {
+                setIsRecovering(true);
+                try {
+                  const phoneDigits = recoveryPhone.replace(/\D/g, '');
+                  const formattedPhone = phoneDigits.startsWith('55') ? phoneDigits : `55${phoneDigits}`;
+                  
+                  const { data, error } = await supabase.functions.invoke('send-password-recovery', {
+                    body: { phone: formattedPhone }
+                  });
+                  
+                  if (error) throw error;
+                  
+                  toast({
+                    title: "Link enviado!",
+                    description: "Verifique seu WhatsApp para redefinir sua senha.",
+                  });
+                  setShowPasswordRecovery(false);
+                  setRecoveryPhone("");
+                } catch (error: any) {
+                  toast({
+                    title: "Erro ao enviar",
+                    description: error.message || "Não foi possível enviar o link de recuperação.",
+                    variant: "destructive",
+                  });
+                } finally {
+                  setIsRecovering(false);
+                }
+              }}
+            >
+              {isRecovering ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Enviar Link de Recuperação
+                </>
+              )}
+            </Button>
+            <p className="text-xs text-muted-foreground text-center">
+              Certifique-se de que o número informado está vinculado à sua conta de síndico.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
