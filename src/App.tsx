@@ -62,6 +62,7 @@ import PorteiroDashboard from "./pages/porteiro/Dashboard";
 import RegisterPackage from "./pages/porteiro/RegisterPackage";
 import PorteiroPackages from "./pages/porteiro/Packages";
 import PorteiroCondominio from "./pages/porteiro/Condominio";
+import PorteiroPackagesHistory from "./pages/porteiro/PackagesHistory";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -334,6 +335,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole="porteiro">
                     <PorteiroCondominio />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/porteiro/historico"
+                element={
+                  <ProtectedRoute requiredRole="porteiro">
+                    <PorteiroPackagesHistory />
                   </ProtectedRoute>
                 }
               />
