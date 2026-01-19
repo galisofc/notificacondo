@@ -817,7 +817,6 @@ const PorteiroPackagesHistory = () => {
                         <TableHead>Morador</TableHead>
                         <TableHead>Tipo</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Código</TableHead>
                         <TableHead>Recebido por</TableHead>
                         <TableHead>Retirado por</TableHead>
                         <TableHead>Data Retirada</TableHead>
@@ -843,7 +842,6 @@ const PorteiroPackagesHistory = () => {
                               {STATUS_CONFIG[pkg.status].label}
                             </Badge>
                           </TableCell>
-                          <TableCell className="font-mono">{pkg.pickup_code}</TableCell>
                           <TableCell>{pkg.received_by_profile?.full_name || "-"}</TableCell>
                           <TableCell>
                             {pkg.picked_up_by_name || pkg.picked_up_by_profile?.full_name || "-"}
