@@ -29,7 +29,6 @@ import {
 import {
   Package,
   PackageCheck,
-  PackageX,
   Clock,
   Building2,
   FileText,
@@ -49,7 +48,7 @@ import autoTable from "jspdf-autotable";
 
 interface PackageWithRelations {
   id: string;
-  status: "pendente" | "retirada" | "expirada";
+  status: "pendente" | "retirada";
   received_at: string;
   received_by: string;
   picked_up_at: string | null;
@@ -95,11 +94,6 @@ const STATUS_CONFIG = {
     label: "Retirada",
     color: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
     pdfColor: [16, 185, 129],
-  },
-  expirada: {
-    label: "Expirada",
-    color: "bg-destructive/10 text-destructive border-destructive/20",
-    pdfColor: [239, 68, 68],
   },
 };
 
@@ -206,7 +200,7 @@ const PackagesHistory = () => {
         .order("received_at", { ascending: false });
 
       if (statusFilter !== "all") {
-        query = query.eq("status", statusFilter as "pendente" | "retirada" | "expirada");
+        query = query.eq("status", statusFilter as "pendente" | "retirada");
       }
 
       if (dateFrom) {
@@ -255,7 +249,6 @@ const PackagesHistory = () => {
       total: packages.length,
       pendente: 0,
       retirada: 0,
-      expirada: 0,
       avgPickupTime: 0,
     };
 
@@ -263,7 +256,7 @@ const PackagesHistory = () => {
     let pickedUpCount = 0;
 
     packages.forEach((pkg) => {
-      const status = pkg.status as "pendente" | "retirada" | "expirada";
+      const status = pkg.status as "pendente" | "retirada";
       s[status]++;
       if (status === "retirada" && pkg.picked_up_at) {
         const minutes = differenceInMinutes(
@@ -456,7 +449,6 @@ const PackagesHistory = () => {
         ["Total de Encomendas", stats.total.toString()],
         ["Retiradas", stats.retirada.toString()],
         ["Pendentes", stats.pendente.toString()],
-        ["Expiradas", stats.expirada.toString()],
         ["Tempo Médio de Retirada", formatPickupTime(stats.avgPickupTime)],
       ],
       theme: "striped",
@@ -726,7 +718,6 @@ const PackagesHistory = () => {
                     <SelectItem value="all">Todos</SelectItem>
                     <SelectItem value="pendente">Pendentes</SelectItem>
                     <SelectItem value="retirada">Retiradas</SelectItem>
-                    <SelectItem value="expirada">Expiradas</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -781,12 +772,6 @@ const PackagesHistory = () => {
               value={stats.retirada}
               icon={PackageCheck}
               color="bg-emerald-500"
-            />
-            <StatCard
-              title="Expiradas"
-              value={stats.expirada}
-              icon={PackageX}
-              color="bg-destructive"
             />
             <StatCard
               title="Tempo Médio"

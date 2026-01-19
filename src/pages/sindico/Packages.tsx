@@ -48,7 +48,6 @@ import {
 import {
   Package,
   PackageCheck,
-  PackageX,
   Clock,
   Building2,
   Search,
@@ -71,7 +70,7 @@ import { useNavigate } from "react-router-dom";
 
 interface PackageWithRelations {
   id: string;
-  status: "pendente" | "retirada" | "expirada";
+  status: "pendente" | "retirada";
   received_at: string;
   received_by: string;
   picked_up_at: string | null;
@@ -105,11 +104,6 @@ const STATUS_CONFIG = {
     label: "Retirada",
     color: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
     icon: PackageCheck,
-  },
-  expirada: {
-    label: "Expirada",
-    color: "bg-destructive/10 text-destructive border-destructive/20",
-    icon: PackageX,
   },
 };
 
@@ -267,7 +261,7 @@ const SindicoPackages = () => {
 
   // Stats
   const stats = useMemo(() => {
-    const s = { total: 0, pendente: 0, retirada: 0, expirada: 0 };
+    const s = { total: 0, pendente: 0, retirada: 0 };
     packages.forEach((pkg) => {
       s.total++;
       s[pkg.status]++;
@@ -411,14 +405,6 @@ const SindicoPackages = () => {
             onClick={() => setStatusFilter("retirada")}
             isActive={statusFilter === "retirada"}
           />
-          <StatCard
-            title="Expiradas"
-            value={stats.expirada}
-            icon={PackageX}
-            color="bg-destructive"
-            onClick={() => setStatusFilter("expirada")}
-            isActive={statusFilter === "expirada"}
-          />
         </div>
 
         {/* Filters */}
@@ -474,7 +460,6 @@ const SindicoPackages = () => {
                   <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="pendente">Pendentes</SelectItem>
                   <SelectItem value="retirada">Retiradas</SelectItem>
-                  <SelectItem value="expirada">Expiradas</SelectItem>
                 </SelectContent>
               </Select>
             </div>

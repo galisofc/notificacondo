@@ -16,7 +16,6 @@ import {
 import {
   Package,
   PackageCheck,
-  PackageX,
   Clock,
   Building2,
   TrendingUp,
@@ -47,7 +46,7 @@ import { ptBR } from "date-fns/locale";
 
 interface PackageWithRelations {
   id: string;
-  status: "pendente" | "retirada" | "expirada";
+  status: "pendente" | "retirada";
   received_at: string;
   picked_up_at: string | null;
   block_id: string;
@@ -60,7 +59,6 @@ interface BlockStats {
   name: string;
   pendente: number;
   retirada: number;
-  expirada: number;
   total: number;
 }
 
@@ -79,7 +77,6 @@ interface Condominium {
 const COLORS = {
   pendente: "hsl(var(--chart-4))",
   retirada: "hsl(var(--chart-2))",
-  expirada: "hsl(var(--chart-1))",
 };
 
 const PackagesDashboard = () => {
@@ -154,7 +151,6 @@ const PackagesDashboard = () => {
     const stats = {
       pendente: 0,
       retirada: 0,
-      expirada: 0,
       total: 0,
     };
 
@@ -178,7 +174,6 @@ const PackagesDashboard = () => {
           name: blockName,
           pendente: 0,
           retirada: 0,
-          expirada: 0,
           total: 0,
         });
       }
@@ -230,7 +225,6 @@ const PackagesDashboard = () => {
     return [
       { name: "Pendentes", value: statusStats.pendente, color: COLORS.pendente },
       { name: "Retiradas", value: statusStats.retirada, color: COLORS.retirada },
-      { name: "Expiradas", value: statusStats.expirada, color: COLORS.expirada },
     ].filter((item) => item.value > 0);
   }, [statusStats]);
 
@@ -348,13 +342,6 @@ const PackagesDashboard = () => {
             icon={PackageCheck}
             description="Entregues com sucesso"
             color="bg-green-500"
-          />
-          <StatCard
-            title="Expiradas"
-            value={statusStats.expirada}
-            icon={PackageX}
-            description="Não retiradas"
-            color="bg-red-500"
           />
         </div>
 
@@ -530,7 +517,6 @@ const PackagesDashboard = () => {
                   <Legend />
                   <Bar dataKey="pendente" name="Pendentes" fill={COLORS.pendente} stackId="a" />
                   <Bar dataKey="retirada" name="Retiradas" fill={COLORS.retirada} stackId="a" />
-                  <Bar dataKey="expirada" name="Expiradas" fill={COLORS.expirada} stackId="a" />
                 </BarChart>
               </ResponsiveContainer>
             )}
