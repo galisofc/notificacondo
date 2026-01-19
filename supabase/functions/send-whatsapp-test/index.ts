@@ -38,7 +38,11 @@ async function sendZproMessage(phone: string, message: string, config: ProviderS
   
   // Z-PRO API uses query parameters
   // Postman uses BearerToken + externalKey (different values)
-  const externalKey = config.instanceId || "";
+  // If instance_id is empty or placeholder, fallback to api_key
+  let externalKey = config.instanceId || "";
+  if (!externalKey || externalKey === "zpro-embedded") {
+    externalKey = config.apiKey;
+  }
   const params = new URLSearchParams({
     body: message,
     number: phoneClean,
