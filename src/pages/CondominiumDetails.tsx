@@ -719,12 +719,17 @@ const CondominiumDetails = () => {
                           <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                             <Building2 className="w-5 h-5 text-primary" />
                           </div>
-                          <div>
+                          <div className="flex items-center gap-2">
                             <h4 className="font-semibold text-foreground">{block.name.toUpperCase()}</h4>
-                            <p className="text-sm text-muted-foreground">
-                              {allBlockApartments.length} apartamento(s)
-                            </p>
+                            {block.short_code && (
+                              <Badge variant="outline" className="text-xs font-mono">
+                                {block.short_code}
+                              </Badge>
+                            )}
                           </div>
+                          <p className="text-sm text-muted-foreground">
+                            {allBlockApartments.length} apartamento(s)
+                          </p>
                         </button>
                       </CollapsibleTrigger>
 
