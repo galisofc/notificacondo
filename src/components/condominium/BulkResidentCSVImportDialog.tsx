@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,11 +20,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, X, Mail, CreditCard } from "lucide-react";
+import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, X, Mail, CreditCard, Pencil } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { isValidCPF } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Block {
   id: string;
@@ -282,6 +289,69 @@ BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
     reader.readAsText(file);
   };
 
+  // Função para validar um residente individualmente
+  const validateResident = useCallback((resident: ParsedResident): ParsedResident => {
+    const errors: string[] = [];
+    
+    // Validate block and apartment
+    if (!resident.block_name || resident.block_name.length < 1) {
+      errors.push("Bloco obrigatório");
+    }
+    
+    if (!resident.apartment_number || resident.apartment_number.length < 1) {
+      errors.push("Apartamento obrigatório");
+    }
+    
+    // Find apartment_id
+    const apartment_id = findApartmentId(resident.block_name || "", resident.apartment_number || "");
+    if (resident.block_name && resident.apartment_number && !apartment_id) {
+      errors.push("Bloco/Apartamento não encontrado");
+    }
+    
+    // Validate name
+    if (!resident.full_name || resident.full_name.length < 2) {
+      errors.push("Nome inválido");
+    }
+    
+    // Validate email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!resident.email || !emailRegex.test(resident.email)) {
+      errors.push("E-mail inválido");
+    }
+    
+    // Validate CPF if provided
+    const cleanCPF = resident.cpf?.replace(/\D/g, "") || "";
+    if (cleanCPF && cleanCPF.length > 0 && !isValidCPF(cleanCPF)) {
+      errors.push("CPF inválido");
+    }
+
+    // Check for duplicate
+    if (apartment_id && resident.email) {
+      const isDuplicate = isResidentDuplicate(apartment_id, resident.email);
+      if (isDuplicate) {
+        errors.push("Morador já cadastrado neste apartamento");
+      }
+    }
+
+    return {
+      ...resident,
+      cpf: cleanCPF,
+      apartment_id,
+      errors,
+      isValid: errors.length === 0,
+    };
+  }, [blocks, apartments, existingResidents]);
+
+  // Função para atualizar um campo do residente
+  const updateResident = useCallback((index: number, field: keyof ParsedResident, value: string | boolean) => {
+    setParsedResidents(prev => {
+      const updated = [...prev];
+      const resident = { ...updated[index], [field]: value };
+      updated[index] = validateResident(resident);
+      return updated;
+    });
+  }, [validateResident]);
+
   const handleImport = async () => {
     const validResidents = parsedResidents.filter(r => r.isValid && r.apartment_id);
     if (validResidents.length === 0) {
@@ -400,17 +470,23 @@ BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
 
         {step === "preview" && (
           <div className="flex flex-col flex-1 overflow-hidden space-y-4">
-            <div className="flex items-center gap-3">
-              <Badge variant="default" className="bg-green-500">
-                <CheckCircle2 className="w-3 h-3 mr-1" />
-                {validCount} válidos
-              </Badge>
-              {invalidCount > 0 && (
-                <Badge variant="destructive">
-                  <AlertCircle className="w-3 h-3 mr-1" />
-                  {invalidCount} com erros
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Badge variant="default" className="bg-green-500">
+                  <CheckCircle2 className="w-3 h-3 mr-1" />
+                  {validCount} válidos
                 </Badge>
-              )}
+                {invalidCount > 0 && (
+                  <Badge variant="destructive">
+                    <AlertCircle className="w-3 h-3 mr-1" />
+                    {invalidCount} com erros
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Pencil className="w-3 h-3" />
+                <span>Clique para editar</span>
+              </div>
             </div>
 
             <div className="border rounded-lg overflow-hidden">
@@ -436,75 +512,133 @@ BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
                           {resident.isValid ? (
                             <CheckCircle2 className="w-4 h-4 text-green-500" />
                           ) : (
-                            <div className="relative group">
-                              <AlertCircle className="w-4 h-4 text-destructive" />
-                              <div className="absolute left-0 top-6 z-20 hidden group-hover:block bg-popover border rounded p-2 text-xs whitespace-nowrap shadow-lg">
-                                {resident.errors.join(", ")}
-                              </div>
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell className="font-medium">{resident.block_name}</TableCell>
-                        <TableCell>{resident.apartment_number}</TableCell>
-                        <TableCell>{resident.full_name}</TableCell>
-                        <TableCell>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-xs truncate max-w-[150px]">{resident.email}</span>
-                                  {resident.email && (
-                                    resident.errors.some(e => e.toLowerCase().includes("e-mail") || e.toLowerCase().includes("email")) ? (
-                                      <Mail className="w-3.5 h-3.5 text-destructive flex-shrink-0" />
-                                    ) : (
-                                      <Mail className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-                                    )
-                                  )}
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent side="top">
-                                {resident.errors.some(e => e.toLowerCase().includes("e-mail") || e.toLowerCase().includes("email")) ? (
-                                  <span className="text-destructive">E-mail inválido ou já cadastrado</span>
-                                ) : (
-                                  <span className="text-green-500">E-mail válido</span>
-                                )}
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </TableCell>
-                        <TableCell>
-                          {resident.cpf ? (
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-xs">{resident.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}</span>
-                                    {resident.errors.some(e => e.toLowerCase().includes("cpf")) ? (
-                                      <CreditCard className="w-3.5 h-3.5 text-destructive flex-shrink-0" />
-                                    ) : (
-                                      <CreditCard className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-                                    )}
-                                  </div>
+                                  <AlertCircle className="w-4 h-4 text-destructive cursor-help" />
                                 </TooltipTrigger>
-                                <TooltipContent side="top">
-                                  {resident.errors.some(e => e.toLowerCase().includes("cpf")) ? (
-                                    <span className="text-destructive">CPF inválido</span>
-                                  ) : (
-                                    <span className="text-green-500">CPF válido</span>
-                                  )}
+                                <TooltipContent side="right" className="max-w-xs">
+                                  <ul className="text-xs space-y-1">
+                                    {resident.errors.map((err, i) => (
+                                      <li key={i}>• {err}</li>
+                                    ))}
+                                  </ul>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
                           )}
                         </TableCell>
-                        <TableCell>{resident.phone || "-"}</TableCell>
-                        <TableCell>
-                          <Checkbox checked={resident.is_owner} disabled />
+                        <TableCell className="p-1">
+                          <Select
+                            value={resident.block_name}
+                            onValueChange={(value) => updateResident(index, "block_name", value)}
+                          >
+                            <SelectTrigger className="h-8 text-xs w-[100px]">
+                              <SelectValue placeholder="Bloco" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {blocks.map(block => (
+                                <SelectItem key={block.id} value={block.name}>
+                                  {block.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </TableCell>
-                        <TableCell>
-                          <Checkbox checked={resident.is_responsible} disabled />
+                        <TableCell className="p-1">
+                          <Select
+                            value={resident.apartment_number}
+                            onValueChange={(value) => updateResident(index, "apartment_number", value)}
+                          >
+                            <SelectTrigger className="h-8 text-xs w-[80px]">
+                              <SelectValue placeholder="Apto" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {apartments
+                                .filter(apt => {
+                                  const block = blocks.find(b => b.name.toUpperCase() === resident.block_name.toUpperCase());
+                                  return block ? apt.block_id === block.id : false;
+                                })
+                                .map(apt => (
+                                  <SelectItem key={apt.id} value={apt.number}>
+                                    {apt.number}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell className="p-1">
+                          <Input
+                            value={resident.full_name}
+                            onChange={(e) => updateResident(index, "full_name", e.target.value)}
+                            className="h-8 text-xs w-[120px]"
+                            placeholder="Nome"
+                          />
+                        </TableCell>
+                        <TableCell className="p-1">
+                          <div className="flex items-center gap-1">
+                            <Input
+                              value={resident.email}
+                              onChange={(e) => updateResident(index, "email", e.target.value)}
+                              className={`h-8 text-xs w-[150px] ${
+                                resident.errors.some(e => e.toLowerCase().includes("e-mail") || e.toLowerCase().includes("email"))
+                                  ? "border-destructive focus-visible:ring-destructive"
+                                  : resident.email ? "border-green-500 focus-visible:ring-green-500" : ""
+                              }`}
+                              placeholder="E-mail"
+                              type="email"
+                            />
+                            {resident.email && (
+                              resident.errors.some(e => e.toLowerCase().includes("e-mail") || e.toLowerCase().includes("email")) ? (
+                                <Mail className="w-3.5 h-3.5 text-destructive flex-shrink-0" />
+                              ) : (
+                                <Mail className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                              )
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="p-1">
+                          <div className="flex items-center gap-1">
+                            <Input
+                              value={resident.cpf}
+                              onChange={(e) => updateResident(index, "cpf", e.target.value.replace(/\D/g, ""))}
+                              className={`h-8 text-xs w-[110px] ${
+                                resident.errors.some(e => e.toLowerCase().includes("cpf"))
+                                  ? "border-destructive focus-visible:ring-destructive"
+                                  : resident.cpf ? "border-green-500 focus-visible:ring-green-500" : ""
+                              }`}
+                              placeholder="CPF"
+                              maxLength={11}
+                            />
+                            {resident.cpf && (
+                              resident.errors.some(e => e.toLowerCase().includes("cpf")) ? (
+                                <CreditCard className="w-3.5 h-3.5 text-destructive flex-shrink-0" />
+                              ) : (
+                                <CreditCard className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                              )
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="p-1">
+                          <Input
+                            value={resident.phone}
+                            onChange={(e) => updateResident(index, "phone", e.target.value.replace(/\D/g, ""))}
+                            className="h-8 text-xs w-[100px]"
+                            placeholder="Telefone"
+                            maxLength={11}
+                          />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Checkbox 
+                            checked={resident.is_owner} 
+                            onCheckedChange={(checked) => updateResident(index, "is_owner", !!checked)}
+                          />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Checkbox 
+                            checked={resident.is_responsible} 
+                            onCheckedChange={(checked) => updateResident(index, "is_responsible", !!checked)}
+                          />
                         </TableCell>
                       </TableRow>
                     ))}
