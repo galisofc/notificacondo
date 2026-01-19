@@ -80,7 +80,7 @@ const moduloEncomendas = [
   {
     icon: Clock,
     title: "Controle de Pendências",
-    description: "Dashboard com encomendas pendentes, retiradas e expiradas por bloco/apartamento."
+    description: "Dashboard com encomendas pendentes e retiradas por bloco/apartamento."
   }
 ];
 

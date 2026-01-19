@@ -17,7 +17,6 @@ export interface Package {
   picked_up_at: string | null;
   picked_up_by: string | null;
   picked_up_by_name: string | null;
-  expires_at: string | null;
   created_at: string;
   // Notification tracking
   notification_sent: boolean | null;

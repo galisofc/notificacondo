@@ -50,7 +50,7 @@ const faqCategories = [
       },
       {
         question: "E se o morador não retirar a encomenda?",
-        answer: "O sistema envia lembretes automáticos após períodos configuráveis. Se a encomenda não for retirada dentro do prazo estabelecido, ela é marcada como expirada e o síndico é notificado."
+        answer: "O sistema permite reenviar notificações sempre que necessário. O porteiro e o síndico podem acompanhar todas as encomendas pendentes pelo painel e tomar as providências necessárias."
       },
       {
         question: "Posso ver o histórico de entregas?",

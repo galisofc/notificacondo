@@ -321,11 +321,6 @@ export function PackageDetailsDialog({
               </div>
             )}
 
-            {package_.status === "expirada" && (
-              <p className="text-sm text-muted-foreground text-center py-2">
-                Esta encomenda expirou. Notificações não são enviadas para encomendas expiradas.
-              </p>
-            )}
           </div>
         </div>
       </DialogContent>

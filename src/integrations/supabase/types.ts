@@ -1054,7 +1054,6 @@ export type Database = {
           condominium_id: string
           created_at: string
           description: string | null
-          expires_at: string | null
           id: string
           notification_count: number | null
           notification_sent: boolean | null
@@ -1077,7 +1076,6 @@ export type Database = {
           condominium_id: string
           created_at?: string
           description?: string | null
-          expires_at?: string | null
           id?: string
           notification_count?: number | null
           notification_sent?: boolean | null
@@ -1100,7 +1098,6 @@ export type Database = {
           condominium_id?: string
           created_at?: string
           description?: string | null
-          expires_at?: string | null
           id?: string
           notification_count?: number | null
           notification_sent?: boolean | null
@@ -1919,7 +1916,7 @@ export type Database = {
         | "advertido"
         | "multado"
       occurrence_type: "advertencia" | "notificacao" | "multa"
-      package_status: "pendente" | "retirada" | "expirada"
+      package_status: "pendente" | "retirada"
       plan_type: "start" | "essencial" | "profissional" | "enterprise"
     }
     CompositeTypes: {
@@ -2059,7 +2056,7 @@ export const Constants = {
         "multado",
       ],
       occurrence_type: ["advertencia", "notificacao", "multa"],
-      package_status: ["pendente", "retirada", "expirada"],
+      package_status: ["pendente", "retirada"],
       plan_type: ["start", "essencial", "profissional", "enterprise"],
     },
   },

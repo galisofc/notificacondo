@@ -1,7 +1,6 @@
 export const PACKAGE_STATUS = {
   PENDENTE: 'pendente',
   RETIRADA: 'retirada',
-  EXPIRADA: 'expirada',
 } as const;
 
 export type PackageStatus = typeof PACKAGE_STATUS[keyof typeof PACKAGE_STATUS];
@@ -9,7 +8,6 @@ export type PackageStatus = typeof PACKAGE_STATUS[keyof typeof PACKAGE_STATUS];
 export const STATUS_LABELS: Record<PackageStatus, string> = {
   pendente: 'Pendente',
   retirada: 'Retirada',
-  expirada: 'Expirada',
 };
 
 export const STATUS_COLORS: Record<PackageStatus, { bg: string; text: string; border: string }> = {
@@ -22,11 +20,6 @@ export const STATUS_COLORS: Record<PackageStatus, { bg: string; text: string; bo
     bg: 'bg-green-100 dark:bg-green-900/30', 
     text: 'text-green-800 dark:text-green-300',
     border: 'border-green-200 dark:border-green-800'
-  },
-  expirada: { 
-    bg: 'bg-red-100 dark:bg-red-900/30', 
-    text: 'text-red-800 dark:text-red-300',
-    border: 'border-red-200 dark:border-red-800'
   },
 };
 
