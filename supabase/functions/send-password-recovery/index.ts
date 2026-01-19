@@ -6,6 +6,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Rate limiting configuration
+const MAX_ATTEMPTS_PER_EMAIL = 3; // Max attempts per email in the time window
+const RATE_LIMIT_WINDOW_MINUTES = 15; // Time window in minutes
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -21,15 +25,49 @@ serve(async (req) => {
       );
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0] || req.headers.get("cf-connecting-ip") || "unknown";
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Check rate limiting
+    const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MINUTES * 60 * 1000).toISOString();
+    
+    const { count: attemptCount, error: countError } = await supabase
+      .from("password_recovery_attempts")
+      .select("*", { count: "exact", head: true })
+      .eq("email", normalizedEmail)
+      .gte("attempted_at", windowStart);
+
+    if (countError) {
+      console.error("Error checking rate limit:", countError);
+    }
+
+    // Log the attempt
+    await supabase.from("password_recovery_attempts").insert({
+      email: normalizedEmail,
+      ip_address: clientIp,
+      success: false,
+    });
+
+    // Check if rate limited
+    if (attemptCount !== null && attemptCount >= MAX_ATTEMPTS_PER_EMAIL) {
+      console.log(`Rate limit exceeded for email: ${normalizedEmail}, attempts: ${attemptCount}`);
+      return new Response(
+        JSON.stringify({ 
+          error: `Muitas tentativas. Aguarde ${RATE_LIMIT_WINDOW_MINUTES} minutos antes de tentar novamente.` 
+        }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Find sindico profile by email
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("user_id, full_name, email, phone")
-      .eq("email", email.toLowerCase())
+      .eq("email", normalizedEmail)
       .maybeSingle();
 
     if (profileError) {
@@ -42,9 +80,9 @@ serve(async (req) => {
 
     if (!profile || !profile.phone) {
       // Return success even if not found to prevent enumeration attacks
-      console.log("Profile not found or no phone for email:", email);
+      console.log("Profile not found or no phone for email:", normalizedEmail);
       return new Response(
-        JSON.stringify({ success: true, message: "Se o email estiver cadastrado, você receberá o link." }),
+        JSON.stringify({ success: true, message: "Se o email estiver cadastrado, você receberá a nova senha." }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -65,7 +103,7 @@ serve(async (req) => {
       // Return success to prevent enumeration
       console.log("User is not a sindico:", profile.user_id);
       return new Response(
-        JSON.stringify({ success: true, message: "Se o número estiver cadastrado, você receberá o link." }),
+        JSON.stringify({ success: true, message: "Se o email estiver cadastrado, você receberá a nova senha." }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -185,10 +223,18 @@ serve(async (req) => {
       );
     }
 
-    console.log("Password recovery link sent successfully to:", formattedPhone);
+    // Update the attempt as successful
+    await supabase
+      .from("password_recovery_attempts")
+      .update({ success: true })
+      .eq("email", normalizedEmail)
+      .order("attempted_at", { ascending: false })
+      .limit(1);
+
+    console.log("New password sent successfully to:", formattedPhone);
 
     return new Response(
-      JSON.stringify({ success: true, message: "Link de recuperação enviado com sucesso" }),
+      JSON.stringify({ success: true, message: "Nova senha enviada com sucesso" }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
