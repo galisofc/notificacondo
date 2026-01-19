@@ -20,7 +20,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, X } from "lucide-react";
+import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, X, Mail, CreditCard } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { isValidCPF } from "@/lib/utils";
@@ -421,7 +422,8 @@ BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
                       <TableHead>Bloco</TableHead>
                       <TableHead>Apto</TableHead>
                       <TableHead>Nome</TableHead>
-                      <TableHead>E-mail</TableHead>
+                     <TableHead>E-mail</TableHead>
+                      <TableHead>CPF</TableHead>
                       <TableHead>Telefone</TableHead>
                       <TableHead className="w-16">Prop.</TableHead>
                       <TableHead className="w-16">Resp.</TableHead>
@@ -445,7 +447,58 @@ BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
                         <TableCell className="font-medium">{resident.block_name}</TableCell>
                         <TableCell>{resident.apartment_number}</TableCell>
                         <TableCell>{resident.full_name}</TableCell>
-                        <TableCell className="text-xs">{resident.email}</TableCell>
+                        <TableCell>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs truncate max-w-[150px]">{resident.email}</span>
+                                  {resident.email && (
+                                    resident.errors.some(e => e.toLowerCase().includes("e-mail") || e.toLowerCase().includes("email")) ? (
+                                      <Mail className="w-3.5 h-3.5 text-destructive flex-shrink-0" />
+                                    ) : (
+                                      <Mail className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                                    )
+                                  )}
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="top">
+                                {resident.errors.some(e => e.toLowerCase().includes("e-mail") || e.toLowerCase().includes("email")) ? (
+                                  <span className="text-destructive">E-mail inválido ou já cadastrado</span>
+                                ) : (
+                                  <span className="text-green-500">E-mail válido</span>
+                                )}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </TableCell>
+                        <TableCell>
+                          {resident.cpf ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-xs">{resident.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}</span>
+                                    {resident.errors.some(e => e.toLowerCase().includes("cpf")) ? (
+                                      <CreditCard className="w-3.5 h-3.5 text-destructive flex-shrink-0" />
+                                    ) : (
+                                      <CreditCard className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                                    )}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="top">
+                                  {resident.errors.some(e => e.toLowerCase().includes("cpf")) ? (
+                                    <span className="text-destructive">CPF inválido</span>
+                                  ) : (
+                                    <span className="text-green-500">CPF válido</span>
+                                  )}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
                         <TableCell>{resident.phone || "-"}</TableCell>
                         <TableCell>
                           <Checkbox checked={resident.is_owner} disabled />
