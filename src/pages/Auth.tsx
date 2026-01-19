@@ -87,6 +87,10 @@ const Auth = () => {
   const [showPasswordRecovery, setShowPasswordRecovery] = useState(false);
   const [recoveryEmail, setRecoveryEmail] = useState("");
   const [isRecovering, setIsRecovering] = useState(false);
+  const [isPasswordReset, setIsPasswordReset] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     condominiumName: "",
     cnpj: "",
@@ -114,6 +118,7 @@ const Auth = () => {
   // Get selected plan from URL
   const searchParams = new URLSearchParams(location.search);
   const selectedPlanSlug = searchParams.get('plano');
+  const isRecoveryMode = searchParams.get('recovery') === 'true';
 
   // Fetch selected plan details
   const { data: selectedPlan } = useQuery({
@@ -132,6 +137,13 @@ const Auth = () => {
     },
     enabled: !!selectedPlanSlug
   });
+
+  // Check if user is in password recovery mode
+  useEffect(() => {
+    if (isRecoveryMode) {
+      setIsPasswordReset(true);
+    }
+  }, [isRecoveryMode]);
 
   // If plan is selected, default to signup
   useEffect(() => {
@@ -584,7 +596,7 @@ const Auth = () => {
           </div>
 
           {/* Selected Plan Display */}
-          {!isLogin && selectedPlan && (
+          {!isPasswordReset && !isLogin && selectedPlan && (
             <div className="mb-6 p-4 rounded-xl bg-gradient-card border border-primary/30">
               <div className="flex items-center gap-3 mb-3">
                 <div 
@@ -669,19 +681,27 @@ const Auth = () => {
 
           <div className="mb-6">
             <h2 className="font-display text-2xl font-bold text-foreground mb-2">
-              {isLogin ? "Entrar na sua conta" : step === 1 ? "Dados do Condomínio" : "Dados do Síndico"}
+              {isPasswordReset 
+                ? "Redefinir Senha" 
+                : isLogin 
+                  ? "Entrar na sua conta" 
+                  : step === 1 
+                    ? "Dados do Condomínio" 
+                    : "Dados do Síndico"}
             </h2>
             <p className="text-muted-foreground">
-              {isLogin
-                ? "Acesse seu painel de gestão condominial"
-                : step === 1 
-                  ? "Preencha os dados do condomínio que será gerenciado"
-                  : "Preencha seus dados como síndico responsável"}
+              {isPasswordReset
+                ? "Digite sua nova senha para acessar sua conta"
+                : isLogin
+                  ? "Acesse seu painel de gestão condominial"
+                  : step === 1 
+                    ? "Preencha os dados do condomínio que será gerenciado"
+                    : "Preencha seus dados como síndico responsável"}
             </p>
           </div>
 
           {/* Animated Step Progress */}
-          {!isLogin && (
+          {!isPasswordReset && !isLogin && (
             <div className="mb-8">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
@@ -770,6 +790,111 @@ const Auth = () => {
             </div>
           )}
 
+          {/* Password Reset Form */}
+          {isPasswordReset ? (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="newPassword" className="text-foreground">Nova Senha</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="newPassword"
+                    name="newPassword"
+                    type="password"
+                    placeholder="••••••••"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="pl-10 bg-secondary/50 border-border"
+                  />
+                </div>
+                {newPassword && newPassword.length < 6 && (
+                  <p className="text-sm text-destructive">Senha deve ter pelo menos 6 caracteres</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmNewPassword" className="text-foreground">Confirmar Nova Senha</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="confirmNewPassword"
+                    name="confirmNewPassword"
+                    type="password"
+                    placeholder="••••••••"
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    className="pl-10 bg-secondary/50 border-border"
+                  />
+                </div>
+                {confirmNewPassword && newPassword !== confirmNewPassword && (
+                  <p className="text-sm text-destructive">As senhas não coincidem</p>
+                )}
+              </div>
+
+              <Button
+                variant="hero"
+                className="w-full"
+                disabled={isResettingPassword || newPassword.length < 6 || newPassword !== confirmNewPassword}
+                onClick={async () => {
+                  setIsResettingPassword(true);
+                  try {
+                    const { error } = await supabase.auth.updateUser({
+                      password: newPassword
+                    });
+                    
+                    if (error) throw error;
+                    
+                    toast({
+                      title: "Senha alterada!",
+                      description: "Sua senha foi redefinida com sucesso. Faça login com sua nova senha.",
+                    });
+                    
+                    // Clear state and redirect to login
+                    setNewPassword("");
+                    setConfirmNewPassword("");
+                    setIsPasswordReset(false);
+                    navigate("/auth", { replace: true });
+                  } catch (error: any) {
+                    toast({
+                      title: "Erro ao redefinir senha",
+                      description: error.message || "Não foi possível redefinir sua senha.",
+                      variant: "destructive",
+                    });
+                  } finally {
+                    setIsResettingPassword(false);
+                  }
+                }}
+              >
+                {isResettingPassword ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4 mr-2" />
+                    Salvar Nova Senha
+                  </>
+                )}
+              </Button>
+
+              <div className="text-center">
+                <Button
+                  type="button"
+                  variant="link"
+                  className="text-sm text-muted-foreground hover:text-primary"
+                  onClick={() => {
+                    setIsPasswordReset(false);
+                    setNewPassword("");
+                    setConfirmNewPassword("");
+                    navigate("/auth", { replace: true });
+                  }}
+                >
+                  Voltar para o login
+                </Button>
+              </div>
+            </div>
+          ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             {isLogin ? (
               <>
@@ -1228,8 +1353,9 @@ const Auth = () => {
               </AnimatePresence>
             )}
           </form>
+          )}
 
-          {isLogin ? (
+          {!isPasswordReset && isLogin ? (
             <div className="mt-8 relative">
               <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-amber-500/10 to-primary/5 rounded-2xl blur-xl" />
               <div className="relative bg-gradient-to-br from-card/80 to-card border border-primary/20 rounded-2xl p-6 backdrop-blur-sm">
@@ -1272,7 +1398,7 @@ const Auth = () => {
                 </div>
               </div>
             </div>
-          ) : (
+          ) : !isPasswordReset ? (
             <div className="mt-6 text-center">
               <p className="text-muted-foreground">
                 Já tem uma conta?{" "}
@@ -1288,9 +1414,9 @@ const Auth = () => {
                 </button>
               </p>
             </div>
-          )}
+          ) : null}
 
-          {!isLogin && (
+          {!isPasswordReset && !isLogin && (
             <p className="mt-6 text-xs text-muted-foreground text-center">
               Ao criar uma conta, você concorda com nossos{" "}
               <a href="#" className="text-primary hover:underline">Termos de Uso</a> e{" "}
