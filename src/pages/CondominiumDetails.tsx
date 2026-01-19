@@ -8,6 +8,12 @@ import { MaskedInput, formatPhone, formatCPF } from "@/components/ui/masked-inpu
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -722,9 +728,19 @@ const CondominiumDetails = () => {
                           <div className="flex items-center gap-2">
                             <h4 className="font-semibold text-foreground">{block.name.toUpperCase()}</h4>
                             {block.short_code && (
-                              <Badge variant="outline" className="text-xs font-mono">
-                                {block.short_code}
-                              </Badge>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge variant="outline" className="text-xs font-mono cursor-help">
+                                      {block.short_code}
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Código curto para busca rápida</p>
+                                    <p className="text-xs text-muted-foreground">Ex: {block.short_code}44 = {block.name}, Apt 44</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             )}
                           </div>
                           <p className="text-sm text-muted-foreground">
