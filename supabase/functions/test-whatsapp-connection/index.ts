@@ -136,7 +136,11 @@ serve(async (req) => {
     switch (provider) {
       case "zpro": {
         const baseUrl = api_url.replace(/\/$/, "");
-        const externalKey = instance_id || "";
+        // If instance_id is empty or placeholder, fallback to api_key
+        let externalKey = instance_id || "";
+        if (!externalKey || externalKey === "zpro-embedded") {
+          externalKey = api_key;
+        }
         const params = new URLSearchParams({
           body: "ping",
           number: "5511999999999",
