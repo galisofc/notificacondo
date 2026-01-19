@@ -70,6 +70,7 @@ interface Block {
   name: string;
   description: string | null;
   floors: number;
+  short_code: string | null;
 }
 
 interface Apartment {
@@ -127,7 +128,7 @@ const CondominiumDetails = () => {
   const [selectedBlockForApartment, setSelectedBlockForApartment] = useState<string>("");
 
   // Form data
-  const [blockForm, setBlockForm] = useState({ name: "", description: "", floors: "1" });
+  const [blockForm, setBlockForm] = useState({ name: "", description: "", floors: "1", short_code: "" });
   const [apartmentForm, setApartmentForm] = useState({
     block_id: "",
     number: "",
@@ -312,6 +313,9 @@ const CondominiumDetails = () => {
     e.preventDefault();
     if (!id) return;
 
+    // Validate short_code format (1-3 uppercase letters/numbers)
+    const shortCode = blockForm.short_code.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 3);
+
     setSaving(true);
     try {
       if (editingBlock) {
@@ -321,9 +325,18 @@ const CondominiumDetails = () => {
             name: blockForm.name.toUpperCase(), 
             description: blockForm.description || null,
             floors: parseInt(blockForm.floors) || 1,
+            short_code: shortCode || null,
           })
           .eq("id", editingBlock.id);
-        if (error) throw error;
+        if (error) {
+          if (error.code === "23505") {
+            toast({ title: "Erro", description: "Código curto já está em uso por outro bloco.", variant: "destructive" });
+          } else {
+            throw error;
+          }
+          setSaving(false);
+          return;
+        }
         toast({ title: "Sucesso", description: "Bloco atualizado!" });
       } else {
         const { error } = await supabase.from("blocks").insert({
@@ -331,13 +344,22 @@ const CondominiumDetails = () => {
           name: blockForm.name.toUpperCase(),
           description: blockForm.description || null,
           floors: parseInt(blockForm.floors) || 1,
+          short_code: shortCode || null,
         });
-        if (error) throw error;
+        if (error) {
+          if (error.code === "23505") {
+            toast({ title: "Erro", description: "Código curto já está em uso por outro bloco.", variant: "destructive" });
+          } else {
+            throw error;
+          }
+          setSaving(false);
+          return;
+        }
         toast({ title: "Sucesso", description: "Bloco cadastrado!" });
       }
       setBlockDialog(false);
       setEditingBlock(null);
-      setBlockForm({ name: "", description: "", floors: "1" });
+      setBlockForm({ name: "", description: "", floors: "1", short_code: "" });
       fetchData();
     } catch (error: any) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
@@ -588,9 +610,9 @@ const CondominiumDetails = () => {
             </Button>
             <Button
               variant="hero"
-              onClick={() => {
+            onClick={() => {
                 setEditingBlock(null);
-                setBlockForm({ name: "", description: "", floors: "1" });
+                setBlockForm({ name: "", description: "", floors: "1", short_code: "" });
                 setBlockDialog(true);
               }}
             >
@@ -656,7 +678,7 @@ const CondominiumDetails = () => {
                   variant="outline"
                   onClick={() => {
                     setEditingBlock(null);
-                    setBlockForm({ name: "", description: "", floors: "1" });
+                    setBlockForm({ name: "", description: "", floors: "1", short_code: "" });
                     setBlockDialog(true);
                   }}
                 >
@@ -729,6 +751,7 @@ const CondominiumDetails = () => {
                                   name: block.name,
                                   description: block.description || "",
                                   floors: String(block.floors || 1),
+                                  short_code: block.short_code || "",
                                 });
                                 setBlockDialog(true);
                               }}
@@ -973,6 +996,20 @@ const CondominiumDetails = () => {
                   className="bg-secondary/50"
                   placeholder="Ex: 10"
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="blockShortCode">Código Curto (para busca rápida)</Label>
+                <Input
+                  id="blockShortCode"
+                  value={blockForm.short_code}
+                  onChange={(e) => setBlockForm({ ...blockForm, short_code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 3) })}
+                  className="bg-secondary/50"
+                  placeholder="Ex: AR, VI, BL1"
+                  maxLength={3}
+                />
+                <p className="text-xs text-muted-foreground">
+                  1 a 3 caracteres para identificar o bloco na busca rápida (ex: AR=ARMANDO, VI=VILELA)
+                </p>
               </div>
               <div className="flex justify-end gap-3">
                 <Button type="button" variant="outline" onClick={() => setBlockDialog(false)}>
