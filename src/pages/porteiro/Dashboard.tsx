@@ -1,26 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Package, PackagePlus, PackageCheck, Clock, History, Search, QrCode } from "lucide-react";
+import { Package, PackagePlus, PackageCheck, Clock, Search, QrCode, Calendar } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
-import { PackageCard } from "@/components/packages/PackageCard";
-import { PackageStatusBadge } from "@/components/packages/PackageStatusBadge";
-import { usePackages } from "@/hooks/usePackages";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { formatDistanceToNow } from "date-fns";
+import { format, startOfDay, endOfDay, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-interface MyPackage {
-  id: string;
-  pickup_code: string;
-  status: "pendente" | "retirada" | "expirada";
-  received_at: string;
-  block_name: string;
-  apartment_number: string;
+type PeriodFilter = "today" | "7days" | "15days" | "custom";
+
+interface Stats {
+  registeredToday: number;
+  totalPending: number;
+  pickedUpToday: number;
 }
 
 export default function PorteiroDashboard() {
@@ -28,12 +24,16 @@ export default function PorteiroDashboard() {
   const { user } = useAuth();
   const [condominiumIds, setCondominiumIds] = useState<string[]>([]);
   const [userName, setUserName] = useState<string>("");
-  const [myPackages, setMyPackages] = useState<MyPackage[]>([]);
-  const [loadingMyPackages, setLoadingMyPackages] = useState(true);
-  const [stats, setStats] = useState({
-    total: 0,
-    pending: 0,
+  const [stats, setStats] = useState<Stats>({
+    registeredToday: 0,
+    totalPending: 0,
     pickedUpToday: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("today");
+  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
+    from: undefined,
+    to: undefined,
   });
 
   // Fetch porter's condominiums
@@ -65,84 +65,102 @@ export default function PorteiroDashboard() {
     fetchCondominiums();
   }, [user]);
 
-  // Fetch packages registered by this porter
+  // Calculate date range based on filter
+  const { startDate, endDate } = useMemo(() => {
+    const today = new Date();
+    const todayStart = startOfDay(today);
+    const todayEnd = endOfDay(today);
+
+    switch (periodFilter) {
+      case "today":
+        return { startDate: todayStart, endDate: todayEnd };
+      case "7days":
+        return { startDate: startOfDay(subDays(today, 6)), endDate: todayEnd };
+      case "15days":
+        return { startDate: startOfDay(subDays(today, 14)), endDate: todayEnd };
+      case "custom":
+        return {
+          startDate: dateRange.from ? startOfDay(dateRange.from) : todayStart,
+          endDate: dateRange.to ? endOfDay(dateRange.to) : todayEnd,
+        };
+      default:
+        return { startDate: todayStart, endDate: todayEnd };
+    }
+  }, [periodFilter, dateRange]);
+
+  // Fetch stats from database
   useEffect(() => {
-    const fetchMyPackages = async () => {
-      if (!user) return;
+    const fetchStats = async () => {
+      if (!condominiumIds.length) return;
 
-      setLoadingMyPackages(true);
+      setLoading(true);
       try {
-        const { data, error } = await supabase
+        const today = new Date();
+        const todayStart = startOfDay(today).toISOString();
+        const todayEnd = endOfDay(today).toISOString();
+
+        // Registered in period (based on filter)
+        const { count: registeredCount } = await supabase
           .from("packages")
-          .select(`
-            id,
-            pickup_code,
-            status,
-            received_at,
-            block:blocks(name),
-            apartment:apartments(number)
-          `)
-          .eq("received_by", user.id)
-          .order("received_at", { ascending: false })
-          .limit(5);
+          .select("*", { count: "exact", head: true })
+          .in("condominium_id", condominiumIds)
+          .gte("received_at", startDate.toISOString())
+          .lte("received_at", endDate.toISOString());
 
-        if (error) throw error;
+        // Total pending from entire database
+        const { count: pendingCount } = await supabase
+          .from("packages")
+          .select("*", { count: "exact", head: true })
+          .in("condominium_id", condominiumIds)
+          .eq("status", "pendente");
 
-        if (data) {
-          setMyPackages(
-            data.map((p) => ({
-              id: p.id,
-              pickup_code: p.pickup_code,
-              status: p.status,
-              received_at: p.received_at,
-              block_name: (p.block as any)?.name || "",
-              apartment_number: (p.apartment as any)?.number || "",
-            }))
-          );
-        }
+        // Picked up today
+        const { count: pickedUpTodayCount } = await supabase
+          .from("packages")
+          .select("*", { count: "exact", head: true })
+          .in("condominium_id", condominiumIds)
+          .eq("status", "retirada")
+          .gte("picked_up_at", todayStart)
+          .lte("picked_up_at", todayEnd);
+
+        setStats({
+          registeredToday: registeredCount || 0,
+          totalPending: pendingCount || 0,
+          pickedUpToday: pickedUpTodayCount || 0,
+        });
       } catch (error) {
-        console.error("Error fetching my packages:", error);
+        console.error("Error fetching stats:", error);
       } finally {
-        setLoadingMyPackages(false);
+        setLoading(false);
       }
     };
 
-    fetchMyPackages();
-  }, [user]);
-
-  const { packages, loading } = usePackages({
-    condominiumIds,
-    limit: 10,
-    realtime: true,
-  });
-
-  // Calculate stats
-  useEffect(() => {
-    if (!packages.length) return;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const pending = packages.filter((p) => p.status === "pendente").length;
-    const pickedUpToday = packages.filter((p) => {
-      if (p.status !== "retirada" || !p.picked_up_at) return false;
-      const pickedUpDate = new Date(p.picked_up_at);
-      pickedUpDate.setHours(0, 0, 0, 0);
-      return pickedUpDate.getTime() === today.getTime();
-    }).length;
-
-    setStats({
-      total: packages.length,
-      pending,
-      pickedUpToday,
-    });
-  }, [packages]);
+    fetchStats();
+  }, [condominiumIds, startDate, endDate]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Bom dia";
     if (hour < 18) return "Boa tarde";
     return "Boa noite";
+  };
+
+  const getPeriodLabel = () => {
+    switch (periodFilter) {
+      case "today":
+        return "Hoje";
+      case "7days":
+        return "Últimos 7 dias";
+      case "15days":
+        return "Últimos 15 dias";
+      case "custom":
+        if (dateRange.from && dateRange.to) {
+          return `${format(dateRange.from, "dd/MM")} - ${format(dateRange.to, "dd/MM")}`;
+        }
+        return "Período personalizado";
+      default:
+        return "";
+    }
   };
 
   return (
@@ -164,16 +182,75 @@ export default function PorteiroDashboard() {
           </Button>
         </div>
 
+        {/* Period Filter */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted-foreground">Período:</span>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={periodFilter === "today" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setPeriodFilter("today")}
+            >
+              Hoje
+            </Button>
+            <Button
+              variant={periodFilter === "7days" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setPeriodFilter("7days")}
+            >
+              7 dias
+            </Button>
+            <Button
+              variant={periodFilter === "15days" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setPeriodFilter("15days")}
+            >
+              15 dias
+            </Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={periodFilter === "custom" ? "default" : "outline"}
+                  size="sm"
+                  className="gap-1"
+                  onClick={() => setPeriodFilter("custom")}
+                >
+                  <Calendar className="h-4 w-4" />
+                  {periodFilter === "custom" && dateRange.from && dateRange.to
+                    ? `${format(dateRange.from, "dd/MM")} - ${format(dateRange.to, "dd/MM")}`
+                    : "Período"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="range"
+                  selected={{ from: dateRange.from, to: dateRange.to }}
+                  onSelect={(range) => {
+                    setDateRange({ from: range?.from, to: range?.to });
+                    if (range?.from && range?.to) {
+                      setPeriodFilter("custom");
+                    }
+                  }}
+                  locale={ptBR}
+                  numberOfMonths={2}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
+
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total de Encomendas</CardTitle>
+              <CardTitle className="text-sm font-medium">Cadastradas</CardTitle>
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-              <p className="text-xs text-muted-foreground">Últimas registradas</p>
+              <div className="text-2xl font-bold">
+                {loading ? "..." : stats.registeredToday}
+              </div>
+              <p className="text-xs text-muted-foreground">{getPeriodLabel()}</p>
             </CardContent>
           </Card>
           <Card>
@@ -182,8 +259,10 @@ export default function PorteiroDashboard() {
               <Clock className="h-4 w-4 text-yellow-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-              <p className="text-xs text-muted-foreground">Aguardando retirada</p>
+              <div className="text-2xl font-bold text-yellow-600">
+                {loading ? "..." : stats.totalPending}
+              </div>
+              <p className="text-xs text-muted-foreground">Total no sistema</p>
             </CardContent>
           </Card>
           <Card>
@@ -192,7 +271,9 @@ export default function PorteiroDashboard() {
               <PackageCheck className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.pickedUpToday}</div>
+              <div className="text-2xl font-bold text-green-600">
+                {loading ? "..." : stats.pickedUpToday}
+              </div>
               <p className="text-xs text-muted-foreground">Entregues aos moradores</p>
             </CardContent>
           </Card>
@@ -235,9 +316,9 @@ export default function PorteiroDashboard() {
                   <Clock className="w-6 h-6 text-yellow-500" />
                 </div>
                 <p className="font-medium text-sm text-center">Pendentes</p>
-                {stats.pending > 0 && (
+                {stats.totalPending > 0 && (
                   <span className="mt-1 px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-medium">
-                    {stats.pending}
+                    {stats.totalPending}
                   </span>
                 )}
               </CardContent>
