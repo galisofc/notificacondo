@@ -85,30 +85,28 @@ serve(async (req) => {
       );
     }
 
-    // Generate password reset link using Supabase Auth
-    const appUrl = whatsappConfig.app_url || "https://notificacondo.lovable.app";
-    
-    const { data: resetData, error: resetError } = await supabase.auth.admin.generateLink({
-      type: "recovery",
-      email: profile.email,
-      options: {
-        redirectTo: `${appUrl}/auth?recovery=true`,
-      },
-    });
+    // Generate a random temporary password
+    const generatePassword = () => {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+      let password = '';
+      for (let i = 0; i < 8; i++) {
+        password += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return password;
+    };
 
-    if (resetError) {
-      console.error("Error generating reset link:", resetError);
-      return new Response(
-        JSON.stringify({ error: "Erro ao gerar link de recuperação" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const newPassword = generatePassword();
 
-    const resetLink = resetData.properties?.action_link;
-    if (!resetLink) {
-      console.error("Reset link not generated");
+    // Update user password using Supabase Auth Admin API
+    const { error: updateError } = await supabase.auth.admin.updateUserById(
+      profile.user_id,
+      { password: newPassword }
+    );
+
+    if (updateError) {
+      console.error("Error updating password:", updateError);
       return new Response(
-        JSON.stringify({ error: "Link de recuperação não gerado" }),
+        JSON.stringify({ error: "Erro ao gerar nova senha" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -117,8 +115,8 @@ serve(async (req) => {
     const phoneDigits = profile.phone.replace(/\D/g, '');
     const formattedPhone = phoneDigits.startsWith('55') ? phoneDigits : `55${phoneDigits}`;
 
-    // Send WhatsApp message
-    const message = `🔐 *NotificaCondo - Recuperação de Senha*\n\nOlá, ${profile.full_name}!\n\nVocê solicitou a recuperação de senha da sua conta.\n\nClique no link abaixo para criar uma nova senha:\n${resetLink}\n\n⚠️ Este link é válido por 1 hora.\n\nSe você não solicitou esta recuperação, ignore esta mensagem.`;
+    // Send WhatsApp message with the new password
+    const message = `🔐 *NotificaCondo - Nova Senha*\n\nOlá, ${profile.full_name}!\n\nSua nova senha temporária é:\n\n*${newPassword}*\n\n⚠️ Por segurança, altere sua senha após o primeiro acesso.\n\nAcesse: https://notificacondo.lovable.app/auth`;
 
     const { api_url, api_key, instance_id, provider } = whatsappConfig;
     const baseUrl = api_url.replace(/\/$/, "");

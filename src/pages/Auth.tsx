@@ -1435,7 +1435,7 @@ const Auth = () => {
               Recuperar Senha via WhatsApp
             </DialogTitle>
             <DialogDescription>
-              Digite seu email cadastrado. Enviaremos um link de recuperação para o WhatsApp vinculado à sua conta.
+              Digite seu email cadastrado. Enviaremos uma nova senha temporária para o WhatsApp vinculado à sua conta.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-4">
@@ -1468,15 +1468,15 @@ const Auth = () => {
                   if (error) throw error;
                   
                   toast({
-                    title: "Link enviado!",
-                    description: "Se o email estiver cadastrado, você receberá o link no WhatsApp vinculado.",
+                    title: "Nova senha enviada!",
+                    description: "Se o email estiver cadastrado, você receberá a nova senha no WhatsApp vinculado.",
                   });
                   setShowPasswordRecovery(false);
                   setRecoveryEmail("");
                 } catch (error: any) {
                   toast({
                     title: "Erro ao enviar",
-                    description: error.message || "Não foi possível enviar o link de recuperação.",
+                    description: error.message || "Não foi possível enviar a nova senha.",
                     variant: "destructive",
                   });
                 } finally {
@@ -1492,12 +1492,12 @@ const Auth = () => {
               ) : (
                 <>
                   <MessageCircle className="w-4 h-4 mr-2" />
-                  Enviar Link de Recuperação
+                  Enviar Nova Senha
                 </>
               )}
             </Button>
             <p className="text-xs text-muted-foreground text-center">
-              O link será enviado para o WhatsApp vinculado ao seu email de síndico.
+              A nova senha será enviada para o WhatsApp vinculado ao seu email de síndico.
             </p>
           </div>
         </DialogContent>
