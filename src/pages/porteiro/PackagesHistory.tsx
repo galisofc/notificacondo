@@ -43,6 +43,13 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useNavigate } from "react-router-dom";
 
+interface ApartmentResident {
+  id: string;
+  full_name: string;
+  phone: string | null;
+  is_responsible: boolean;
+}
+
 interface PackageWithRelations {
   id: string;
   status: "pendente" | "retirada";
@@ -56,7 +63,7 @@ interface PackageWithRelations {
   description: string | null;
   tracking_code: string | null;
   block: { id: string; name: string } | null;
-  apartment: { id: string; number: string } | null;
+  apartment: { id: string; number: string; residents: ApartmentResident[] } | null;
   condominium: { id: string; name: string } | null;
   resident: { id: string; full_name: string; phone: string | null } | null;
   package_type: { id: string; name: string; icon: string | null } | null;
@@ -177,7 +184,7 @@ const PorteiroPackagesHistory = () => {
           description,
           tracking_code,
           block:blocks(id, name),
-          apartment:apartments(id, number),
+          apartment:apartments(id, number, residents(id, full_name, phone, is_responsible)),
           condominium:condominiums(id, name),
           resident:residents(id, full_name, phone),
           package_type:package_types(id, name, icon)
@@ -296,6 +303,22 @@ const PorteiroPackagesHistory = () => {
     if (pkg.status === "pendente") {
       const minutes = differenceInMinutes(new Date(), parseISO(pkg.received_at));
       return formatPickupTime(minutes);
+    }
+    return "-";
+  };
+
+  const getResidentName = (pkg: PackageWithRelations): string => {
+    // First check if package has a direct resident
+    if (pkg.resident?.full_name) {
+      return pkg.resident.full_name;
+    }
+    // Fallback to apartment residents - prefer responsible resident
+    if (pkg.apartment?.residents && pkg.apartment.residents.length > 0) {
+      const responsibleResident = pkg.apartment.residents.find(r => r.is_responsible);
+      if (responsibleResident) {
+        return responsibleResident.full_name;
+      }
+      return pkg.apartment.residents[0].full_name;
     }
     return "-";
   };
@@ -835,7 +858,7 @@ const PorteiroPackagesHistory = () => {
                               apartmentNumber={pkg.apartment?.number}
                             />
                           </TableCell>
-                          <TableCell>{pkg.resident?.full_name || "-"}</TableCell>
+                          <TableCell>{getResidentName(pkg)}</TableCell>
                           <TableCell>{pkg.package_type?.name || "Encomenda"}</TableCell>
                           <TableCell>
                             <Badge variant="outline" className={STATUS_CONFIG[pkg.status].color}>
