@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -392,51 +392,53 @@ BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
               )}
             </div>
 
-            <ScrollArea className="flex-1 border rounded-lg">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-10">Status</TableHead>
-                    <TableHead>Bloco</TableHead>
-                    <TableHead>Apto</TableHead>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>E-mail</TableHead>
-                    <TableHead>Telefone</TableHead>
-                    <TableHead className="w-16">Prop.</TableHead>
-                    <TableHead className="w-16">Resp.</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {parsedResidents.map((resident, index) => (
-                    <TableRow key={index} className={!resident.isValid ? "bg-destructive/10" : ""}>
-                      <TableCell>
-                        {resident.isValid ? (
-                          <CheckCircle2 className="w-4 h-4 text-green-500" />
-                        ) : (
-                          <div className="relative group">
-                            <AlertCircle className="w-4 h-4 text-destructive" />
-                            <div className="absolute left-0 top-6 z-10 hidden group-hover:block bg-popover border rounded p-2 text-xs whitespace-nowrap shadow-lg">
-                              {resident.errors.join(", ")}
-                            </div>
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell className="font-medium">{resident.block_name}</TableCell>
-                      <TableCell>{resident.apartment_number}</TableCell>
-                      <TableCell>{resident.full_name}</TableCell>
-                      <TableCell className="text-xs">{resident.email}</TableCell>
-                      <TableCell>{resident.phone || "-"}</TableCell>
-                      <TableCell>
-                        <Checkbox checked={resident.is_owner} disabled />
-                      </TableCell>
-                      <TableCell>
-                        <Checkbox checked={resident.is_responsible} disabled />
-                      </TableCell>
+            <div className="border rounded-lg overflow-hidden">
+              <div className="max-h-[350px] overflow-auto">
+                <Table>
+                  <TableHeader className="sticky top-0 bg-background z-10">
+                    <TableRow>
+                      <TableHead className="w-10">Status</TableHead>
+                      <TableHead>Bloco</TableHead>
+                      <TableHead>Apto</TableHead>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>E-mail</TableHead>
+                      <TableHead>Telefone</TableHead>
+                      <TableHead className="w-16">Prop.</TableHead>
+                      <TableHead className="w-16">Resp.</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </ScrollArea>
+                  </TableHeader>
+                  <TableBody>
+                    {parsedResidents.map((resident, index) => (
+                      <TableRow key={index} className={!resident.isValid ? "bg-destructive/10" : ""}>
+                        <TableCell>
+                          {resident.isValid ? (
+                            <CheckCircle2 className="w-4 h-4 text-green-500" />
+                          ) : (
+                            <div className="relative group">
+                              <AlertCircle className="w-4 h-4 text-destructive" />
+                              <div className="absolute left-0 top-6 z-20 hidden group-hover:block bg-popover border rounded p-2 text-xs whitespace-nowrap shadow-lg">
+                                {resident.errors.join(", ")}
+                              </div>
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="font-medium">{resident.block_name}</TableCell>
+                        <TableCell>{resident.apartment_number}</TableCell>
+                        <TableCell>{resident.full_name}</TableCell>
+                        <TableCell className="text-xs">{resident.email}</TableCell>
+                        <TableCell>{resident.phone || "-"}</TableCell>
+                        <TableCell>
+                          <Checkbox checked={resident.is_owner} disabled />
+                        </TableCell>
+                        <TableCell>
+                          <Checkbox checked={resident.is_responsible} disabled />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
 
             <div className="flex justify-between pt-2">
               <Button variant="outline" onClick={resetState}>
