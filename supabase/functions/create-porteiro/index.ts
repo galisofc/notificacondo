@@ -25,10 +25,16 @@ const zproProvider: ProviderConfig = {
     const baseUrl = config.apiUrl.replace(/\/$/, "");
     const phoneClean = phone.replace(/\D/g, "");
     
+    // If instanceId is empty or placeholder, fallback to apiKey
+    let externalKey = config.instanceId || "";
+    if (!externalKey || externalKey === "zpro-embedded") {
+      externalKey = config.apiKey;
+    }
+    
     const params = new URLSearchParams({
       body: message,
       number: phoneClean,
-      externalKey: config.apiKey,
+      externalKey,
       bearertoken: config.apiKey,
       isClosed: "false"
     });

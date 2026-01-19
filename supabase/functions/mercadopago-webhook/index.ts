@@ -132,10 +132,16 @@ async function sendWhatsAppMessage(
       const baseUrl = settings.apiUrl.replace(/\/$/, "");
       const phoneClean = phone.replace(/\D/g, "");
       
+      // If instanceId is empty or placeholder, fallback to apiKey
+      let externalKey = settings.instanceId || "";
+      if (!externalKey || externalKey === "zpro-embedded") {
+        externalKey = settings.apiKey;
+      }
+      
       const params = new URLSearchParams({
         body: message,
         number: phoneClean,
-        externalKey: settings.apiKey,
+        externalKey,
         bearertoken: settings.apiKey,
         isClosed: "false"
       });
