@@ -12,11 +12,11 @@ serve(async (req) => {
   }
 
   try {
-    const { phone } = await req.json();
+    const { email } = await req.json();
 
-    if (!phone) {
+    if (!email) {
       return new Response(
-        JSON.stringify({ error: "Número de telefone é obrigatório" }),
+        JSON.stringify({ error: "Email é obrigatório" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -25,11 +25,11 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Find sindico profile by phone
+    // Find sindico profile by email
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("user_id, full_name, email, phone")
-      .eq("phone", phone)
+      .eq("email", email.toLowerCase())
       .maybeSingle();
 
     if (profileError) {
@@ -40,11 +40,11 @@ serve(async (req) => {
       );
     }
 
-    if (!profile) {
+    if (!profile || !profile.phone) {
       // Return success even if not found to prevent enumeration attacks
-      console.log("Profile not found for phone:", phone);
+      console.log("Profile not found or no phone for email:", email);
       return new Response(
-        JSON.stringify({ success: true, message: "Se o número estiver cadastrado, você receberá o link." }),
+        JSON.stringify({ success: true, message: "Se o email estiver cadastrado, você receberá o link." }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -113,6 +113,10 @@ serve(async (req) => {
       );
     }
 
+    // Format phone number from profile
+    const phoneDigits = profile.phone.replace(/\D/g, '');
+    const formattedPhone = phoneDigits.startsWith('55') ? phoneDigits : `55${phoneDigits}`;
+
     // Send WhatsApp message
     const message = `🔐 *NotificaCondo - Recuperação de Senha*\n\nOlá, ${profile.full_name}!\n\nVocê solicitou a recuperação de senha da sua conta.\n\nClique no link abaixo para criar uma nova senha:\n${resetLink}\n\n⚠️ Este link é válido por 1 hora.\n\nSe você não solicitou esta recuperação, ignore esta mensagem.`;
 
@@ -125,14 +129,14 @@ serve(async (req) => {
     }
 
     const params = new URLSearchParams({
-      phone: phone,
+      phone: formattedPhone,
       message: message,
       externalKey: externalKey,
     });
 
     const whatsappUrl = `${api_url}/send-text?${params.toString()}`;
 
-    console.log("Sending WhatsApp message to:", phone);
+    console.log("Sending WhatsApp message to:", formattedPhone);
 
     const whatsappResponse = await fetch(whatsappUrl, {
       method: "GET",
@@ -159,7 +163,7 @@ serve(async (req) => {
       );
     }
 
-    console.log("Password recovery link sent successfully to:", phone);
+    console.log("Password recovery link sent successfully to:", formattedPhone);
 
     return new Response(
       JSON.stringify({ success: true, message: "Link de recuperação enviado com sucesso" }),
