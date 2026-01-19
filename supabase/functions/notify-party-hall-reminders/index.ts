@@ -49,15 +49,20 @@ const safeParseResponse = async (response: Response, providerName: string): Prom
 
 const providers: Record<string, ProviderConfig> = {
   zpro: {
-    // Z-PRO uses GET with query parameters
     async sendMessage(config, phone, message) {
       const formattedPhone = formatPhoneNumber(phone);
       const baseUrl = config.api_url.replace(/\/$/, "");
       
+      // If instance_id is empty or placeholder, fallback to api_key
+      let externalKey = config.instance_id || "";
+      if (!externalKey || externalKey === "zpro-embedded") {
+        externalKey = config.api_key;
+      }
+      
       const params = new URLSearchParams({
         body: message,
         number: formattedPhone,
-        externalKey: config.api_key,
+        externalKey,
         bearertoken: config.api_key,
         isClosed: "false"
       });
