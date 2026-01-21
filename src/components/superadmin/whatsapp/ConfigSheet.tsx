@@ -229,9 +229,12 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
         toast({ title: "Conexão bem-sucedida!" });
       } else {
         setTestResult("error");
+        const errorCode = (data as any)?.errorCode;
+        const errorMessage = (data as any)?.error || "Verifique as configurações.";
+        
         toast({
-          title: "Falha na conexão",
-          description: (data as any)?.error || "Verifique as configurações.",
+          title: errorCode === "SESSION_DISCONNECTED" ? "Sessão desconectada" : "Falha na conexão",
+          description: errorMessage,
           variant: "destructive",
         });
       }
