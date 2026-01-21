@@ -56,6 +56,10 @@ import {
   ChevronRight,
   FileText,
   Trash2,
+  Mail,
+  Calendar,
+  Hash,
+  Home,
 } from "lucide-react";
 
 interface Condominium {
@@ -783,34 +787,52 @@ export function CondominiumsManagement() {
             <div className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="min-w-0">
-                  <p className="text-sm text-muted-foreground">Nome</p>
+                  <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5" />
+                    Nome
+                  </p>
                   <p className="font-medium break-words">{selectedCondominium.name}</p>
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm text-muted-foreground">CNPJ</p>
+                  <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5" />
+                    CNPJ
+                  </p>
                   <p className="font-medium break-words">
                     {selectedCondominium.cnpj ? formatCNPJ(selectedCondominium.cnpj) : "—"}
                   </p>
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm text-muted-foreground">Telefone</p>
+                  <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5" />
+                    Telefone
+                  </p>
                   <p className="font-medium break-words">
                     {selectedCondominium.phone ? formatPhone(selectedCondominium.phone) : "—"}
                   </p>
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm text-muted-foreground">CEP</p>
+                  <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5" />
+                    CEP
+                  </p>
                   <p className="font-medium break-words">{selectedCondominium.zip_code || "—"}</p>
                 </div>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-4">
                 <div className="sm:col-span-3 min-w-0">
-                  <p className="text-sm text-muted-foreground">Endereço</p>
+                  <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                    <Home className="w-3.5 h-3.5" />
+                    Endereço
+                  </p>
                   <p className="font-medium break-words">{selectedCondominium.address || "—"}</p>
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm text-muted-foreground">Nº</p>
+                  <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                    <Hash className="w-3.5 h-3.5" />
+                    Nº
+                  </p>
                   <p className="font-medium break-words">{selectedCondominium.address_number || "—"}</p>
                 </div>
               </div>
@@ -839,11 +861,17 @@ export function CondominiumsManagement() {
                   <div className="space-y-2 pl-6">
                     <div className="grid gap-2 grid-cols-2">
                       <div className="min-w-0">
-                        <p className="text-sm text-muted-foreground">Nome</p>
+                        <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                          <User className="w-3.5 h-3.5" />
+                          Nome
+                        </p>
                         <p className="font-medium break-words">{selectedCondominium.owner.full_name}</p>
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm text-muted-foreground">Telefone</p>
+                        <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                          <Phone className="w-3.5 h-3.5" />
+                          Telefone
+                        </p>
                         <p className="font-medium break-words">
                           {selectedCondominium.owner.phone 
                             ? formatPhone(selectedCondominium.owner.phone) 
@@ -853,7 +881,10 @@ export function CondominiumsManagement() {
                       </div>
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm text-muted-foreground">Email</p>
+                      <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                        <Mail className="w-3.5 h-3.5" />
+                        Email
+                      </p>
                       <p className="font-medium break-all">{selectedCondominium.owner.email}</p>
                     </div>
                   </div>
@@ -864,13 +895,19 @@ export function CondominiumsManagement() {
 
               <div className="pt-4 border-t border-border grid gap-4 sm:grid-cols-2 text-sm">
                 <div className="min-w-0">
-                  <p className="text-muted-foreground">Cadastrado em</p>
+                  <p className="text-muted-foreground flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5" />
+                    Cadastrado em
+                  </p>
                   <p className="font-medium break-words">
                     {formatDateTime(selectedCondominium.created_at)}
                   </p>
                 </div>
                 <div className="min-w-0">
-                  <p className="text-muted-foreground">Última atualização</p>
+                  <p className="text-muted-foreground flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5" />
+                    Última atualização
+                  </p>
                   <p className="font-medium break-words">
                     {formatDateTime(selectedCondominium.updated_at)}
                   </p>
