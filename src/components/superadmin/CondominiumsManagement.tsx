@@ -788,14 +788,14 @@ export function CondominiumsManagement() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="min-w-0">
                   <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                    <Building2 className="w-3.5 h-3.5" />
+                    <Building2 className="w-3.5 h-3.5 text-primary" />
                     Nome
                   </p>
                   <p className="font-medium break-words">{selectedCondominium.name}</p>
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                    <FileText className="w-3.5 h-3.5" />
+                    <FileText className="w-3.5 h-3.5 text-primary" />
                     CNPJ
                   </p>
                   <p className="font-medium break-words">
@@ -804,7 +804,7 @@ export function CondominiumsManagement() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                    <Phone className="w-3.5 h-3.5" />
+                    <Phone className="w-3.5 h-3.5 text-primary" />
                     Telefone
                   </p>
                   <p className="font-medium break-words">
@@ -813,7 +813,7 @@ export function CondominiumsManagement() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5" />
+                    <MapPin className="w-3.5 h-3.5 text-icon-address" />
                     CEP
                   </p>
                   <p className="font-medium break-words">{selectedCondominium.zip_code || "—"}</p>
@@ -823,14 +823,14 @@ export function CondominiumsManagement() {
               <div className="grid gap-4 sm:grid-cols-4">
                 <div className="sm:col-span-3 min-w-0">
                   <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                    <Home className="w-3.5 h-3.5" />
+                    <Home className="w-3.5 h-3.5 text-icon-address" />
                     Endereço
                   </p>
                   <p className="font-medium break-words">{selectedCondominium.address || "—"}</p>
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                    <Hash className="w-3.5 h-3.5" />
+                    <Hash className="w-3.5 h-3.5 text-icon-address" />
                     Nº
                   </p>
                   <p className="font-medium break-words">{selectedCondominium.address_number || "—"}</p>
@@ -862,14 +862,14 @@ export function CondominiumsManagement() {
                     <div className="grid gap-2 grid-cols-2">
                       <div className="min-w-0">
                         <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                          <User className="w-3.5 h-3.5" />
+                          <User className="w-3.5 h-3.5 text-icon-person" />
                           Nome
                         </p>
                         <p className="font-medium break-words">{selectedCondominium.owner.full_name}</p>
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                          <Phone className="w-3.5 h-3.5" />
+                          <Phone className="w-3.5 h-3.5 text-icon-person" />
                           Telefone
                         </p>
                         <p className="font-medium break-words">
@@ -882,7 +882,7 @@ export function CondominiumsManagement() {
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                        <Mail className="w-3.5 h-3.5" />
+                        <Mail className="w-3.5 h-3.5 text-icon-person" />
                         Email
                       </p>
                       <p className="font-medium break-all">{selectedCondominium.owner.email}</p>
@@ -896,7 +896,7 @@ export function CondominiumsManagement() {
               <div className="pt-4 border-t border-border grid gap-4 sm:grid-cols-2 text-sm">
                 <div className="min-w-0">
                   <p className="text-muted-foreground flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5" />
+                    <Calendar className="w-3.5 h-3.5 text-icon-date" />
                     Cadastrado em
                   </p>
                   <p className="font-medium break-words">
@@ -905,7 +905,7 @@ export function CondominiumsManagement() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-muted-foreground flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5" />
+                    <Calendar className="w-3.5 h-3.5 text-icon-date" />
                     Última atualização
                   </p>
                   <p className="font-medium break-words">

@@ -50,6 +50,11 @@
     --shadow-card: 0 2px 8px hsl(220 20% 10% / 0.06), 0 4px 16px hsl(220 20% 10% / 0.04);
     --shadow-elevated: 0 4px 12px hsl(220 20% 10% / 0.08), 0 8px 24px hsl(220 20% 10% / 0.06);
 
+    /* Category icon colors */
+    --icon-address: 25 95% 53%;
+    --icon-person: 160 84% 39%;
+    --icon-date: 199 89% 48%;
+
     --font-display: 'Outfit', sans-serif;
     --font-body: 'DM Sans', sans-serif;
 
@@ -102,6 +107,11 @@
     --shadow-glow: 0 0 60px hsl(217 91% 50% / 0.15);
     --shadow-card: 0 4px 24px hsl(0 0% 0% / 0.4);
     --shadow-elevated: 0 8px 32px hsl(0 0% 0% / 0.5);
+
+    /* Category icon colors - dark mode */
+    --icon-address: 25 95% 60%;
+    --icon-person: 160 84% 50%;
+    --icon-date: 199 89% 55%;
 
     --sidebar-background: 220 18% 14%;
     --sidebar-foreground: 210 20% 98%;

@@ -62,6 +62,11 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
           muted: "hsl(var(--sidebar-muted))",
         },
+        icon: {
+          address: "hsl(var(--icon-address))",
+          person: "hsl(var(--icon-person))",
+          date: "hsl(var(--icon-date))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
