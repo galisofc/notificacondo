@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -10,13 +11,36 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+  let supabase: ReturnType<typeof createClient> | null = null;
+  let logId: string | null = null;
+
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log("Starting orphan package photos cleanup...");
+    // Determine trigger type from request
+    const authHeader = req.headers.get("authorization");
+    const isScheduled = authHeader?.includes("anon") || false;
+    const triggerType = isScheduled ? "scheduled" : "manual";
+
+    console.log(`Starting orphan package photos cleanup (${triggerType})...`);
+
+    // Log start of execution
+    const { data: logEntry } = await supabase
+      .from("edge_function_logs")
+      .insert({
+        function_name: "cleanup-orphan-package-photos",
+        trigger_type: triggerType,
+        status: "running",
+        started_at: new Date().toISOString(),
+      } as any)
+      .select("id")
+      .single();
+
+    logId = (logEntry as any)?.id || null;
 
     // Check if this cron is paused
     const { data: pauseStatus } = await supabase
@@ -25,8 +49,22 @@ Deno.serve(async (req) => {
       .eq("function_name", "cleanup-orphan-package-photos")
       .single();
 
-    if (pauseStatus?.paused) {
+    if ((pauseStatus as any)?.paused) {
       console.log("Cleanup job is paused, skipping execution");
+      
+      // Update log with skipped status
+      if (logId) {
+        await supabase
+          .from("edge_function_logs")
+          .update({
+            status: "skipped",
+            ended_at: new Date().toISOString(),
+            duration_ms: Date.now() - startTime,
+            result: { message: "Job is paused" },
+          } as any)
+          .eq("id", logId);
+      }
+
       return new Response(
         JSON.stringify({ success: true, message: "Job is paused" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -44,8 +82,24 @@ Deno.serve(async (req) => {
 
     if (!storageFiles || storageFiles.length === 0) {
       console.log("No files found in package-photos bucket");
+      
+      const result = { success: true, deletedCount: 0, message: "No files to check" };
+      
+      // Update log with success
+      if (logId) {
+        await supabase
+          .from("edge_function_logs")
+          .update({
+            status: "success",
+            ended_at: new Date().toISOString(),
+            duration_ms: Date.now() - startTime,
+            result,
+          } as any)
+          .eq("id", logId);
+      }
+
       return new Response(
-        JSON.stringify({ success: true, deletedCount: 0, message: "No files to check" }),
+        JSON.stringify(result),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -64,7 +118,7 @@ Deno.serve(async (req) => {
 
     // Extract file names from package URLs
     const packageFileNames = new Set<string>();
-    for (const pkg of packages || []) {
+    for (const pkg of (packages || []) as { photo_url: string }[]) {
       if (pkg.photo_url) {
         // Extract filename from URL: .../package-photos/filename.jpg
         const match = pkg.photo_url.match(/package-photos\/([^?]+)/);
@@ -110,48 +164,52 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Log the cleanup result
-    await supabase.from("cron_job_logs").insert({
-      function_name: "cleanup-orphan-package-photos",
-      status: errors.length > 0 ? "partial" : "success",
-      details: {
-        totalFilesChecked: storageFiles.length,
-        referencedFiles: packageFileNames.size,
-        orphanFilesFound: orphanFiles.length,
-        deletedCount,
-        errors: errors.length > 0 ? errors : undefined,
-      },
-    });
-
     console.log(`Cleanup completed. Deleted ${deletedCount} orphan files.`);
 
+    const result = {
+      success: true,
+      totalFilesChecked: storageFiles.length,
+      referencedFiles: packageFileNames.size,
+      orphanFilesFound: orphanFiles.length,
+      deletedCount,
+      errors: errors.length > 0 ? errors : undefined,
+    };
+
+    // Update log with success
+    if (logId) {
+      await supabase
+        .from("edge_function_logs")
+        .update({
+          status: errors.length > 0 ? "partial" : "success",
+          ended_at: new Date().toISOString(),
+          duration_ms: Date.now() - startTime,
+          result,
+        } as any)
+        .eq("id", logId);
+    }
+
     return new Response(
-      JSON.stringify({
-        success: true,
-        totalFilesChecked: storageFiles.length,
-        referencedFiles: packageFileNames.size,
-        orphanFilesFound: orphanFiles.length,
-        deletedCount,
-        errors: errors.length > 0 ? errors : undefined,
-      }),
+      JSON.stringify(result),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Cleanup error:", error);
 
-    // Try to log the error
-    try {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-      await supabase.from("cron_job_logs").insert({
-        function_name: "cleanup-orphan-package-photos",
-        status: "error",
-        details: { error: String(error) },
-      });
-    } catch (logError) {
-      console.error("Failed to log error:", logError);
+    // Try to update log with error
+    if (supabase && logId) {
+      try {
+        await supabase
+          .from("edge_function_logs")
+          .update({
+            status: "error",
+            ended_at: new Date().toISOString(),
+            duration_ms: Date.now() - startTime,
+            error_message: String(error),
+          } as any)
+          .eq("id", logId);
+      } catch (logError) {
+        console.error("Failed to update log:", logError);
+      }
     }
 
     return new Response(
