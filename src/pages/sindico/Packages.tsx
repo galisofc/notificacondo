@@ -276,11 +276,18 @@ const SindicoPackages = () => {
 
   // Delete package mutation
   const deletePackageMutation = useMutation({
-    mutationFn: async (packageId: string) => {
+    mutationFn: async (pkg: PackageWithRelations) => {
+      // First, delete the photo from storage if it exists
+      if (pkg.photo_url) {
+        const { deletePackagePhoto } = await import("@/lib/packageStorage");
+        await deletePackagePhoto(pkg.photo_url);
+      }
+      
+      // Then delete the package record
       const { error } = await supabase
         .from("packages")
         .delete()
-        .eq("id", packageId);
+        .eq("id", pkg.id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -825,7 +832,7 @@ const SindicoPackages = () => {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => packageToDelete && deletePackageMutation.mutate(packageToDelete.id)}
+              onClick={() => packageToDelete && deletePackageMutation.mutate(packageToDelete)}
               disabled={deletePackageMutation.isPending}
             >
               {deletePackageMutation.isPending ? "Excluindo..." : "Excluir"}
