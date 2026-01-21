@@ -836,23 +836,25 @@ export function CondominiumsManagement() {
                   <span className="font-medium">Síndico Responsável</span>
                 </div>
                 {selectedCondominium.owner ? (
-                  <div className="grid gap-2 sm:grid-cols-2 pl-6">
-                    <div className="min-w-0">
-                      <p className="text-sm text-muted-foreground">Nome</p>
-                      <p className="font-medium break-words">{selectedCondominium.owner.full_name}</p>
+                  <div className="space-y-2 pl-6">
+                    <div className="grid gap-2 grid-cols-2">
+                      <div className="min-w-0">
+                        <p className="text-sm text-muted-foreground">Nome</p>
+                        <p className="font-medium break-words">{selectedCondominium.owner.full_name}</p>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm text-muted-foreground">Telefone</p>
+                        <p className="font-medium break-words">
+                          {selectedCondominium.owner.phone 
+                            ? formatPhone(selectedCondominium.owner.phone) 
+                            : "—"
+                          }
+                        </p>
+                      </div>
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm text-muted-foreground">Email</p>
                       <p className="font-medium break-all">{selectedCondominium.owner.email}</p>
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm text-muted-foreground">Telefone</p>
-                      <p className="font-medium break-words">
-                        {selectedCondominium.owner.phone 
-                          ? formatPhone(selectedCondominium.owner.phone) 
-                          : "—"
-                        }
-                      </p>
                     </div>
                   </div>
                 ) : (
