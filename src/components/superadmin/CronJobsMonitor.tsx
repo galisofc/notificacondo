@@ -263,11 +263,7 @@ export function CronJobsMonitor() {
             <CardContent className="pt-4">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  {status.name === "cleanup-orphan-package-photos" ? (
-                    <Trash2 className="h-5 w-5 text-primary" />
-                  ) : (
-                    getStatusIcon(status)
-                  )}
+                  {getStatusIcon(status)}
                   <div>
                     <h4 className="font-medium text-sm">{status.label}</h4>
                     <p className="text-xs text-muted-foreground line-clamp-1">{status.description}</p>
