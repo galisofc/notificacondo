@@ -82,6 +82,14 @@ async function sendZproMessage(phone: string, message: string, config: ProviderS
     
     console.log("Z-PRO parsed response:", data);
     
+    // Check for session disconnected error
+    if (data.error === "ERR_API_REQUIRES_SESSION") {
+      return { 
+        success: false, 
+        error: "Sessão do WhatsApp desconectada. Acesse o painel do provedor (AtenderChat/Z-PRO) e escaneie o QR Code para reconectar." 
+      };
+    }
+    
     // Check for success indicators
     if (response.ok) {
       if (data.id || data.messageId || data.zapiMessageId || data.message_id || data.key?.id) {

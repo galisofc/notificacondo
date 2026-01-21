@@ -180,6 +180,24 @@ serve(async (req) => {
       
       // For Z-PRO, we need stricter validation
       if (provider === "zpro") {
+        // Check for session disconnected error
+        try {
+          const jsonResponse = JSON.parse(responseText);
+          if (jsonResponse.error === "ERR_API_REQUIRES_SESSION") {
+            return new Response(
+              JSON.stringify({ 
+                success: false, 
+                error: "Sessão do WhatsApp desconectada. Acesse o painel do provedor (AtenderChat/Z-PRO) e escaneie o QR Code para reconectar.",
+                errorCode: "SESSION_DISCONNECTED",
+                status: response.status
+              }),
+              { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        } catch {
+          // Not JSON, continue with other checks
+        }
+
         if (response.status === 401 || response.status === 403) {
           return new Response(
             JSON.stringify({ 
