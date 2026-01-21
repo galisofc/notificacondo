@@ -277,7 +277,22 @@ export function CondominiumsManagement() {
       // Delete party hall checklist templates
       await supabase.from("party_hall_checklist_templates").delete().eq("condominium_id", condominiumId);
       
-      // 3. Delete packages
+      // 3. Delete packages and their photos
+      const { data: packagesData } = await supabase
+        .from("packages")
+        .select("photo_url")
+        .eq("condominium_id", condominiumId);
+      
+      // Delete photos from storage
+      if (packagesData && packagesData.length > 0) {
+        const photoUrls = packagesData.map(p => p.photo_url).filter(Boolean) as string[];
+        if (photoUrls.length > 0) {
+          const { deleteMultiplePackagePhotos } = await import("@/lib/packageStorage");
+          await deleteMultiplePackagePhotos(photoUrls);
+        }
+      }
+      
+      // Delete package records
       await supabase.from("packages").delete().eq("condominium_id", condominiumId);
       
       // 4. Delete residents via apartments and blocks
