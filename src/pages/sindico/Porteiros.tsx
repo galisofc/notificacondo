@@ -83,6 +83,7 @@ export default function Porteiros() {
   const [editingPorter, setEditingPorter] = useState<Porter | null>(null);
   const [editForm, setEditForm] = useState({
     full_name: "",
+    email: "",
     phone: "",
   });
   const [orphanDialogOpen, setOrphanDialogOpen] = useState(false);
@@ -432,6 +433,7 @@ export default function Porteiros() {
     setEditingPorter(porter);
     setEditForm({
       full_name: porter.profile?.full_name || "",
+      email: porter.profile?.email || "",
       phone: porter.profile?.phone || "",
     });
     setIsEditDialogOpen(true);
@@ -447,17 +449,32 @@ export default function Porteiros() {
       return;
     }
 
+    if (!editForm.email.trim() || !editForm.email.includes("@")) {
+      toast({
+        title: "E-mail inválido",
+        description: "Informe um e-mail válido",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsUpdating(true);
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({
+      // Use edge function to update porter (needed for email change in Auth)
+      const { data, error } = await supabase.functions.invoke("update-porteiro", {
+        body: {
+          porter_user_id: editingPorter.user_id,
           full_name: editForm.full_name.trim(),
+          email: editForm.email.trim().toLowerCase(),
           phone: editForm.phone.trim() || null,
-        })
-        .eq("user_id", editingPorter.user_id);
+        },
+      });
 
       if (error) throw error;
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
 
       // Update local state
       setPorters((prev) =>
@@ -469,6 +486,7 @@ export default function Porteiros() {
                   ? {
                       ...p.profile,
                       full_name: editForm.full_name.trim(),
+                      email: editForm.email.trim().toLowerCase(),
                       phone: editForm.phone.trim() || null,
                     }
                   : null,
@@ -1477,15 +1495,23 @@ export default function Porteiros() {
               />
             </div>
 
-            {editingPorter?.profile?.email && (
-              <div className="space-y-1.5 sm:space-y-2">
-                <Label className="text-muted-foreground text-xs sm:text-sm">E-mail (não editável)</Label>
-                <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground bg-muted px-2 sm:px-3 py-2 rounded-md">
-                  <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                  <span className="truncate">{editingPorter.profile.email}</span>
-                </div>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="edit_email" className="text-xs sm:text-sm">E-mail</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
+                <Input
+                  id="edit_email"
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, email: e.target.value }))}
+                  placeholder="email@exemplo.com"
+                  className="h-9 sm:h-10 text-sm pl-9 sm:pl-10"
+                />
               </div>
-            )}
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
+                O e-mail é usado para login no sistema
+              </p>
+            </div>
           </div>
 
           <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-2">
