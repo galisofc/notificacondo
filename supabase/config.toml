@@ -116,3 +116,7 @@ verify_jwt = false
 # Reenvio de credenciais de porteiro via WhatsApp
 [functions.resend-porter-credentials]
 verify_jwt = false
+
+# Limpeza automática de fotos órfãs de encomendas
+[functions.cleanup-orphan-package-photos]
+verify_jwt = false
