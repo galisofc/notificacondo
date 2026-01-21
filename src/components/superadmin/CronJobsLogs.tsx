@@ -315,6 +315,7 @@ export function CronJobsLogs() {
     { name: "notify-party-hall-reminders", label: "Lembretes Salão de Festas", description: "Envia lembretes de reservas de salão de festas para amanhã" },
     { name: "start-party-hall-usage", label: "Iniciar Uso Salão", description: "Marca reservas do dia como 'em uso' e envia checklist de entrada" },
     { name: "finish-party-hall-usage", label: "Finalizar Uso Salão", description: "Marca reservas finalizadas como 'concluídas' e envia checklist de saída" },
+    { name: "cleanup-orphan-package-photos", label: "Limpar Fotos Órfãs", description: "Remove fotos de encomendas excluídas do storage para liberar espaço" },
   ];
 
   // Translation map for job names to Portuguese
@@ -324,6 +325,7 @@ export function CronJobsLogs() {
     "notify-party-hall-reminders-daily": "Lembretes Salão de Festas (Diário)",
     "start-party-hall-usage-daily": "Iniciar Uso Salão (Diário)",
     "finish-party-hall-usage-daily": "Finalizar Uso Salão (Diário)",
+    "cleanup-orphan-package-photos": "Limpar Fotos Órfãs (Semanal)",
     "notify-trial-ending": "Avisar Fim do Trial",
     "generate-invoices": "Gerar Faturas",
     "notify-party-hall-reminders": "Lembretes Salão de Festas",

@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useDateFormatter } from "@/hooks/useFormattedDate";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Activity,
   CheckCircle2,
@@ -14,11 +13,9 @@ import {
   AlertTriangle,
   TrendingUp,
   Loader2,
-  Play,
   Trash2,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { toast } from "sonner";
 
 interface EdgeFunctionLog {
   id: string;
@@ -49,7 +46,6 @@ interface JobStatus {
   successCount: number;
   failedCount: number;
   avgDuration: number;
-  canRunManually: boolean;
 }
 
 const availableFunctions = [
@@ -58,49 +54,12 @@ const availableFunctions = [
   { name: "notify-party-hall-reminders", label: "Lembretes Salão de Festas", description: "Envia lembretes de reservas" },
   { name: "start-party-hall-usage", label: "Iniciar Uso Salão", description: "Marca reservas como 'em uso'" },
   { name: "finish-party-hall-usage", label: "Finalizar Uso Salão", description: "Marca reservas como 'concluídas'" },
-  { name: "cleanup-orphan-package-photos", label: "Limpar Fotos Órfãs", description: "Remove fotos de encomendas excluídas", canRunManually: true },
+  { name: "cleanup-orphan-package-photos", label: "Limpar Fotos Órfãs", description: "Remove fotos de encomendas excluídas" },
 ];
-
-interface AvailableFunction {
-  name: string;
-  label: string;
-  description: string;
-  canRunManually?: boolean;
-}
 
 export function CronJobsMonitor() {
   const queryClient = useQueryClient();
   const { custom: formatCustom } = useDateFormatter();
-  const [runningFunction, setRunningFunction] = useState<string | null>(null);
-
-  // Function to manually run a job
-  const handleRunManually = async (functionName: string) => {
-    setRunningFunction(functionName);
-    try {
-      const { data, error } = await supabase.functions.invoke(functionName);
-      
-      if (error) {
-        toast.error(`Erro ao executar ${functionName}`, {
-          description: error.message,
-        });
-        return;
-      }
-
-      toast.success("Limpeza executada com sucesso", {
-        description: `${data?.deletedCount || 0} fotos órfãs removidas`,
-      });
-
-      // Refresh the logs
-      queryClient.invalidateQueries({ queryKey: ["edge-function-logs-monitor"] });
-      queryClient.invalidateQueries({ queryKey: ["cron-job-logs"] });
-    } catch (err) {
-      toast.error("Erro ao executar função", {
-        description: String(err),
-      });
-    } finally {
-      setRunningFunction(null);
-    }
-  };
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
@@ -170,7 +129,6 @@ export function CronJobsMonitor() {
         successCount: successLogs.length,
         failedCount: failedLogs.length,
         avgDuration,
-        canRunManually: (fn as AvailableFunction).canRunManually || false,
       };
     });
   }, [logs, pauseStatuses]);
@@ -315,34 +273,11 @@ export function CronJobsMonitor() {
                     <p className="text-xs text-muted-foreground line-clamp-1">{status.description}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {status.canRunManually && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-xs gap-1"
-                      onClick={() => handleRunManually(status.name)}
-                      disabled={runningFunction === status.name}
-                    >
-                      {runningFunction === status.name ? (
-                        <>
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                          Executando...
-                        </>
-                      ) : (
-                        <>
-                          <Play className="h-3 w-3" />
-                          Executar
-                        </>
-                      )}
-                    </Button>
-                  )}
-                  {status.isPaused && (
-                    <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-xs">
-                      Pausado
-                    </Badge>
-                  )}
-                </div>
+                {status.isPaused && (
+                  <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-xs">
+                    Pausado
+                  </Badge>
+                )}
               </div>
 
               {/* Success Rate Progress */}
