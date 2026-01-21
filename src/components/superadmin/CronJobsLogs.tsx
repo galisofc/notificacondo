@@ -294,12 +294,34 @@ export function CronJobsLogs() {
     
     if (minute === "*" && hour === "*") return "A cada minuto";
     if (minute === "0" && hour === "*") return "A cada hora";
-    if (minute !== "*" && hour !== "*" && dayOfMonth === "*" && month === "*" && dayOfWeek === "*") {
-      // Convert UTC to São Paulo time (UTC-3)
+    
+    // Weekly schedule (specific day of week)
+    if (minute !== "*" && hour !== "*" && dayOfMonth === "*" && month === "*" && dayOfWeek !== "*") {
       const utcHour = parseInt(hour, 10);
       const utcMinute = parseInt(minute, 10);
       
-      // São Paulo is UTC-3 (or UTC-2 during daylight saving, but Brazil suspended DST)
+      let spHour = utcHour - 3;
+      if (spHour < 0) spHour += 24;
+      
+      const dayNames: Record<string, string> = {
+        "0": "Domingo",
+        "1": "Segunda",
+        "2": "Terça",
+        "3": "Quarta",
+        "4": "Quinta",
+        "5": "Sexta",
+        "6": "Sábado",
+      };
+      
+      const dayName = dayNames[dayOfWeek] || dayOfWeek;
+      return `Semanalmente ${dayName} às ${spHour.toString().padStart(2, "0")}:${utcMinute.toString().padStart(2, "0")} (Brasília)`;
+    }
+    
+    // Daily schedule
+    if (minute !== "*" && hour !== "*" && dayOfMonth === "*" && month === "*" && dayOfWeek === "*") {
+      const utcHour = parseInt(hour, 10);
+      const utcMinute = parseInt(minute, 10);
+      
       let spHour = utcHour - 3;
       if (spHour < 0) spHour += 24;
       
