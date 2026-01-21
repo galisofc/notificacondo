@@ -492,7 +492,7 @@ export default function SuperAdminDashboard() {
                 ) : (
                   [
                     { 
-                      plan: "Start (Grátis)", 
+                      plan: "Start", 
                       percentage: stats?.planDistribution?.start ?? 0, 
                       count: stats?.planCounts?.start ?? 0,
                       color: "bg-muted" 
