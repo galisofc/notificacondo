@@ -372,6 +372,7 @@ serve(async (req) => {
       .select(`
         id,
         tracking_code,
+        received_by,
         package_type_id,
         package_types (
           id,
@@ -388,7 +389,21 @@ serve(async (req) => {
     const packageTypeName = (packageData?.package_types as any)?.name || "Não informado";
     const trackingCode = packageData?.tracking_code || "Não informado";
 
-    console.log(`Package type: ${packageTypeName}, Tracking: ${trackingCode}`);
+    // Fetch porter name who registered the package
+    let porterName = "Portaria";
+    if (packageData?.received_by) {
+      const { data: porterProfile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("user_id", packageData.received_by)
+        .maybeSingle();
+      
+      if (porterProfile?.full_name) {
+        porterName = porterProfile.full_name;
+      }
+    }
+
+    console.log(`Package type: ${packageTypeName}, Tracking: ${trackingCode}, Porter: ${porterName}`);
 
     // ========== FETCH RESIDENTS ==========
     const { data: residents, error: resError } = await supabase
@@ -505,9 +520,10 @@ Olá, *{nome}*!
 
 Você tem uma encomenda aguardando na portaria.
 
+🏠 *Destino:* BLOCO {bloco}, APTO {apartamento}
 📋 *Tipo:* {tipo_encomenda}
 📍 *Rastreio:* {codigo_rastreio}
-🏠 *Destino:* BLOCO {bloco}, APTO {apartamento}
+🧑‍💼 *Recebido por:* {porteiro}
 🔑 *Código de retirada:* {codigo}
 
 Apresente este código na portaria para retirar sua encomenda.
@@ -518,7 +534,7 @@ _Mensagem automática - NotificaCondo_`;
     const results: Array<{ resident_id: string; success: boolean; error?: string }> = [];
 
     for (const resident of residentsWithPhone) {
-      // Build message with all variables including package type and tracking
+      // Build message with all variables including package type, tracking and porter
       let message = templateContent || defaultMessage;
       message = message
         .replace(/{nome}/g, sanitize(resident.full_name))
@@ -527,7 +543,8 @@ _Mensagem automática - NotificaCondo_`;
         .replace(/{apartamento}/g, sanitize(aptNumber))
         .replace(/{codigo}/g, pickup_code)
         .replace(/{tipo_encomenda}/g, sanitize(packageTypeName))
-        .replace(/{codigo_rastreio}/g, sanitize(trackingCode));
+        .replace(/{codigo_rastreio}/g, sanitize(trackingCode))
+        .replace(/{porteiro}/g, sanitize(porterName));
 
       console.log(`Sending notification to ${resident.full_name} (${resident.phone})`);
       if (photo_url) {

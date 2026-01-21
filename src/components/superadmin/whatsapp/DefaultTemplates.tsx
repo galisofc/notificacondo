@@ -228,9 +228,10 @@ Olá, *{nome}*!
 
 Você tem uma encomenda aguardando na portaria.
 
+🏠 *Destino:* BLOCO {bloco}, APTO {apartamento}
 📋 *Tipo:* {tipo_encomenda}
 📍 *Rastreio:* {codigo_rastreio}
-🏠 *Destino:* BLOCO {bloco}, APTO {apartamento}
+🧑‍💼 *Recebido por:* {porteiro}
 🔑 *Código de retirada:* {codigo}
 
 Apresente este código na portaria para retirar sua encomenda.
