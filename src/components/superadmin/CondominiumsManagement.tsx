@@ -782,51 +782,51 @@ export function CondominiumsManagement() {
           {selectedCondominium && (
             <div className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm text-muted-foreground">Nome</p>
-                  <p className="font-medium">{selectedCondominium.name}</p>
+                  <p className="font-medium break-words">{selectedCondominium.name}</p>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm text-muted-foreground">CNPJ</p>
-                  <p className="font-medium">
+                  <p className="font-medium break-words">
                     {selectedCondominium.cnpj ? formatCNPJ(selectedCondominium.cnpj) : "—"}
                   </p>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm text-muted-foreground">Telefone</p>
-                  <p className="font-medium">
+                  <p className="font-medium break-words">
                     {selectedCondominium.phone ? formatPhone(selectedCondominium.phone) : "—"}
                   </p>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm text-muted-foreground">CEP</p>
-                  <p className="font-medium">{selectedCondominium.zip_code || "—"}</p>
+                  <p className="font-medium break-words">{selectedCondominium.zip_code || "—"}</p>
                 </div>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-4">
-                <div className="sm:col-span-3">
+                <div className="sm:col-span-3 min-w-0">
                   <p className="text-sm text-muted-foreground">Endereço</p>
-                  <p className="font-medium">{selectedCondominium.address || "—"}</p>
+                  <p className="font-medium break-words">{selectedCondominium.address || "—"}</p>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm text-muted-foreground">Nº</p>
-                  <p className="font-medium">{selectedCondominium.address_number || "—"}</p>
+                  <p className="font-medium break-words">{selectedCondominium.address_number || "—"}</p>
                 </div>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-3">
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm text-muted-foreground">Bairro</p>
-                  <p className="font-medium">{selectedCondominium.neighborhood || "—"}</p>
+                  <p className="font-medium break-words">{selectedCondominium.neighborhood || "—"}</p>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm text-muted-foreground">Cidade</p>
-                  <p className="font-medium">{selectedCondominium.city || "—"}</p>
+                  <p className="font-medium break-words">{selectedCondominium.city || "—"}</p>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm text-muted-foreground">UF</p>
-                  <p className="font-medium">{selectedCondominium.state || "—"}</p>
+                  <p className="font-medium break-words">{selectedCondominium.state || "—"}</p>
                 </div>
               </div>
 
@@ -837,17 +837,17 @@ export function CondominiumsManagement() {
                 </div>
                 {selectedCondominium.owner ? (
                   <div className="grid gap-2 sm:grid-cols-2 pl-6">
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-sm text-muted-foreground">Nome</p>
-                      <p className="font-medium">{selectedCondominium.owner.full_name}</p>
+                      <p className="font-medium break-words">{selectedCondominium.owner.full_name}</p>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-sm text-muted-foreground">Email</p>
-                      <p className="font-medium">{selectedCondominium.owner.email}</p>
+                      <p className="font-medium break-all">{selectedCondominium.owner.email}</p>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-sm text-muted-foreground">Telefone</p>
-                      <p className="font-medium">
+                      <p className="font-medium break-words">
                         {selectedCondominium.owner.phone 
                           ? formatPhone(selectedCondominium.owner.phone) 
                           : "—"
@@ -861,15 +861,15 @@ export function CondominiumsManagement() {
               </div>
 
               <div className="pt-4 border-t border-border grid gap-4 sm:grid-cols-2 text-sm">
-                <div>
+                <div className="min-w-0">
                   <p className="text-muted-foreground">Cadastrado em</p>
-                  <p className="font-medium">
+                  <p className="font-medium break-words">
                     {formatDateTime(selectedCondominium.created_at)}
                   </p>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-muted-foreground">Última atualização</p>
-                  <p className="font-medium">
+                  <p className="font-medium break-words">
                     {formatDateTime(selectedCondominium.updated_at)}
                   </p>
                 </div>
