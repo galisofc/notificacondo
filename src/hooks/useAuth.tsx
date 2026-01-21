@@ -98,9 +98,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     setSession(null);
     
+    // Force clear all Supabase tokens from localStorage to prevent session restoration
+    const keysToRemove = Object.keys(localStorage).filter(key => 
+      key.startsWith('sb-') || key.includes('supabase')
+    );
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    
     // Then attempt to sign out from Supabase (ignore errors if session doesn't exist)
     try {
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: 'global' });
     } catch (error) {
       console.log("Sign out completed (session may have already expired)");
     }
