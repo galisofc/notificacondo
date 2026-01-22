@@ -550,23 +550,29 @@ const PackagesHistory = () => {
     icon: Icon,
     color,
     subtitle,
+    loading = false,
   }: {
     title: string;
     value: string | number;
     icon: React.ElementType;
     color: string;
     subtitle?: string;
+    loading?: boolean;
   }) => (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground">{title}</p>
-            <p className="text-2xl font-bold">{value}</p>
-            {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+    <Card className="overflow-hidden">
+      <CardContent className="p-3 sm:p-4">
+        <div className="flex items-center gap-3 sm:flex-col sm:items-start">
+          <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0 ${color}`}>
+            <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </div>
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${color}`}>
-            <Icon className="w-5 h-5 text-white" />
+          <div className="flex-1 min-w-0 sm:mt-2 sm:w-full">
+            {loading ? (
+              <Skeleton className="h-6 sm:h-8 w-12 sm:w-16 mb-1" />
+            ) : (
+              <p className="text-lg sm:text-2xl font-bold leading-tight">{value}</p>
+            )}
+            <p className="text-[11px] sm:text-sm text-muted-foreground leading-tight">{title}</p>
+            {subtitle && <p className="text-[10px] sm:text-xs text-muted-foreground">{subtitle}</p>}
           </div>
         </div>
       </CardContent>
@@ -754,24 +760,27 @@ const PackagesHistory = () => {
 
         {/* Stats */}
         {selectedApartment && (
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
               title="Total"
               value={stats.total}
               icon={Package}
               color="bg-primary"
+              loading={isLoading}
             />
             <StatCard
               title="Pendentes"
               value={stats.pendente}
               icon={Clock}
               color="bg-amber-500"
+              loading={isLoading}
             />
             <StatCard
               title="Retiradas"
               value={stats.retirada}
               icon={PackageCheck}
               color="bg-emerald-500"
+              loading={isLoading}
             />
             <StatCard
               title="Tempo Médio"
@@ -779,6 +788,7 @@ const PackagesHistory = () => {
               icon={Timer}
               color="bg-blue-500"
               subtitle="para retirada"
+              loading={isLoading}
             />
           </div>
         )}
