@@ -798,18 +798,19 @@ const PackagesCondominiumHistory = () => {
           </div>
         )}
 
-        {/* Block Stats (when showing all blocks) */}
-        {selectedCondominium && selectedBlock === "all" && Object.keys(stats.blockStats).length > 1 && (
+        {/* Block Stats - Pending only (when showing all blocks) */}
+        {selectedCondominium && selectedBlock === "all" && Object.entries(stats.blockStats).some(([_, s]) => s.pendente > 0) && (
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Layers className="w-5 h-5" />
-                Estatísticas por Bloco
+                Pendentes por Bloco
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {Object.entries(stats.blockStats)
+                  .filter(([_, blockStats]) => blockStats.pendente > 0)
                   .sort(([a], [b]) => a.localeCompare(b, "pt-BR", { numeric: true }))
                   .map(([blockName, blockStats]) => (
                     <div
@@ -818,9 +819,9 @@ const PackagesCondominiumHistory = () => {
                     >
                       <p className="font-medium text-sm">{blockName}</p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-lg font-bold">{blockStats.total}</span>
+                        <span className="text-lg font-bold text-amber-500">{blockStats.pendente}</span>
                         <span className="text-xs text-muted-foreground">
-                          ({blockStats.pendente} pend. / {blockStats.retirada} ret.)
+                          pendente{blockStats.pendente !== 1 ? 's' : ''}
                         </span>
                       </div>
                     </div>
