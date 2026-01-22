@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Html5Qrcode } from "html5-qrcode";
-import { X, SwitchCamera, QrCode, Loader2, CheckCircle2 } from "lucide-react";
+import { X, SwitchCamera, QrCode, Loader2, CheckCircle2, Flashlight, FlashlightOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -76,10 +76,27 @@ export function BarcodeScanner({ isOpen, onClose, onScan }: BarcodeScannerProps)
   const [currentCameraIndex, setCurrentCameraIndex] = useState(0);
   const [scannedCode, setScannedCode] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [torchEnabled, setTorchEnabled] = useState(false);
+  const [torchSupported, setTorchSupported] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const videoTrackRef = useRef<MediaStreamTrack | null>(null);
 
   const stopScanner = useCallback(async () => {
+    // Turn off torch before stopping
+    if (torchEnabled && videoTrackRef.current) {
+      try {
+        await (videoTrackRef.current as any).applyConstraints({
+          advanced: [{ torch: false }]
+        });
+      } catch (error) {
+        console.warn("Error turning off torch:", error);
+      }
+    }
+    setTorchEnabled(false);
+    setTorchSupported(false);
+    videoTrackRef.current = null;
+    
     if (scannerRef.current) {
       try {
         const state = scannerRef.current.getState();
@@ -91,7 +108,47 @@ export function BarcodeScanner({ isOpen, onClose, onScan }: BarcodeScannerProps)
       }
     }
     setIsScanning(false);
+  }, [torchEnabled]);
+
+  // Check if torch is supported and get the video track
+  const checkTorchSupport = useCallback(async () => {
+    try {
+      const videoElement = document.querySelector('#barcode-scanner-container video') as HTMLVideoElement;
+      if (videoElement && videoElement.srcObject) {
+        const stream = videoElement.srcObject as MediaStream;
+        const track = stream.getVideoTracks()[0];
+        if (track) {
+          videoTrackRef.current = track;
+          const capabilities = track.getCapabilities() as any;
+          if (capabilities && capabilities.torch) {
+            setTorchSupported(true);
+          }
+        }
+      }
+    } catch (error) {
+      console.warn("Error checking torch support:", error);
+    }
   }, []);
+
+  // Toggle torch/flashlight
+  const toggleTorch = useCallback(async () => {
+    if (!videoTrackRef.current) return;
+    
+    try {
+      const newTorchState = !torchEnabled;
+      await (videoTrackRef.current as any).applyConstraints({
+        advanced: [{ torch: newTorchState }]
+      });
+      setTorchEnabled(newTorchState);
+    } catch (error) {
+      console.warn("Error toggling torch:", error);
+      toast({
+        title: "Erro ao ligar lanterna",
+        description: "Não foi possível controlar a lanterna",
+        variant: "destructive",
+      });
+    }
+  }, [torchEnabled, toast]);
 
   const handleSuccessfulScan = useCallback((code: string) => {
     // Play success sound + vibration
@@ -174,6 +231,11 @@ export function BarcodeScanner({ isOpen, onClose, onScan }: BarcodeScannerProps)
       );
 
       setIsScanning(true);
+      
+      // Check torch support after scanner starts
+      setTimeout(() => {
+        checkTorchSupport();
+      }, 500);
     } catch (error) {
       console.error("Error starting scanner:", error);
       toast({
@@ -184,7 +246,7 @@ export function BarcodeScanner({ isOpen, onClose, onScan }: BarcodeScannerProps)
     } finally {
       setIsLoading(false);
     }
-  }, [handleSuccessfulScan, toast]);
+  }, [handleSuccessfulScan, toast, checkTorchSupport]);
 
   const switchCamera = useCallback(async () => {
     if (cameras.length <= 1) return;
@@ -215,12 +277,17 @@ export function BarcodeScanner({ isOpen, onClose, onScan }: BarcodeScannerProps)
       );
 
       setIsScanning(true);
+      
+      // Check torch support after camera switch
+      setTimeout(() => {
+        checkTorchSupport();
+      }, 500);
     } catch (error) {
       console.error("Error switching camera:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [cameras, currentCameraIndex, handleSuccessfulScan, stopScanner]);
+  }, [cameras, currentCameraIndex, handleSuccessfulScan, stopScanner, checkTorchSupport]);
 
   // Start scanner when dialog opens
   useEffect(() => {
@@ -416,8 +483,26 @@ export function BarcodeScanner({ isOpen, onClose, onScan }: BarcodeScannerProps)
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="p-4 flex gap-3"
+          className="p-4 flex gap-2"
         >
+          {/* Torch Button */}
+          {torchSupported && (
+            <Button
+              variant={torchEnabled ? "default" : "outline"}
+              onClick={toggleTorch}
+              disabled={isLoading || showSuccess}
+              className="gap-2"
+              size="icon"
+            >
+              {torchEnabled ? (
+                <Flashlight className="w-4 h-4" />
+              ) : (
+                <FlashlightOff className="w-4 h-4" />
+              )}
+            </Button>
+          )}
+          
+          {/* Switch Camera Button */}
           {cameras.length > 1 && (
             <Button
               variant="outline"
@@ -429,11 +514,13 @@ export function BarcodeScanner({ isOpen, onClose, onScan }: BarcodeScannerProps)
               Trocar Câmera
             </Button>
           )}
+          
+          {/* Cancel Button */}
           <Button
             variant="secondary"
             onClick={handleClose}
             disabled={showSuccess}
-            className={cameras.length > 1 ? "flex-1" : "w-full"}
+            className={cameras.length > 1 || torchSupported ? "flex-1" : "w-full"}
           >
             <X className="w-4 h-4 mr-2" />
             Cancelar
