@@ -17,6 +17,18 @@ interface BarcodeScannerProps {
   onScan: (code: string) => void;
 }
 
+// Vibrate device for tactile feedback
+const vibrateDevice = () => {
+  try {
+    if ('vibrate' in navigator) {
+      // Pattern: short-pause-long (success pattern)
+      navigator.vibrate([100, 50, 150]);
+    }
+  } catch (error) {
+    console.warn("Vibration not supported:", error);
+  }
+};
+
 // Create a reusable beep sound
 const playSuccessSound = () => {
   try {
@@ -50,6 +62,12 @@ const playSuccessSound = () => {
   }
 };
 
+// Combined feedback: sound + vibration
+const playSuccessFeedback = () => {
+  playSuccessSound();
+  vibrateDevice();
+};
+
 export function BarcodeScanner({ isOpen, onClose, onScan }: BarcodeScannerProps) {
   const { toast } = useToast();
   const [isScanning, setIsScanning] = useState(false);
@@ -76,8 +94,8 @@ export function BarcodeScanner({ isOpen, onClose, onScan }: BarcodeScannerProps)
   }, []);
 
   const handleSuccessfulScan = useCallback((code: string) => {
-    // Play success sound
-    playSuccessSound();
+    // Play success sound + vibration
+    playSuccessFeedback();
     
     // Show success animation
     setScannedCode(code);
