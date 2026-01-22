@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Html5Qrcode } from "html5-qrcode";
-import { X, SwitchCamera, QrCode, Loader2, CheckCircle2, Flashlight, FlashlightOff } from "lucide-react";
+import { X, SwitchCamera, QrCode, Loader2, CheckCircle2, Flashlight, FlashlightOff, ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
+import { Slider } from "@/components/ui/slider";
 
 interface BarcodeScannerProps {
   isOpen: boolean;
@@ -78,6 +79,9 @@ export function BarcodeScanner({ isOpen, onClose, onScan }: BarcodeScannerProps)
   const [showSuccess, setShowSuccess] = useState(false);
   const [torchEnabled, setTorchEnabled] = useState(false);
   const [torchSupported, setTorchSupported] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [zoomSupported, setZoomSupported] = useState(false);
+  const [zoomRange, setZoomRange] = useState({ min: 1, max: 1 });
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const videoTrackRef = useRef<MediaStreamTrack | null>(null);
@@ -95,6 +99,9 @@ export function BarcodeScanner({ isOpen, onClose, onScan }: BarcodeScannerProps)
     }
     setTorchEnabled(false);
     setTorchSupported(false);
+    setZoomLevel(1);
+    setZoomSupported(false);
+    setZoomRange({ min: 1, max: 1 });
     videoTrackRef.current = null;
     
     if (scannerRef.current) {
@@ -110,8 +117,8 @@ export function BarcodeScanner({ isOpen, onClose, onScan }: BarcodeScannerProps)
     setIsScanning(false);
   }, [torchEnabled]);
 
-  // Check if torch is supported and get the video track
-  const checkTorchSupport = useCallback(async () => {
+  // Check if torch and zoom are supported and get the video track
+  const checkCameraCapabilities = useCallback(async () => {
     try {
       const videoElement = document.querySelector('#barcode-scanner-container video') as HTMLVideoElement;
       if (videoElement && videoElement.srcObject) {
@@ -120,13 +127,29 @@ export function BarcodeScanner({ isOpen, onClose, onScan }: BarcodeScannerProps)
         if (track) {
           videoTrackRef.current = track;
           const capabilities = track.getCapabilities() as any;
+          
+          // Check torch support
           if (capabilities && capabilities.torch) {
             setTorchSupported(true);
+          }
+          
+          // Check zoom support
+          if (capabilities && capabilities.zoom) {
+            setZoomSupported(true);
+            setZoomRange({
+              min: capabilities.zoom.min || 1,
+              max: capabilities.zoom.max || 1
+            });
+            // Get current zoom level
+            const settings = track.getSettings() as any;
+            if (settings.zoom) {
+              setZoomLevel(settings.zoom);
+            }
           }
         }
       }
     } catch (error) {
-      console.warn("Error checking torch support:", error);
+      console.warn("Error checking camera capabilities:", error);
     }
   }, []);
 
@@ -149,6 +172,21 @@ export function BarcodeScanner({ isOpen, onClose, onScan }: BarcodeScannerProps)
       });
     }
   }, [torchEnabled, toast]);
+
+  // Handle zoom level change
+  const handleZoomChange = useCallback(async (value: number[]) => {
+    if (!videoTrackRef.current || !zoomSupported) return;
+    
+    const newZoom = value[0];
+    try {
+      await (videoTrackRef.current as any).applyConstraints({
+        advanced: [{ zoom: newZoom }]
+      });
+      setZoomLevel(newZoom);
+    } catch (error) {
+      console.warn("Error changing zoom:", error);
+    }
+  }, [zoomSupported]);
 
   const handleSuccessfulScan = useCallback((code: string) => {
     // Play success sound + vibration
@@ -232,9 +270,9 @@ export function BarcodeScanner({ isOpen, onClose, onScan }: BarcodeScannerProps)
 
       setIsScanning(true);
       
-      // Check torch support after scanner starts
+      // Check camera capabilities after scanner starts
       setTimeout(() => {
-        checkTorchSupport();
+        checkCameraCapabilities();
       }, 500);
     } catch (error) {
       console.error("Error starting scanner:", error);
@@ -246,7 +284,7 @@ export function BarcodeScanner({ isOpen, onClose, onScan }: BarcodeScannerProps)
     } finally {
       setIsLoading(false);
     }
-  }, [handleSuccessfulScan, toast, checkTorchSupport]);
+  }, [handleSuccessfulScan, toast, checkCameraCapabilities]);
 
   const switchCamera = useCallback(async () => {
     if (cameras.length <= 1) return;
@@ -278,16 +316,16 @@ export function BarcodeScanner({ isOpen, onClose, onScan }: BarcodeScannerProps)
 
       setIsScanning(true);
       
-      // Check torch support after camera switch
+      // Check camera capabilities after camera switch
       setTimeout(() => {
-        checkTorchSupport();
+        checkCameraCapabilities();
       }, 500);
     } catch (error) {
       console.error("Error switching camera:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [cameras, currentCameraIndex, handleSuccessfulScan, stopScanner, checkTorchSupport]);
+  }, [cameras, currentCameraIndex, handleSuccessfulScan, stopScanner, checkCameraCapabilities]);
 
   // Start scanner when dialog opens
   useEffect(() => {
@@ -416,6 +454,33 @@ export function BarcodeScanner({ isOpen, onClose, onScan }: BarcodeScannerProps)
                     />
                   </motion.div>
                 </div>
+
+                {/* Zoom Slider - positioned at the right side */}
+                {zoomSupported && zoomRange.max > zoomRange.min && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.4 }}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col items-center gap-2 pointer-events-auto"
+                  >
+                    <ZoomIn className="w-4 h-4 text-white/80" />
+                    <div className="h-32 flex items-center">
+                      <Slider
+                        orientation="vertical"
+                        value={[zoomLevel]}
+                        onValueChange={handleZoomChange}
+                        min={zoomRange.min}
+                        max={zoomRange.max}
+                        step={0.1}
+                        className="h-full"
+                      />
+                    </div>
+                    <ZoomOut className="w-4 h-4 text-white/80" />
+                    <span className="text-white/60 text-xs font-medium">
+                      {zoomLevel.toFixed(1)}x
+                    </span>
+                  </motion.div>
+                )}
 
                 {/* Instructions */}
                 <motion.div
