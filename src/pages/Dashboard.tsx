@@ -33,6 +33,8 @@ interface DashboardStats {
   occurrences: number;
   pendingFines: number;
   pendingDefenses: number;
+  packagesRegistered: number;
+  packagesPending: number;
 }
 
 interface ProfileData {
@@ -50,6 +52,8 @@ const Dashboard = () => {
     occurrences: 0,
     pendingFines: 0,
     pendingDefenses: 0,
+    packagesRegistered: 0,
+    packagesPending: 0,
   });
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -117,6 +121,8 @@ const Dashboard = () => {
         let occurrencesCount = 0;
         let finesCount = 0;
         let defensesCount = 0;
+        let packagesRegisteredCount = 0;
+        let packagesPendingCount = 0;
 
         if (condoIds.length > 0) {
           const { data: blocks } = await supabase
@@ -181,6 +187,24 @@ const Dashboard = () => {
 
             finesCount = fCount || 0;
           }
+
+          // Count packages registered within the period
+          const { count: pkgRegisteredCount } = await supabase
+            .from("packages")
+            .select("*", { count: "exact", head: true })
+            .in("condominium_id", condoIds)
+            .gte("received_at", dateFilter.toISOString());
+
+          packagesRegisteredCount = pkgRegisteredCount || 0;
+
+          // Count pending packages (all time, not filtered by period)
+          const { count: pkgPendingCount } = await supabase
+            .from("packages")
+            .select("*", { count: "exact", head: true })
+            .in("condominium_id", condoIds)
+            .eq("status", "pendente");
+
+          packagesPendingCount = pkgPendingCount || 0;
         }
 
         setStats({
@@ -189,6 +213,8 @@ const Dashboard = () => {
           occurrences: occurrencesCount,
           pendingFines: finesCount,
           pendingDefenses: defensesCount,
+          packagesRegistered: packagesRegisteredCount,
+          packagesPending: packagesPendingCount,
         });
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
@@ -221,6 +247,20 @@ const Dashboard = () => {
       icon: FileText,
       gradient: "from-amber-500 to-orange-500",
       action: () => navigate("/occurrences"),
+    },
+    {
+      title: "Encomendas Cadastradas",
+      value: stats.packagesRegistered,
+      icon: Package,
+      gradient: "from-cyan-500 to-teal-500",
+      action: () => navigate("/sindico/packages"),
+    },
+    {
+      title: "Encomendas Pendentes",
+      value: stats.packagesPending,
+      icon: Package,
+      gradient: "from-orange-500 to-amber-500",
+      action: () => navigate("/sindico/packages"),
     },
     {
       title: "Defesas Pendentes",
@@ -312,7 +352,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 md:gap-4">
             {statCards.map((stat, index) => (
               <Card
                 key={index}
