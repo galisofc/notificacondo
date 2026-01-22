@@ -345,10 +345,49 @@ const PorteiroPackagesHistory = () => {
       });
   }, [pendingPackages]);
 
-  // Statistics
+  // Fetch stats for ALL filtered packages (not just current page)
+  const { data: statsData } = useQuery({
+    queryKey: ["porteiro-packages-stats", selectedCondominium, selectedBlock, statusFilter, dateFrom, dateTo],
+    queryFn: async () => {
+      let query = supabase
+        .from("packages")
+        .select(`
+          id,
+          status,
+          received_at,
+          picked_up_at,
+          block:blocks(id, name)
+        `)
+        .eq("condominium_id", selectedCondominium);
+
+      if (selectedBlock !== "all") {
+        query = query.eq("block_id", selectedBlock);
+      }
+
+      if (statusFilter !== "all") {
+        query = query.eq("status", statusFilter as "pendente" | "retirada");
+      }
+
+      if (dateFrom) {
+        query = query.gte("received_at", dateFrom);
+      }
+
+      if (dateTo) {
+        query = query.lte("received_at", `${dateTo}T23:59:59`);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!selectedCondominium,
+  });
+
+  // Statistics calculated from ALL filtered data
   const stats = useMemo(() => {
+    const allPackages = statsData || [];
     const s = {
-      total: packages.length,
+      total: allPackages.length,
       pendente: 0,
       retirada: 0,
       avgPickupTime: 0,
@@ -358,7 +397,7 @@ const PorteiroPackagesHistory = () => {
     let totalPickupTimeMinutes = 0;
     let pickedUpCount = 0;
 
-    packages.forEach((pkg) => {
+    allPackages.forEach((pkg) => {
       const status = pkg.status as "pendente" | "retirada";
       s[status]++;
 
@@ -385,7 +424,7 @@ const PorteiroPackagesHistory = () => {
     }
 
     return s;
-  }, [packages]);
+  }, [statsData]);
 
   const formatPickupTime = (minutes: number) => {
     if (minutes < 60) return `${minutes} min`;
