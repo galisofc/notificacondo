@@ -346,7 +346,7 @@ const PorteiroPackagesHistory = () => {
   }, [pendingPackages]);
 
   // Fetch stats for ALL filtered packages (not just current page)
-  const { data: statsData } = useQuery({
+  const { data: statsData, isLoading: isLoadingStats } = useQuery({
     queryKey: ["porteiro-packages-stats", selectedCondominium, selectedBlock, statusFilter, dateFrom, dateTo],
     queryFn: async () => {
       let query = supabase
@@ -738,12 +738,14 @@ const PorteiroPackagesHistory = () => {
     icon: Icon,
     color,
     subtitle,
+    loading = false,
   }: {
     title: string;
     value: string | number;
     icon: React.ElementType;
     color: string;
     subtitle?: string;
+    loading?: boolean;
   }) => (
     <Card className="overflow-hidden">
       <CardContent className="p-3 sm:p-4">
@@ -752,7 +754,11 @@ const PorteiroPackagesHistory = () => {
             <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </div>
           <div className="flex-1 min-w-0 sm:mt-2 sm:w-full">
-            <p className="text-lg sm:text-2xl font-bold leading-tight">{value}</p>
+            {loading ? (
+              <Skeleton className="h-6 sm:h-8 w-12 sm:w-16 mb-1" />
+            ) : (
+              <p className="text-lg sm:text-2xl font-bold leading-tight">{value}</p>
+            )}
             <p className="text-[11px] sm:text-sm text-muted-foreground leading-tight">{title}</p>
             {subtitle && <p className="text-[10px] sm:text-xs text-muted-foreground">{subtitle}</p>}
           </div>
@@ -909,18 +915,21 @@ const PorteiroPackagesHistory = () => {
               value={stats.total}
               icon={Package}
               color="bg-primary"
+              loading={isLoadingStats}
             />
             <StatCard
               title="Pendentes"
               value={stats.pendente}
               icon={Clock}
               color="bg-amber-500"
+              loading={isLoadingStats}
             />
             <StatCard
               title="Retiradas"
               value={stats.retirada}
               icon={PackageCheck}
               color="bg-emerald-500"
+              loading={isLoadingStats}
             />
             <StatCard
               title="Tempo Médio"
@@ -928,6 +937,7 @@ const PorteiroPackagesHistory = () => {
               icon={Timer}
               color="bg-blue-500"
               subtitle="para retirada"
+              loading={isLoadingStats}
             />
           </div>
         )}
