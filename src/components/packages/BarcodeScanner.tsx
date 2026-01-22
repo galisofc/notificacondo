@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Html5Qrcode } from "html5-qrcode";
-import { X, SwitchCamera, QrCode, Loader2 } from "lucide-react";
+import { X, SwitchCamera, QrCode, Loader2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface BarcodeScannerProps {
   isOpen: boolean;
@@ -16,12 +17,47 @@ interface BarcodeScannerProps {
   onScan: (code: string) => void;
 }
 
+// Create a reusable beep sound
+const playSuccessSound = () => {
+  try {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    
+    // Create a pleasant two-tone beep
+    const playTone = (frequency: number, startTime: number, duration: number) => {
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = frequency;
+      oscillator.type = "sine";
+      
+      gainNode.gain.setValueAtTime(0, startTime);
+      gainNode.gain.linearRampToValueAtTime(0.3, startTime + 0.02);
+      gainNode.gain.linearRampToValueAtTime(0, startTime + duration);
+      
+      oscillator.start(startTime);
+      oscillator.stop(startTime + duration);
+    };
+    
+    const now = audioContext.currentTime;
+    playTone(880, now, 0.1); // A5
+    playTone(1108.73, now + 0.1, 0.15); // C#6
+    
+  } catch (error) {
+    console.warn("Could not play sound:", error);
+  }
+};
+
 export function BarcodeScanner({ isOpen, onClose, onScan }: BarcodeScannerProps) {
   const { toast } = useToast();
   const [isScanning, setIsScanning] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [cameras, setCameras] = useState<{ id: string; label: string }[]>([]);
   const [currentCameraIndex, setCurrentCameraIndex] = useState(0);
+  const [scannedCode, setScannedCode] = useState<string | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -38,6 +74,32 @@ export function BarcodeScanner({ isOpen, onClose, onScan }: BarcodeScannerProps)
     }
     setIsScanning(false);
   }, []);
+
+  const handleSuccessfulScan = useCallback((code: string) => {
+    // Play success sound
+    playSuccessSound();
+    
+    // Show success animation
+    setScannedCode(code);
+    setShowSuccess(true);
+    stopScanner();
+    
+    // Wait for animation, then close
+    setTimeout(() => {
+      onScan(code);
+      onClose();
+      toast({
+        title: "Código escaneado!",
+        description: code,
+      });
+      
+      // Reset state after closing
+      setTimeout(() => {
+        setShowSuccess(false);
+        setScannedCode(null);
+      }, 300);
+    }, 800);
+  }, [onScan, onClose, stopScanner, toast]);
 
   const startScanner = useCallback(async () => {
     if (!containerRef.current || scannerRef.current?.getState() === 2) return;
@@ -86,14 +148,7 @@ export function BarcodeScanner({ isOpen, onClose, onScan }: BarcodeScannerProps)
           aspectRatio: 1.5,
         },
         (decodedText) => {
-          // Code detected - stop scanning and return result
-          stopScanner();
-          onScan(decodedText);
-          onClose();
-          toast({
-            title: "Código escaneado!",
-            description: decodedText,
-          });
+          handleSuccessfulScan(decodedText);
         },
         () => {
           // Scan error - ignore, it just means no code found yet
@@ -111,7 +166,7 @@ export function BarcodeScanner({ isOpen, onClose, onScan }: BarcodeScannerProps)
     } finally {
       setIsLoading(false);
     }
-  }, [onScan, onClose, stopScanner, toast]);
+  }, [handleSuccessfulScan, toast]);
 
   const switchCamera = useCallback(async () => {
     if (cameras.length <= 1) return;
@@ -136,13 +191,7 @@ export function BarcodeScanner({ isOpen, onClose, onScan }: BarcodeScannerProps)
           aspectRatio: 1.5,
         },
         (decodedText) => {
-          stopScanner();
-          onScan(decodedText);
-          onClose();
-          toast({
-            title: "Código escaneado!",
-            description: decodedText,
-          });
+          handleSuccessfulScan(decodedText);
         },
         () => {}
       );
@@ -153,7 +202,7 @@ export function BarcodeScanner({ isOpen, onClose, onScan }: BarcodeScannerProps)
     } finally {
       setIsLoading(false);
     }
-  }, [cameras, currentCameraIndex, onScan, onClose, stopScanner, toast]);
+  }, [cameras, currentCameraIndex, handleSuccessfulScan, stopScanner]);
 
   // Start scanner when dialog opens
   useEffect(() => {
@@ -180,6 +229,8 @@ export function BarcodeScanner({ isOpen, onClose, onScan }: BarcodeScannerProps)
 
   const handleClose = () => {
     stopScanner();
+    setShowSuccess(false);
+    setScannedCode(null);
     onClose();
   };
 
@@ -202,47 +253,158 @@ export function BarcodeScanner({ isOpen, onClose, onScan }: BarcodeScannerProps)
           />
 
           {/* Loading Overlay */}
-          {isLoading && (
-            <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center">
-              <Loader2 className="w-8 h-8 text-white animate-spin mb-2" />
-              <p className="text-white text-sm">Iniciando câmera...</p>
-            </div>
-          )}
+          <AnimatePresence>
+            {isLoading && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center"
+              >
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                >
+                  <Loader2 className="w-8 h-8 text-white" />
+                </motion.div>
+                <motion.p
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-white text-sm mt-2"
+                >
+                  Iniciando câmera...
+                </motion.p>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Scanning Overlay with Viewfinder */}
-          {isScanning && !isLoading && (
-            <div className="absolute inset-0 pointer-events-none">
-              {/* Dark overlay around viewfinder */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="relative w-[280px] h-[150px]">
-                  {/* Corner brackets */}
-                  <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-primary" />
-                  <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-primary" />
-                  <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-primary" />
-                  <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-primary" />
-                  
-                  {/* Scan line animation */}
-                  <div className="absolute left-1 right-1 top-1/2 h-0.5 bg-primary/50 animate-pulse" />
+          <AnimatePresence>
+            {isScanning && !isLoading && !showSuccess && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 pointer-events-none"
+              >
+                {/* Viewfinder */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <motion.div
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                    className="relative w-[280px] h-[150px]"
+                  >
+                    {/* Corner brackets with pulse animation */}
+                    <motion.div
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                      className="absolute top-0 left-0 w-8 h-8 border-t-3 border-l-3 border-primary rounded-tl-lg"
+                      style={{ borderWidth: "3px" }}
+                    />
+                    <motion.div
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+                      className="absolute top-0 right-0 w-8 h-8 border-t-3 border-r-3 border-primary rounded-tr-lg"
+                      style={{ borderWidth: "3px" }}
+                    />
+                    <motion.div
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 2, repeat: Infinity, delay: 1 }}
+                      className="absolute bottom-0 left-0 w-8 h-8 border-b-3 border-l-3 border-primary rounded-bl-lg"
+                      style={{ borderWidth: "3px" }}
+                    />
+                    <motion.div
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 2, repeat: Infinity, delay: 1.5 }}
+                      className="absolute bottom-0 right-0 w-8 h-8 border-b-3 border-r-3 border-primary rounded-br-lg"
+                      style={{ borderWidth: "3px" }}
+                    />
+                    
+                    {/* Animated scan line */}
+                    <motion.div
+                      animate={{ y: [-60, 60, -60] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                      className="absolute left-2 right-2 top-1/2 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent"
+                      style={{ boxShadow: "0 0 8px hsl(var(--primary))" }}
+                    />
+                  </motion.div>
                 </div>
-              </div>
 
-              {/* Instructions */}
-              <div className="absolute bottom-4 left-0 right-0 text-center">
-                <p className="text-white text-sm bg-black/50 inline-block px-3 py-1 rounded">
-                  Aponte para o código de barras ou QR Code
-                </p>
-              </div>
-            </div>
-          )}
+                {/* Instructions */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="absolute bottom-4 left-0 right-0 text-center"
+                >
+                  <p className="text-white text-sm bg-black/60 backdrop-blur-sm inline-block px-4 py-2 rounded-full">
+                    Aponte para o código de barras ou QR Code
+                  </p>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Success Overlay */}
+          <AnimatePresence>
+            {showSuccess && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center"
+              >
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mb-4"
+                >
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 20, delay: 0.1 }}
+                  >
+                    <CheckCircle2 className="w-12 h-12 text-green-500" />
+                  </motion.div>
+                </motion.div>
+                
+                <motion.p
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-white text-lg font-medium mb-2"
+                >
+                  Código Escaneado!
+                </motion.p>
+                
+                <motion.p
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-white/70 text-sm font-mono bg-white/10 px-4 py-2 rounded-lg max-w-[280px] truncate"
+                >
+                  {scannedCode}
+                </motion.p>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Action Buttons */}
-        <div className="p-4 flex gap-3">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="p-4 flex gap-3"
+        >
           {cameras.length > 1 && (
             <Button
               variant="outline"
               onClick={switchCamera}
-              disabled={isLoading}
+              disabled={isLoading || showSuccess}
               className="flex-1 gap-2"
             >
               <SwitchCamera className="w-4 h-4" />
@@ -252,12 +414,13 @@ export function BarcodeScanner({ isOpen, onClose, onScan }: BarcodeScannerProps)
           <Button
             variant="secondary"
             onClick={handleClose}
+            disabled={showSuccess}
             className={cameras.length > 1 ? "flex-1" : "w-full"}
           >
             <X className="w-4 h-4 mr-2" />
             Cancelar
           </Button>
-        </div>
+        </motion.div>
       </DialogContent>
     </Dialog>
   );
