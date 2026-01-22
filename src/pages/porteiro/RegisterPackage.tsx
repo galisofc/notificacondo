@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Package, CheckCircle2, Loader2, MessageCircle, AlertCircle, MapPin, User, Phone, UserPlus, Check, ChevronsUpDown, Search, icons } from "lucide-react";
+import { ArrowLeft, Package, CheckCircle2, Loader2, MessageCircle, AlertCircle, MapPin, User, Phone, UserPlus, Check, ChevronsUpDown, Search, icons, QrCode } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { CameraCapture } from "@/components/packages/CameraCapture";
+import { BarcodeScanner } from "@/components/packages/BarcodeScanner";
 import { CondominiumBlockApartmentSelect } from "@/components/packages/CondominiumBlockApartmentSelect";
 import { generatePickupCode } from "@/lib/packageConstants";
 import { supabase } from "@/integrations/supabase/client";
@@ -77,6 +78,7 @@ export default function RegisterPackage() {
   const [newResidentPhone, setNewResidentPhone] = useState("");
   const [newResidentEmail, setNewResidentEmail] = useState("");
   const [isSavingResident, setIsSavingResident] = useState(false);
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
 
   // Fetch porter's condominiums
   useEffect(() => {
@@ -681,14 +683,34 @@ export default function RegisterPackage() {
               {/* Tracking Code */}
               <div className="space-y-2">
                 <Label htmlFor="tracking-code">Código de Rastreio *</Label>
-                <Input
-                  id="tracking-code"
-                  placeholder="Ex: AA123456789BR"
-                  value={trackingCode}
-                  onChange={(e) => setTrackingCode(e.target.value.toUpperCase())}
-                  disabled={isSubmitting}
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="tracking-code"
+                    placeholder="Ex: AA123456789BR"
+                    value={trackingCode}
+                    onChange={(e) => setTrackingCode(e.target.value.toUpperCase())}
+                    disabled={isSubmitting}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setShowBarcodeScanner(true)}
+                    disabled={isSubmitting}
+                    title="Escanear código de barras ou QR Code"
+                  >
+                    <QrCode className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
+
+              {/* Barcode Scanner Modal */}
+              <BarcodeScanner
+                isOpen={showBarcodeScanner}
+                onClose={() => setShowBarcodeScanner(false)}
+                onScan={(code) => setTrackingCode(code.toUpperCase())}
+              />
 
               <div className="space-y-2">
                 <Label htmlFor="description">Descrição (opcional)</Label>
