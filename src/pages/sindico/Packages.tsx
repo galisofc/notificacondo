@@ -508,6 +508,7 @@ const SindicoPackages = () => {
                         <TableHead>Tipo</TableHead>
                         <TableHead>Código</TableHead>
                         <TableHead>Recebida</TableHead>
+                        <TableHead>Recebido por</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Retirada por</TableHead>
                         <TableHead className="w-[50px]"></TableHead>
@@ -556,6 +557,11 @@ const SindicoPackages = () => {
                                   })}
                                 </p>
                               </div>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm">
+                                {pkg.received_by_profile?.full_name || "-"}
+                              </span>
                             </TableCell>
                             <TableCell>
                               <Badge variant="outline" className={statusConfig.color}>
