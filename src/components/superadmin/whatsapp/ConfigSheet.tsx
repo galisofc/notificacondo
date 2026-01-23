@@ -41,7 +41,6 @@ interface WhatsAppConfigData {
   instance_id: string;
   is_active: boolean;
   app_url: string;
-  use_official_api: boolean;
 }
 
 // Validation schemas
@@ -83,7 +82,6 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
     instance_id: "",
     is_active: true,
     app_url: "https://notificacondo.com.br",
-    use_official_api: false,
   });
 
   const { data: existingConfig, isLoading } = useQuery({
@@ -119,7 +117,6 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
         instance_id: instanceId,
         is_active: existingConfig.is_active,
         app_url: (existingConfig as any).app_url || "https://notificacondo.com.br",
-        use_official_api: (existingConfig as any).use_official_api || false,
       });
     }
   }, [existingConfig]);
@@ -173,7 +170,6 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
             instance_id: instanceId,
             is_active: config.is_active,
             app_url: config.app_url.trim(),
-            use_official_api: config.use_official_api,
           } as any)
           .eq("id", config.id);
 
@@ -188,7 +184,6 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
             instance_id: instanceId,
             is_active: true,
             app_url: config.app_url.trim(),
-            use_official_api: config.use_official_api,
           } as any)
           .select()
           .single();
@@ -606,22 +601,6 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
             </div>
 
             <Separator />
-
-            {/* Official API Toggle - Only for Z-PRO */}
-            {config.provider === "zpro" && (
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <Label className="text-xs sm:text-sm">Usar API Oficial (WABA)</Label>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">
-                    Usar endpoints oficiais SendMessageAPIText e SendMessageAPIFileURL
-                  </p>
-                </div>
-                <Switch
-                  checked={config.use_official_api}
-                  onCheckedChange={(checked) => setConfig(prev => ({ ...prev, use_official_api: checked }))}
-                />
-              </div>
-            )}
 
             {/* Status Toggle */}
             <div className="flex items-center justify-between gap-3">

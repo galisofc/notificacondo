@@ -15,7 +15,6 @@ interface WhatsAppConfig {
   api_key: string;
   instance_id: string;
   provider: string;
-  use_official_api?: boolean;
 }
 
 const formatPhoneNumber = (phone: string): string => {
@@ -49,44 +48,22 @@ const providers: Record<string, ProviderConfig> = {
         externalKey = config.api_key;
       }
       
-      let response;
+      // Z-PRO uses GET with query parameters
+      const params = new URLSearchParams({
+        body: message,
+        number: formattedPhone,
+        externalKey,
+        bearertoken: config.api_key,
+        isClosed: "false"
+      });
       
-      // Check if using official WABA API endpoints
-      if (config.use_official_api) {
-        console.log("Z-PRO using OFFICIAL WABA API");
-        const targetUrl = `${baseUrl}/SendMessageAPIText`;
-        console.log("Z-PRO WABA sending text to:", formattedPhone);
-        
-        response = await fetch(targetUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${config.api_key}`,
-          },
-          body: JSON.stringify({
-            number: formattedPhone,
-            text: message,
-            externalKey,
-          }),
-        });
-      } else {
-        // Unofficial API (legacy behavior) - GET with query parameters
-        const params = new URLSearchParams({
-          body: message,
-          number: formattedPhone,
-          externalKey,
-          bearertoken: config.api_key,
-          isClosed: "false"
-        });
-        
-        const sendUrl = `${baseUrl}/params/?${params.toString()}`;
-        console.log("Z-PRO sending to:", sendUrl.substring(0, 150) + "...");
-        
-        response = await fetch(sendUrl, {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
-      }
+      const sendUrl = `${baseUrl}/params/?${params.toString()}`;
+      console.log("Z-PRO sending to:", sendUrl.substring(0, 150) + "...");
+      
+      const response = await fetch(sendUrl, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
 
       const { data: result, error: parseError } = await parseResponseSafely(response);
       if (parseError) return { error: parseError };
