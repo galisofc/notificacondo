@@ -41,6 +41,7 @@ interface WhatsAppConfigData {
   instance_id: string;
   is_active: boolean;
   app_url: string;
+  use_waba_templates: boolean;
 }
 
 // Validation schemas
@@ -82,6 +83,7 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
     instance_id: "",
     is_active: true,
     app_url: "https://notificacondo.com.br",
+    use_waba_templates: false,
   });
 
   const { data: existingConfig, isLoading } = useQuery({
@@ -117,6 +119,7 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
         instance_id: instanceId,
         is_active: existingConfig.is_active,
         app_url: (existingConfig as any).app_url || "https://notificacondo.com.br",
+        use_waba_templates: (existingConfig as any).use_waba_templates || false,
       });
     }
   }, [existingConfig]);
@@ -170,6 +173,7 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
             instance_id: instanceId,
             is_active: config.is_active,
             app_url: config.app_url.trim(),
+            use_waba_templates: config.use_waba_templates,
           } as any)
           .eq("id", config.id);
 
@@ -184,6 +188,7 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
             instance_id: instanceId,
             is_active: true,
             app_url: config.app_url.trim(),
+            use_waba_templates: config.use_waba_templates,
           } as any)
           .select()
           .single();
@@ -532,6 +537,33 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
                 URL base usada nos links das mensagens
               </p>
             </div>
+
+            <Separator />
+
+            {/* WABA Templates Toggle */}
+            {config.provider === "zpro" && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <Label className="text-xs sm:text-sm">Usar Templates WABA</Label>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">
+                      Ativar envio via API oficial com templates aprovados na Meta
+                    </p>
+                  </div>
+                  <Switch
+                    checked={config.use_waba_templates}
+                    onCheckedChange={(checked) => setConfig(prev => ({ ...prev, use_waba_templates: checked }))}
+                  />
+                </div>
+                {config.use_waba_templates && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-3">
+                    <p className="text-xs text-amber-700 dark:text-amber-300">
+                      ⚠️ Certifique-se de que os templates WABA estão configurados na aba "Templates" de cada mensagem e aprovados no Meta Business Manager.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
             <Separator />
 
