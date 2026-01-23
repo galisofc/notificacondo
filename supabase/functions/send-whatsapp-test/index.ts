@@ -32,7 +32,7 @@ interface SendResult {
   error?: string;
 }
 
-// Z-PRO Provider - Supports unofficial (/params) endpoints
+// Z-PRO Provider - Supports both unofficial (/params) and official WABA (SendMessageAPIText) endpoints
 async function sendZproMessage(phone: string, message: string, config: ProviderSettings): Promise<SendResult> {
   const baseUrl = config.apiUrl.replace(/\/$/, "");
   const phoneClean = phone.replace(/\D/g, "");
@@ -44,23 +44,46 @@ async function sendZproMessage(phone: string, message: string, config: ProviderS
   }
   
   try {
-    // Unofficial API (legacy behavior) - GET with query params
-    console.log("Z-PRO using UNOFFICIAL API (legacy)");
-    const params = new URLSearchParams({
-      body: message,
-      number: phoneClean,
-      externalKey,
-      bearertoken: config.apiKey,
-      isClosed: "false",
-    });
+    let response;
     
-    const sendUrl = `${baseUrl}/params/?${params.toString()}`;
-    console.log("Z-PRO sending to:", sendUrl.substring(0, 150) + "...");
-    
-    const response = await fetch(sendUrl, {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-    });
+    // Check if using official WABA API endpoints
+    if (config.useOfficialApi) {
+      console.log("Z-PRO using OFFICIAL WABA API");
+      const targetUrl = `${baseUrl}/SendMessageAPIText`;
+      console.log("Z-PRO WABA sending text to:", phoneClean);
+      console.log("Z-PRO WABA endpoint:", targetUrl);
+      
+      response = await fetch(targetUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${config.apiKey}`,
+        },
+        body: JSON.stringify({
+          number: phoneClean,
+          text: message,
+          externalKey,
+        }),
+      });
+    } else {
+      // Unofficial API (legacy behavior) - GET with query params
+      console.log("Z-PRO using UNOFFICIAL API (legacy)");
+      const params = new URLSearchParams({
+        body: message,
+        number: phoneClean,
+        externalKey,
+        bearertoken: config.apiKey,
+        isClosed: "false",
+      });
+      
+      const sendUrl = `${baseUrl}/params/?${params.toString()}`;
+      console.log("Z-PRO sending to:", sendUrl.substring(0, 150) + "...");
+      
+      response = await fetch(sendUrl, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+    }
     
     const responseText = await response.text();
     console.log("Z-PRO response status:", response.status);
@@ -184,76 +207,6 @@ async function sendWppconnectMessage(phone: string, message: string, config: Pro
   }
 }
 
-// Meta WhatsApp Cloud API (Official) - https://developers.facebook.com/docs/whatsapp/cloud-api
-async function sendMetaCloudMessage(phone: string, message: string, config: ProviderSettings): Promise<SendResult> {
-  try {
-    // instance_id = Phone Number ID from Meta Business
-    // api_key = Access Token (System User or temporary)
-    const phoneNumberId = config.instanceId;
-    const accessToken = config.apiKey;
-    
-    if (!phoneNumberId) {
-      return { success: false, error: "Phone Number ID não configurado. Configure o ID do número no campo 'ID da Instância'." };
-    }
-    
-    // Format phone: must include country code, no + sign
-    let phoneClean = phone.replace(/\D/g, "");
-    if (!phoneClean.startsWith("55")) {
-      phoneClean = "55" + phoneClean;
-    }
-    
-    // Meta Cloud API endpoint
-    const targetUrl = `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`;
-    console.log("Meta Cloud API sending to:", phoneClean);
-    console.log("Meta Cloud API endpoint:", targetUrl);
-    
-    const response = await fetch(targetUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({
-        messaging_product: "whatsapp",
-        recipient_type: "individual",
-        to: phoneClean,
-        type: "text",
-        text: {
-          preview_url: false,
-          body: message,
-        },
-      }),
-    });
-    
-    const responseText = await response.text();
-    console.log("Meta Cloud API response status:", response.status);
-    console.log("Meta Cloud API response:", responseText);
-    
-    let data;
-    try {
-      data = JSON.parse(responseText);
-    } catch {
-      return { success: false, error: `Resposta inválida da API Meta: ${responseText.substring(0, 200)}` };
-    }
-    
-    if (response.ok && data.messages && data.messages[0]?.id) {
-      return { success: true, messageId: data.messages[0].id };
-    }
-    
-    // Handle Meta API errors
-    if (data.error) {
-      const errorMsg = data.error.message || data.error.error_user_msg || "Erro desconhecido";
-      const errorCode = data.error.code ? ` (código: ${data.error.code})` : "";
-      return { success: false, error: `${errorMsg}${errorCode}` };
-    }
-    
-    return { success: false, error: `Erro ${response.status}: ${JSON.stringify(data)}` };
-  } catch (error: any) {
-    console.error("Meta Cloud API fetch error:", error);
-    return { success: false, error: `Erro de conexão: ${error.message}` };
-  }
-}
-
 interface SendTestRequest {
   phone: string;
   message?: string;
@@ -327,27 +280,21 @@ _Enviado em: ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo
 
     let result: SendResult;
 
-    // If using official Meta Cloud API, use that provider regardless of selected provider
-    if (providerSettings.useOfficialApi) {
-      console.log("Using Meta WhatsApp Cloud API (Official)");
-      result = await sendMetaCloudMessage(phone, testMessage, providerSettings);
-    } else {
-      switch (whatsappProvider) {
-        case "zpro":
-          result = await sendZproMessage(phone, testMessage, providerSettings);
-          break;
-        case "zapi":
-          result = await sendZapiMessage(phone, testMessage, providerSettings);
-          break;
-        case "evolution":
-          result = await sendEvolutionMessage(phone, testMessage, providerSettings);
-          break;
-        case "wppconnect":
-          result = await sendWppconnectMessage(phone, testMessage, providerSettings);
-          break;
-        default:
-          result = { success: false, error: `Provedor desconhecido: ${whatsappProvider}` };
-      }
+    switch (whatsappProvider) {
+      case "zpro":
+        result = await sendZproMessage(phone, testMessage, providerSettings);
+        break;
+      case "zapi":
+        result = await sendZapiMessage(phone, testMessage, providerSettings);
+        break;
+      case "evolution":
+        result = await sendEvolutionMessage(phone, testMessage, providerSettings);
+        break;
+      case "wppconnect":
+        result = await sendWppconnectMessage(phone, testMessage, providerSettings);
+        break;
+      default:
+        result = { success: false, error: `Provedor desconhecido: ${whatsappProvider}` };
     }
 
     if (result.success) {

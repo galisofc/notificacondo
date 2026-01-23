@@ -42,7 +42,7 @@ interface WhatsAppConfigRow {
   use_official_api?: boolean;
 }
 
-// Z-PRO Provider - Unofficial endpoints only
+// Z-PRO Provider - Supports both unofficial (/params) and official WABA (SendMessageAPIText) endpoints
 const zproProvider: ProviderConfig = {
   async sendMessage(phone: string, message: string, config: ProviderSettings) {
     const baseUrl = config.apiUrl.replace(/\/$/, "");
@@ -55,22 +55,44 @@ const zproProvider: ProviderConfig = {
     }
     
     try {
-      // Unofficial API (legacy behavior)
-      const params = new URLSearchParams({
-        body: message,
-        number: phoneClean,
-        externalKey,
-        bearertoken: config.apiKey,
-        isClosed: "false"
-      });
+      let response;
       
-      const sendUrl = `${baseUrl}/params/?${params.toString()}`;
-      console.log("Z-PRO sending to:", sendUrl.substring(0, 150) + "...");
-      
-      const response = await fetch(sendUrl, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      });
+      // Check if using official WABA API endpoints
+      if (config.useOfficialApi) {
+        console.log("Z-PRO using OFFICIAL WABA API");
+        const targetUrl = `${baseUrl}/SendMessageAPIText`;
+        console.log("Z-PRO WABA sending text to:", phoneClean);
+        
+        response = await fetch(targetUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${config.apiKey}`,
+          },
+          body: JSON.stringify({
+            number: phoneClean,
+            text: message,
+            externalKey,
+          }),
+        });
+      } else {
+        // Unofficial API (legacy behavior)
+        const params = new URLSearchParams({
+          body: message,
+          number: phoneClean,
+          externalKey,
+          bearertoken: config.apiKey,
+          isClosed: "false"
+        });
+        
+        const sendUrl = `${baseUrl}/params/?${params.toString()}`;
+        console.log("Z-PRO sending to:", sendUrl.substring(0, 150) + "...");
+        
+        response = await fetch(sendUrl, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+      }
       
       const responseText = await response.text();
       console.log("Z-PRO response status:", response.status);

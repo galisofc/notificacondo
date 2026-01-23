@@ -34,7 +34,7 @@ interface WhatsAppConfigRow {
   use_official_api?: boolean;
 }
 
-// Z-PRO Provider - Unofficial endpoints only (/params, /url)
+// Z-PRO Provider - Supports both unofficial (/params, /url) and official WABA (SendMessageAPIText, SendMessageAPIFileURL) endpoints
 const zproProvider: ProviderConfig = {
   async sendMessage(phone: string, message: string, config: ProviderSettings, imageUrl?: string) {
     const baseUrl = config.apiUrl.replace(/\/$/, "");
@@ -49,47 +49,91 @@ const zproProvider: ProviderConfig = {
         externalKey = config.apiKey;
       }
       
-      // Unofficial API (legacy behavior)
-      console.log("Z-PRO using UNOFFICIAL API (legacy)");
-      
-      if (imageUrl) {
-        // Unofficial: Send image with caption via POST /url endpoint
-        console.log("Z-PRO sending image to:", phoneClean);
-        console.log("Image URL:", imageUrl.substring(0, 100) + "...");
-        const targetUrl = `${baseUrl}/url`;
-        console.log("Z-PRO image endpoint:", targetUrl);
+      // Check if using official WABA API endpoints
+      if (config.useOfficialApi) {
+        console.log("Z-PRO using OFFICIAL WABA API");
+        
+        if (imageUrl) {
+          // Official API: Send image via SendMessageAPIFileURL
+          const targetUrl = `${baseUrl}/SendMessageAPIFileURL`;
+          console.log("Z-PRO WABA sending image to:", phoneClean);
+          console.log("Z-PRO WABA endpoint:", targetUrl);
+          
+          response = await fetch(targetUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${config.apiKey}`,
+            },
+            body: JSON.stringify({
+              number: phoneClean,
+              fileUrl: imageUrl,
+              caption: message,
+              externalKey,
+            }),
+          });
+        } else {
+          // Official API: Send text via SendMessageAPIText
+          const targetUrl = `${baseUrl}/SendMessageAPIText`;
+          console.log("Z-PRO WABA sending text to:", phoneClean);
+          console.log("Z-PRO WABA endpoint:", targetUrl);
+          
+          response = await fetch(targetUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${config.apiKey}`,
+            },
+            body: JSON.stringify({
+              number: phoneClean,
+              text: message,
+              externalKey,
+            }),
+          });
+        }
+      } else {
+        // Unofficial API (legacy behavior)
+        console.log("Z-PRO using UNOFFICIAL API (legacy)");
+        
+        if (imageUrl) {
+          // Unofficial: Send image with caption via POST /url endpoint
+          console.log("Z-PRO sending image to:", phoneClean);
+          console.log("Image URL:", imageUrl.substring(0, 100) + "...");
+          const targetUrl = `${baseUrl}/url`;
+          console.log("Z-PRO image endpoint:", targetUrl);
 
-        response = await fetch(targetUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${config.apiKey}`,
-          },
-          body: JSON.stringify({
-            mediaUrl: imageUrl,
+          response = await fetch(targetUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${config.apiKey}`,
+            },
+            body: JSON.stringify({
+              mediaUrl: imageUrl,
+              body: message,
+              number: phoneClean,
+              externalKey,
+              isClosed: false,
+            }),
+          });
+        } else {
+          // Unofficial: Send text only via GET
+          const params = new URLSearchParams({
             body: message,
             number: phoneClean,
             externalKey,
-            isClosed: false,
-          }),
-        });
-      } else {
-        // Unofficial: Send text only via GET
-        const params = new URLSearchParams({
-          body: message,
-          number: phoneClean,
-          externalKey,
-          bearertoken: config.apiKey,
-          isClosed: "false",
-        });
-        
-        const sendUrl = `${baseUrl}/params/?${params.toString()}`;
-        console.log("Z-PRO sending text to:", sendUrl.substring(0, 150) + "...");
-        
-        response = await fetch(sendUrl, {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
+            bearertoken: config.apiKey,
+            isClosed: "false",
+          });
+          
+          const sendUrl = `${baseUrl}/params/?${params.toString()}`;
+          console.log("Z-PRO sending text to:", sendUrl.substring(0, 150) + "...");
+          
+          response = await fetch(sendUrl, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+          });
+        }
       }
       
       const responseText = await response.text();
@@ -245,103 +289,6 @@ const wppconnectProvider: ProviderConfig = {
       return { success: true, messageId: data.id };
     }
     return { success: false, error: data.message || "Erro ao enviar mensagem" };
-  },
-};
-
-// Meta WhatsApp Cloud API (Official) - https://developers.facebook.com/docs/whatsapp/cloud-api
-const metaCloudProvider: ProviderConfig = {
-  async sendMessage(phone: string, message: string, config: ProviderSettings, imageUrl?: string) {
-    try {
-      // instance_id = Phone Number ID from Meta Business
-      // api_key = Access Token (System User or temporary)
-      const phoneNumberId = config.instanceId;
-      const accessToken = config.apiKey;
-      
-      if (!phoneNumberId) {
-        return { success: false, error: "Phone Number ID não configurado. Configure o ID do número no campo 'ID da Instância'." };
-      }
-      
-      // Format phone: must include country code, no + sign
-      let phoneClean = phone.replace(/\D/g, "");
-      if (!phoneClean.startsWith("55")) {
-        phoneClean = "55" + phoneClean;
-      }
-      
-      // Meta Cloud API endpoint
-      const targetUrl = `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`;
-      console.log("Meta Cloud API sending to:", phoneClean);
-      console.log("Meta Cloud API endpoint:", targetUrl);
-      
-      let response;
-      
-      if (imageUrl) {
-        // First, send the image
-        console.log("Meta Cloud API sending image:", imageUrl.substring(0, 80) + "...");
-        response = await fetch(targetUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            messaging_product: "whatsapp",
-            recipient_type: "individual",
-            to: phoneClean,
-            type: "image",
-            image: {
-              link: imageUrl,
-              caption: message,
-            },
-          }),
-        });
-      } else {
-        // Send text message
-        response = await fetch(targetUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            messaging_product: "whatsapp",
-            recipient_type: "individual",
-            to: phoneClean,
-            type: "text",
-            text: {
-              preview_url: false,
-              body: message,
-            },
-          }),
-        });
-      }
-      
-      const responseText = await response.text();
-      console.log("Meta Cloud API response status:", response.status);
-      console.log("Meta Cloud API response:", responseText.substring(0, 300));
-      
-      let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch {
-        return { success: false, error: `Resposta inválida da API Meta: ${responseText.substring(0, 200)}` };
-      }
-      
-      if (response.ok && data.messages && data.messages[0]?.id) {
-        return { success: true, messageId: data.messages[0].id };
-      }
-      
-      // Handle Meta API errors
-      if (data.error) {
-        const errorMsg = data.error.message || data.error.error_user_msg || "Erro desconhecido";
-        const errorCode = data.error.code ? ` (código: ${data.error.code})` : "";
-        return { success: false, error: `${errorMsg}${errorCode}` };
-      }
-      
-      return { success: false, error: `Erro ${response.status}: ${JSON.stringify(data)}` };
-    } catch (error: any) {
-      console.error("Meta Cloud API fetch error:", error);
-      return { success: false, error: `Erro de conexão: ${error.message}` };
-    }
   },
 };
 
@@ -577,10 +524,7 @@ serve(async (req) => {
 
     const typedConfig = whatsappConfig as WhatsAppConfigRow;
     const whatsappProvider = (typedConfig.provider || "zpro") as WhatsAppProvider;
-    
-    // Use Meta Cloud API when official API is enabled, otherwise use the configured provider
-    const provider = typedConfig.use_official_api ? metaCloudProvider : providers[whatsappProvider];
-    const providerName = typedConfig.use_official_api ? "Meta Cloud API" : whatsappProvider;
+    const provider = providers[whatsappProvider];
 
     console.log(`Using WhatsApp provider: ${whatsappProvider}`);
 
