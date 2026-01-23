@@ -554,8 +554,15 @@ _Mensagem automática - NotificaCondo_`;
       try {
         let result: { success: boolean; messageId?: string; error?: string };
 
-        // Check if WABA mode is enabled and template is configured
-        if (useWabaTemplates && wabaTemplateName && paramsOrder.length > 0 && whatsappProvider === "zpro") {
+        // Validate WABA template - skip WABA mode if template is a test template or not properly configured
+        const isValidWabaTemplate = wabaTemplateName && 
+          wabaTemplateName !== "hello_world" && 
+          wabaTemplateName !== "sample_template" &&
+          !wabaTemplateName.startsWith("test_") &&
+          paramsOrder.length > 0;
+
+        // Check if WABA mode is enabled and template is properly configured
+        if (useWabaTemplates && isValidWabaTemplate && whatsappProvider === "zpro") {
           // ========== WABA TEMPLATE MODE ==========
           console.log(`Sending WABA template "${wabaTemplateName}" to ${resident.phone}`);
           
@@ -578,7 +585,7 @@ _Mensagem automática - NotificaCondo_`;
           const wabaResult = await sendWabaTemplate(
             {
               phone: resident.phone!,
-              templateName: wabaTemplateName,
+              templateName: wabaTemplateName!,
               language: wabaLanguage,
               params,
             },
@@ -595,6 +602,10 @@ _Mensagem automática - NotificaCondo_`;
             error: wabaResult.error,
           };
         } else {
+          // Log reason for falling back to legacy mode
+          if (useWabaTemplates && !isValidWabaTemplate) {
+            console.log(`WABA mode enabled but template not properly configured (template: ${wabaTemplateName}, params: ${paramsOrder.length}). Falling back to free text mode.`);
+          }
           // ========== FREE TEXT MODE (legacy) ==========
           let message = templateContent || defaultMessage;
           message = message
