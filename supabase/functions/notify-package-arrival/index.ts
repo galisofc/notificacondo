@@ -588,6 +588,8 @@ _Mensagem automática - NotificaCondo_`;
               templateName: wabaTemplateName!,
               language: wabaLanguage,
               params,
+              mediaUrl: photo_url || undefined,  // Include package photo as header image
+              mediaType: "image",
             },
             {
               apiUrl: typedConfig.api_url,
