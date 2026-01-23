@@ -6,7 +6,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Multi-provider WhatsApp configuration
 type WhatsAppProvider = "zpro" | "zapi" | "evolution" | "wppconnect";
 
 interface ProviderSettings {
@@ -28,88 +27,142 @@ interface SendResult {
   success: boolean;
   messageId?: string;
   error?: string;
+  errorCode?: string;
 }
 
-// Z-PRO Provider - Uses query parameters via GET
-// API format: GET {api_url}/params/?body=message&number=phone&externalKey=apiKey&bearertoken=token
+// ============================================
+// Z-PRO Provider - Supports WABA and Legacy
+// ============================================
+
+function isZproWabaUrl(url: string): boolean {
+  return url.includes("/v2/api/external/");
+}
+
 async function sendZproMessage(phone: string, message: string, config: ProviderSettings): Promise<SendResult> {
-  const baseUrl = config.apiUrl.replace(/\/$/, ""); // Remove trailing slash
+  const baseUrl = config.apiUrl.replace(/\/$/, "");
   const phoneClean = phone.replace(/\D/g, "");
   
-  // Z-PRO API uses query parameters
-  // Postman uses BearerToken + externalKey (different values)
-  // If instance_id is empty or placeholder, fallback to api_key
-  let externalKey = config.instanceId || "";
-  if (!externalKey || externalKey === "zpro-embedded") {
-    externalKey = config.apiKey;
-  }
-  const params = new URLSearchParams({
-    body: message,
-    number: phoneClean,
-    externalKey,
-    bearertoken: config.apiKey,
-    isClosed: "false",
-  });
-  
-  const sendUrl = `${baseUrl}/params/?${params.toString()}`;
-  
-  console.log("Z-PRO sending to:", sendUrl.substring(0, 150) + "...");
-  console.log("Phone:", phoneClean);
+  console.log(`[Z-PRO] Sending to: ${phoneClean}`);
+  console.log(`[Z-PRO] Base URL: ${baseUrl}`);
   
   try {
-    const response = await fetch(sendUrl, {
-      method: "GET",
-      headers: { 
-        "Content-Type": "application/json",
-      },
-    });
-    
-    const responseText = await response.text();
-    console.log("Z-PRO response status:", response.status);
-    console.log("Z-PRO response body:", responseText);
-    
-    // Try to parse as JSON
-    let data;
-    try {
-      data = JSON.parse(responseText);
-    } catch (e) {
-      console.error("Failed to parse response as JSON:", e);
-      return { 
-        success: false, 
-        error: `Resposta inválida da API: ${responseText.substring(0, 200)}` 
-      };
-    }
-    
-    console.log("Z-PRO parsed response:", data);
-    
-    // Check for session disconnected error
-    if (data.error === "ERR_API_REQUIRES_SESSION") {
-      return { 
-        success: false, 
-        error: "Sessão do WhatsApp desconectada. Acesse o painel do provedor (AtenderChat/Z-PRO) e escaneie o QR Code para reconectar." 
-      };
-    }
-    
-    // Check for success indicators
-    if (response.ok) {
-      if (data.id || data.messageId || data.zapiMessageId || data.message_id || data.key?.id) {
-        return { success: true, messageId: data.id || data.messageId || data.zapiMessageId || data.message_id || data.key?.id };
+    if (isZproWabaUrl(baseUrl)) {
+      // WABA (Official WhatsApp Business API) mode
+      console.log("[Z-PRO] Using WABA mode (POST /SendMessageAPIText)");
+      
+      const endpoint = `${baseUrl}/SendMessageAPIText`;
+      console.log(`[Z-PRO] Endpoint: ${endpoint}`);
+      
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${config.apiKey}`,
+        },
+        body: JSON.stringify({
+          number: phoneClean,
+          body: message,
+        }),
+      });
+      
+      const responseText = await response.text();
+      console.log(`[Z-PRO] Response status: ${response.status}`);
+      console.log(`[Z-PRO] Response: ${responseText.substring(0, 300)}`);
+      
+      return parseZproResponse(response, responseText);
+    } else {
+      // Legacy /params/ mode
+      console.log("[Z-PRO] Using Legacy mode (GET /params/)");
+      
+      let externalKey = config.instanceId || "";
+      if (!externalKey || externalKey === "zpro-embedded") {
+        externalKey = config.apiKey;
       }
-      if (data.status === "success" || data.success === true || data.status === "PENDING") {
-        return { success: true, messageId: data.id || "sent" };
-      }
-      // Even if no ID, if status is OK consider it success
-      return { success: true, messageId: "sent" };
+      
+      const params = new URLSearchParams({
+        body: message,
+        number: phoneClean,
+        externalKey,
+        bearertoken: config.apiKey,
+        isClosed: "false",
+      });
+      
+      const sendUrl = `${baseUrl}/params/?${params.toString()}`;
+      console.log(`[Z-PRO] URL: ${sendUrl.substring(0, 150)}...`);
+      
+      const response = await fetch(sendUrl, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+      
+      const responseText = await response.text();
+      console.log(`[Z-PRO] Response status: ${response.status}`);
+      console.log(`[Z-PRO] Response: ${responseText.substring(0, 300)}`);
+      
+      return parseZproResponse(response, responseText);
     }
-    
-    return { success: false, error: data.message || data.error || `Erro ${response.status}` };
   } catch (error: any) {
-    console.error("Z-PRO fetch error:", error);
+    console.error("[Z-PRO] Error:", error);
     return { success: false, error: `Erro de conexão: ${error.message}` };
   }
 }
 
-// Z-API Provider
+function parseZproResponse(response: Response, responseText: string): SendResult {
+  // Check for HTML response (wrong endpoint)
+  if (responseText.startsWith("<!DOCTYPE") || responseText.startsWith("<html")) {
+    console.error("[Z-PRO] Received HTML - wrong endpoint");
+    return { 
+      success: false, 
+      error: "Endpoint incorreto. Verifique a URL da API.",
+      errorCode: "INVALID_ENDPOINT"
+    };
+  }
+  
+  let data: any;
+  try {
+    data = JSON.parse(responseText);
+  } catch {
+    return { 
+      success: false, 
+      error: `Resposta inválida: ${responseText.substring(0, 100)}`,
+      errorCode: "INVALID_RESPONSE"
+    };
+  }
+  
+  // Check for session error
+  if (data.error === "ERR_API_REQUIRES_SESSION") {
+    return { 
+      success: false, 
+      error: "Sessão do WhatsApp desconectada. Escaneie o QR Code no painel do provedor.",
+      errorCode: "SESSION_DISCONNECTED"
+    };
+  }
+  
+  if (data.error) {
+    return { success: false, error: data.error, errorCode: "API_ERROR" };
+  }
+  
+  if (response.ok || response.status === 200 || response.status === 201) {
+    const messageId = data.id || data.messageId || data.message_id || data.msgId || data.key?.id || data.wamid;
+    
+    if (messageId) {
+      return { success: true, messageId: String(messageId) };
+    }
+    
+    if (data.status === "success" || data.success === true || data.status === "PENDING" || data.sent === true) {
+      return { success: true, messageId: `zpro_${Date.now()}` };
+    }
+    
+    return { success: true, messageId: `zpro_${Date.now()}` };
+  }
+  
+  return { success: false, error: data.message || `Erro ${response.status}`, errorCode: "HTTP_ERROR" };
+}
+
+// ============================================
+// Other Providers
+// ============================================
+
 async function sendZapiMessage(phone: string, message: string, config: ProviderSettings): Promise<SendResult> {
   try {
     const response = await fetch(`${config.apiUrl}/instances/${config.instanceId}/token/${config.apiKey}/send-text`, {
@@ -122,18 +175,17 @@ async function sendZapiMessage(phone: string, message: string, config: ProviderS
     });
     
     const data = await response.json();
-    console.log("Z-API response:", data);
+    console.log("[Z-API] Response:", JSON.stringify(data).substring(0, 200));
     
     if (response.ok && data.zapiMessageId) {
       return { success: true, messageId: data.zapiMessageId };
     }
-    return { success: false, error: data.message || "Erro ao enviar mensagem" };
+    return { success: false, error: data.message || "Erro ao enviar" };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
 }
 
-// Evolution API Provider
 async function sendEvolutionMessage(phone: string, message: string, config: ProviderSettings): Promise<SendResult> {
   try {
     const response = await fetch(`${config.apiUrl}/message/sendText/${config.instanceId}`, {
@@ -149,18 +201,17 @@ async function sendEvolutionMessage(phone: string, message: string, config: Prov
     });
     
     const data = await response.json();
-    console.log("Evolution API response:", data);
+    console.log("[Evolution] Response:", JSON.stringify(data).substring(0, 200));
     
     if (response.ok && data.key?.id) {
       return { success: true, messageId: data.key.id };
     }
-    return { success: false, error: data.message || "Erro ao enviar mensagem" };
+    return { success: false, error: data.message || "Erro ao enviar" };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
 }
 
-// WPPConnect Provider
 async function sendWppconnectMessage(phone: string, message: string, config: ProviderSettings): Promise<SendResult> {
   try {
     const response = await fetch(`${config.apiUrl}/api/${config.instanceId}/send-message`, {
@@ -177,21 +228,20 @@ async function sendWppconnectMessage(phone: string, message: string, config: Pro
     });
     
     const data = await response.json();
-    console.log("WPPConnect response:", data);
+    console.log("[WPPConnect] Response:", JSON.stringify(data).substring(0, 200));
     
     if (response.ok && data.status === "success") {
       return { success: true, messageId: data.id };
     }
-    return { success: false, error: data.message || "Erro ao enviar mensagem" };
+    return { success: false, error: data.message || "Erro ao enviar" };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
 }
 
-interface SendTestRequest {
-  phone: string;
-  message?: string;
-}
+// ============================================
+// Main Handler
+// ============================================
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -201,10 +251,9 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch WhatsApp config from database
+    // Fetch WhatsApp config
     const { data: whatsappConfig, error: configError } = await supabase
       .from("whatsapp_config")
       .select("*")
@@ -214,35 +263,34 @@ serve(async (req) => {
       .maybeSingle();
 
     if (configError) {
-      console.error("Error fetching WhatsApp config:", configError);
+      console.error("Config error:", configError);
       return new Response(
-        JSON.stringify({ success: false, error: "Erro ao buscar configuração do WhatsApp" }),
+        JSON.stringify({ success: false, error: "Erro ao buscar configuração" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     if (!whatsappConfig) {
-      console.error("WhatsApp not configured in database");
       return new Response(
-        JSON.stringify({ success: false, error: "WhatsApp não configurado. Configure no painel do Super Admin." }),
+        JSON.stringify({ success: false, error: "WhatsApp não configurado" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const { phone, message }: SendTestRequest = await req.json();
+    const { phone, message } = await req.json();
 
     if (!phone) {
       return new Response(
-        JSON.stringify({ success: false, error: "Número de telefone é obrigatório" }),
+        JSON.stringify({ success: false, error: "Telefone obrigatório" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const typedConfig = whatsappConfig as WhatsAppConfigRow;
-    const whatsappProvider = (typedConfig.provider || "zpro") as WhatsAppProvider;
+    const provider = (typedConfig.provider || "zpro") as WhatsAppProvider;
 
-    console.log(`Sending test message via ${whatsappProvider} to ${phone}`);
-    console.log(`API URL: ${typedConfig.api_url}`);
+    console.log(`[Main] Provider: ${provider}`);
+    console.log(`[Main] API URL: ${typedConfig.api_url}`);
 
     const testMessage = message || `🔔 *Teste de Notificação*
 
@@ -260,7 +308,7 @@ _Enviado em: ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo
 
     let result: SendResult;
 
-    switch (whatsappProvider) {
+    switch (provider) {
       case "zpro":
         result = await sendZproMessage(phone, testMessage, providerSettings);
         break;
@@ -274,25 +322,26 @@ _Enviado em: ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo
         result = await sendWppconnectMessage(phone, testMessage, providerSettings);
         break;
       default:
-        result = { success: false, error: `Provedor desconhecido: ${whatsappProvider}` };
+        result = { success: false, error: `Provedor desconhecido: ${provider}` };
     }
 
     if (result.success) {
-      console.log("Test message sent successfully:", result.messageId);
+      console.log(`[Main] Success! Message ID: ${result.messageId}`);
       return new Response(
         JSON.stringify({
           success: true,
-          message: "Mensagem de teste enviada com sucesso!",
+          message: "Mensagem enviada com sucesso!",
           message_id: result.messageId,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     } else {
-      console.error("Failed to send test message:", result.error);
+      console.error(`[Main] Failed: ${result.error}`);
       return new Response(
         JSON.stringify({
           success: false,
-          error: result.error || "Falha ao enviar mensagem de teste",
+          error: result.error,
+          errorCode: result.errorCode,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
