@@ -67,7 +67,7 @@ async function sendZproImage(phone: string, imageUrl: string, caption: string, c
       },
       body: JSON.stringify({
         mediaUrl: imageUrl,
-        body: caption,
+        caption: caption,
         number: phoneClean,
         externalKey,
         isClosed: false,
