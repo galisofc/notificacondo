@@ -80,24 +80,6 @@ export default function RegisterPackage() {
   const [isSavingResident, setIsSavingResident] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
 
-  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-  const isRetryableError = (err: any) => {
-    const code = err?.code;
-    const message = String(err?.message || err || "");
-
-    // 57014 = statement timeout (PostgREST)
-    // 544 can show up as a transient timeout in some setups
-    if (code === "57014" || code === "544") return true;
-
-    // Browser/network transient errors
-    if (message.includes("Failed to fetch")) return true;
-    if (message.includes("NetworkError")) return true;
-    if (message.includes("timeout")) return true;
-
-    return false;
-  };
-
   // Fetch porter's condominiums
   useEffect(() => {
     const fetchCondominiums = async () => {
@@ -228,9 +210,10 @@ export default function RegisterPackage() {
     setIsSubmitting(true);
 
     try {
+      // 1. Upload image to storage
       const pickupCode = generatePickupCode();
       const fileName = `${Date.now()}_${pickupCode}.jpg`;
-
+      
       // Convert base64 to blob
       const base64Data = capturedImage.split(",")[1];
       const byteCharacters = atob(base64Data);
@@ -241,68 +224,38 @@ export default function RegisterPackage() {
       const byteArray = new Uint8Array(byteNumbers);
       const blob = new Blob([byteArray], { type: "image/jpeg" });
 
-      // Retry transient backend/network failures (timeouts, failed fetch, etc.)
-      const maxAttempts = 2;
-      let lastError: any = null;
-      let packageData: { id: string } | null = null;
-      let publicPhotoUrl: string | null = null;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("package-photos")
+        .upload(fileName, blob, {
+          contentType: "image/jpeg",
+        });
 
-      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        try {
-          // 1) Upload image (upsert to avoid duplicate filename errors on retry)
-          const { error: uploadError } = await supabase.storage
-            .from("package-photos")
-            .upload(fileName, blob, {
-              contentType: "image/jpeg",
-              upsert: true,
-            });
+      if (uploadError) throw uploadError;
 
-          if (uploadError) throw uploadError;
+      // 2. Get public URL
+      const { data: urlData } = supabase.storage
+        .from("package-photos")
+        .getPublicUrl(fileName);
 
-          // 2) Get public URL
-          const { data: urlData } = supabase.storage
-            .from("package-photos")
-            .getPublicUrl(fileName);
+      // 3. Insert package record
+      const { data: packageData, error: insertError } = await supabase
+        .from("packages")
+        .insert({
+          condominium_id: selectedCondominium,
+          block_id: selectedBlock,
+          apartment_id: selectedApartment,
+          received_by: user.id,
+          pickup_code: pickupCode,
+          description: description || null,
+          photo_url: urlData.publicUrl,
+          status: "pendente",
+          package_type_id: selectedPackageType || null,
+          tracking_code: trackingCode || null,
+        })
+        .select()
+        .single();
 
-          publicPhotoUrl = urlData.publicUrl;
-
-          // 3) Insert package record
-          const { data, error: insertError } = await supabase
-            .from("packages")
-            .insert({
-              condominium_id: selectedCondominium,
-              block_id: selectedBlock,
-              apartment_id: selectedApartment,
-              received_by: user.id,
-              pickup_code: pickupCode,
-              description: description || null,
-              photo_url: publicPhotoUrl,
-              status: "pendente",
-              package_type_id: selectedPackageType || null,
-              tracking_code: trackingCode || null,
-            })
-            .select("id")
-            .single();
-
-          if (insertError) throw insertError;
-          packageData = data;
-          break;
-        } catch (err) {
-          lastError = err;
-          const retryable = isRetryableError(err);
-          console.warn(`RegisterPackage attempt ${attempt}/${maxAttempts} failed`, {
-            retryable,
-            err,
-          });
-
-          if (!retryable || attempt === maxAttempts) break;
-          await sleep(800 * attempt);
-        }
-      }
-
-      if (!packageData || !publicPhotoUrl) {
-        throw lastError || new Error("Falha ao registrar encomenda");
-      }
+      if (insertError) throw insertError;
 
       // 4. Send WhatsApp notification (non-blocking)
       let notifResult: NotificationResult = { sent: false, count: 0 };
@@ -314,7 +267,7 @@ export default function RegisterPackage() {
               package_id: packageData.id,
               apartment_id: selectedApartment,
               pickup_code: pickupCode,
-              photo_url: publicPhotoUrl,
+              photo_url: urlData.publicUrl,
             },
           }
         );
@@ -348,9 +301,7 @@ export default function RegisterPackage() {
       console.error("Error registering package:", error);
       toast({
         title: "Erro ao registrar",
-        description: isRetryableError(error)
-          ? "Instabilidade temporária no sistema. Tente novamente em alguns segundos."
-          : String((error as any)?.message || "Não foi possível registrar a encomenda. Tente novamente."),
+        description: "Não foi possível registrar a encomenda. Tente novamente.",
         variant: "destructive",
       });
     } finally {

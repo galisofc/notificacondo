@@ -7,6 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Input validation schema
 const TestConnectionSchema = z.object({
   provider: z.enum(["zpro", "zapi", "evolution", "wppconnect"]).optional(),
   api_url: z.string().url("URL inválida").max(500).optional(),
@@ -22,11 +23,13 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Authentication
+    // ========== AUTHENTICATION ==========
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
+      console.error("No authorization header");
       return new Response(
         JSON.stringify({ success: false, error: "Não autorizado" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -37,13 +40,14 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
+      console.error("Auth error:", authError);
       return new Response(
         JSON.stringify({ success: false, error: "Não autorizado" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Authorization: Only super_admin
+    // ========== AUTHORIZATION: Only super_admin can test WhatsApp ==========
     const { data: roleData } = await supabase
       .from("user_roles")
       .select("role")
@@ -52,15 +56,16 @@ serve(async (req) => {
       .maybeSingle();
 
     if (!roleData) {
+      console.error(`User ${user.id} is not super_admin`);
       return new Response(
-        JSON.stringify({ success: false, error: "Apenas Super Admins podem testar" }),
+        JSON.stringify({ success: false, error: "Acesso negado. Apenas Super Admins podem testar a conexão" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     console.log(`Super admin ${user.id} testing WhatsApp connection`);
 
-    // Parse body
+    // ========== INPUT VALIDATION ==========
     let body = null;
     try {
       body = await req.json().catch(() => null);
@@ -71,8 +76,13 @@ serve(async (req) => {
     if (body) {
       const parsed = TestConnectionSchema.safeParse(body);
       if (!parsed.success) {
+        console.error("Validation error:", parsed.error.errors);
         return new Response(
-          JSON.stringify({ success: false, error: "Dados inválidos", details: parsed.error.errors.map(e => e.message) }),
+          JSON.stringify({ 
+            success: false,
+            error: "Dados inválidos", 
+            details: parsed.error.errors.map(e => e.message) 
+          }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -89,7 +99,7 @@ serve(async (req) => {
       instance_id = body.instance_id ?? "";
       console.log(`Testing connection using request body provider=${provider}`);
     } else {
-      // Fetch from database
+      // Fetch WhatsApp config from database
       const { data: whatsappConfig, error: configError } = await supabase
         .from("whatsapp_config")
         .select("*")
@@ -99,6 +109,7 @@ serve(async (req) => {
         .maybeSingle();
 
       if (configError) {
+        console.error("Error fetching WhatsApp config:", configError);
         return new Response(
           JSON.stringify({ success: false, error: "Erro ao buscar configuração" }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -113,18 +124,19 @@ serve(async (req) => {
       }
 
       ({ provider, api_url, api_key, instance_id } = whatsappConfig as any);
-      console.log(`Testing from database: provider=${provider}`);
+      console.log(`Testing ${provider} connection (db config)...`);
     }
 
-    const baseUrl = api_url.replace(/\/$/, "");
-    let testUrl = "";
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
 
-    // Build test URL based on provider
+    let testUrl = "";
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
     switch (provider) {
       case "zpro": {
-        // For Z-PRO, always use the GET /params/ method with a ping test
-        // This works for both legacy URLs and WABA URLs (the baseUrl already contains the path)
+        const baseUrl = api_url.replace(/\/$/, "");
+        // If instance_id is empty or placeholder, fallback to api_key
         let externalKey = instance_id || "";
         if (!externalKey || externalKey === "zpro-embedded") {
           externalKey = api_key;
@@ -137,7 +149,6 @@ serve(async (req) => {
           isClosed: "false",
         });
         testUrl = `${baseUrl}/params/?${params.toString()}`;
-        console.log(`Testing URL: ${testUrl.substring(0, 80)}...`);
         break;
       }
       case "zapi":
@@ -155,118 +166,138 @@ serve(async (req) => {
         testUrl = `${api_url}/status`;
     }
 
-    // Execute the GET test
-    if (testUrl) {
-      try {
-        const response = await fetch(testUrl, { method: "GET", headers });
-        console.log(`Response status: ${response.status}`);
-        const responseText = await response.text();
-        console.log(`Response: ${responseText.substring(0, 200)}`);
+    console.log(`Testing URL: ${testUrl.substring(0, 60)}...`);
+
+    try {
+      const response = await fetch(testUrl, {
+        method: "GET",
+        headers,
+      });
+
+      console.log(`Response status: ${response.status}`);
+      const responseText = await response.text();
+      console.log(`Response: ${responseText.substring(0, 200)}`);
+      
+      // For Z-PRO, we need stricter validation
+      if (provider === "zpro") {
+        // Check for session disconnected error
+        try {
+          const jsonResponse = JSON.parse(responseText);
+          if (jsonResponse.error === "ERR_API_REQUIRES_SESSION") {
+            return new Response(
+              JSON.stringify({ 
+                success: false, 
+                error: "Sessão do WhatsApp desconectada. Acesse o painel do provedor (AtenderChat/Z-PRO) e escaneie o QR Code para reconectar.",
+                errorCode: "SESSION_DISCONNECTED",
+                status: response.status
+              }),
+              { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        } catch {
+          // Not JSON, continue with other checks
+        }
+
+        if (response.status === 401 || response.status === 403) {
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: "Credenciais inválidas (token incorreto)",
+              status: response.status
+            }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
         
-        // Z-PRO validation
-        if (provider === "zpro") {
-          try {
-            const jsonResponse = JSON.parse(responseText);
-            if (jsonResponse.error === "ERR_API_REQUIRES_SESSION") {
-              return new Response(
-                JSON.stringify({ 
-                  success: false, 
-                  error: "Sessão desconectada. Escaneie o QR Code no painel do provedor.",
-                  errorCode: "SESSION_DISCONNECTED",
-                  status: response.status
-                }),
-                { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-              );
-            }
-            
-            // Check for message sent successfully
-            if (jsonResponse.message === "Message sent successfully" || 
-                jsonResponse.status === "success" || 
-                jsonResponse.sent === true ||
-                jsonResponse.id ||
-                jsonResponse.messageId) {
-              return new Response(
-                JSON.stringify({ success: true, message: "Conexão estabelecida", status: response.status }),
-                { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-              );
-            }
-          } catch {
-            // Not JSON - continue with status check
-          }
-
-          if (response.status === 401 || response.status === 403) {
-            return new Response(
-              JSON.stringify({ success: false, error: "Credenciais inválidas", status: response.status }),
-              { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
-          }
-          
-          if (response.status === 404) {
-            return new Response(
-              JSON.stringify({ success: false, error: "Endpoint não encontrado (URL incorreta)", status: response.status }),
-              { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
-          }
-          
-          if (response.status >= 500) {
-            return new Response(
-              JSON.stringify({ success: false, error: "Erro no servidor do provedor", status: response.status }),
-              { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
-          }
-          
-          // Status 200, 201, or 400 (sometimes returns 400 for valid but wrong params) are OK for zpro
-          if (response.status === 200 || response.status === 201 || response.status === 400) {
-            return new Response(
-              JSON.stringify({ success: true, message: "Credenciais válidas", status: response.status }),
-              { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
-          }
-          
+        if (response.status === 404) {
           return new Response(
-            JSON.stringify({ success: false, error: `Resposta inesperada: ${response.status}`, status: response.status }),
+            JSON.stringify({ 
+              success: false, 
+              error: "Endpoint não encontrado (URL incorreta)",
+              status: response.status
+            }),
             { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-
-        // Other providers
-        if (response.ok) {
-          try {
-            const data = JSON.parse(responseText);
-            return new Response(
-              JSON.stringify({ success: true, message: "Conexão estabelecida", data }),
-              { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
-          } catch {
-            return new Response(
-              JSON.stringify({ success: true, message: "Conexão estabelecida" }),
-              { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
-          }
-        } else {
+        
+        if (response.status >= 500) {
           return new Response(
-            JSON.stringify({ success: false, error: `Falha: ${response.status}`, details: responseText }),
+            JSON.stringify({ 
+              success: false, 
+              error: "Erro no servidor do provedor",
+              status: response.status
+            }),
             { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-      } catch (fetchError: any) {
+        
+        if (response.status === 200 || response.status === 201 || response.status === 400) {
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              message: "Credenciais válidas",
+              status: response.status
+            }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
         return new Response(
-          JSON.stringify({ success: false, error: `Erro de conexão: ${fetchError.message}` }),
+          JSON.stringify({ 
+            success: false, 
+            error: `Resposta inesperada: ${response.status}`,
+            status: response.status
+          }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-    }
 
-    // Fallback response
-    return new Response(
-      JSON.stringify({ success: false, error: "Nenhum teste executado" }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+      // For other providers, check for success status
+      if (response.ok) {
+        try {
+          const data = JSON.parse(responseText);
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              message: "Conexão estabelecida",
+              data
+            }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        } catch {
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              message: "Conexão estabelecida"
+            }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      } else {
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: `Falha na conexão: ${response.status}`,
+            details: responseText
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    } catch (fetchError: any) {
+      console.error("Fetch error:", fetchError);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Erro de conexão: ${fetchError.message}`
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
   } catch (error: any) {
     console.error("Unexpected error:", error);
     return new Response(
-      JSON.stringify({ success: false, error: "Erro interno" }),
+      JSON.stringify({ success: false, error: "Erro interno do servidor" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
