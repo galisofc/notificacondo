@@ -70,7 +70,7 @@ export async function sendZproMessage(
         },
         body: JSON.stringify({
           mediaUrl: imageUrl,
-          body: message,
+          caption: message,
           number: phoneClean,
           externalKey,
           isClosed: false,
