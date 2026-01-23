@@ -53,9 +53,15 @@ const zproProvider: ProviderConfig = {
       if (config.useOfficialApi) {
         console.log("Z-PRO using OFFICIAL WABA API");
         
+        // For WABA, extract base domain and construct correct endpoint
+        // Current URL format: https://api2.atenderchat.com.br/v2/api/external/{instanceId}
+        // WABA endpoint: https://api2.atenderchat.com.br/v2/api/{channelId}/SendMessageAPIText or SendMessageAPIFileURL
+        const urlParts = baseUrl.match(/^(https?:\/\/[^\/]+)/);
+        const baseDomain = urlParts ? urlParts[1] : baseUrl;
+        
         if (imageUrl) {
           // Official API: Send image via SendMessageAPIFileURL
-          const targetUrl = `${baseUrl}/SendMessageAPIFileURL`;
+          const targetUrl = `${baseDomain}/v2/api/${externalKey}/SendMessageAPIFileURL`;
           console.log("Z-PRO WABA sending image to:", phoneClean);
           console.log("Z-PRO WABA endpoint:", targetUrl);
           
@@ -63,18 +69,17 @@ const zproProvider: ProviderConfig = {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "Authorization": `Bearer ${config.apiKey}`,
+              "externalkey": externalKey,
             },
             body: JSON.stringify({
               number: phoneClean,
               fileUrl: imageUrl,
               caption: message,
-              externalKey,
             }),
           });
         } else {
           // Official API: Send text via SendMessageAPIText
-          const targetUrl = `${baseUrl}/SendMessageAPIText`;
+          const targetUrl = `${baseDomain}/v2/api/${externalKey}/SendMessageAPIText`;
           console.log("Z-PRO WABA sending text to:", phoneClean);
           console.log("Z-PRO WABA endpoint:", targetUrl);
           
@@ -82,12 +87,11 @@ const zproProvider: ProviderConfig = {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "Authorization": `Bearer ${config.apiKey}`,
+              "externalkey": externalKey,
             },
             body: JSON.stringify({
               number: phoneClean,
               text: message,
-              externalKey,
             }),
           });
         }

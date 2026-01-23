@@ -49,7 +49,18 @@ async function sendZproMessage(phone: string, message: string, config: ProviderS
     // Check if using official WABA API endpoints
     if (config.useOfficialApi) {
       console.log("Z-PRO using OFFICIAL WABA API");
-      const targetUrl = `${baseUrl}/SendMessageAPIText`;
+      
+      // For WABA, we need to extract the base domain and construct the correct endpoint
+      // Current URL format: https://api2.atenderchat.com.br/v2/api/external/{instanceId}
+      // WABA endpoint format: https://api2.atenderchat.com.br/v2/api/{channelId}/SendMessageAPIText
+      // The channelId is the instanceId
+      
+      // Extract base domain (e.g., https://api2.atenderchat.com.br)
+      const urlParts = baseUrl.match(/^(https?:\/\/[^\/]+)/);
+      const baseDomain = urlParts ? urlParts[1] : baseUrl;
+      
+      // Build WABA endpoint: /v2/api/{channelId}/SendMessageAPIText
+      const targetUrl = `${baseDomain}/v2/api/${externalKey}/SendMessageAPIText`;
       console.log("Z-PRO WABA sending text to:", phoneClean);
       console.log("Z-PRO WABA endpoint:", targetUrl);
       
@@ -57,12 +68,11 @@ async function sendZproMessage(phone: string, message: string, config: ProviderS
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${config.apiKey}`,
+          "externalkey": externalKey,
         },
         body: JSON.stringify({
           number: phoneClean,
           text: message,
-          externalKey,
         }),
       });
     } else {
