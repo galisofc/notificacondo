@@ -13,6 +13,7 @@ interface ProviderSettings {
   apiUrl: string;
   apiKey: string;
   instanceId: string;
+  useOfficialApi?: boolean;
 }
 
 interface WhatsAppConfigRow {
@@ -22,6 +23,7 @@ interface WhatsAppConfigRow {
   api_key: string;
   instance_id: string;
   is_active: boolean;
+  use_official_api?: boolean;
 }
 
 interface SendResult {
@@ -30,45 +32,63 @@ interface SendResult {
   error?: string;
 }
 
-// Z-PRO Provider - Uses query parameters via GET
-// API format: GET {api_url}/params/?body=message&number=phone&externalKey=apiKey&bearertoken=token
+// Z-PRO Provider - Supports both unofficial (/params) and official WABA (SendMessageAPIText) endpoints
 async function sendZproMessage(phone: string, message: string, config: ProviderSettings): Promise<SendResult> {
-  const baseUrl = config.apiUrl.replace(/\/$/, ""); // Remove trailing slash
+  const baseUrl = config.apiUrl.replace(/\/$/, "");
   const phoneClean = phone.replace(/\D/g, "");
   
-  // Z-PRO API uses query parameters
-  // Postman uses BearerToken + externalKey (different values)
   // If instance_id is empty or placeholder, fallback to api_key
   let externalKey = config.instanceId || "";
   if (!externalKey || externalKey === "zpro-embedded") {
     externalKey = config.apiKey;
   }
-  const params = new URLSearchParams({
-    body: message,
-    number: phoneClean,
-    externalKey,
-    bearertoken: config.apiKey,
-    isClosed: "false",
-  });
-  
-  const sendUrl = `${baseUrl}/params/?${params.toString()}`;
-  
-  console.log("Z-PRO sending to:", sendUrl.substring(0, 150) + "...");
-  console.log("Phone:", phoneClean);
   
   try {
-    const response = await fetch(sendUrl, {
-      method: "GET",
-      headers: { 
-        "Content-Type": "application/json",
-      },
-    });
+    let response;
+    
+    // Check if using official WABA API endpoints
+    if (config.useOfficialApi) {
+      console.log("Z-PRO using OFFICIAL WABA API");
+      const targetUrl = `${baseUrl}/SendMessageAPIText`;
+      console.log("Z-PRO WABA sending text to:", phoneClean);
+      console.log("Z-PRO WABA endpoint:", targetUrl);
+      
+      response = await fetch(targetUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${config.apiKey}`,
+        },
+        body: JSON.stringify({
+          number: phoneClean,
+          text: message,
+          externalKey,
+        }),
+      });
+    } else {
+      // Unofficial API (legacy behavior) - GET with query params
+      console.log("Z-PRO using UNOFFICIAL API (legacy)");
+      const params = new URLSearchParams({
+        body: message,
+        number: phoneClean,
+        externalKey,
+        bearertoken: config.apiKey,
+        isClosed: "false",
+      });
+      
+      const sendUrl = `${baseUrl}/params/?${params.toString()}`;
+      console.log("Z-PRO sending to:", sendUrl.substring(0, 150) + "...");
+      
+      response = await fetch(sendUrl, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+    }
     
     const responseText = await response.text();
     console.log("Z-PRO response status:", response.status);
     console.log("Z-PRO response body:", responseText);
     
-    // Try to parse as JSON
     let data;
     try {
       data = JSON.parse(responseText);
@@ -98,7 +118,6 @@ async function sendZproMessage(phone: string, message: string, config: ProviderS
       if (data.status === "success" || data.success === true || data.status === "PENDING") {
         return { success: true, messageId: data.id || "sent" };
       }
-      // Even if no ID, if status is OK consider it success
       return { success: true, messageId: "sent" };
     }
     
@@ -256,6 +275,7 @@ _Enviado em: ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo
       apiUrl: typedConfig.api_url,
       apiKey: typedConfig.api_key,
       instanceId: typedConfig.instance_id,
+      useOfficialApi: typedConfig.use_official_api || false,
     };
 
     let result: SendResult;

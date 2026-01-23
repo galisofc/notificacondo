@@ -20,6 +20,7 @@ interface ProviderSettings {
   apiUrl: string;
   apiKey: string;
   instanceId: string;
+  useOfficialApi?: boolean;
 }
 
 interface WhatsAppConfigRow {
@@ -30,9 +31,10 @@ interface WhatsAppConfigRow {
   instance_id: string;
   is_active: boolean;
   app_url?: string;
+  use_official_api?: boolean;
 }
 
-// Z-PRO Provider - Uses query parameters via GET for text, POST for images
+// Z-PRO Provider - Supports both unofficial (/params, /url) and official WABA (SendMessageAPIText, SendMessageAPIFileURL) endpoints
 const zproProvider: ProviderConfig = {
   async sendMessage(phone: string, message: string, config: ProviderSettings, imageUrl?: string) {
     const baseUrl = config.apiUrl.replace(/\/$/, "");
@@ -41,52 +43,97 @@ const zproProvider: ProviderConfig = {
     try {
       let response;
       
-      if (imageUrl) {
-        // Send image with caption via POST /url endpoint
-        // Postman: BearerToken (auth header) + externalKey (body)
-        console.log("Z-PRO sending image to:", phoneClean);
-        console.log("Image URL:", imageUrl.substring(0, 100) + "...");
-        const targetUrl = `${baseUrl}/url`;
-        console.log("Z-PRO image endpoint:", targetUrl);
-
-        // If instance_id is empty or placeholder, fallback to api_key
-        let externalKey = config.instanceId || "";
-        if (!externalKey || externalKey === "zpro-embedded") {
-          externalKey = config.apiKey;
+      // If instance_id is empty or placeholder, fallback to api_key
+      let externalKey = config.instanceId || "";
+      if (!externalKey || externalKey === "zpro-embedded") {
+        externalKey = config.apiKey;
+      }
+      
+      // Check if using official WABA API endpoints
+      if (config.useOfficialApi) {
+        console.log("Z-PRO using OFFICIAL WABA API");
+        
+        if (imageUrl) {
+          // Official API: Send image via SendMessageAPIFileURL
+          const targetUrl = `${baseUrl}/SendMessageAPIFileURL`;
+          console.log("Z-PRO WABA sending image to:", phoneClean);
+          console.log("Z-PRO WABA endpoint:", targetUrl);
+          
+          response = await fetch(targetUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${config.apiKey}`,
+            },
+            body: JSON.stringify({
+              number: phoneClean,
+              fileUrl: imageUrl,
+              caption: message,
+              externalKey,
+            }),
+          });
+        } else {
+          // Official API: Send text via SendMessageAPIText
+          const targetUrl = `${baseUrl}/SendMessageAPIText`;
+          console.log("Z-PRO WABA sending text to:", phoneClean);
+          console.log("Z-PRO WABA endpoint:", targetUrl);
+          
+          response = await fetch(targetUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${config.apiKey}`,
+            },
+            body: JSON.stringify({
+              number: phoneClean,
+              text: message,
+              externalKey,
+            }),
+          });
         }
+      } else {
+        // Unofficial API (legacy behavior)
+        console.log("Z-PRO using UNOFFICIAL API (legacy)");
+        
+        if (imageUrl) {
+          // Unofficial: Send image with caption via POST /url endpoint
+          console.log("Z-PRO sending image to:", phoneClean);
+          console.log("Image URL:", imageUrl.substring(0, 100) + "...");
+          const targetUrl = `${baseUrl}/url`;
+          console.log("Z-PRO image endpoint:", targetUrl);
 
-        response = await fetch(targetUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${config.apiKey}`,
-          },
-          body: JSON.stringify({
-            mediaUrl: imageUrl,
+          response = await fetch(targetUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${config.apiKey}`,
+            },
+            body: JSON.stringify({
+              mediaUrl: imageUrl,
+              body: message,
+              number: phoneClean,
+              externalKey,
+              isClosed: false,
+            }),
+          });
+        } else {
+          // Unofficial: Send text only via GET
+          const params = new URLSearchParams({
             body: message,
             number: phoneClean,
             externalKey,
-            isClosed: false,
-          }),
-        });
-      } else {
-        // Send text only via GET (existing behavior)
-        const externalKey = config.instanceId || "";
-        const params = new URLSearchParams({
-          body: message,
-          number: phoneClean,
-          externalKey,
-          bearertoken: config.apiKey,
-          isClosed: "false",
-        });
-        
-        const sendUrl = `${baseUrl}/params/?${params.toString()}`;
-        console.log("Z-PRO sending text to:", sendUrl.substring(0, 150) + "...");
-        
-        response = await fetch(sendUrl, {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
+            bearertoken: config.apiKey,
+            isClosed: "false",
+          });
+          
+          const sendUrl = `${baseUrl}/params/?${params.toString()}`;
+          console.log("Z-PRO sending text to:", sendUrl.substring(0, 150) + "...");
+          
+          response = await fetch(sendUrl, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+          });
+        }
       }
       
       const responseText = await response.text();
@@ -559,6 +606,7 @@ _Mensagem automática - NotificaCondo_`;
             apiUrl: typedConfig.api_url,
             apiKey: typedConfig.api_key,
             instanceId: typedConfig.instance_id,
+            useOfficialApi: typedConfig.use_official_api || false,
           },
           photo_url || undefined
         );
