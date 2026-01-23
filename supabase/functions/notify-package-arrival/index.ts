@@ -63,7 +63,7 @@ const zproProvider: ProviderConfig = {
           },
           body: JSON.stringify({
             mediaUrl: imageUrl,
-            caption: message,
+            body: message,
             number: phoneClean,
             externalKey,
             isClosed: false,
