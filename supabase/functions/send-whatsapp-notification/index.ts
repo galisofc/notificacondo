@@ -61,18 +61,21 @@ const zproProvider: ProviderConfig = {
       if (config.useOfficialApi) {
         console.log("Z-PRO using OFFICIAL WABA API");
         
-        // For WABA, extract base domain and construct correct endpoint
+        // For WABA, we use instanceId as the channel identifier in the URL
+        // and apiKey as the externalkey header for authentication
         const urlParts = baseUrl.match(/^(https?:\/\/[^\/]+)/);
         const baseDomain = urlParts ? urlParts[1] : baseUrl;
-        const targetUrl = `${baseDomain}/v2/api/${externalKey}/SendMessageAPIText`;
+        const channelId = config.instanceId || "";
+        const targetUrl = `${baseDomain}/v2/api/${channelId}/SendMessageAPIText`;
         console.log("Z-PRO WABA sending text to:", phoneClean);
         console.log("Z-PRO WABA endpoint:", targetUrl);
+        console.log("Z-PRO WABA channelId:", channelId);
         
         response = await fetch(targetUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "externalkey": externalKey,
+            "externalkey": config.apiKey,
           },
           body: JSON.stringify({
             number: phoneClean,

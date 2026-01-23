@@ -53,23 +53,24 @@ const zproProvider: ProviderConfig = {
       if (config.useOfficialApi) {
         console.log("Z-PRO using OFFICIAL WABA API");
         
-        // For WABA, extract base domain and construct correct endpoint
-        // Current URL format: https://api2.atenderchat.com.br/v2/api/external/{instanceId}
-        // WABA endpoint: https://api2.atenderchat.com.br/v2/api/{channelId}/SendMessageAPIText or SendMessageAPIFileURL
+        // For WABA, we use instanceId as the channel identifier in the URL
+        // and api_key as the externalkey header for authentication
         const urlParts = baseUrl.match(/^(https?:\/\/[^\/]+)/);
         const baseDomain = urlParts ? urlParts[1] : baseUrl;
+        const channelId = config.instanceId || "";
         
         if (imageUrl) {
           // Official API: Send image via SendMessageAPIFileURL
-          const targetUrl = `${baseDomain}/v2/api/${externalKey}/SendMessageAPIFileURL`;
+          const targetUrl = `${baseDomain}/v2/api/${channelId}/SendMessageAPIFileURL`;
           console.log("Z-PRO WABA sending image to:", phoneClean);
           console.log("Z-PRO WABA endpoint:", targetUrl);
+          console.log("Z-PRO WABA channelId:", channelId);
           
           response = await fetch(targetUrl, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "externalkey": externalKey,
+              "externalkey": config.apiKey,
             },
             body: JSON.stringify({
               number: phoneClean,
@@ -79,15 +80,16 @@ const zproProvider: ProviderConfig = {
           });
         } else {
           // Official API: Send text via SendMessageAPIText
-          const targetUrl = `${baseDomain}/v2/api/${externalKey}/SendMessageAPIText`;
+          const targetUrl = `${baseDomain}/v2/api/${channelId}/SendMessageAPIText`;
           console.log("Z-PRO WABA sending text to:", phoneClean);
           console.log("Z-PRO WABA endpoint:", targetUrl);
+          console.log("Z-PRO WABA channelId:", channelId);
           
           response = await fetch(targetUrl, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "externalkey": externalKey,
+              "externalkey": config.apiKey,
             },
             body: JSON.stringify({
               number: phoneClean,
