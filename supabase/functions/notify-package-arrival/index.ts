@@ -524,7 +524,7 @@ Você tem uma encomenda aguardando na portaria.
 📋 *Tipo:* {tipo_encomenda}
 📍 *Rastreio:* {codigo_rastreio}
 🧑‍💼 *Recebido por:* {porteiro}
-🔑 *Código de retirada:* {codigo}
+🔑 *Código de retirada:* {numeropedido}
 
 Apresente este código na portaria para retirar sua encomenda.
 
@@ -541,7 +541,7 @@ _Mensagem automática - NotificaCondo_`;
         .replace(/{condominio}/g, sanitize(condoName))
         .replace(/{bloco}/g, sanitize(blockName))
         .replace(/{apartamento}/g, sanitize(aptNumber))
-        .replace(/{codigo}/g, pickup_code)
+        .replace(/{numeropedido}/g, pickup_code)
         .replace(/{tipo_encomenda}/g, sanitize(packageTypeName))
         .replace(/{codigo_rastreio}/g, sanitize(trackingCode))
         .replace(/{porteiro}/g, sanitize(porterName));
