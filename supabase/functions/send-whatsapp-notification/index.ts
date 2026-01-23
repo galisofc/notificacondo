@@ -28,6 +28,7 @@ interface ProviderSettings {
   apiUrl: string;
   apiKey: string;
   instanceId: string;
+  useOfficialApi?: boolean;
 }
 
 interface WhatsAppConfigRow {
@@ -38,9 +39,10 @@ interface WhatsAppConfigRow {
   instance_id: string;
   is_active: boolean;
   app_url?: string;
+  use_official_api?: boolean;
 }
 
-// Z-PRO Provider - Uses query parameters via GET
+// Z-PRO Provider - Supports both unofficial (/params) and official WABA (SendMessageAPIText) endpoints
 const zproProvider: ProviderConfig = {
   async sendMessage(phone: string, message: string, config: ProviderSettings) {
     const baseUrl = config.apiUrl.replace(/\/$/, "");
@@ -52,22 +54,45 @@ const zproProvider: ProviderConfig = {
       externalKey = config.apiKey;
     }
     
-    const params = new URLSearchParams({
-      body: message,
-      number: phoneClean,
-      externalKey,
-      bearertoken: config.apiKey,
-      isClosed: "false"
-    });
-    
-    const sendUrl = `${baseUrl}/params/?${params.toString()}`;
-    console.log("Z-PRO sending to:", sendUrl.substring(0, 150) + "...");
-    
     try {
-      const response = await fetch(sendUrl, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      });
+      let response;
+      
+      // Check if using official WABA API endpoints
+      if (config.useOfficialApi) {
+        console.log("Z-PRO using OFFICIAL WABA API");
+        const targetUrl = `${baseUrl}/SendMessageAPIText`;
+        console.log("Z-PRO WABA sending text to:", phoneClean);
+        
+        response = await fetch(targetUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${config.apiKey}`,
+          },
+          body: JSON.stringify({
+            number: phoneClean,
+            text: message,
+            externalKey,
+          }),
+        });
+      } else {
+        // Unofficial API (legacy behavior)
+        const params = new URLSearchParams({
+          body: message,
+          number: phoneClean,
+          externalKey,
+          bearertoken: config.apiKey,
+          isClosed: "false"
+        });
+        
+        const sendUrl = `${baseUrl}/params/?${params.toString()}`;
+        console.log("Z-PRO sending to:", sendUrl.substring(0, 150) + "...");
+        
+        response = await fetch(sendUrl, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+      }
       
       const responseText = await response.text();
       console.log("Z-PRO response status:", response.status);
@@ -477,6 +502,7 @@ Este link é pessoal e intransferível.`;
       apiUrl: whatsappApiUrl,
       apiKey: whatsappApiKey,
       instanceId: whatsappInstanceId,
+      useOfficialApi: (typedConfig as any).use_official_api || false,
     });
 
     // Update notification with result
