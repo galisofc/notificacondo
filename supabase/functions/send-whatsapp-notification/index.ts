@@ -60,19 +60,23 @@ const zproProvider: ProviderConfig = {
       // Check if using official WABA API endpoints
       if (config.useOfficialApi) {
         console.log("Z-PRO using OFFICIAL WABA API");
-        const targetUrl = `${baseUrl}/SendMessageAPIText`;
+        
+        // For WABA, extract base domain and construct correct endpoint
+        const urlParts = baseUrl.match(/^(https?:\/\/[^\/]+)/);
+        const baseDomain = urlParts ? urlParts[1] : baseUrl;
+        const targetUrl = `${baseDomain}/v2/api/${externalKey}/SendMessageAPIText`;
         console.log("Z-PRO WABA sending text to:", phoneClean);
+        console.log("Z-PRO WABA endpoint:", targetUrl);
         
         response = await fetch(targetUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${config.apiKey}`,
+            "externalkey": externalKey,
           },
           body: JSON.stringify({
             number: phoneClean,
             text: message,
-            externalKey,
           }),
         });
       } else {
