@@ -50,25 +50,28 @@ async function sendZproMessage(phone: string, message: string, config: ProviderS
     if (config.useOfficialApi) {
       console.log("Z-PRO using OFFICIAL WABA API");
       
-      // For WABA, we need to extract the base domain and construct the correct endpoint
-      // Current URL format: https://api2.atenderchat.com.br/v2/api/external/{instanceId}
-      // WABA endpoint format: https://api2.atenderchat.com.br/v2/api/{channelId}/SendMessageAPIText
-      // The channelId is the instanceId
+      // For WABA, we use the instance_id as the channel identifier in the URL
+      // The api_key is used as the externalkey header for authentication
+      // URL format: https://api2.atenderchat.com.br/v2/api/{instanceId}/SendMessageAPIText
       
       // Extract base domain (e.g., https://api2.atenderchat.com.br)
       const urlParts = baseUrl.match(/^(https?:\/\/[^\/]+)/);
       const baseDomain = urlParts ? urlParts[1] : baseUrl;
       
+      // The instance_id is the channel identifier for WABA
+      const channelId = config.instanceId || "";
+      
       // Build WABA endpoint: /v2/api/{channelId}/SendMessageAPIText
-      const targetUrl = `${baseDomain}/v2/api/${externalKey}/SendMessageAPIText`;
+      const targetUrl = `${baseDomain}/v2/api/${channelId}/SendMessageAPIText`;
       console.log("Z-PRO WABA sending text to:", phoneClean);
       console.log("Z-PRO WABA endpoint:", targetUrl);
+      console.log("Z-PRO WABA channelId:", channelId);
       
       response = await fetch(targetUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "externalkey": externalKey,
+          "externalkey": config.apiKey,
         },
         body: JSON.stringify({
           number: phoneClean,
