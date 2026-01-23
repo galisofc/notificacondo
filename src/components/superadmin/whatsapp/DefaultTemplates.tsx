@@ -232,7 +232,7 @@ Você tem uma encomenda aguardando na portaria.
 📋 *Tipo:* {tipo_encomenda}
 📍 *Rastreio:* {codigo_rastreio}
 🧑‍💼 *Recebido por:* {porteiro}
-🔑 *Código de retirada:* {codigo}
+🔑 *Código de retirada:* {numeropedido}
 
 Apresente este código na portaria para retirar sua encomenda.
 
