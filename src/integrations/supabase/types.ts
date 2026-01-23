@@ -1776,7 +1776,6 @@ export type Database = {
           is_active: boolean
           provider: string
           updated_at: string
-          use_official_api: boolean | null
         }
         Insert: {
           api_key: string
@@ -1788,7 +1787,6 @@ export type Database = {
           is_active?: boolean
           provider?: string
           updated_at?: string
-          use_official_api?: boolean | null
         }
         Update: {
           api_key?: string
@@ -1800,7 +1798,6 @@ export type Database = {
           is_active?: boolean
           provider?: string
           updated_at?: string
-          use_official_api?: boolean | null
         }
         Relationships: []
       }
