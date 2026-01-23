@@ -21,6 +21,9 @@ interface Template {
   content: string;
   variables: string[];
   is_active: boolean;
+  waba_template_name?: string | null;
+  waba_language?: string | null;
+  params_order?: string[] | null;
 }
 
 export function TemplatesList() {

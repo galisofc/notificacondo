@@ -1777,6 +1777,7 @@ export type Database = {
           provider: string
           updated_at: string
           use_official_api: boolean | null
+          use_waba_templates: boolean | null
         }
         Insert: {
           api_key: string
@@ -1789,6 +1790,7 @@ export type Database = {
           provider?: string
           updated_at?: string
           use_official_api?: boolean | null
+          use_waba_templates?: boolean | null
         }
         Update: {
           api_key?: string
@@ -1801,6 +1803,7 @@ export type Database = {
           provider?: string
           updated_at?: string
           use_official_api?: boolean | null
+          use_waba_templates?: boolean | null
         }
         Relationships: []
       }
@@ -1812,9 +1815,12 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          params_order: string[] | null
           slug: string
           updated_at: string
           variables: string[]
+          waba_language: string | null
+          waba_template_name: string | null
         }
         Insert: {
           content: string
@@ -1823,9 +1829,12 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          params_order?: string[] | null
           slug: string
           updated_at?: string
           variables?: string[]
+          waba_language?: string | null
+          waba_template_name?: string | null
         }
         Update: {
           content?: string
@@ -1834,9 +1843,12 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          params_order?: string[] | null
           slug?: string
           updated_at?: string
           variables?: string[]
+          waba_language?: string | null
+          waba_template_name?: string | null
         }
         Relationships: []
       }
