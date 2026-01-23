@@ -25,6 +25,8 @@ export interface WabaTemplateParams {
   templateName: string;
   language: string;
   params: string[];
+  mediaUrl?: string;  // URL for header image/video/document
+  mediaType?: "image" | "video" | "document";
 }
 
 /**
@@ -55,7 +57,7 @@ export async function sendWabaTemplate(
   template: WabaTemplateParams,
   config: WabaConfig
 ): Promise<WabaSendResult> {
-  const { phone, templateName, language, params } = template;
+  const { phone, templateName, language, params, mediaUrl, mediaType } = template;
   const { apiUrl, apiKey, instanceId } = config;
 
   // Determine externalKey (fallback logic for zpro-embedded or null instanceId)
@@ -63,7 +65,8 @@ export async function sendWabaTemplate(
 
   const endpoint = `${apiUrl}/templateBody`;
   
-  const requestBody = {
+  // Build request body with optional media header
+  const requestBody: Record<string, unknown> = {
     number: formatPhoneForWaba(phone),
     externalKey,
     templateName,
@@ -71,9 +74,24 @@ export async function sendWabaTemplate(
     params
   };
 
+  // Add media header if present (for templates with dynamic image/video header)
+  if (mediaUrl) {
+    // Z-PRO format for media headers in WABA templates
+    requestBody.image = mediaUrl;
+    // Also include header object for compatibility with some Z-PRO versions
+    requestBody.header = {
+      type: mediaType || "image",
+      url: mediaUrl
+    };
+    console.log(`[WABA] Including media header: ${mediaType || "image"} - ${mediaUrl.substring(0, 60)}...`);
+  }
+
   console.log(`[WABA] Sending template "${templateName}" to ${phone}`);
   console.log(`[WABA] Endpoint: ${endpoint}`);
   console.log(`[WABA] Params count: ${params.length}`);
+  if (mediaUrl) {
+    console.log(`[WABA] Has media header: ${mediaType || "image"}`);
+  }
 
   try {
     const response = await fetch(endpoint, {
