@@ -283,7 +283,37 @@ function SidebarNavigation() {
       .on(
         "postgres_changes",
         {
-          event: "*",
+          event: "INSERT",
+          schema: "public",
+          table: "contact_messages",
+        },
+        async (payload) => {
+          const newMessage = payload.new as { name?: string; subject?: string };
+          
+          // Play sound
+          playMessageNotificationSound();
+          
+          // Show toast
+          toast({
+            title: "📬 Nova mensagem de contato",
+            description: newMessage.name 
+              ? `${newMessage.name}: ${newMessage.subject || "Sem assunto"}`
+              : "Uma nova mensagem foi recebida",
+          });
+
+          // Update count
+          const { count } = await supabase
+            .from("contact_messages")
+            .select("*", { count: "exact", head: true })
+            .eq("is_read", false);
+
+          setUnreadMessages(count || 0);
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
           schema: "public",
           table: "contact_messages",
         },
@@ -293,14 +323,7 @@ function SidebarNavigation() {
             .select("*", { count: "exact", head: true })
             .eq("is_read", false);
 
-          const newCount = count || 0;
-          
-          if (newCount > prevUnreadMessagesRef.current) {
-            playMessageNotificationSound();
-          }
-          
-          prevUnreadMessagesRef.current = newCount;
-          setUnreadMessages(newCount);
+          setUnreadMessages(count || 0);
         }
       )
       .subscribe();
@@ -308,7 +331,7 @@ function SidebarNavigation() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, role, playMessageNotificationSound]);
+  }, [user, role, playMessageNotificationSound, toast]);
 
   useEffect(() => {
     if (!user || role !== "sindico" || condoIds.length === 0) return;
