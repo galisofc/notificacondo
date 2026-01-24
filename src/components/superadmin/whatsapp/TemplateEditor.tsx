@@ -9,6 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Save, 
@@ -20,7 +28,10 @@ import {
   Sparkles,
   GripVertical,
   MessageSquare,
-  FileText
+  FileText,
+  Send,
+  CheckCircle2,
+  XCircle
 } from "lucide-react";
 import { TemplatePreview } from "./TemplatePreview";
 import { TEMPLATE_COLORS, getCategoryForSlug } from "./TemplateCategories";
@@ -63,6 +74,12 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
   const [wabaLanguage, setWabaLanguage] = useState(template.waba_language || "pt_BR");
   const [paramsOrder, setParamsOrder] = useState<string[]>(template.params_order || template.variables);
   const [activeTab, setActiveTab] = useState<"content" | "waba">("content");
+  
+  // Test dialog state
+  const [showTestDialog, setShowTestDialog] = useState(false);
+  const [testPhone, setTestPhone] = useState("");
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [isTesting, setIsTesting] = useState(false);
 
   const category = getCategoryForSlug(template.slug);
   const CategoryIcon = category?.icon;
@@ -167,6 +184,60 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
 
   const insertVariable = (variable: string) => {
     setEditContent((prev) => prev + `{${variable}}`);
+  };
+
+  const handleTestWaba = async () => {
+    if (!testPhone.trim()) {
+      toast({
+        title: "Telefone obrigatório",
+        description: "Informe o número para teste",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const templateToTest = wabaTemplateName.trim() || "hello_world";
+    const languageToTest = wabaTemplateName.trim() ? wabaLanguage : "en_US";
+
+    setIsTesting(true);
+    setTestResult(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("send-whatsapp-template-test", {
+        body: {
+          phone: testPhone.replace(/\D/g, ""),
+          templateName: templateToTest,
+          language: languageToTest,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        setTestResult({
+          success: true,
+          message: `Template "${templateToTest}" enviado com sucesso!`,
+        });
+        toast({ title: "Teste enviado!", description: "Verifique o WhatsApp do número informado" });
+      } else {
+        setTestResult({
+          success: false,
+          message: data?.error || data?.message || "Erro desconhecido",
+        });
+      }
+    } catch (err: any) {
+      setTestResult({
+        success: false,
+        message: err.message || "Erro ao enviar teste",
+      });
+      toast({
+        title: "Erro no teste",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsTesting(false);
+    }
   };
 
   const moveParamUp = (index: number) => {
@@ -426,6 +497,33 @@ ${paramsOrder.map((p, i) => `    "${p}"`).join(",\n")}
 }`}
                   </pre>
                 </div>
+
+                <Separator />
+
+                {/* Test Button */}
+                <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 sm:p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h4 className="text-sm font-medium mb-1">Testar Envio WABA</h4>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">
+                        {wabaTemplateName 
+                          ? `Enviar template "${wabaTemplateName}" para um número de teste`
+                          : "Configure o nome do template acima ou teste com 'hello_world'"}
+                      </p>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      onClick={() => {
+                        setTestResult(null);
+                        setShowTestDialog(true);
+                      }}
+                      className="shrink-0 gap-1.5"
+                    >
+                      <Send className="h-3.5 w-3.5" />
+                      Testar
+                    </Button>
+                  </div>
+                </div>
               </div>
             )}
           </ScrollArea>
@@ -481,6 +579,76 @@ ${paramsOrder.map((p, i) => `    "${p}"`).join(",\n")}
           </Button>
         </div>
       </div>
+
+      {/* Test Dialog */}
+      <Dialog open={showTestDialog} onOpenChange={setShowTestDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Testar Template WABA</DialogTitle>
+            <DialogDescription>
+              {wabaTemplateName 
+                ? `Enviar "${wabaTemplateName}" (${wabaLanguage}) para um número de teste`
+                : "Enviar template 'hello_world' para verificar a conexão"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="test-phone">Número do WhatsApp</Label>
+              <Input
+                id="test-phone"
+                value={testPhone}
+                onChange={(e) => setTestPhone(e.target.value)}
+                placeholder="5511999999999"
+                className="font-mono"
+              />
+              <p className="text-xs text-muted-foreground">
+                Digite o número com código do país (ex: 5511999999999)
+              </p>
+            </div>
+
+            {testResult && (
+              <div className={`rounded-lg p-3 flex items-start gap-2 ${
+                testResult.success 
+                  ? "bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800" 
+                  : "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800"
+              }`}>
+                {testResult.success ? (
+                  <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
+                ) : (
+                  <XCircle className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
+                )}
+                <p className={`text-xs ${
+                  testResult.success 
+                    ? "text-green-700 dark:text-green-300" 
+                    : "text-red-700 dark:text-red-300"
+                }`}>
+                  {testResult.message}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTestDialog(false)}>
+              Fechar
+            </Button>
+            <Button onClick={handleTestWaba} disabled={isTesting}>
+              {isTesting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Enviar Teste
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
