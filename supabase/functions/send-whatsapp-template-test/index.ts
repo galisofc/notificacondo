@@ -9,6 +9,7 @@ interface RequestBody {
   phone: string;
   templateName?: string;
   language?: string;
+  isClosed?: boolean;
 }
 
 Deno.serve(async (req) => {
@@ -18,7 +19,12 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { phone, templateName = "hello_world", language = "en_US" }: RequestBody = await req.json();
+    const {
+      phone,
+      templateName = "hello_world",
+      language = "en_US",
+      isClosed = false,
+    }: RequestBody = await req.json();
 
     if (!phone) {
       return new Response(
@@ -57,22 +63,22 @@ Deno.serve(async (req) => {
     // Example: https://{BaseUrl}/v2/api/external/{ApiID}/template
     const endpoint = `${config.api_url}/template`;
 
-    // Determine externalKey (some Z-PRO setups still require it in body)
-    const externalKey = (!config.instance_id || config.instance_id === "zpro-embedded")
-      ? config.api_key
-      : config.instance_id;
-
-    // Build request body (Z-PRO WABA Template)
-    // NOTE: hello_world has no variables, so components can be an empty array.
+    // Build request body EXACTLY like the Postman example (SendTemplateWaba)
+    // Ref: /template expects `number`, `isClosed` and a nested `templateData` payload.
     const requestBody = {
       number: formattedPhone,
-      externalKey,
-      templateName,
-      templateLangCode: language,
-      // Some versions accept params (array of strings) instead of components
-      params: [],
-      // Some versions accept components (array) for variables
-      components: [],
+      isClosed,
+      templateData: {
+        messaging_product: "whatsapp",
+        to: formattedPhone,
+        type: "template",
+        template: {
+          name: templateName,
+          language: {
+            code: language,
+          },
+        },
+      },
     };
 
     console.log("[Template Test] Endpoint:", endpoint);
