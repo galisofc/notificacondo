@@ -117,48 +117,47 @@ export async function sendWabaTemplate(
   template: WabaTemplateParams,
   config: WabaConfig
 ): Promise<WabaSendResult> {
-  const { phone, templateName, language, params, mediaUrl, mediaType, hasFooter } = template;
-  const { apiUrl, apiKey, instanceId } = config;
+  const { phone, templateName, language, params, mediaUrl, mediaType } = template;
+  const { apiUrl, apiKey } = config;
 
   const formattedPhone = formatPhoneForWaba(phone);
   
-  // Use /template endpoint (same as successful test - NOT /templateBody which adds extra fields)
+  // Use /template endpoint (same as successful test)
   const endpoint = `${apiUrl}/template`;
   
-  // Build components array in Meta Cloud API format
-  const components = buildTemplateComponents(params, mediaUrl, mediaType, hasFooter);
+  // Build request body in Z-PRO format (matching the successful hello_world test)
+  // Z-PRO uses "templateParams" object, NOT the complex Meta "templateData" format
+  const templateParams: Record<string, unknown> = {
+    phone: formattedPhone,
+    language: language,
+    templateName: templateName,
+  };
 
-  // Build templateParams array for Z-PRO API format
-  // Z-PRO expects: templateParams: ["value1", "value2", ...]
-  // NOT the complex Meta Cloud API components structure
-  
-  // Build request body in Z-PRO format (same as successful hello_world test)
+  // Add params array if there are body variables
+  // Z-PRO expects: params: ["value1", "value2", ...]
+  if (params.length > 0) {
+    templateParams.params = params;
+  }
+
+  // Add header image if present
+  // Z-PRO format for image header
+  if (mediaUrl) {
+    templateParams.header = {
+      type: mediaType || "image",
+      link: mediaUrl,
+    };
+  }
+
   const requestBody: Record<string, unknown> = {
     number: formattedPhone,
     isClosed: false,
-    templateData: {
-      messaging_product: "whatsapp",
-      to: formattedPhone,
-      type: "template",
-      template: {
-        name: templateName,
-        language: {
-          code: language,
-        },
-        // Z-PRO uses "components" in Meta format for complex templates
-        components: components,
-      },
-    },
+    templateParams: templateParams,
   };
-
-  // NOTE: Do NOT add "image" field at templateData level
-  // The Meta Cloud API expects media ONLY inside components.header.parameters
-  // Adding extra fields causes Error 400
 
   console.log(`[WABA] Sending template "${templateName}" to ${phone}`);
   console.log(`[WABA] Endpoint: ${endpoint}`);
   console.log(`[WABA] Params count: ${params.length}`);
-  console.log(`[WABA] Components: ${JSON.stringify(components).substring(0, 300)}...`);
+  console.log(`[WABA] Template params: ${JSON.stringify(templateParams).substring(0, 300)}...`);
   console.log(`[WABA] FULL PAYLOAD: ${JSON.stringify(requestBody)}`);
   if (mediaUrl) {
     console.log(`[WABA] Has media header: ${mediaType || "image"}`);
