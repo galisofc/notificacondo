@@ -93,7 +93,7 @@ const getBaseSuperAdminNavItems = (): NavStructure => [
     ],
   },
   {
-    title: "Financeiro",
+    title: "Assinaturas",
     icon: Wallet,
     items: [
       { title: "Assinaturas", url: "/superadmin/subscriptions", icon: CreditCard },
@@ -429,7 +429,7 @@ function SidebarNavigation() {
     { title: "Notificações", url: "/notifications", icon: Bell },
     { title: "Relatórios", url: "/reports", icon: BarChart3 },
     {
-      title: "Financeiro",
+      title: "Assinaturas",
       icon: Wallet,
       items: [
         { title: "Assinaturas", url: "/sindico/subscriptions", icon: CreditCard },
