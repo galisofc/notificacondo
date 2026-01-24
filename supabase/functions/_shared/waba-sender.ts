@@ -49,7 +49,11 @@ export function formatPhoneForWaba(phone: string): string {
 
 /**
  * Builds the components array for WABA template in Meta Cloud API format
- * Required by Z-PRO /template endpoint inside templateData
+ * Format: https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages#template-object
+ * 
+ * Structure expected by Meta/WhatsApp:
+ * - Header (optional): { type: "header", parameters: [{ type: "image", image: { link: "url" } }] }
+ * - Body: { type: "body", parameters: [{ type: "text", text: "value" }, ...] }
  */
 function buildTemplateComponents(
   params: string[],
@@ -58,14 +62,15 @@ function buildTemplateComponents(
 ): Array<Record<string, unknown>> {
   const components: Array<Record<string, unknown>> = [];
 
-  // Add header component if media is present
+  // Add header component if media is present (image/video/document)
   if (mediaUrl) {
+    const type = mediaType || "image";
     components.push({
       type: "header",
       parameters: [
         {
-          type: mediaType || "image",
-          [mediaType || "image"]: {
+          type: type,
+          [type]: {
             link: mediaUrl,
           },
         },
@@ -74,12 +79,13 @@ function buildTemplateComponents(
   }
 
   // Add body component with text parameters
+  // Each parameter is an object: { type: "text", text: "value" }
   if (params.length > 0) {
     components.push({
       type: "body",
       parameters: params.map((value) => ({
         type: "text",
-        text: value,
+        text: String(value || ""),
       })),
     });
   }
@@ -114,23 +120,34 @@ export async function sendWabaTemplate(
   // Determine externalKey (fallback logic for zpro-embedded or null instanceId)
   const externalKey = (!instanceId || instanceId === "zpro-embedded") ? apiKey : instanceId;
 
-  const buildRequestBody = (componentsToSend: Array<Record<string, unknown>>) => ({
-    number: formattedPhone,
-    externalKey,
-    isClosed: false,
-    templateData: {
-      messaging_product: "whatsapp",
-      to: formattedPhone,
-      type: "template",
-      template: {
-        name: templateName,
-        language: {
-          code: language,
-        },
-        ...(componentsToSend.length > 0 ? { components: componentsToSend } : {}),
+  // Build the templateData following exact Meta Cloud API format
+  // Reference: User-provided correct payload structure
+  const buildRequestBody = (componentsToSend: Array<Record<string, unknown>>) => {
+    // The inner template object follows Meta Cloud API format exactly
+    const templateObject: Record<string, unknown> = {
+      name: templateName,
+      language: {
+        code: language,
       },
-    },
-  });
+    };
+
+    // Only add components if there are any (header and/or body)
+    if (componentsToSend.length > 0) {
+      templateObject.components = componentsToSend;
+    }
+
+    return {
+      number: formattedPhone,
+      externalKey,
+      isClosed: false,
+      templateData: {
+        messaging_product: "whatsapp",
+        to: formattedPhone,
+        type: "template",
+        template: templateObject,
+      },
+    };
+  };
 
   const requestBody: Record<string, unknown> = buildRequestBody(components);
 
