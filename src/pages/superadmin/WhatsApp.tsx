@@ -1,7 +1,7 @@
 import { Helmet } from "react-helmet-async";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SuperAdminBreadcrumbs from "@/components/superadmin/SuperAdminBreadcrumbs";
-import { ConnectionStatus, TemplatesList } from "@/components/superadmin/whatsapp";
+import { TemplatesList } from "@/components/superadmin/whatsapp";
 
 export default function WhatsApp() {
   return (
@@ -17,12 +17,9 @@ export default function WhatsApp() {
             WhatsApp
           </h1>
           <p className="text-xs sm:text-sm md:text-base text-muted-foreground mt-1">
-            Configure a integração e gerencie os templates de mensagens
+            Gerencie os templates de mensagens
           </p>
         </div>
-
-        {/* Connection Status Card */}
-        <ConnectionStatus />
 
         {/* Templates List with Categories */}
         <TemplatesList />

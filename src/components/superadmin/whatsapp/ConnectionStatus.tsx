@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useDateFormatter } from "@/hooks/useFormattedDate";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,15 +10,13 @@ import {
   XCircle, 
   AlertCircle, 
   Loader2, 
-  RefreshCw,
-  ChevronRight
+  RefreshCw
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type ConnectionStatus = "checking" | "connected" | "disconnected" | "not_configured";
 
 export function ConnectionStatus() {
-  const navigate = useNavigate();
   const { toast } = useToast();
   const [status, setStatus] = useState<ConnectionStatus>("checking");
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -148,10 +145,7 @@ export function ConnectionStatus() {
   const Icon = statusConfig.icon;
 
   return (
-    <Card 
-      className={`${statusConfig.borderClass} ${statusConfig.bgClass} cursor-pointer transition-all hover:shadow-md`}
-      onClick={() => navigate("/superadmin/whatsapp/config")}
-    >
+    <Card className={`${statusConfig.borderClass} ${statusConfig.bgClass}`}>
       <CardContent className="pt-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3 sm:gap-4">
@@ -177,16 +171,12 @@ export function ConnectionStatus() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleRefresh();
-              }}
+              onClick={handleRefresh}
               disabled={isRefreshing}
               className="h-9 w-9"
             >
               <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
             </Button>
-            <ChevronRight className="h-5 w-5 text-muted-foreground" />
           </div>
         </div>
       </CardContent>
