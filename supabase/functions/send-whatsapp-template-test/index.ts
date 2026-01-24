@@ -155,10 +155,23 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     } else {
+      // Detect specific error types for better UX
+      let userFriendlyError = result.error || result.message || `HTTP ${response.status}`;
+      
+      // Check for template not found / not approved errors (400 from Meta)
+      const responseStr = JSON.stringify(result).toLowerCase();
+      if (response.status === 400 || responseStr.includes("400") || responseStr.includes("err_bad_request")) {
+        if (templateName !== "hello_world") {
+          userFriendlyError = `Template "${templateName}" não encontrado ou não aprovado na Meta. Verifique se o nome está correto e se o template foi aprovado no Meta Business Manager.`;
+        } else {
+          userFriendlyError = "Erro de conexão com a Meta. Verifique as credenciais no Meta Business Manager.";
+        }
+      }
+      
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: result.error || result.message || `HTTP ${response.status}`,
+          error: userFriendlyError,
           debug: {
             status: response.status,
             endpoint,
