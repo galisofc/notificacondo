@@ -126,18 +126,14 @@ export async function sendWabaTemplate(
 
   const formattedPhone = formatPhoneForWaba(phone);
   
-  // Use /templateBody endpoint (per Postman / Atende Aí Chat docs)
-  const endpoint = `${apiUrl}/templateBody`;
+  // Use /template endpoint (same as successful test - NOT /templateBody which adds extra fields)
+  const endpoint = `${apiUrl}/template`;
   
   // Build components array in Meta Cloud API format
   const components = buildTemplateComponents(params, mediaUrl, mediaType, hasFooter);
 
-  // Build request body with templateData structure (required by Z-PRO)
-  // Determine externalKey (fallback logic for zpro-embedded or null instanceId)
-  const externalKey = (!instanceId || instanceId === "zpro-embedded") ? apiKey : instanceId;
-
   // Build the templateData following exact Meta Cloud API format
-  // Reference: User-provided correct payload structure
+  // Match the structure that works for hello_world test
   const buildRequestBody = (componentsToSend: Array<Record<string, unknown>>) => {
     // The inner template object follows Meta Cloud API format exactly
     const templateObject: Record<string, unknown> = {
@@ -152,9 +148,9 @@ export async function sendWabaTemplate(
       templateObject.components = componentsToSend;
     }
 
+    // Use same structure as successful test: number, isClosed, templateData (NO externalKey)
     return {
       number: formattedPhone,
-      externalKey,
       isClosed: false,
       templateData: {
         messaging_product: "whatsapp",
