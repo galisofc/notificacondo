@@ -582,14 +582,15 @@ _Mensagem automática - NotificaCondo_`;
           const params = buildParamsArray(variables, paramsOrder);
           console.log(`WABA params: [${params.join(", ")}]`);
 
+          // Note: The Meta template "encomenda_management_5" does NOT have a header image.
+          // Do NOT send mediaUrl here - it will cause a 400 error from Meta.
           const wabaResult = await sendWabaTemplate(
             {
               phone: resident.phone!,
               templateName: wabaTemplateName!,
               language: wabaLanguage,
               params,
-              mediaUrl: photo_url || undefined,  // Include package photo as header image
-              mediaType: "image",
+              // mediaUrl omitted - template has no image header configured in Meta
             },
             {
               apiUrl: typedConfig.api_url,
