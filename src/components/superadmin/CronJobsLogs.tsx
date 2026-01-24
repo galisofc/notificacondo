@@ -35,6 +35,7 @@ import {
   Pause,
   PlayCircle,
   SkipForward,
+  Eye,
 } from "lucide-react";
 import {
   Dialog,
@@ -100,6 +101,7 @@ export function CronJobsLogs() {
   const queryClient = useQueryClient();
   const [selectedJob, setSelectedJob] = useState<CronJob | null>(null);
   const [isRunDialogOpen, setIsRunDialogOpen] = useState(false);
+  const [selectedLogDetails, setSelectedLogDetails] = useState<EdgeFunctionLog | null>(null);
   const { dateTime: formatDateTime, custom: formatCustom } = useDateFormatter();
 
   // Fetch cron jobs
@@ -676,9 +678,16 @@ export function CronJobsLogs() {
                               {log.duration_ms ? `${log.duration_ms}ms` : "—"}
                             </TableCell>
                             <TableCell>{getStatusBadge(log.status)}</TableCell>
-                            <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
-                              {log.error_message || 
-                                (log.result ? JSON.stringify(log.result).substring(0, 50) + "..." : "—")}
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => setSelectedLogDetails(log)}
+                                title="Ver detalhes"
+                              >
+                                <Eye className="h-4 w-4 text-muted-foreground" />
+                              </Button>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -686,7 +695,6 @@ export function CronJobsLogs() {
                     </Table>
                   </div>
 
-                  {/* Mobile Cards */}
                   <div className="md:hidden space-y-3">
                     {edgeFunctionLogs.map((log) => (
                       <div key={log.id} className="border rounded-lg p-3 space-y-2">
@@ -694,7 +702,18 @@ export function CronJobsLogs() {
                           <code className="text-xs bg-muted px-2 py-1 rounded truncate flex-1">
                             {translateFunctionName(log.function_name)}
                           </code>
-                          {getStatusBadge(log.status)}
+                          <div className="flex items-center gap-1">
+                            {getStatusBadge(log.status)}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => setSelectedLogDetails(log)}
+                              title="Ver detalhes"
+                            >
+                              <Eye className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                          </div>
                         </div>
                         
                         <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -849,6 +868,92 @@ export function CronJobsLogs() {
                 <Play className="h-4 w-4" />
               )}
               Executar Agora
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Log Details Modal */}
+      <Dialog open={!!selectedLogDetails} onOpenChange={(open) => !open && setSelectedLogDetails(null)}>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Detalhes da Execução
+            </DialogTitle>
+            <DialogDescription>
+              {selectedLogDetails && (
+                <span className="flex items-center gap-2">
+                  <code className="bg-muted px-2 py-1 rounded text-xs">
+                    {translateFunctionName(selectedLogDetails.function_name)}
+                  </code>
+                  {getTriggerTypeBadge(selectedLogDetails.trigger_type)}
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedLogDetails && (
+            <div className="space-y-4 overflow-y-auto flex-1">
+              {/* Status and Timing */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground font-medium">Status</p>
+                  {getStatusBadge(selectedLogDetails.status)}
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground font-medium">Duração</p>
+                  <p className="text-sm font-medium">
+                    {selectedLogDetails.duration_ms ? `${selectedLogDetails.duration_ms}ms` : "—"}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground font-medium">Início</p>
+                  <p className="text-sm">
+                    {selectedLogDetails.started_at
+                      ? formatCustom(selectedLogDetails.started_at, "dd/MM/yyyy HH:mm:ss")
+                      : "—"}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground font-medium">Fim</p>
+                  <p className="text-sm">
+                    {selectedLogDetails.ended_at
+                      ? formatCustom(selectedLogDetails.ended_at, "dd/MM/yyyy HH:mm:ss")
+                      : "—"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Error Message */}
+              {selectedLogDetails.error_message && (
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground font-medium">Mensagem de Erro</p>
+                  <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+                    <p className="text-sm text-destructive whitespace-pre-wrap break-words">
+                      {selectedLogDetails.error_message}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Result */}
+              {selectedLogDetails.result && (
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground font-medium">Resultado</p>
+                  <div className="bg-muted rounded-lg p-3 overflow-x-auto">
+                    <pre className="text-xs whitespace-pre-wrap break-words">
+                      {JSON.stringify(selectedLogDetails.result, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedLogDetails(null)}>
+              Fechar
             </Button>
           </DialogFooter>
         </DialogContent>
