@@ -199,11 +199,16 @@ export async function sendWabaTemplate(
     }
 
     // Some setups reject templates if we send a header image but the template doesn't have a header.
-    // Retry once without header component on 400.
-    if (!response.ok && response.status === 400 && mediaUrl) {
+    // Z-PRO sometimes returns 500 while embedding a Meta 400 inside the message (AxiosError).
+    // Retry once without header component on:
+    // - direct 400
+    // - 500 containing "status code 400"
+    const indicatesMeta400 = response.status === 500 && responseText.includes("status code 400");
+
+    if (!response.ok && mediaUrl && (response.status === 400 || indicatesMeta400)) {
       const componentsWithoutHeader = components.filter((c) => c.type !== "header");
       const retryBody = buildRequestBody(componentsWithoutHeader);
-      console.log(`[WABA] 400 received. Retrying without header media...`);
+      console.log(`[WABA] Error received (${response.status}${indicatesMeta400 ? "/meta400" : ""}). Retrying without header media...`);
 
       const retry = await doRequest(retryBody);
       response = retry.response;
