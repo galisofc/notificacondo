@@ -108,8 +108,14 @@ const getBaseSuperAdminNavItems = (): NavStructure => [
       { title: "Mensagens", url: "/superadmin/contact-messages", icon: Mail },
       { title: "Logs", url: "/superadmin/logs", icon: FileText },
       { title: "Cron Jobs", url: "/superadmin/cron-jobs", icon: Clock },
-      { title: "WhatsApp", url: "/superadmin/whatsapp", icon: MessageCircle },
-      { title: "Config WhatsApp", url: "/superadmin/whatsapp/config", icon: Cog },
+    ],
+  },
+  {
+    title: "WhatsApp",
+    icon: MessageCircle,
+    items: [
+      { title: "Dashboard", url: "/superadmin/whatsapp", icon: BarChart3 },
+      { title: "Configurações", url: "/superadmin/whatsapp/config", icon: Cog },
     ],
   },
   { title: "Configurações", url: "/superadmin/settings", icon: Settings },
