@@ -70,6 +70,7 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
   const [isSendingImageTest, setIsSendingImageTest] = useState(false);
   const [isSendingImageTestCustom, setIsSendingImageTestCustom] = useState(false);
   const [isSendingImageTestBoth, setIsSendingImageTestBoth] = useState(false);
+  const [isSendingTemplateTest, setIsSendingTemplateTest] = useState(false);
   const [bothTestResult, setBothTestResult] = useState<{ winner: "token" | "custom" | null; results: { token?: { success: boolean; error?: string }; custom?: { success: boolean; error?: string } } } | null>(null);
   const [testResult, setTestResult] = useState<"success" | "error" | null>(null);
   const [showToken, setShowToken] = useState(false);
@@ -292,6 +293,76 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
       });
     } finally {
       setIsSendingTest(false);
+    }
+  };
+
+  // Send WABA template test (hello_world)
+  const handleSendTemplateTest = async () => {
+    if (!testPhone) {
+      toast({
+        title: "Número obrigatório",
+        description: "Digite um número de telefone para enviar o template de teste.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSendingTemplateTest(true);
+
+    try {
+      // Build WABA template request for hello_world (no params needed)
+      const externalKey = config.instance_id || config.api_key;
+      const endpoint = `${config.api_url}/templateBody`;
+      
+      // Format phone number
+      const formattedPhone = testPhone.replace(/\D/g, "");
+      const phoneWithPrefix = formattedPhone.startsWith("55") ? formattedPhone : `55${formattedPhone}`;
+      
+      const requestBody = {
+        number: phoneWithPrefix,
+        externalKey,
+        templateName: "hello_world",
+        language: "en_US",
+        params: []
+      };
+
+      console.log("[Template Test] Sending to:", endpoint);
+      console.log("[Template Test] Body:", JSON.stringify(requestBody, null, 2));
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${config.api_key}`,
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      const result = await response.json();
+      console.log("[Template Test] Response:", result);
+
+      if (response.ok && (result.success !== false)) {
+        toast({ 
+          title: "✅ Template enviado!", 
+          description: "O template hello_world foi enviado. Verifique seu WhatsApp." 
+        });
+        setTestPhone("");
+      } else {
+        toast({
+          title: "❌ Erro ao enviar template",
+          description: result.error || result.message || `HTTP ${response.status}`,
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error("[Template Test] Error:", error);
+      toast({
+        title: "Erro ao enviar template",
+        description: error.message || "Não foi possível enviar o template de teste.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingTemplateTest(false);
     }
   };
 
@@ -626,9 +697,25 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
                   )}
                   Enviar Texto
                 </Button>
+                <Button
+                  onClick={handleSendTemplateTest}
+                  disabled={isSendingTemplateTest || !testPhone}
+                  variant="secondary"
+                  className="shrink-0 gap-2 h-9 sm:h-10 text-sm"
+                >
+                  {isSendingTemplateTest ? (
+                    <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
+                  ) : (
+                    <TestTube className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  )}
+                  Template WABA
+                </Button>
               </div>
               <p className="text-[10px] sm:text-xs text-muted-foreground">
                 Formato: código do país + DDD + número (sem espaços ou traços)
+              </p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
+                💡 O botão "Template WABA" envia o template <code className="bg-muted px-1 rounded">hello_world</code> para testar a API oficial.
               </p>
             </div>
 
