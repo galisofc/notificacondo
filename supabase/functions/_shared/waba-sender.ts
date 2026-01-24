@@ -97,14 +97,10 @@ function buildTemplateComponents(
     });
   }
 
-  // Add footer component if template has static footer (no dynamic params)
-  // Per Meta API: static footers require empty parameters array
-  if (hasFooter) {
-    components.push({
-      type: "footer",
-      parameters: [],
-    });
-  }
+  // NOTE: Static footers do NOT need to be included in components array
+  // Per Meta API: only dynamic components (with variables) need to be sent
+  // The footer is defined in the template itself and renders automatically
+  // Sending { type: "footer", parameters: [] } causes Error 400!
 
   return components;
 }
@@ -155,13 +151,9 @@ export async function sendWabaTemplate(
     },
   };
 
-  // If there's a media header, also add the "image" field at templateData level
-  // Some Z-PRO versions expect this for media templates
-  if (mediaUrl) {
-    (requestBody.templateData as Record<string, unknown>).image = mediaUrl;
-  }
-
-  
+  // NOTE: Do NOT add "image" field at templateData level
+  // The Meta Cloud API expects media ONLY inside components.header.parameters
+  // Adding extra fields causes Error 400
 
   console.log(`[WABA] Sending template "${templateName}" to ${phone}`);
   console.log(`[WABA] Endpoint: ${endpoint}`);
