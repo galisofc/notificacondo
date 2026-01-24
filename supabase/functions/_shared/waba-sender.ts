@@ -125,39 +125,63 @@ export async function sendWabaTemplate(
   // Use /template endpoint (same as successful test)
   const endpoint = `${apiUrl}/template`;
   
-  // Build request body in Z-PRO format (matching the successful hello_world test)
-  // Z-PRO uses "templateParams" object, NOT the complex Meta "templateData" format
-  const templateParams: Record<string, unknown> = {
-    phone: formattedPhone,
-    language: language,
-    templateName: templateName,
+  // Build template object - matching the successful hello_world structure
+  const templateObj: Record<string, unknown> = {
+    name: templateName,
+    language: {
+      code: language,
+    },
   };
 
-  // Add params array if there are body variables
-  // Z-PRO expects: params: ["value1", "value2", ...]
-  if (params.length > 0) {
-    templateParams.params = params;
+  // Add components only if there are params or media (hello_world has none)
+  if (params.length > 0 || mediaUrl) {
+    const components: Array<Record<string, unknown>> = [];
+    
+    // Add header component for media
+    if (mediaUrl) {
+      components.push({
+        type: "header",
+        parameters: [
+          {
+            type: mediaType || "image",
+            [mediaType || "image"]: {
+              link: mediaUrl,
+            },
+          },
+        ],
+      });
+    }
+    
+    // Add body component for text params
+    if (params.length > 0) {
+      components.push({
+        type: "body",
+        parameters: params.map((value) => ({
+          type: "text",
+          text: value,
+        })),
+      });
+    }
+    
+    templateObj.components = components;
   }
 
-  // Add header image if present
-  // Z-PRO format for image header
-  if (mediaUrl) {
-    templateParams.header = {
-      type: mediaType || "image",
-      link: mediaUrl,
-    };
-  }
-
+  // Build request body matching successful test format
   const requestBody: Record<string, unknown> = {
     number: formattedPhone,
     isClosed: false,
-    templateParams: templateParams,
+    templateData: {
+      to: formattedPhone,
+      type: "template",
+      template: templateObj,
+      messaging_product: "whatsapp",
+    },
   };
 
   console.log(`[WABA] Sending template "${templateName}" to ${phone}`);
   console.log(`[WABA] Endpoint: ${endpoint}`);
   console.log(`[WABA] Params count: ${params.length}`);
-  console.log(`[WABA] Template params: ${JSON.stringify(templateParams).substring(0, 300)}...`);
+  console.log(`[WABA] Template obj: ${JSON.stringify(templateObj).substring(0, 300)}...`);
   console.log(`[WABA] FULL PAYLOAD: ${JSON.stringify(requestBody)}`);
   if (mediaUrl) {
     console.log(`[WABA] Has media header: ${mediaType || "image"}`);
