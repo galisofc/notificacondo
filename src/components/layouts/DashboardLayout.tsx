@@ -94,7 +94,7 @@ const getBaseSuperAdminNavItems = (): NavStructure => [
   },
   {
     title: "Assinaturas",
-    icon: Wallet,
+    icon: CreditCard,
     items: [
       { title: "Assinantes", url: "/superadmin/subscriptions", icon: CreditCard },
       { title: "Faturas", url: "/superadmin/invoices", icon: Receipt },
