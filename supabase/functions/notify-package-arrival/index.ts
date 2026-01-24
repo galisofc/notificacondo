@@ -561,8 +561,8 @@ _Mensagem automática - NotificaCondo_`;
           !wabaTemplateName.startsWith("test_") &&
           paramsOrder.length > 0;
 
-        // Check if WABA mode is enabled and template is properly configured
-        if (useWabaTemplates && isValidWabaTemplate && whatsappProvider === "zpro") {
+         // Check if WABA mode is enabled and template is properly configured
+         if (useWabaTemplates && isValidWabaTemplate && whatsappProvider === "zpro") {
           // ========== WABA TEMPLATE MODE ==========
           console.log(`Sending WABA template "${wabaTemplateName}" to ${resident.phone}`);
           
@@ -605,9 +605,28 @@ _Mensagem automática - NotificaCondo_`;
               messageId: wabaResult.messageId,
             };
           } else {
-            console.log(`[WABA] Failed (${wabaResult.error}). Falling back to free text mode for delivery.`);
+            // IMPORTANT: When WABA mode is enabled, we must NOT fall back to free-text.
+            // This ensures we can detect and fix template/Meta/provider issues instead of masking them.
+            console.error(`[WABA] Failed (${wabaResult.error}). WABA mode is enabled, so fallback is disabled.`);
+            result = {
+              success: false,
+              error: wabaResult.error || "WABA_FAILED",
+            };
+          }
+        } else {
+          if (useWabaTemplates) {
+            // WABA mode is enabled, but we can't send via WABA due to configuration/provider mismatch.
+            const reason = !isValidWabaTemplate
+              ? `Template WABA inválido (nome="${wabaTemplateName}", params_order=${paramsOrder.length}).`
+              : `Provedor "${whatsappProvider}" não suporta WABA (apenas "zpro").`;
 
-            // ========== FALLBACK TO FREE TEXT ==========
+            console.error(`[WABA] ${reason} Fallback desabilitado.`);
+            result = {
+              success: false,
+              error: reason,
+            };
+          } else {
+            // ========== FREE TEXT MODE (legacy) ==========
             let message = templateContent || defaultMessage;
             message = message
               .replace(/{nome}/g, sanitize(resident.full_name))
@@ -619,8 +638,12 @@ _Mensagem automática - NotificaCondo_`;
               .replace(/{codigo_rastreio}/g, sanitize(trackingCode))
               .replace(/{porteiro}/g, sanitize(porterName));
 
-            // Keep photo in legacy mode (captioned image) when available
-            const legacy = await provider.sendMessage(
+            console.log(`Sending free text message to ${resident.full_name}`);
+            if (photo_url) {
+              console.log(`Including package photo: ${photo_url.substring(0, 80)}...`);
+            }
+
+            result = await provider.sendMessage(
               resident.phone!,
               message,
               {
@@ -630,45 +653,7 @@ _Mensagem automática - NotificaCondo_`;
               },
               photo_url || undefined
             );
-
-            result = {
-              success: legacy.success,
-              messageId: legacy.messageId,
-              error: legacy.success ? undefined : (legacy.error || wabaResult.error),
-            };
           }
-        } else {
-          // Log reason for falling back to legacy mode
-          if (useWabaTemplates && !isValidWabaTemplate) {
-            console.log(`WABA mode enabled but template not properly configured (template: ${wabaTemplateName}, params: ${paramsOrder.length}). Falling back to free text mode.`);
-          }
-          // ========== FREE TEXT MODE (legacy) ==========
-          let message = templateContent || defaultMessage;
-          message = message
-            .replace(/{nome}/g, sanitize(resident.full_name))
-            .replace(/{condominio}/g, sanitize(condoName))
-            .replace(/{bloco}/g, sanitize(blockName))
-            .replace(/{apartamento}/g, sanitize(aptNumber))
-            .replace(/{numeropedido}/g, pickup_code)
-            .replace(/{tipo_encomenda}/g, sanitize(packageTypeName))
-            .replace(/{codigo_rastreio}/g, sanitize(trackingCode))
-            .replace(/{porteiro}/g, sanitize(porterName));
-
-          console.log(`Sending free text message to ${resident.full_name}`);
-          if (photo_url) {
-            console.log(`Including package photo: ${photo_url.substring(0, 80)}...`);
-          }
-
-          result = await provider.sendMessage(
-            resident.phone!, 
-            message, 
-            {
-              apiUrl: typedConfig.api_url,
-              apiKey: typedConfig.api_key,
-              instanceId: typedConfig.instance_id,
-            },
-            photo_url || undefined
-          );
         }
 
         results.push({
