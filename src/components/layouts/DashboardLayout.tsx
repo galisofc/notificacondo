@@ -101,16 +101,6 @@ const getBaseSuperAdminNavItems = (): NavStructure => [
     ],
   },
   {
-    title: "Sistema",
-    icon: Wrench,
-    items: [
-      { title: "Tipos de Encomenda", url: "/superadmin/package-types", icon: Package },
-      { title: "Mensagens", url: "/superadmin/contact-messages", icon: Mail },
-      { title: "Logs", url: "/superadmin/logs", icon: FileText },
-      { title: "Cron Jobs", url: "/superadmin/cron-jobs", icon: Clock },
-    ],
-  },
-  {
     title: "WhatsApp",
     icon: MessageCircle,
     items: [
@@ -118,7 +108,17 @@ const getBaseSuperAdminNavItems = (): NavStructure => [
       { title: "Configurações", url: "/superadmin/whatsapp/config", icon: Cog },
     ],
   },
-  { title: "Configurações", url: "/superadmin/settings", icon: Settings },
+  {
+    title: "Configurações",
+    icon: Settings,
+    items: [
+      { title: "Geral", url: "/superadmin/settings", icon: Cog },
+      { title: "Tipos de Encomenda", url: "/superadmin/package-types", icon: Package },
+      { title: "Mensagens", url: "/superadmin/contact-messages", icon: Mail },
+      { title: "Logs", url: "/superadmin/logs", icon: FileText },
+      { title: "Cron Jobs", url: "/superadmin/cron-jobs", icon: Clock },
+    ],
+  },
 ];
 
 const residentNavItems: NavStructure = [
