@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,11 +36,21 @@ export default function WhatsAppConfig() {
   const [isSendingTemplateTest, setIsSendingTemplateTest] = useState(false);
   const [testResult, setTestResult] = useState<"success" | "error" | null>(null);
   const [testPhone, setTestPhone] = useState("");
-  const [lastTestedAt, setLastTestedAt] = useState<Date | null>(null);
+  const [lastTestedAt, setLastTestedAt] = useState<Date | null>(() => {
+    const stored = localStorage.getItem("whatsapp_last_tested_at");
+    return stored ? new Date(stored) : null;
+  });
   const [connectionInfo, setConnectionInfo] = useState<{
     phoneNumber?: string;
     businessName?: string;
   } | null>(null);
+
+  // Persist lastTestedAt to localStorage
+  useEffect(() => {
+    if (lastTestedAt) {
+      localStorage.setItem("whatsapp_last_tested_at", lastTestedAt.toISOString());
+    }
+  }, [lastTestedAt]);
 
   const handleTest = async () => {
     setIsTesting(true);
