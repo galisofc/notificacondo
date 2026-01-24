@@ -1,12 +1,9 @@
 import { Helmet } from "react-helmet-async";
-import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SuperAdminBreadcrumbs from "@/components/superadmin/SuperAdminBreadcrumbs";
 import { ConnectionStatus, TemplatesList } from "@/components/superadmin/whatsapp";
 
 export default function WhatsApp() {
-  const navigate = useNavigate();
-
   return (
     <DashboardLayout>
       <Helmet>
@@ -25,7 +22,7 @@ export default function WhatsApp() {
         </div>
 
         {/* Connection Status Card */}
-        <ConnectionStatus onConfigure={() => navigate("/superadmin/whatsapp/config")} />
+        <ConnectionStatus />
 
         {/* Templates List with Categories */}
         <TemplatesList />
