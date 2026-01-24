@@ -59,6 +59,12 @@ import {
   Clock,
   UserX,
   Users,
+  Archive,
+  Calendar,
+  Trash,
+  Play,
+  Pause,
+  Search,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -129,6 +135,13 @@ export default function SuperAdminSettings() {
   const [sindicoDiscount, setSindicoDiscount] = useState<number>(15);
   const [defaultTrialDays, setDefaultTrialDays] = useState<number>(7);
   const [invoiceDueDays, setInvoiceDueDays] = useState<number>(5);
+  const [packageRetentionDays, setPackageRetentionDays] = useState<number>(90);
+  
+  // Package cleanup state
+  const [isCleaningPackages, setIsCleaningPackages] = useState(false);
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [cleanupPreview, setCleanupPreview] = useState<{ count: number } | null>(null);
+  const [isPackageCleanupPaused, setIsPackageCleanupPaused] = useState(false);
   
   const [formData, setFormData] = useState({
     slug: "",
@@ -167,6 +180,9 @@ export default function SuperAdminSettings() {
             break;
           case "invoice_due_days":
             setInvoiceDueDays(isNaN(value) ? 5 : value);
+            break;
+          case "package_retention_days":
+            setPackageRetentionDays(isNaN(value) ? 90 : value);
             break;
         }
       });
@@ -234,6 +250,140 @@ export default function SuperAdminSettings() {
     },
     enabled: !!plans,
   });
+
+  // Package statistics query
+  const { data: packageStats, isLoading: packageStatsLoading, refetch: refetchPackageStats } = useQuery({
+    queryKey: ["package-cleanup-stats", packageRetentionDays],
+    queryFn: async () => {
+      const now = new Date();
+      const cutoff30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const cutoff90 = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString();
+      const cutoff180 = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000).toISOString();
+      const cutoffRetention = new Date(now.getTime() - packageRetentionDays * 24 * 60 * 60 * 1000).toISOString();
+
+      const [total, last30, between30and90, between90and180, over180, toDelete] = await Promise.all([
+        supabase.from("packages").select("*", { count: "exact", head: true }).eq("status", "retirada"),
+        supabase.from("packages").select("*", { count: "exact", head: true }).eq("status", "retirada").gte("picked_up_at", cutoff30),
+        supabase.from("packages").select("*", { count: "exact", head: true }).eq("status", "retirada").lt("picked_up_at", cutoff30).gte("picked_up_at", cutoff90),
+        supabase.from("packages").select("*", { count: "exact", head: true }).eq("status", "retirada").lt("picked_up_at", cutoff90).gte("picked_up_at", cutoff180),
+        supabase.from("packages").select("*", { count: "exact", head: true }).eq("status", "retirada").lt("picked_up_at", cutoff180),
+        supabase.from("packages").select("*", { count: "exact", head: true }).eq("status", "retirada").lt("picked_up_at", cutoffRetention),
+      ]);
+
+      return {
+        total: total.count || 0,
+        last30: last30.count || 0,
+        between30and90: between30and90.count || 0,
+        between90and180: between90and180.count || 0,
+        over180: over180.count || 0,
+        toDelete: toDelete.count || 0,
+      };
+    },
+  });
+
+  // Package cleanup pause status query
+  const { data: packageCleanupPauseStatus, refetch: refetchPauseStatus } = useQuery({
+    queryKey: ["package-cleanup-pause-status"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("cron_job_controls")
+        .select("paused")
+        .eq("function_name", "cleanup-old-packages")
+        .maybeSingle();
+      if (error) throw error;
+      return data?.paused || false;
+    },
+  });
+
+  // Package cleanup logs query
+  const { data: packageCleanupLogs, isLoading: packageLogsLoading, refetch: refetchPackageLogs } = useQuery({
+    queryKey: ["package-cleanup-logs"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("edge_function_logs")
+        .select("*")
+        .eq("function_name", "cleanup-old-packages")
+        .order("started_at", { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Toggle package cleanup pause
+  const togglePackageCleanupPause = async () => {
+    try {
+      const { data, error } = await supabase.rpc("toggle_cron_job_pause", {
+        p_function_name: "cleanup-old-packages",
+      });
+      if (error) throw error;
+      setIsPackageCleanupPaused(data);
+      refetchPauseStatus();
+      toast({
+        title: data ? "Job pausado" : "Job ativado",
+        description: data
+          ? "A limpeza automática foi pausada"
+          : "A limpeza automática foi reativada",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao alternar status",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Simulate package cleanup
+  const handleSimulateCleanup = async () => {
+    setIsSimulating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("cleanup-old-packages", {
+        body: { dry_run: true, retention_days: packageRetentionDays },
+      });
+      if (error) throw error;
+      setCleanupPreview({ count: data.packages_found || 0 });
+      toast({
+        title: "Simulação concluída",
+        description: `${data.packages_found || 0} encomendas seriam removidas`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro na simulação",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSimulating(false);
+    }
+  };
+
+  // Execute package cleanup
+  const handleExecuteCleanup = async () => {
+    setIsCleaningPackages(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("cleanup-old-packages", {
+        body: { retention_days: packageRetentionDays },
+      });
+      if (error) throw error;
+      toast({
+        title: "Limpeza concluída",
+        description: `${data.packages_deleted || 0} encomendas removidas, ${data.photos_deleted || 0} fotos deletadas`,
+      });
+      setCleanupPreview(null);
+      refetchPackageStats();
+      refetchPackageLogs();
+    } catch (error: any) {
+      toast({
+        title: "Erro na limpeza",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsCleaningPackages(false);
+    }
+  };
+
   // Create plan mutation
   const createPlanMutation = useMutation({
     mutationFn: async (data: Omit<Plan, "id">) => {
@@ -543,6 +693,10 @@ export default function SuperAdminSettings() {
             <TabsTrigger value="plans" className="gap-2">
               <CreditCard className="w-4 h-4" />
               Distribuição
+            </TabsTrigger>
+            <TabsTrigger value="packages" className="gap-2">
+              <Archive className="w-4 h-4" />
+              Encomendas
             </TabsTrigger>
             <TabsTrigger value="mercadopago" className="gap-2">
               <CreditCard className="w-4 h-4" />
@@ -1392,6 +1546,265 @@ export default function SuperAdminSettings() {
                     </tbody>
                   </table>
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Packages Tab */}
+          <TabsContent value="packages" className="space-y-6">
+            {/* Configuração de Retenção */}
+            <Card className="bg-gradient-card border-border/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Archive className="w-5 h-5 text-primary" />
+                  Limpeza de Encomendas Antigas
+                </CardTitle>
+                <CardDescription>
+                  Configure o período de retenção e execute a limpeza de encomendas já retiradas
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Período de Retenção */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg border border-border/50">
+                  <div className="flex-1">
+                    <Label htmlFor="package-retention" className="text-base font-medium">
+                      Período de retenção
+                    </Label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Encomendas retiradas há mais tempo serão removidas automaticamente
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Select
+                      value={String(packageRetentionDays)}
+                      onValueChange={(value) => setPackageRetentionDays(parseInt(value, 10))}
+                    >
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="30">30 dias</SelectItem>
+                        <SelectItem value="60">60 dias</SelectItem>
+                        <SelectItem value="90">90 dias</SelectItem>
+                        <SelectItem value="180">180 dias</SelectItem>
+                        <SelectItem value="365">1 ano</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="sm"
+                      onClick={() => updateSettingMutation.mutate({
+                        key: "package_retention_days",
+                        value: String(packageRetentionDays),
+                      })}
+                      disabled={updateSettingMutation.isPending}
+                    >
+                      {updateSettingMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Estatísticas */}
+                <div className="space-y-3">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    Estatísticas de Encomendas Retiradas
+                  </h4>
+                  {packageStatsLoading ? (
+                    <div className="flex justify-center py-4">
+                      <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                    </div>
+                  ) : (
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                        <p className="text-xs text-muted-foreground">Últimos 30 dias</p>
+                        <p className="text-xl font-bold text-foreground">{packageStats?.last30 || 0}</p>
+                      </div>
+                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                        <p className="text-xs text-muted-foreground">31-90 dias</p>
+                        <p className="text-xl font-bold text-foreground">{packageStats?.between30and90 || 0}</p>
+                      </div>
+                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                        <p className="text-xs text-muted-foreground">91-180 dias</p>
+                        <p className="text-xl font-bold text-foreground">{packageStats?.between90and180 || 0}</p>
+                      </div>
+                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                        <p className="text-xs text-muted-foreground">Mais de 180 dias</p>
+                        <p className="text-xl font-bold text-foreground">{packageStats?.over180 || 0}</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Alerta de remoção */}
+                  <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/30">
+                    <div className="flex items-center gap-2">
+                      <Trash className="w-5 h-5 text-destructive" />
+                      <span className="font-medium text-destructive">
+                        Serão removidas ({">"}{packageRetentionDays} dias): {packageStats?.toDelete || 0} encomendas
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Ações */}
+                <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-border/50">
+                  <Button
+                    variant="outline"
+                    onClick={handleSimulateCleanup}
+                    disabled={isSimulating || isCleaningPackages}
+                    className="gap-2"
+                  >
+                    {isSimulating ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Search className="w-4 h-4" />
+                    )}
+                    Simular Limpeza
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={handleExecuteCleanup}
+                    disabled={isCleaningPackages || isSimulating || (packageStats?.toDelete || 0) === 0}
+                    className="gap-2"
+                  >
+                    {isCleaningPackages ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Trash className="w-4 h-4" />
+                    )}
+                    Executar Limpeza
+                  </Button>
+                  <Button
+                    variant={packageCleanupPauseStatus ? "default" : "secondary"}
+                    onClick={togglePackageCleanupPause}
+                    className="gap-2 ml-auto"
+                  >
+                    {packageCleanupPauseStatus ? (
+                      <>
+                        <Play className="w-4 h-4" />
+                        Ativar Cron Job
+                      </>
+                    ) : (
+                      <>
+                        <Pause className="w-4 h-4" />
+                        Pausar Cron Job
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {cleanupPreview && (
+                  <div className="p-4 rounded-lg bg-primary/10 border border-primary/30">
+                    <p className="text-sm">
+                      <strong>Preview:</strong> {cleanupPreview.count} encomendas serão removidas com a configuração de {packageRetentionDays} dias.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Histórico de Execuções */}
+            <Card className="bg-gradient-card border-border/50">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-primary" />
+                    Histórico de Execuções
+                  </CardTitle>
+                  <CardDescription>
+                    Últimas execuções da limpeza de encomendas
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => refetchPackageLogs()}
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {packageLogsLoading ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  </div>
+                ) : !packageCleanupLogs?.length ? (
+                  <p className="text-center text-muted-foreground py-4">
+                    Nenhuma execução registrada
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border/50">
+                          <th className="text-left py-2 px-3 font-medium text-muted-foreground">Data</th>
+                          <th className="text-left py-2 px-3 font-medium text-muted-foreground">Tipo</th>
+                          <th className="text-left py-2 px-3 font-medium text-muted-foreground">Status</th>
+                          <th className="text-right py-2 px-3 font-medium text-muted-foreground">Removidas</th>
+                          <th className="text-right py-2 px-3 font-medium text-muted-foreground">Duração</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {packageCleanupLogs.map((log) => {
+                          const result = log.result as { packages_deleted?: number; dry_run?: boolean } | null;
+                          const startedAt = log.started_at ? new Date(log.started_at) : null;
+                          const endedAt = log.ended_at ? new Date(log.ended_at) : null;
+                          const durationMs = log.duration_ms ?? (startedAt && endedAt ? endedAt.getTime() - startedAt.getTime() : null);
+
+                          return (
+                            <tr key={log.id} className="border-b border-border/30">
+                              <td className="py-2 px-3">
+                                {startedAt?.toLocaleString("pt-BR", {
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </td>
+                              <td className="py-2 px-3">
+                                <Badge variant={log.trigger_type === "scheduled" ? "secondary" : "outline"}>
+                                  {log.trigger_type === "scheduled" ? "Agendado" : "Manual"}
+                                </Badge>
+                              </td>
+                              <td className="py-2 px-3">
+                                <Badge
+                                  variant={
+                                    log.status === "success"
+                                      ? "default"
+                                      : log.status === "error"
+                                      ? "destructive"
+                                      : log.status === "skipped"
+                                      ? "secondary"
+                                      : "outline"
+                                  }
+                                >
+                                  {log.status === "success"
+                                    ? result?.dry_run
+                                      ? "Simulação"
+                                      : "Sucesso"
+                                    : log.status === "error"
+                                    ? "Erro"
+                                    : log.status === "skipped"
+                                    ? "Pulado"
+                                    : log.status}
+                                </Badge>
+                              </td>
+                              <td className="py-2 px-3 text-right font-mono">
+                                {result?.dry_run ? "-" : result?.packages_deleted ?? "-"}
+                              </td>
+                              <td className="py-2 px-3 text-right font-mono text-muted-foreground">
+                                {durationMs !== null ? `${(durationMs / 1000).toFixed(1)}s` : "-"}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
