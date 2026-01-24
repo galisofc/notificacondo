@@ -24,7 +24,8 @@ import {
   Shield,
   Zap,
   Info,
-  ExternalLink
+  ExternalLink,
+  Clock
 } from "lucide-react";
 
 export default function WhatsAppConfig() {
@@ -35,6 +36,7 @@ export default function WhatsAppConfig() {
   const [isSendingTemplateTest, setIsSendingTemplateTest] = useState(false);
   const [testResult, setTestResult] = useState<"success" | "error" | null>(null);
   const [testPhone, setTestPhone] = useState("");
+  const [lastTestedAt, setLastTestedAt] = useState<Date | null>(null);
   const [connectionInfo, setConnectionInfo] = useState<{
     phoneNumber?: string;
     businessName?: string;
@@ -54,6 +56,7 @@ export default function WhatsAppConfig() {
 
       if (data?.success) {
         setTestResult("success");
+        setLastTestedAt(new Date());
         setConnectionInfo({
           phoneNumber: data.phoneNumber,
           businessName: data.businessName,
@@ -61,6 +64,7 @@ export default function WhatsAppConfig() {
         toast({ title: "✅ Conexão bem-sucedida com a Meta Cloud API!" });
       } else {
         setTestResult("error");
+        setLastTestedAt(new Date());
         const errorCode = data?.errorCode;
         const errorMessage = data?.error || "Verifique as credenciais no Supabase Secrets.";
         
@@ -324,6 +328,22 @@ export default function WhatsAppConfig() {
                   )}
                   Testar Conexão
                 </Button>
+
+                {lastTestedAt && (
+                  <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+                    <Clock className="h-3 w-3" />
+                    <span>
+                      Último teste: {lastTestedAt.toLocaleString('pt-BR', { 
+                        day: '2-digit', 
+                        month: '2-digit', 
+                        year: 'numeric',
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        second: '2-digit'
+                      })}
+                    </span>
+                  </div>
+                )}
 
                 <div className="text-center">
                   <a
