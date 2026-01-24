@@ -56,19 +56,13 @@ Deno.serve(async (req) => {
     // Build endpoint
     const endpoint = `${config.api_url}/templateBody`;
     
-    // Build request body - Meta/WABA standard format with "to" field
-    // The Z-PRO/Atende Aí Chat API may require the nested "template" structure
+    // Build request body - Z-PRO/Atende Aí Chat format
+    // Uses flat structure with templateName and templateLangCode at root level
     const requestBody = {
-      to: formattedPhone,
-      number: formattedPhone, // Include both for compatibility
-      type: "template",
-      template: {
-        name: templateName,
-        language: {
-          code: language
-        },
-        components: [] // hello_world has no dynamic components
-      }
+      number: formattedPhone,
+      templateName: templateName,
+      templateLangCode: language,
+      components: [] // Empty array for templates without variables
     };
 
     console.log("[Template Test] Endpoint:", endpoint);
@@ -98,7 +92,7 @@ Deno.serve(async (req) => {
       result = { raw: responseText };
     }
 
-    if (response.ok && result.success !== false && !result.error) {
+    if (response.ok && result.success !== false && !result.error && !result.message?.includes("Missing")) {
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -117,6 +111,7 @@ Deno.serve(async (req) => {
             status: response.status,
             endpoint,
             templateName,
+            requestBodySent: requestBody,
             response: result
           }
         }),
