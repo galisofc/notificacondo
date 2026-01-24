@@ -52,6 +52,7 @@ import MagicLinkLogs from "./pages/superadmin/MagicLinkLogs";
 import CronJobs from "./pages/superadmin/CronJobs";
 import Transfers from "./pages/superadmin/Transfers";
 import WhatsApp from "./pages/superadmin/WhatsApp";
+import WhatsAppConfig from "./pages/superadmin/WhatsAppConfig";
 import SuperAdminSettings from "./pages/superadmin/Settings";
 import PorteiroSettings from "./pages/porteiro/Settings";
 import ContactMessages from "./pages/superadmin/ContactMessages";
@@ -441,6 +442,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole="super_admin">
                     <WhatsApp />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/superadmin/whatsapp/config"
+                element={
+                  <ProtectedRoute requiredRole="super_admin">
+                    <WhatsAppConfig />
                   </ProtectedRoute>
                 }
               />
