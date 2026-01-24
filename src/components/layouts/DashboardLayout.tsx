@@ -391,18 +391,13 @@ function SidebarNavigation() {
           items: item.items.map(subItem => ({ ...subItem }))
         };
       }
+      // Add badge to Mensagens item if there are unread messages
+      if (!isNavGroup(item) && item.url === "/superadmin/contact-messages" && unreadMessages > 0) {
+        return { ...item, badge: unreadMessages };
+      }
       return { ...item };
     });
     
-    // Find and update messages badge in Sistema group
-    for (const item of items) {
-      if (isNavGroup(item)) {
-        const messagesItem = item.items.find(i => i.url === "/superadmin/contact-messages");
-        if (messagesItem && unreadMessages > 0) {
-          messagesItem.badge = unreadMessages;
-        }
-      }
-    }
     return items;
   };
 
