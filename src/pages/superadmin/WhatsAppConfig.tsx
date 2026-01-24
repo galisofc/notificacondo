@@ -52,6 +52,42 @@ export default function WhatsAppConfig() {
     }
   }, [lastTestedAt]);
 
+  // Auto-test connection on page load
+  useEffect(() => {
+    const autoTestConnection = async () => {
+      setIsTesting(true);
+      setTestResult(null);
+      setConnectionInfo(null);
+
+      try {
+        const { data, error } = await supabase.functions.invoke("test-whatsapp-connection", {
+          body: {},
+        });
+
+        if (error) throw error;
+
+        if (data?.success) {
+          setTestResult("success");
+          setLastTestedAt(new Date());
+          setConnectionInfo({
+            phoneNumber: data.phoneNumber,
+            businessName: data.businessName,
+          });
+        } else {
+          setTestResult("error");
+          setLastTestedAt(new Date());
+        }
+      } catch (error) {
+        setTestResult("error");
+        setLastTestedAt(new Date());
+      } finally {
+        setIsTesting(false);
+      }
+    };
+
+    autoTestConnection();
+  }, []);
+
   const handleTest = async () => {
     setIsTesting(true);
     setTestResult(null);
