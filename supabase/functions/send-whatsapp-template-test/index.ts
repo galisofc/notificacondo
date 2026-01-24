@@ -1,261 +1,214 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { 
+  sendMetaTemplate, 
+  isMetaConfigured,
+  formatPhoneForMeta,
+} from "../_shared/meta-whatsapp.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface RequestBody {
-  phone: string;
-  templateName?: string;
-  language?: string;
-  isClosed?: boolean;
-  params?: string[];
-  mediaUrl?: string;
-  payloadFormat?: "meta" | "zpro_simplified";
-}
-
-Deno.serve(async (req) => {
-  // Handle CORS preflight
+serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const {
-      phone,
-      templateName = "hello_world",
-      language = "en_US",
-      isClosed = false,
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // ========== AUTHENTICATION ==========
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Não autorizado" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Não autorizado" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check if user is super_admin
+    const { data: superAdminRole } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "super_admin")
+      .maybeSingle();
+
+    if (!superAdminRole) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Permissão negada" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ========== CHECK META CONFIG ==========
+    if (!isMetaConfigured()) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Meta WhatsApp não configurado. Configure META_WHATSAPP_PHONE_ID e META_WHATSAPP_ACCESS_TOKEN nos Secrets." 
+        }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ========== INPUT VALIDATION ==========
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ success: false, error: "JSON inválido" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { 
+      phone, 
+      templateName, 
+      language = "pt_BR", 
       params = [],
       mediaUrl,
-      payloadFormat = "meta",
-    }: RequestBody = await req.json();
+      mediaType = "image",
+    } = body;
 
     if (!phone) {
       return new Response(
-        JSON.stringify({ success: false, error: "Número de telefone é obrigatório" }),
+        JSON.stringify({ success: false, error: "Telefone é obrigatório" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Get Supabase client
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Fetch WhatsApp config
-    const { data: config, error: configError } = await supabase
-      .from("whatsapp_config")
-      .select("*")
-      .eq("is_active", true)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (configError || !config) {
-      console.error("[Template Test] Config error:", configError);
+    if (!templateName) {
       return new Response(
-        JSON.stringify({ success: false, error: "Configuração do WhatsApp não encontrada" }),
+        JSON.stringify({ success: false, error: "Nome do template é obrigatório" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Format phone number (Brazilian format)
-    const cleanPhone = phone.replace(/\D/g, "");
-    const formattedPhone = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`;
-
-    // Build endpoint
-    const endpoint = `${config.api_url}/template`;
-
-    // Build templateData according to provider expectations.
-    // Some Z-PRO gateways forward templateData directly to Meta Graph API, which requires the Meta format.
-    let templateData: Record<string, unknown>;
-    if (payloadFormat === "zpro_simplified") {
-      // Z-PRO simplified format (as provided by user)
-      templateData = {
-        name: templateName,
-        language,
-        footer: true,
-      };
-
-      if (mediaUrl) {
-        templateData.header = {
-          type: "image",
-          image: { link: mediaUrl },
-        };
-      }
-
-      if (params.length > 0) {
-        templateData.body = params;
-      }
-    } else {
-      // Meta Cloud API format
-      const templateObj: Record<string, unknown> = {
-        name: templateName,
-        language: { code: language },
-      };
-
-      if (params.length > 0 || mediaUrl) {
-        const components: Array<Record<string, unknown>> = [];
-        if (mediaUrl) {
-          components.push({
-            type: "header",
-            parameters: [{ type: "image", image: { link: mediaUrl } }],
-          });
-        }
-        if (params.length > 0) {
-          components.push({
-            type: "body",
-            parameters: params.map((text) => ({ type: "text", text })),
-          });
-        }
-        templateObj.components = components;
-      }
-
-      templateData = {
-        messaging_product: "whatsapp",
-        to: formattedPhone,
-        type: "template",
-        template: templateObj,
-      };
+    console.log(`[Template Test] Sending template: ${templateName} to ${phone}`);
+    console.log(`[Template Test] Language: ${language}, Params: ${JSON.stringify(params)}`);
+    if (mediaUrl) {
+      console.log(`[Template Test] Media: ${mediaType} - ${mediaUrl.substring(0, 100)}...`);
     }
 
-    // Build request body
-    const requestBody: Record<string, unknown> = {
-      number: formattedPhone,
-      isClosed,
-      templateData,
-    };
-
-    console.log("[Template Test] Endpoint:", endpoint);
-    console.log("[Template Test] Template:", templateName);
-    console.log("[Template Test] Payload format:", payloadFormat);
-    console.log("[Template Test] Phone:", formattedPhone);
-    console.log("[Template Test] Params:", params);
-    console.log("[Template Test] MediaUrl:", mediaUrl);
-    console.log("[Template Test] Request body:", JSON.stringify(requestBody, null, 2));
-
-    // Send request to Z-PRO API
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${config.api_key}`,
-      },
-      body: JSON.stringify(requestBody),
+    // Send template via Meta API directly
+    const result = await sendMetaTemplate({
+      phone,
+      templateName,
+      language,
+      bodyParams: params,
+      headerMediaUrl: mediaUrl || undefined,
+      headerMediaType: mediaUrl ? mediaType : undefined,
     });
 
-    const responseText = await response.text();
-    console.log("[Template Test] Response status:", response.status);
-    console.log("[Template Test] Response body:", responseText);
+    // Log to whatsapp_notification_logs for debugging
+    await supabase.from("whatsapp_notification_logs").insert({
+      phone: formatPhoneForMeta(phone),
+      template_name: templateName,
+      params: { 
+        language, 
+        bodyParams: params,
+        mediaUrl,
+        mediaType,
+      },
+      success: result.success,
+      message_id: result.messageId,
+      error_message: result.error,
+      request_payload: result.debug?.payload,
+      response_body: result.debug?.response,
+    });
 
-    // Parse response
-    let result: any;
-    try {
-      result = JSON.parse(responseText);
-    } catch {
-      result = { raw: responseText };
-    }
-
-    const isSuccess = response.ok && result.success !== false && !result.error && !result.message?.includes("Missing");
-    const messageId = result.messageId || result.key?.id || result.id || result.messages?.[0]?.id;
-
-    // ========== SAVE WABA TEST LOG ==========
-    try {
-      await supabase.from("whatsapp_notification_logs").insert({
-        function_name: "send-whatsapp-template-test",
-        package_id: null,
-        resident_id: null,
-        phone: formattedPhone,
-        template_name: templateName,
-        template_language: language,
-        request_payload: {
-          templateParams: {
-            phone: formattedPhone,
-            templateName,
-            language,
-            payloadFormat,
-          },
-          endpoint,
-          isClosed,
-        },
-        response_status: response.status,
-        response_body: responseText.substring(0, 2000),
-        success: isSuccess,
-        message_id: messageId || null,
-        error_message: isSuccess ? null : (result.error || result.message || `HTTP ${response.status}`),
-        debug_info: {
-          requestBodySent: requestBody,
-          isTestMessage: true,
-        },
-      });
-      console.log("[Template Test] Log saved to whatsapp_notification_logs");
-    } catch (logError) {
-      console.error("[Template Test] Failed to save log:", logError);
-    }
-
-    if (isSuccess) {
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: `Template ${templateName} enviado com sucesso`,
-          messageId,
-          response: result 
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    } else {
-      // Detect specific error types for better UX
-      let userFriendlyError = result.error || result.message || `HTTP ${response.status}`;
+    if (!result.success) {
+      console.error("[Template Test] Failed:", result.error);
+      
+      // Provide helpful error messages for common Meta API errors
       let possibleCauses: string[] = [];
       
-      // Check for template not found / not approved errors (400 from Meta)
-      const responseStr = JSON.stringify(result).toLowerCase();
-      if (response.status === 400 || responseStr.includes("400") || responseStr.includes("err_bad_request")) {
-        if (templateName !== "hello_world") {
-          possibleCauses = [
-            `Nome do template incorreto (você digitou: "${templateName}")`,
-            `Código de idioma incorreto (você digitou: "${language}")`,
-            "Template ainda não aprovado no Meta Business Manager",
-            "Número de parâmetros diferente do configurado na Meta",
-            "Template usa header/footer diferente do enviado",
-          ];
-          userFriendlyError = `Erro 400 da Meta ao enviar template "${templateName}".`;
-        } else {
-          possibleCauses = [
-            "Token de acesso expirado ou inválido",
-            "Instância não conectada ao Meta",
-            "Credenciais incorretas no provedor",
-          ];
-          userFriendlyError = "Erro de conexão com a Meta.";
-        }
+      if (result.errorCode === "132001") {
+        possibleCauses = [
+          "Template não encontrado ou não aprovado",
+          `Nome do template incorreto (você digitou: "${templateName}")`,
+          "Template ainda pendente de aprovação no Meta Business Manager",
+        ];
+      } else if (result.errorCode === "132000") {
+        possibleCauses = [
+          "Número de parâmetros diferente do configurado no template",
+          `Você enviou ${params.length} parâmetros`,
+          "Verifique a ordem e quantidade de variáveis no template",
+        ];
+      } else if (result.errorCode === "131047") {
+        possibleCauses = [
+          "Número de telefone não é válido no WhatsApp",
+          "Verifique se o número está correto e ativo",
+        ];
+      } else if (result.error?.includes("language")) {
+        possibleCauses = [
+          `Código de idioma incorreto (você digitou: "${language}")`,
+          "Use: pt_BR, en_US, es, etc.",
+        ];
+      } else {
+        possibleCauses = [
+          "Verifique as credenciais da Meta Cloud API",
+          "Confirme que o template está aprovado",
+          "Verifique os parâmetros do template",
+        ];
       }
       
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: userFriendlyError,
+          error: `Erro ao enviar template "${templateName}".`,
+          errorCode: result.errorCode,
+          errorMessage: result.error,
           possibleCauses,
           debug: {
-            status: response.status,
-            endpoint,
+            status: result.debug?.status,
+            endpoint: result.debug?.endpoint,
             templateName,
             language,
             paramsCount: params.length,
             hasMedia: !!mediaUrl,
-            payloadFormat,
-            requestBodySent: requestBody,
-            response: result
-          }
+            requestPayload: result.debug?.payload,
+            response: result.debug?.response,
+          },
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-  } catch (error: any) {
+
+    console.log("[Template Test] Success:", result.messageId);
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: `Template "${templateName}" enviado com sucesso via Meta Cloud API!`,
+        message_id: result.messageId,
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
     console.error("[Template Test] Error:", error);
     return new Response(
-      JSON.stringify({ success: false, error: error.message || "Erro interno" }),
+      JSON.stringify({ 
+        success: false, 
+        error: error instanceof Error ? error.message : "Erro interno do servidor" 
+      }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
