@@ -12,6 +12,7 @@ interface RequestBody {
   isClosed?: boolean;
   params?: string[];
   mediaUrl?: string;
+  payloadFormat?: "meta" | "zpro_simplified";
 }
 
 Deno.serve(async (req) => {
@@ -28,6 +29,7 @@ Deno.serve(async (req) => {
       isClosed = false,
       params = [],
       mediaUrl,
+      payloadFormat = "meta",
     }: RequestBody = await req.json();
 
     if (!phone) {
@@ -66,29 +68,58 @@ Deno.serve(async (req) => {
     // Build endpoint
     const endpoint = `${config.api_url}/template`;
 
-    // Build templateData in Z-PRO simplified format
-    const templateData: Record<string, unknown> = {
-      name: templateName,
-      language: language,
-    };
+    // Build templateData according to provider expectations.
+    // Some Z-PRO gateways forward templateData directly to Meta Graph API, which requires the Meta format.
+    let templateData: Record<string, unknown>;
+    if (payloadFormat === "zpro_simplified") {
+      // Z-PRO simplified format (as provided by user)
+      templateData = {
+        name: templateName,
+        language,
+        footer: true,
+      };
 
-    // Add header for media (Z-PRO format)
-    if (mediaUrl) {
-      templateData.header = {
-        type: "image",
-        image: {
-          link: mediaUrl,
-        },
+      if (mediaUrl) {
+        templateData.header = {
+          type: "image",
+          image: { link: mediaUrl },
+        };
+      }
+
+      if (params.length > 0) {
+        templateData.body = params;
+      }
+    } else {
+      // Meta Cloud API format
+      const templateObj: Record<string, unknown> = {
+        name: templateName,
+        language: { code: language },
+      };
+
+      if (params.length > 0 || mediaUrl) {
+        const components: Array<Record<string, unknown>> = [];
+        if (mediaUrl) {
+          components.push({
+            type: "header",
+            parameters: [{ type: "image", image: { link: mediaUrl } }],
+          });
+        }
+        if (params.length > 0) {
+          components.push({
+            type: "body",
+            parameters: params.map((text) => ({ type: "text", text })),
+          });
+        }
+        templateObj.components = components;
+      }
+
+      templateData = {
+        messaging_product: "whatsapp",
+        to: formattedPhone,
+        type: "template",
+        template: templateObj,
       };
     }
-
-    // Add body params as simple array (Z-PRO format)
-    if (params.length > 0) {
-      templateData.body = params;
-    }
-
-    // Add footer flag (Z-PRO expects this for templates with footer)
-    templateData.footer = true;
 
     // Build request body
     const requestBody: Record<string, unknown> = {
@@ -99,6 +130,7 @@ Deno.serve(async (req) => {
 
     console.log("[Template Test] Endpoint:", endpoint);
     console.log("[Template Test] Template:", templateName);
+    console.log("[Template Test] Payload format:", payloadFormat);
     console.log("[Template Test] Phone:", formattedPhone);
     console.log("[Template Test] Params:", params);
     console.log("[Template Test] MediaUrl:", mediaUrl);
@@ -143,6 +175,7 @@ Deno.serve(async (req) => {
             phone: formattedPhone,
             templateName,
             language,
+            payloadFormat,
           },
           endpoint,
           isClosed,
@@ -211,6 +244,7 @@ Deno.serve(async (req) => {
             language,
             paramsCount: params.length,
             hasMedia: !!mediaUrl,
+            payloadFormat,
             requestBodySent: requestBody,
             response: result
           }
