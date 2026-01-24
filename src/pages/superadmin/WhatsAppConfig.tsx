@@ -5,6 +5,7 @@ import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SuperAdminBreadcrumbs from "@/components/superadmin/SuperAdminBreadcrumbs";
+import { ConnectionStatus } from "@/components/superadmin/whatsapp";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -375,7 +376,11 @@ export default function WhatsAppConfig() {
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="space-y-6">
+            {/* Connection Status Card */}
+            <ConnectionStatus />
+
+            <div className="grid gap-6 lg:grid-cols-2">
             {/* Main Configuration Card */}
             <Card>
               <CardHeader>
@@ -627,6 +632,7 @@ export default function WhatsAppConfig() {
                 )}
                 Salvar Configurações
               </Button>
+            </div>
             </div>
           </div>
         )}
