@@ -138,6 +138,7 @@ export async function sendWabaTemplate(
   console.log(`[WABA] Endpoint: ${endpoint}`);
   console.log(`[WABA] Params count: ${params.length}`);
   console.log(`[WABA] Components: ${JSON.stringify(components).substring(0, 300)}...`);
+  console.log(`[WABA] FULL PAYLOAD: ${JSON.stringify(requestBody)}`);
   if (mediaUrl) {
     console.log(`[WABA] Has media header: ${mediaType || "image"}`);
   }
