@@ -325,15 +325,19 @@ serve(async (req) => {
 
       // Log to whatsapp_notification_logs
       await supabase.from("whatsapp_notification_logs").insert({
+        function_name: "notify-package-arrival",
         phone: resident.phone,
+        resident_id: resident.id,
+        package_id: package_id,
         template_name: wabaTemplateName || "package_arrival_fallback",
-        params: variables,
+        template_language: wabaLanguage,
         success: result.success,
         message_id: result.messageId,
         error_message: result.error,
-        request_payload: result.debug?.payload,
+        request_payload: result.debug?.payload || { variables, params_order: paramsOrder },
         response_body: result.debug?.response,
-        condominium_id: condoId,
+        response_status: result.debug?.status,
+        debug_info: { condominium_id: condoId, photo_url: photo_url || null },
       });
 
       results.push({
