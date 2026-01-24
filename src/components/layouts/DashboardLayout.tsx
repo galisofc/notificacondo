@@ -92,6 +92,7 @@ const getBaseSuperAdminNavItems = (): NavStructure => [
       { title: "Transferências", url: "/superadmin/transfers", icon: Scale },
     ],
   },
+  { title: "Mensagens", url: "/superadmin/contact-messages", icon: Mail },
   {
     title: "Assinaturas",
     icon: CreditCard,
@@ -114,7 +115,6 @@ const getBaseSuperAdminNavItems = (): NavStructure => [
     items: [
       { title: "Geral", url: "/superadmin/settings", icon: Cog },
       { title: "Tipos de Encomenda", url: "/superadmin/package-types", icon: Package },
-      { title: "Mensagens", url: "/superadmin/contact-messages", icon: Mail },
       { title: "Logs", url: "/superadmin/logs", icon: FileText },
       { title: "Cron Jobs", url: "/superadmin/cron-jobs", icon: Clock },
     ],
