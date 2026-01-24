@@ -1807,6 +1807,60 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_notification_logs: {
+        Row: {
+          created_at: string
+          debug_info: Json | null
+          error_message: string | null
+          function_name: string
+          id: string
+          message_id: string | null
+          package_id: string | null
+          phone: string | null
+          request_payload: Json | null
+          resident_id: string | null
+          response_body: string | null
+          response_status: number | null
+          success: boolean
+          template_language: string | null
+          template_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          debug_info?: Json | null
+          error_message?: string | null
+          function_name: string
+          id?: string
+          message_id?: string | null
+          package_id?: string | null
+          phone?: string | null
+          request_payload?: Json | null
+          resident_id?: string | null
+          response_body?: string | null
+          response_status?: number | null
+          success?: boolean
+          template_language?: string | null
+          template_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          debug_info?: Json | null
+          error_message?: string | null
+          function_name?: string
+          id?: string
+          message_id?: string | null
+          package_id?: string | null
+          phone?: string | null
+          request_payload?: Json | null
+          resident_id?: string | null
+          response_body?: string | null
+          response_status?: number | null
+          success?: boolean
+          template_language?: string | null
+          template_name?: string | null
+        }
+        Relationships: []
+      }
       whatsapp_templates: {
         Row: {
           content: string

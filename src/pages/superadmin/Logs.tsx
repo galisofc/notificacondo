@@ -4,7 +4,7 @@ import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { AuditLogs } from "@/components/superadmin/AuditLogs";
 import SuperAdminBreadcrumbs from "@/components/superadmin/SuperAdminBreadcrumbs";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Link2, Zap } from "lucide-react";
+import { FileText, Link2, Zap, MessageSquare } from "lucide-react";
 
 export default function Logs() {
   return (
@@ -22,7 +22,7 @@ export default function Logs() {
         </div>
 
         {/* Submenu de Logs */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Link to="/superadmin/logs">
             <Card className="hover:bg-muted/50 transition-colors border-primary">
               <CardHeader className="pb-3">
@@ -65,9 +65,26 @@ export default function Logs() {
                     <Zap className="h-5 w-5 text-orange-500" />
                   </div>
                   <div>
-                    <CardTitle className="text-base">Edge Functions</CardTitle>
+                    <CardTitle className="text-base">Funções de Backend</CardTitle>
                     <CardDescription className="text-xs">
-                      Logs de execução do backend
+                      Logs de execução do sistema
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+            </Card>
+          </Link>
+          <Link to="/superadmin/logs/waba">
+            <Card className="hover:bg-muted/50 transition-colors">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-green-500/10">
+                    <MessageSquare className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base">Logs WABA</CardTitle>
+                    <CardDescription className="text-xs">
+                      Debug de templates WhatsApp
                     </CardDescription>
                   </div>
                 </div>
