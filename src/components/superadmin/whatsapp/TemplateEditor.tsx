@@ -82,6 +82,7 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
   const [testImageUrl, setTestImageUrl] = useState("");
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [isTesting, setIsTesting] = useState(false);
+  const [testPayloadFormat, setTestPayloadFormat] = useState<"meta" | "zpro_simplified">("meta");
 
   // Initialize test params when dialog opens
   const initializeTestParams = () => {
@@ -92,6 +93,7 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
     setTestParams(initialParams);
     setTestImageUrl("");
     setTestResult(null);
+    setTestPayloadFormat("meta");
   };
 
   const category = getCategoryForSlug(template.slug);
@@ -226,6 +228,7 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
           language: languageToTest,
           params: paramsArray.length > 0 ? paramsArray : undefined,
           mediaUrl: testImageUrl.trim() || undefined,
+          payloadFormat: testPayloadFormat,
         },
       });
 
@@ -642,6 +645,23 @@ ${paramsOrder.map((p, i) => `    "${p}"`).join(",\n")}
                 </p>
               </div>
             )}
+
+            {/* Payload format */}
+            <div className="space-y-2">
+              <Label className="text-sm">Formato do payload</Label>
+              <Select value={testPayloadFormat} onValueChange={(v) => setTestPayloadFormat(v as any)}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="meta">Meta (padrão)</SelectItem>
+                  <SelectItem value="zpro_simplified">Z-PRO (simplificado)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Se o provedor estiver repassando o payload direto para a Meta, use “Meta (padrão)”.
+              </p>
+            </div>
 
             {/* Dynamic Params */}
             {wabaTemplateName && paramsOrder.length > 0 && (
