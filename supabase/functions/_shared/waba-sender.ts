@@ -104,15 +104,19 @@ export async function sendWabaTemplate(
 
   const formattedPhone = formatPhoneForWaba(phone);
   
-  // Use /template endpoint (correct for Z-PRO / Atende Aí Chat)
-  const endpoint = `${apiUrl}/template`;
+  // Use /templateBody endpoint (per Postman / Atende Aí Chat docs)
+  const endpoint = `${apiUrl}/templateBody`;
   
   // Build components array in Meta Cloud API format
   const components = buildTemplateComponents(params, mediaUrl, mediaType);
 
   // Build request body with templateData structure (required by Z-PRO)
-  const requestBody: Record<string, unknown> = {
+  // Determine externalKey (fallback logic for zpro-embedded or null instanceId)
+  const externalKey = (!instanceId || instanceId === "zpro-embedded") ? apiKey : instanceId;
+
+  const buildRequestBody = (componentsToSend: Array<Record<string, unknown>>) => ({
     number: formattedPhone,
+    externalKey,
     isClosed: false,
     templateData: {
       messaging_product: "whatsapp",
@@ -123,10 +127,12 @@ export async function sendWabaTemplate(
         language: {
           code: language,
         },
-        components,  // Meta Cloud API format with typed parameters
+        ...(componentsToSend.length > 0 ? { components: componentsToSend } : {}),
       },
     },
-  };
+  });
+
+  const requestBody: Record<string, unknown> = buildRequestBody(components);
 
   console.log(`[WABA] Sending template "${templateName}" to ${phone}`);
   console.log(`[WABA] Endpoint: ${endpoint}`);
@@ -137,16 +143,22 @@ export async function sendWabaTemplate(
   }
 
   try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
-      body: JSON.stringify(requestBody)
-    });
+    const doRequest = async (body: Record<string, unknown>) => {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify(body)
+      });
+      const responseText = await response.text();
+      return { response, responseText };
+    };
 
-    const responseText = await response.text();
+    // First attempt: with all components (including header image when provided)
+    let { response, responseText } = await doRequest(requestBody);
+
     console.log(`[WABA] Response status: ${response.status}`);
     console.log(`[WABA] Response body: ${responseText.substring(0, 500)}`);
 
@@ -184,6 +196,40 @@ export async function sendWabaTemplate(
           payload: requestBody,
         }
       };
+    }
+
+    // Some setups reject templates if we send a header image but the template doesn't have a header.
+    // Retry once without header component on 400.
+    if (!response.ok && response.status === 400 && mediaUrl) {
+      const componentsWithoutHeader = components.filter((c) => c.type !== "header");
+      const retryBody = buildRequestBody(componentsWithoutHeader);
+      console.log(`[WABA] 400 received. Retrying without header media...`);
+
+      const retry = await doRequest(retryBody);
+      response = retry.response;
+      responseText = retry.responseText;
+      console.log(`[WABA] Retry status: ${response.status}`);
+      console.log(`[WABA] Retry body: ${responseText.substring(0, 500)}`);
+
+      // Re-parse after retry
+      try {
+        responseData = JSON.parse(responseText);
+      } catch {
+        responseData = { raw: responseText };
+      }
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: responseData?.message || responseData?.error || `HTTP ${response.status}`,
+          debug: {
+            endpoint,
+            status: response.status,
+            response: responseText.substring(0, 200),
+            payload: retryBody,
+          }
+        };
+      }
     }
 
     if (!response.ok) {
