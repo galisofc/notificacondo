@@ -140,27 +140,15 @@ export async function sendMetaTemplate(
   
   // Add body component with text parameters
   // IMPORTANT: Meta API rejects empty text values - must use placeholder "-" for empty/null values
-  // Some templates require named parameters (parameter_name field)
+  // Use simple positional format: { type: "text", text: "value" }
   if (params.bodyParams && params.bodyParams.length > 0) {
-    const validParams = params.bodyParams.map((value, index) => {
+    const validParams = params.bodyParams.map((value) => {
       // Convert to string and trim
       const strValue = String(value ?? "").trim();
-      const textValue = strValue || "-";
-      
-      // Check if we have named parameters for this template
-      if (params.bodyParamNames && params.bodyParamNames[index]) {
-        // Use named parameter format (required by some templates)
-        return {
-          type: "text",
-          parameter_name: params.bodyParamNames[index],
-          text: textValue,
-        };
-      }
-      
-      // Use positional parameter format (default)
+      // Use "-" as placeholder if empty (Meta rejects empty strings)
       return {
         type: "text",
-        text: textValue,
+        text: strValue || "-",
       };
     });
     
