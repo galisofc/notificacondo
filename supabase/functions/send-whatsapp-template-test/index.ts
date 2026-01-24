@@ -106,31 +106,49 @@ serve(async (req) => {
       console.log(`[Template Test] Media: ${mediaType} - ${mediaUrl.substring(0, 100)}...`);
     }
 
+    // If this template uses named parameters, get the parameter names from DB (params_order)
+    const { data: templateConfig, error: templateConfigError } = await supabase
+      .from("whatsapp_templates")
+      .select("params_order")
+      .eq("waba_template_name", templateName)
+      .maybeSingle();
+
+    if (templateConfigError) {
+      console.warn("[Template Test] Could not fetch template params_order:", templateConfigError.message);
+    }
+
+    const bodyParamNames = Array.isArray(templateConfig?.params_order)
+      ? (templateConfig!.params_order as string[])
+      : undefined;
+
     // Send template via Meta API directly
     const result = await sendMetaTemplate({
       phone,
       templateName,
       language,
       bodyParams: params,
+      bodyParamNames,
       headerMediaUrl: mediaUrl || undefined,
       headerMediaType: mediaUrl ? mediaType : undefined,
     });
 
     // Log to whatsapp_notification_logs for debugging
     await supabase.from("whatsapp_notification_logs").insert({
+      function_name: "send-whatsapp-template-test",
       phone: formatPhoneForMeta(phone),
       template_name: templateName,
-      params: { 
-        language, 
-        bodyParams: params,
-        mediaUrl,
-        mediaType,
-      },
+      template_language: language,
       success: result.success,
       message_id: result.messageId,
       error_message: result.error,
+      response_status: result.debug?.status,
       request_payload: result.debug?.payload,
       response_body: result.debug?.response,
+      debug_info: {
+        paramsCount: Array.isArray(params) ? params.length : 0,
+        hasMedia: !!mediaUrl,
+        resolvedBodyParamNames: bodyParamNames ?? null,
+      },
     });
 
     if (!result.success) {
