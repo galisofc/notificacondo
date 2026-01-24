@@ -598,11 +598,44 @@ _Mensagem automática - NotificaCondo_`;
             }
           );
 
-          result = {
-            success: wabaResult.success,
-            messageId: wabaResult.messageId,
-            error: wabaResult.error,
-          };
+          if (wabaResult.success) {
+            result = {
+              success: true,
+              messageId: wabaResult.messageId,
+            };
+          } else {
+            console.log(`[WABA] Failed (${wabaResult.error}). Falling back to free text mode for delivery.`);
+
+            // ========== FALLBACK TO FREE TEXT ==========
+            let message = templateContent || defaultMessage;
+            message = message
+              .replace(/{nome}/g, sanitize(resident.full_name))
+              .replace(/{condominio}/g, sanitize(condoName))
+              .replace(/{bloco}/g, sanitize(blockName))
+              .replace(/{apartamento}/g, sanitize(aptNumber))
+              .replace(/{numeropedido}/g, pickup_code)
+              .replace(/{tipo_encomenda}/g, sanitize(packageTypeName))
+              .replace(/{codigo_rastreio}/g, sanitize(trackingCode))
+              .replace(/{porteiro}/g, sanitize(porterName));
+
+            // Keep photo in legacy mode (captioned image) when available
+            const legacy = await provider.sendMessage(
+              resident.phone!,
+              message,
+              {
+                apiUrl: typedConfig.api_url,
+                apiKey: typedConfig.api_key,
+                instanceId: typedConfig.instance_id,
+              },
+              photo_url || undefined
+            );
+
+            result = {
+              success: legacy.success,
+              messageId: legacy.messageId,
+              error: legacy.success ? undefined : (legacy.error || wabaResult.error),
+            };
+          }
         } else {
           // Log reason for falling back to legacy mode
           if (useWabaTemplates && !isValidWabaTemplate) {
