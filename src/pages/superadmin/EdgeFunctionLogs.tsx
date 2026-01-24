@@ -91,27 +91,49 @@ export default function EdgeFunctionLogs() {
         return <Badge variant="destructive">Erro</Badge>;
       case "running":
         return <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20">Executando</Badge>;
+      case "completed":
+        return <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">Concluído</Badge>;
+      case "scheduled":
+        return <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/20">Agendado</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  const translateTriggerType = (type: string | null) => {
+    if (!type) return null;
+    switch (type) {
+      case "cron":
+        return "agendamento";
+      case "manual":
+        return "manual";
+      case "scheduled":
+        return "agendado";
+      case "webhook":
+        return "webhook";
+      case "api":
+        return "api";
+      default:
+        return type;
     }
   };
 
   return (
     <DashboardLayout>
       <Helmet>
-        <title>Logs de Edge Functions | Super Admin</title>
+        <title>Logs de Funções de Backend | Super Admin</title>
       </Helmet>
       <div className="space-y-4 md:space-y-6 animate-fade-up">
         <SuperAdminBreadcrumbs items={[
           { label: "Logs", href: "/superadmin/logs" },
-          { label: "Edge Functions" }
+          { label: "Funções de Backend" }
         ]} />
         
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="font-display text-xl md:text-3xl font-bold text-foreground">Logs de Edge Functions</h1>
+            <h1 className="font-display text-xl md:text-3xl font-bold text-foreground">Logs de Funções de Backend</h1>
             <p className="text-sm md:text-base text-muted-foreground mt-1">
-              Histórico de execução das funções de backend
+              Histórico de execução das funções do sistema
             </p>
           </div>
           
@@ -180,7 +202,7 @@ export default function EdgeFunctionLogs() {
                                     <span className="ml-2">• {log.duration_ms}ms</span>
                                   )}
                                   {log.trigger_type && (
-                                    <span className="ml-2">• {log.trigger_type}</span>
+                                    <span className="ml-2">• {translateTriggerType(log.trigger_type)}</span>
                                   )}
                                 </div>
                               </div>
