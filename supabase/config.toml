@@ -120,3 +120,7 @@ verify_jwt = false
 # Limpeza automática de fotos órfãs de encomendas
 [functions.cleanup-orphan-package-photos]
 verify_jwt = false
+
+# Limpeza automática de encomendas antigas já retiradas
+[functions.cleanup-old-packages]
+verify_jwt = false
