@@ -197,14 +197,27 @@ Deno.serve(async (req) => {
     } else {
       // Detect specific error types for better UX
       let userFriendlyError = result.error || result.message || `HTTP ${response.status}`;
+      let possibleCauses: string[] = [];
       
       // Check for template not found / not approved errors (400 from Meta)
       const responseStr = JSON.stringify(result).toLowerCase();
       if (response.status === 400 || responseStr.includes("400") || responseStr.includes("err_bad_request")) {
         if (templateName !== "hello_world") {
-          userFriendlyError = `Template "${templateName}" não encontrado ou não aprovado na Meta. Verifique se o nome está correto e se o template foi aprovado no Meta Business Manager.`;
+          possibleCauses = [
+            `Nome do template incorreto (você digitou: "${templateName}")`,
+            `Código de idioma incorreto (você digitou: "${language}")`,
+            "Template ainda não aprovado no Meta Business Manager",
+            "Número de parâmetros diferente do configurado na Meta",
+            "Template usa header/footer diferente do enviado",
+          ];
+          userFriendlyError = `Erro 400 da Meta ao enviar template "${templateName}".`;
         } else {
-          userFriendlyError = "Erro de conexão com a Meta. Verifique as credenciais no Meta Business Manager.";
+          possibleCauses = [
+            "Token de acesso expirado ou inválido",
+            "Instância não conectada ao Meta",
+            "Credenciais incorretas no provedor",
+          ];
+          userFriendlyError = "Erro de conexão com a Meta.";
         }
       }
       
@@ -212,10 +225,14 @@ Deno.serve(async (req) => {
         JSON.stringify({ 
           success: false, 
           error: userFriendlyError,
+          possibleCauses,
           debug: {
             status: response.status,
             endpoint,
             templateName,
+            language,
+            paramsCount: params.length,
+            hasMedia: !!mediaUrl,
             requestBodySent: requestBody,
             response: result
           }
