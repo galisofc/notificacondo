@@ -51,6 +51,7 @@ import {
   Wrench,
   Wallet,
   ClipboardList,
+  Cog,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
@@ -108,6 +109,7 @@ const getBaseSuperAdminNavItems = (): NavStructure => [
       { title: "Logs", url: "/superadmin/logs", icon: FileText },
       { title: "Cron Jobs", url: "/superadmin/cron-jobs", icon: Clock },
       { title: "WhatsApp", url: "/superadmin/whatsapp", icon: MessageCircle },
+      { title: "Config WhatsApp", url: "/superadmin/whatsapp/config", icon: Cog },
     ],
   },
   { title: "Configurações", url: "/superadmin/settings", icon: Settings },
