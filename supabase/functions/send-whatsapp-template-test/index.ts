@@ -53,16 +53,26 @@ Deno.serve(async (req) => {
     const cleanPhone = phone.replace(/\D/g, "");
     const formattedPhone = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`;
 
-    // Build endpoint
-    const endpoint = `${config.api_url}/templateBody`;
-    
-    // Build request body - Z-PRO/Atende Aí Chat format
-    // Uses flat structure with templateName and templateLangCode at root level
+    // Build endpoint (per Postman: /template)
+    // Example: https://{BaseUrl}/v2/api/external/{ApiID}/template
+    const endpoint = `${config.api_url}/template`;
+
+    // Determine externalKey (some Z-PRO setups still require it in body)
+    const externalKey = (!config.instance_id || config.instance_id === "zpro-embedded")
+      ? config.api_key
+      : config.instance_id;
+
+    // Build request body (Z-PRO WABA Template)
+    // NOTE: hello_world has no variables, so components can be an empty array.
     const requestBody = {
       number: formattedPhone,
-      templateName: templateName,
+      externalKey,
+      templateName,
       templateLangCode: language,
-      components: [] // Empty array for templates without variables
+      // Some versions accept params (array of strings) instead of components
+      params: [],
+      // Some versions accept components (array) for variables
+      components: [],
     };
 
     console.log("[Template Test] Endpoint:", endpoint);
