@@ -1,6 +1,12 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://esm.sh/zod@3.22.4";
+import { 
+  sendMetaText, 
+  isMetaConfigured,
+  formatPhoneForMeta,
+  type MetaSendResult 
+} from "../_shared/meta-whatsapp.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,172 +23,6 @@ const SendNotificationSchema = z.object({
 // Sanitize strings for use in messages
 const sanitize = (str: string) => str.replace(/[<>"'`]/g, "").trim();
 
-// Multi-provider WhatsApp configuration
-type WhatsAppProvider = "zpro" | "zapi" | "evolution" | "wppconnect";
-
-interface ProviderConfig {
-  sendMessage: (phone: string, message: string, config: ProviderSettings) => Promise<{ success: boolean; messageId?: string; error?: string }>;
-}
-
-interface ProviderSettings {
-  apiUrl: string;
-  apiKey: string;
-  instanceId: string;
-}
-
-interface WhatsAppConfigRow {
-  id: string;
-  provider: string;
-  api_url: string;
-  api_key: string;
-  instance_id: string;
-  is_active: boolean;
-  app_url?: string;
-}
-
-// Z-PRO Provider - Uses query parameters via GET
-const zproProvider: ProviderConfig = {
-  async sendMessage(phone: string, message: string, config: ProviderSettings) {
-    const baseUrl = config.apiUrl.replace(/\/$/, "");
-    const phoneClean = phone.replace(/\D/g, "");
-    
-    // If instanceId is empty or placeholder, fallback to apiKey
-    let externalKey = config.instanceId || "";
-    if (!externalKey || externalKey === "zpro-embedded") {
-      externalKey = config.apiKey;
-    }
-    
-    const params = new URLSearchParams({
-      body: message,
-      number: phoneClean,
-      externalKey,
-      bearertoken: config.apiKey,
-      isClosed: "false"
-    });
-    
-    const sendUrl = `${baseUrl}/params/?${params.toString()}`;
-    console.log("Z-PRO sending to:", sendUrl.substring(0, 150) + "...");
-    
-    try {
-      const response = await fetch(sendUrl, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      });
-      
-      const responseText = await response.text();
-      console.log("Z-PRO response status:", response.status);
-      console.log("Z-PRO response:", responseText.substring(0, 200));
-      
-      let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch {
-        return { success: false, error: `Resposta inválida: ${responseText.substring(0, 100)}` };
-      }
-      
-      if (response.ok) {
-        const extractedMessageId = data.id || data.messageId || data.key?.id || data.msgId || data.message_id;
-        
-        if (extractedMessageId && extractedMessageId !== "sent") {
-          return { success: true, messageId: String(extractedMessageId) };
-        }
-        
-        if (data.status === "success" || data.status === "PENDING" || response.status === 200) {
-          const trackingId = `zpro_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-          console.log(`Z-PRO: No message ID in response, using tracking ID: ${trackingId}`);
-          return { success: true, messageId: trackingId };
-        }
-        
-        return { success: true, messageId: `zpro_${Date.now()}` };
-      }
-      
-      return { success: false, error: data.message || data.error || `Erro ${response.status}` };
-    } catch (error: any) {
-      return { success: false, error: `Erro de conexão: ${error.message}` };
-    }
-  },
-};
-
-// Z-API Provider
-const zapiProvider: ProviderConfig = {
-  async sendMessage(phone: string, message: string, config: ProviderSettings) {
-    const response = await fetch(`${config.apiUrl}/instances/${config.instanceId}/token/${config.apiKey}/send-text`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        phone: phone.replace(/\D/g, ""),
-        message: message,
-      }),
-    });
-    
-    const data = await response.json();
-    console.log("Z-API response:", data);
-    
-    if (response.ok && data.zapiMessageId) {
-      return { success: true, messageId: data.zapiMessageId };
-    }
-    return { success: false, error: data.message || "Erro ao enviar mensagem" };
-  },
-};
-
-// Evolution API Provider
-const evolutionProvider: ProviderConfig = {
-  async sendMessage(phone: string, message: string, config: ProviderSettings) {
-    const response = await fetch(`${config.apiUrl}/message/sendText/${config.instanceId}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": config.apiKey,
-      },
-      body: JSON.stringify({
-        number: phone.replace(/\D/g, ""),
-        text: message,
-      }),
-    });
-    
-    const data = await response.json();
-    console.log("Evolution API response:", data);
-    
-    if (response.ok && data.key?.id) {
-      return { success: true, messageId: data.key.id };
-    }
-    return { success: false, error: data.message || "Erro ao enviar mensagem" };
-  },
-};
-
-// WPPConnect Provider
-const wppconnectProvider: ProviderConfig = {
-  async sendMessage(phone: string, message: string, config: ProviderSettings) {
-    const response = await fetch(`${config.apiUrl}/api/${config.instanceId}/send-message`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${config.apiKey}`,
-      },
-      body: JSON.stringify({
-        phone: phone.replace(/\D/g, ""),
-        message: message,
-        isGroup: false,
-      }),
-    });
-    
-    const data = await response.json();
-    console.log("WPPConnect response:", data);
-    
-    if (response.ok && data.status === "success") {
-      return { success: true, messageId: data.id };
-    }
-    return { success: false, error: data.message || "Erro ao enviar mensagem" };
-  },
-};
-
-const providers: Record<WhatsAppProvider, ProviderConfig> = {
-  zpro: zproProvider,
-  zapi: zapiProvider,
-  evolution: evolutionProvider,
-  wppconnect: wppconnectProvider,
-};
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -191,8 +31,16 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // ========== CHECK META CONFIG ==========
+    if (!isMetaConfigured()) {
+      console.error("Meta WhatsApp not configured");
+      return new Response(
+        JSON.stringify({ error: "Meta WhatsApp não configurado. Configure META_WHATSAPP_PHONE_ID e META_WHATSAPP_ACCESS_TOKEN." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // ========== AUTHENTICATION ==========
     const authHeader = req.headers.get("Authorization");
@@ -243,7 +91,6 @@ serve(async (req) => {
     const { occurrence_id, resident_id, message_template } = parsed.data;
 
     // ========== AUTHORIZATION ==========
-    // Verify user has permission (owns the condominium or is super_admin)
     const { data: occurrence, error: occCheckError } = await supabase
       .from("occurrences")
       .select("condominium_id")
@@ -284,41 +131,14 @@ serve(async (req) => {
 
     console.log(`Authorization passed for user ${user.id}`);
 
-    // Fetch WhatsApp config from database
-    const { data: whatsappConfig, error: configError } = await supabase
-      .from("whatsapp_config")
-      .select("*")
-      .eq("is_active", true)
-      .order("created_at", { ascending: false })
-      .limit(1)
+    // Get app URL from settings or use default
+    const { data: appSettings } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "app_url")
       .maybeSingle();
-
-    if (configError) {
-      console.error("Error fetching WhatsApp config:", configError);
-      return new Response(
-        JSON.stringify({ error: "Erro ao buscar configuração do WhatsApp" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (!whatsappConfig) {
-      console.error("WhatsApp not configured in database");
-      return new Response(
-        JSON.stringify({ error: "WhatsApp não configurado. Configure no painel do Super Admin em Configurações > WhatsApp" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const typedConfig = whatsappConfig as WhatsAppConfigRow;
-    const whatsappApiUrl = typedConfig.api_url;
-    const whatsappApiKey = typedConfig.api_key;
-    const whatsappInstanceId = typedConfig.instance_id;
-    const whatsappProvider = (typedConfig.provider || "zpro") as WhatsAppProvider;
-    const appBaseUrl = typedConfig.app_url || "https://notificacondo.com.br";
-
-    console.log(`Using WhatsApp provider: ${whatsappProvider}`);
-    console.log(`API URL: ${whatsappApiUrl.substring(0, 50)}...`);
-    console.log(`App URL: ${appBaseUrl}`);
+    
+    const appBaseUrl = (appSettings?.value as string) || "https://notificacondo.lovable.app";
 
     // Fetch resident and occurrence details
     const { data: resident, error: residentError } = await supabase
@@ -454,7 +274,7 @@ Este link é pessoal e intransferível.`;
         occurrence_id,
         resident_id,
         message_content: message,
-        sent_via: `whatsapp_${whatsappProvider}`,
+        sent_via: "whatsapp_meta",
         secure_link: secureLink,
         secure_link_token: secureToken,
         sent_at: new Date().toISOString(),
@@ -470,13 +290,13 @@ Este link é pessoal e intransferível.`;
       );
     }
 
-    // Send WhatsApp message
+    // Send WhatsApp message via Meta API
     console.log(`Sending WhatsApp message to: ${resident.phone}`);
-    const provider = providers[whatsappProvider];
-    const result = await provider.sendMessage(resident.phone, message, {
-      apiUrl: whatsappApiUrl,
-      apiKey: whatsappApiKey,
-      instanceId: whatsappInstanceId,
+    
+    const result = await sendMetaText({
+      phone: resident.phone,
+      message,
+      previewUrl: true,
     });
 
     // Update notification with result
@@ -500,13 +320,14 @@ Este link é pessoal e intransferível.`;
       );
     }
 
-    console.log("WhatsApp sent successfully:", result.messageId);
+    console.log("WhatsApp notification sent successfully:", result.messageId);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message_id: result.messageId,
+        message: "Notificação enviada com sucesso",
         notification_id: notification.id,
+        message_id: result.messageId,
         secure_link: secureLink,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -515,7 +336,7 @@ Este link é pessoal e intransferível.`;
   } catch (error) {
     console.error("Unexpected error:", error);
     return new Response(
-      JSON.stringify({ error: "Erro interno do servidor" }),
+      JSON.stringify({ error: error instanceof Error ? error.message : "Erro interno do servidor" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

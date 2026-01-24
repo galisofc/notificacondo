@@ -1,6 +1,13 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { sendWabaTemplate, buildParamsArray, formatPhoneForWaba, type WabaConfig, type WabaSendResult } from "../_shared/waba-sender.ts";
+import { 
+  sendMetaTemplate, 
+  sendMetaImage, 
+  formatPhoneForMeta, 
+  buildParamsArray,
+  isMetaConfigured,
+  type MetaSendResult 
+} from "../_shared/meta-whatsapp.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,30 +16,6 @@ const corsHeaders = {
 
 // Sanitize strings for use in messages
 const sanitize = (str: string) => str.replace(/[<>"'`]/g, "").trim();
-
-// Multi-provider WhatsApp configuration
-type WhatsAppProvider = "zpro" | "zapi" | "evolution" | "wppconnect";
-
-interface ProviderConfig {
-  sendMessage: (phone: string, message: string, config: ProviderSettings, imageUrl?: string) => Promise<{ success: boolean; messageId?: string; error?: string }>;
-}
-
-interface ProviderSettings {
-  apiUrl: string;
-  apiKey: string;
-  instanceId: string;
-}
-
-interface WhatsAppConfigRow {
-  id: string;
-  provider: string;
-  api_url: string;
-  api_key: string;
-  instance_id: string;
-  is_active: boolean;
-  app_url?: string;
-  use_waba_templates?: boolean;
-}
 
 interface WhatsAppTemplateRow {
   id: string;
@@ -44,222 +27,6 @@ interface WhatsAppTemplateRow {
   params_order?: string[];
 }
 
-// Z-PRO Provider - Uses query parameters via GET for text, POST for images
-const zproProvider: ProviderConfig = {
-  async sendMessage(phone: string, message: string, config: ProviderSettings, imageUrl?: string) {
-    const baseUrl = config.apiUrl.replace(/\/$/, "");
-    const phoneClean = phone.replace(/\D/g, "");
-    
-    try {
-      let response;
-      
-      if (imageUrl) {
-        // Send image with caption via POST /url endpoint
-        console.log("Z-PRO sending image to:", phoneClean);
-        console.log("Image URL:", imageUrl.substring(0, 100) + "...");
-        const targetUrl = `${baseUrl}/url`;
-        console.log("Z-PRO image endpoint:", targetUrl);
-
-        // If instance_id is empty or placeholder, fallback to api_key
-        let externalKey = config.instanceId || "";
-        if (!externalKey || externalKey === "zpro-embedded") {
-          externalKey = config.apiKey;
-        }
-
-        response = await fetch(targetUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${config.apiKey}`,
-          },
-          body: JSON.stringify({
-            mediaUrl: imageUrl,
-            body: message,
-            number: phoneClean,
-            externalKey,
-            isClosed: false,
-          }),
-        });
-      } else {
-        // Send text only via GET (existing behavior)
-        const externalKey = config.instanceId || "";
-        const params = new URLSearchParams({
-          body: message,
-          number: phoneClean,
-          externalKey,
-          bearertoken: config.apiKey,
-          isClosed: "false",
-        });
-        
-        const sendUrl = `${baseUrl}/params/?${params.toString()}`;
-        console.log("Z-PRO sending text to:", sendUrl.substring(0, 150) + "...");
-        
-        response = await fetch(sendUrl, {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-      
-      const responseText = await response.text();
-      console.log("Z-PRO response status:", response.status);
-      console.log("Z-PRO response:", responseText.substring(0, 200));
-      
-      let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch {
-        return { success: false, error: `Resposta inválida: ${responseText.substring(0, 100)}` };
-      }
-      
-      if (response.ok) {
-        const extractedMessageId = data.id || data.messageId || data.key?.id || data.msgId || data.message_id;
-        
-        if (extractedMessageId && extractedMessageId !== "sent") {
-          return { success: true, messageId: String(extractedMessageId) };
-        }
-        
-        if (data.status === "success" || data.status === "PENDING" || response.status === 200) {
-          const trackingId = `zpro_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-          return { success: true, messageId: trackingId };
-        }
-        
-        return { success: true, messageId: `zpro_${Date.now()}` };
-      }
-      
-      return { success: false, error: data.message || data.error || `Erro ${response.status}` };
-    } catch (error: any) {
-      return { success: false, error: `Erro de conexão: ${error.message}` };
-    }
-  },
-};
-
-// Z-API Provider
-const zapiProvider: ProviderConfig = {
-  async sendMessage(phone: string, message: string, config: ProviderSettings, imageUrl?: string) {
-    const phoneClean = phone.replace(/\D/g, "");
-    
-    let response;
-    if (imageUrl) {
-      response = await fetch(`${config.apiUrl}/instances/${config.instanceId}/token/${config.apiKey}/send-image`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone: phoneClean,
-          image: imageUrl,
-          caption: message,
-        }),
-      });
-    } else {
-      response = await fetch(`${config.apiUrl}/instances/${config.instanceId}/token/${config.apiKey}/send-text`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone: phoneClean,
-          message: message,
-        }),
-      });
-    }
-    
-    const data = await response.json();
-    if (response.ok && data.zapiMessageId) {
-      return { success: true, messageId: data.zapiMessageId };
-    }
-    return { success: false, error: data.message || "Erro ao enviar mensagem" };
-  },
-};
-
-// Evolution API Provider
-const evolutionProvider: ProviderConfig = {
-  async sendMessage(phone: string, message: string, config: ProviderSettings, imageUrl?: string) {
-    const phoneClean = phone.replace(/\D/g, "");
-    
-    let response;
-    if (imageUrl) {
-      response = await fetch(`${config.apiUrl}/message/sendMedia/${config.instanceId}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": config.apiKey,
-        },
-        body: JSON.stringify({
-          number: phoneClean,
-          mediatype: "image",
-          media: imageUrl,
-          caption: message,
-        }),
-      });
-    } else {
-      response = await fetch(`${config.apiUrl}/message/sendText/${config.instanceId}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": config.apiKey,
-        },
-        body: JSON.stringify({
-          number: phoneClean,
-          text: message,
-        }),
-      });
-    }
-    
-    const data = await response.json();
-    if (response.ok && data.key?.id) {
-      return { success: true, messageId: data.key.id };
-    }
-    return { success: false, error: data.message || "Erro ao enviar mensagem" };
-  },
-};
-
-// WPPConnect Provider
-const wppconnectProvider: ProviderConfig = {
-  async sendMessage(phone: string, message: string, config: ProviderSettings, imageUrl?: string) {
-    const phoneClean = phone.replace(/\D/g, "");
-    
-    let response;
-    if (imageUrl) {
-      response = await fetch(`${config.apiUrl}/api/${config.instanceId}/send-file-url`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${config.apiKey}`,
-        },
-        body: JSON.stringify({
-          phone: phoneClean,
-          url: imageUrl,
-          caption: message,
-          isGroup: false,
-        }),
-      });
-    } else {
-      response = await fetch(`${config.apiUrl}/api/${config.instanceId}/send-message`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${config.apiKey}`,
-        },
-        body: JSON.stringify({
-          phone: phoneClean,
-          message: message,
-          isGroup: false,
-        }),
-      });
-    }
-    
-    const data = await response.json();
-    if (response.ok && data.status === "success") {
-      return { success: true, messageId: data.id };
-    }
-    return { success: false, error: data.message || "Erro ao enviar mensagem" };
-  },
-};
-
-const providers: Record<WhatsAppProvider, ProviderConfig> = {
-  zpro: zproProvider,
-  zapi: zapiProvider,
-  evolution: evolutionProvider,
-  wppconnect: wppconnectProvider,
-};
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -269,6 +36,15 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // ========== CHECK META CONFIG ==========
+    if (!isMetaConfigured()) {
+      console.error("Meta WhatsApp not configured");
+      return new Response(
+        JSON.stringify({ error: "Meta WhatsApp não configurado. Configure META_WHATSAPP_PHONE_ID e META_WHATSAPP_ACCESS_TOKEN." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // ========== AUTHENTICATION ==========
     const authHeader = req.headers.get("Authorization");
@@ -453,44 +229,7 @@ serve(async (req) => {
       );
     }
 
-    // ========== FETCH WHATSAPP CONFIG ==========
-    const { data: whatsappConfig, error: configError } = await supabase
-      .from("whatsapp_config")
-      .select("*")
-      .eq("is_active", true)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (configError) {
-      console.error("Error fetching WhatsApp config:", configError);
-      return new Response(
-        JSON.stringify({ error: "Erro ao buscar configuração do WhatsApp" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (!whatsappConfig) {
-      console.log("WhatsApp not configured");
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: "WhatsApp não configurado. Encomenda registrada sem notificação.",
-          notifications_sent: 0 
-        }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const typedConfig = whatsappConfig as WhatsAppConfigRow;
-    const whatsappProvider = (typedConfig.provider || "zpro") as WhatsAppProvider;
-    const provider = providers[whatsappProvider];
-    const useWabaTemplates = typedConfig.use_waba_templates === true;
-
-    console.log(`Using WhatsApp provider: ${whatsappProvider}, WABA mode: ${useWabaTemplates}`);
-
     // ========== FETCH TEMPLATE ==========
-    let templateContent: string | null = null;
     let wabaTemplateName: string | null = null;
     let wabaLanguage: string = "pt_BR";
     let paramsOrder: string[] = [];
@@ -504,247 +243,141 @@ serve(async (req) => {
       .eq("is_active", true)
       .maybeSingle();
 
-    if (customTemplate?.content && !useWabaTemplates) {
-      // Custom templates only work in non-WABA mode (free text)
-      templateContent = customTemplate.content;
-      console.log("Using custom condominium template (free text mode)");
-    } else {
-      // Get default template with WABA fields
-      const { data: defaultTemplate } = await supabase
-        .from("whatsapp_templates")
-        .select("content, waba_template_name, waba_language, params_order")
-        .eq("slug", "package_arrival")
-        .eq("is_active", true)
-        .maybeSingle();
-      
-      if (defaultTemplate) {
-        templateContent = defaultTemplate.content;
-        wabaTemplateName = (defaultTemplate as WhatsAppTemplateRow).waba_template_name || null;
-        wabaLanguage = (defaultTemplate as WhatsAppTemplateRow).waba_language || "pt_BR";
-        paramsOrder = (defaultTemplate as WhatsAppTemplateRow).params_order || [];
-        console.log(`Template loaded: WABA name=${wabaTemplateName}, params_order=${paramsOrder.length} items`);
-      }
+    // Fetch default template with WABA config
+    const { data: defaultTemplate } = await supabase
+      .from("whatsapp_templates")
+      .select("id, slug, content, is_active, waba_template_name, waba_language, params_order")
+      .eq("slug", "package_arrival")
+      .eq("is_active", true)
+      .maybeSingle() as { data: WhatsAppTemplateRow | null; error: any };
+
+    if (defaultTemplate) {
+      wabaTemplateName = defaultTemplate.waba_template_name || null;
+      wabaLanguage = defaultTemplate.waba_language || "pt_BR";
+      paramsOrder = defaultTemplate.params_order || [];
+      console.log(`Template WABA config: name=${wabaTemplateName}, lang=${wabaLanguage}, params=${paramsOrder.join(",")}`);
     }
-
-    // Default message template (fallback for free text mode)
-    const defaultMessage = `📦 *Nova Encomenda!*
-
-🏢 *{condominio}*
-
-Olá, *{nome}*!
-
-Você tem uma encomenda aguardando na portaria.
-
-🏠 *Destino:* BLOCO {bloco}, APTO {apartamento}
-📋 *Tipo:* {tipo_encomenda}
-📍 *Rastreio:* {codigo_rastreio}
-🧑‍💼 *Recebido por:* {porteiro}
-🔑 *Código de retirada:* {numeropedido}
-
-Apresente este código na portaria para retirar sua encomenda.
-
-_Mensagem automática - NotificaCondo_`;
 
     // ========== SEND NOTIFICATIONS ==========
-    const results: Array<{ resident_id: string; success: boolean; error?: string; messageId?: string }> = [];
+    const results: Array<{ resident_id: string; success: boolean; messageId?: string; error?: string }> = [];
 
     for (const resident of residentsWithPhone) {
-      console.log(`Processing notification for ${resident.full_name} (${resident.phone})`);
+      console.log(`Sending notification to ${resident.full_name} (${resident.phone})`);
 
-      try {
-        let result: { success: boolean; messageId?: string; error?: string };
+      // Build variables for template
+      const variables: Record<string, string> = {
+        condominio: sanitize(condoName),
+        nome: sanitize(resident.full_name || "Morador"),
+        bloco: sanitize(blockName),
+        apartamento: sanitize(aptNumber),
+        tipo_encomenda: sanitize(packageTypeName),
+        codigo_rastreio: sanitize(trackingCode),
+        porteiro: sanitize(porterName),
+        numeropedido: sanitize(pickup_code),
+      };
 
-        // Validate WABA template - skip WABA mode if template is a test template or not properly configured
-        const isValidWabaTemplate = wabaTemplateName && 
-          wabaTemplateName !== "hello_world" && 
-          wabaTemplateName !== "sample_template" &&
-          !wabaTemplateName.startsWith("test_") &&
-          paramsOrder.length > 0;
+      let result: MetaSendResult;
 
-         // Check if WABA mode is enabled and template is properly configured
-         if (useWabaTemplates && isValidWabaTemplate && whatsappProvider === "zpro") {
-          // ========== WABA TEMPLATE MODE ==========
-          console.log(`Sending WABA template "${wabaTemplateName}" to ${resident.phone}`);
-          
-          // Build variables object for this resident
-          const variables: Record<string, string> = {
-            nome: sanitize(resident.full_name),
-            condominio: sanitize(condoName),
-            bloco: sanitize(blockName),
-            apartamento: sanitize(aptNumber),
-            numeropedido: pickup_code,
-            tipo_encomenda: sanitize(packageTypeName),
-            codigo_rastreio: sanitize(trackingCode),
-            porteiro: sanitize(porterName),
-          };
-
-          // Build params array in the correct order
-          const params = buildParamsArray(variables, paramsOrder);
-          console.log(`WABA params: [${params.join(", ")}]`);
-
-          // Template "encomenda_management_5" HAS a header image AND footer in Meta
-          const wabaTemplateParams = {
-            phone: resident.phone!,
-            templateName: wabaTemplateName!,
-            language: wabaLanguage,
-            params,
-            mediaUrl: photo_url || undefined,
-            mediaType: "image" as const,
-            hasFooter: true, // Template has static footer
-          };
-
-          const wabaResult = await sendWabaTemplate(
-            wabaTemplateParams,
-            {
-              apiUrl: typedConfig.api_url,
-              apiKey: typedConfig.api_key,
-              instanceId: typedConfig.instance_id,
-            }
-          );
-
-          // ========== SAVE WABA DEBUG LOG ==========
-          try {
-            await supabase.from("whatsapp_notification_logs").insert({
-              function_name: "notify-package-arrival",
-              package_id: package_id,
-              resident_id: resident.id,
-              phone: resident.phone,
-              template_name: wabaTemplateName,
-              template_language: wabaLanguage,
-              request_payload: {
-                templateParams: wabaTemplateParams,
-                paramsOrder,
-                variables,
-              },
-              response_status: wabaResult.debug?.status || null,
-              response_body: wabaResult.debug?.response || null,
-              success: wabaResult.success,
-              message_id: wabaResult.messageId || null,
-              error_message: wabaResult.error || null,
-              debug_info: wabaResult.debug || null,
-            });
-          } catch (logError) {
-            console.error("[WABA] Failed to save debug log:", logError);
-          }
-
-          if (wabaResult.success) {
-            result = {
-              success: true,
-              messageId: wabaResult.messageId,
-            };
-          } else {
-            // IMPORTANT: When WABA mode is enabled, we must NOT fall back to free-text.
-            // This ensures we can detect and fix template/Meta/provider issues instead of masking them.
-            console.error(`[WABA] Failed (${wabaResult.error}). WABA mode is enabled, so fallback is disabled.`);
-            result = {
-              success: false,
-              error: wabaResult.error || "WABA_FAILED",
-            };
-          }
-        } else {
-          if (useWabaTemplates) {
-            // WABA mode is enabled, but we can't send via WABA due to configuration/provider mismatch.
-            const reason = !isValidWabaTemplate
-              ? `Template WABA inválido (nome="${wabaTemplateName}", params_order=${paramsOrder.length}).`
-              : `Provedor "${whatsappProvider}" não suporta WABA (apenas "zpro").`;
-
-            console.error(`[WABA] ${reason} Fallback desabilitado.`);
-            result = {
-              success: false,
-              error: reason,
-            };
-          } else {
-            // ========== FREE TEXT MODE (legacy) ==========
-            let message = templateContent || defaultMessage;
-            message = message
-              .replace(/{nome}/g, sanitize(resident.full_name))
-              .replace(/{condominio}/g, sanitize(condoName))
-              .replace(/{bloco}/g, sanitize(blockName))
-              .replace(/{apartamento}/g, sanitize(aptNumber))
-              .replace(/{numeropedido}/g, pickup_code)
-              .replace(/{tipo_encomenda}/g, sanitize(packageTypeName))
-              .replace(/{codigo_rastreio}/g, sanitize(trackingCode))
-              .replace(/{porteiro}/g, sanitize(porterName));
-
-            console.log(`Sending free text message to ${resident.full_name}`);
-            if (photo_url) {
-              console.log(`Including package photo: ${photo_url.substring(0, 80)}...`);
-            }
-
-            result = await provider.sendMessage(
-              resident.phone!,
-              message,
-              {
-                apiUrl: typedConfig.api_url,
-                apiKey: typedConfig.api_key,
-                instanceId: typedConfig.instance_id,
-              },
-              photo_url || undefined
-            );
-          }
-        }
-
-        results.push({
-          resident_id: resident.id,
-          success: result.success,
-          messageId: result.messageId,
-          error: result.error,
+      // Try to send via WABA template if configured
+      if (wabaTemplateName && paramsOrder.length > 0) {
+        console.log(`Using WABA template: ${wabaTemplateName}`);
+        
+        const bodyParams = buildParamsArray(variables, paramsOrder);
+        
+        result = await sendMetaTemplate({
+          phone: resident.phone!,
+          templateName: wabaTemplateName,
+          language: wabaLanguage,
+          bodyParams,
+          headerMediaUrl: photo_url || undefined,
+          headerMediaType: photo_url ? "image" : undefined,
         });
-
-        if (result.success) {
-          console.log(`Notification sent successfully to ${resident.full_name} (ID: ${result.messageId})`);
-        } else {
-          console.error(`Failed to notify ${resident.full_name}:`, result.error);
-        }
-      } catch (error: any) {
-        console.error(`Error sending to ${resident.full_name}:`, error);
-        results.push({
-          resident_id: resident.id,
-          success: false,
-          error: error.message,
-        });
-      }
-    }
-
-    const successCount = results.filter(r => r.success).length;
-    const failCount = results.filter(r => !r.success).length;
-
-    console.log(`Notifications complete: ${successCount} sent, ${failCount} failed`);
-
-    // Update package notification status in database
-    if (successCount > 0) {
-      const { error: updateError } = await supabase
-        .from("packages")
-        .update({
-          notification_sent: true,
-          notification_sent_at: new Date().toISOString(),
-          notification_count: successCount,
-        })
-        .eq("id", package_id);
-
-      if (updateError) {
-        console.error("Error updating package notification status:", updateError);
       } else {
-        console.log(`Package ${package_id} notification status updated`);
+        // Fallback: Send image with caption
+        console.log("Fallback: sending image with caption");
+        
+        const caption = `🏢 *${sanitize(condoName)}*\n\n` +
+          `📦 *Nova Encomenda!*\n\n` +
+          `Olá, *${sanitize(resident.full_name || "Morador")}*!\n\n` +
+          `Uma encomenda chegou para você:\n` +
+          `• Tipo: ${sanitize(packageTypeName)}\n` +
+          `• Bloco: ${sanitize(blockName)}\n` +
+          `• Apto: ${sanitize(aptNumber)}\n` +
+          `• Rastreio: ${sanitize(trackingCode)}\n` +
+          `• Código de retirada: *${sanitize(pickup_code)}*\n\n` +
+          `Recebido por: ${sanitize(porterName)}`;
+        
+        if (photo_url) {
+          result = await sendMetaImage({
+            phone: resident.phone!,
+            imageUrl: photo_url,
+            caption,
+          });
+        } else {
+          // Import sendMetaText for text-only fallback
+          const { sendMetaText } = await import("../_shared/meta-whatsapp.ts");
+          result = await sendMetaText({
+            phone: resident.phone!,
+            message: caption,
+          });
+        }
+      }
+
+      // Log to whatsapp_notification_logs
+      await supabase.from("whatsapp_notification_logs").insert({
+        phone: resident.phone,
+        template_name: wabaTemplateName || "package_arrival_fallback",
+        params: variables,
+        success: result.success,
+        message_id: result.messageId,
+        error_message: result.error,
+        request_payload: result.debug?.payload,
+        response_body: result.debug?.response,
+        condominium_id: condoId,
+      });
+
+      results.push({
+        resident_id: resident.id,
+        success: result.success,
+        messageId: result.messageId,
+        error: result.error,
+      });
+
+      // Small delay between messages to avoid rate limiting
+      if (residentsWithPhone.length > 1) {
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
     }
+
+    // Update package notification status
+    const successCount = results.filter(r => r.success).length;
+    
+    await supabase
+      .from("packages")
+      .update({
+        notification_sent: successCount > 0,
+        notification_sent_at: new Date().toISOString(),
+        notification_count: successCount,
+      })
+      .eq("id", package_id);
+
+    console.log(`Notification complete: ${successCount}/${results.length} sent successfully`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Notificações enviadas: ${successCount} de ${results.length}`,
+        message: `Notificação enviada para ${successCount} de ${results.length} moradores`,
         notifications_sent: successCount,
-        notifications_failed: failCount,
-        waba_mode: useWabaTemplates,
+        total_residents: results.length,
         details: results,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
-  } catch (error: any) {
+  } catch (error) {
     console.error("Unexpected error:", error);
     return new Response(
-      JSON.stringify({ error: "Erro interno do servidor", details: error.message }),
+      JSON.stringify({ error: error instanceof Error ? error.message : "Erro interno do servidor" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
