@@ -28,6 +28,7 @@ export interface WabaTemplateParams {
   params: string[];
   mediaUrl?: string;  // URL for header image/video/document
   mediaType?: "image" | "video" | "document";
+  hasFooter?: boolean;  // Whether the template has a static footer (no params)
 }
 
 /**
@@ -58,7 +59,8 @@ export function formatPhoneForWaba(phone: string): string {
 function buildTemplateComponents(
   params: string[],
   mediaUrl?: string,
-  mediaType?: string
+  mediaType?: string,
+  hasFooter?: boolean
 ): Array<Record<string, unknown>> {
   const components: Array<Record<string, unknown>> = [];
 
@@ -95,6 +97,15 @@ function buildTemplateComponents(
     });
   }
 
+  // Add footer component if template has static footer (no dynamic params)
+  // Per Meta API: static footers require empty parameters array
+  if (hasFooter) {
+    components.push({
+      type: "footer",
+      parameters: [],
+    });
+  }
+
   return components;
 }
 
@@ -110,7 +121,7 @@ export async function sendWabaTemplate(
   template: WabaTemplateParams,
   config: WabaConfig
 ): Promise<WabaSendResult> {
-  const { phone, templateName, language, params, mediaUrl, mediaType } = template;
+  const { phone, templateName, language, params, mediaUrl, mediaType, hasFooter } = template;
   const { apiUrl, apiKey, instanceId } = config;
 
   const formattedPhone = formatPhoneForWaba(phone);
@@ -119,7 +130,7 @@ export async function sendWabaTemplate(
   const endpoint = `${apiUrl}/templateBody`;
   
   // Build components array in Meta Cloud API format
-  const components = buildTemplateComponents(params, mediaUrl, mediaType);
+  const components = buildTemplateComponents(params, mediaUrl, mediaType, hasFooter);
 
   // Build request body with templateData structure (required by Z-PRO)
   // Determine externalKey (fallback logic for zpro-embedded or null instanceId)

@@ -582,7 +582,7 @@ _Mensagem automática - NotificaCondo_`;
           const params = buildParamsArray(variables, paramsOrder);
           console.log(`WABA params: [${params.join(", ")}]`);
 
-          // Template "encomenda_management_5" HAS a header image in Meta
+          // Template "encomenda_management_5" HAS a header image AND footer in Meta
           const wabaTemplateParams = {
             phone: resident.phone!,
             templateName: wabaTemplateName!,
@@ -590,6 +590,7 @@ _Mensagem automática - NotificaCondo_`;
             params,
             mediaUrl: photo_url || undefined,
             mediaType: "image" as const,
+            hasFooter: true, // Template has static footer
           };
 
           const wabaResult = await sendWabaTemplate(
