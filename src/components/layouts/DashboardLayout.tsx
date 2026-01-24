@@ -155,7 +155,8 @@ function SidebarNavigation() {
   const prevUnreadMessagesRef = useRef<number>(0);
   const audioContextRef = useRef<AudioContext | null>(null);
 
-  const playNotificationSound = useCallback(() => {
+  // Som para defesas pendentes (tom ascendente - urgência)
+  const playDefenseNotificationSound = useCallback(() => {
     try {
       if (!audioContextRef.current) {
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -180,7 +181,45 @@ function SidebarNavigation() {
       oscillator.start(ctx.currentTime);
       oscillator.stop(ctx.currentTime + 0.4);
     } catch (error) {
-      console.error("Error playing notification sound:", error);
+      console.error("Error playing defense notification sound:", error);
+    }
+  }, []);
+
+  // Som para mensagens de contato (tom duplo suave - atenção gentil)
+  const playMessageNotificationSound = useCallback(() => {
+    try {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      
+      const ctx = audioContextRef.current;
+      
+      // Primeiro tom
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+      osc1.type = "sine";
+      gain1.gain.setValueAtTime(0.25, ctx.currentTime);
+      gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+      osc1.start(ctx.currentTime);
+      osc1.stop(ctx.currentTime + 0.15);
+      
+      // Segundo tom (mais alto)
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.frequency.setValueAtTime(659.25, ctx.currentTime + 0.18); // E5
+      osc2.type = "sine";
+      gain2.gain.setValueAtTime(0, ctx.currentTime);
+      gain2.gain.setValueAtTime(0.25, ctx.currentTime + 0.18);
+      gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+      osc2.start(ctx.currentTime + 0.18);
+      osc2.stop(ctx.currentTime + 0.35);
+    } catch (error) {
+      console.error("Error playing message notification sound:", error);
     }
   }, []);
 
@@ -257,7 +296,7 @@ function SidebarNavigation() {
           const newCount = count || 0;
           
           if (newCount > prevUnreadMessagesRef.current) {
-            playNotificationSound();
+            playMessageNotificationSound();
           }
           
           prevUnreadMessagesRef.current = newCount;
@@ -269,7 +308,7 @@ function SidebarNavigation() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, role, playNotificationSound]);
+  }, [user, role, playMessageNotificationSound]);
 
   useEffect(() => {
     if (!user || role !== "sindico" || condoIds.length === 0) return;
@@ -293,7 +332,7 @@ function SidebarNavigation() {
           const newCount = count || 0;
           
           if (newCount > prevPendingDefensesRef.current) {
-            playNotificationSound();
+            playDefenseNotificationSound();
           }
           
           prevPendingDefensesRef.current = newCount;
@@ -305,7 +344,7 @@ function SidebarNavigation() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, role, condoIds, playNotificationSound]);
+  }, [user, role, condoIds, playDefenseNotificationSound]);
 
   useEffect(() => {
     prevPendingDefensesRef.current = pendingDefenses;
