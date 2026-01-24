@@ -583,21 +583,48 @@ _Mensagem automática - NotificaCondo_`;
           console.log(`WABA params: [${params.join(", ")}]`);
 
           // Template "encomenda_management_5" HAS a header image in Meta
+          const wabaTemplateParams = {
+            phone: resident.phone!,
+            templateName: wabaTemplateName!,
+            language: wabaLanguage,
+            params,
+            mediaUrl: photo_url || undefined,
+            mediaType: "image" as const,
+          };
+
           const wabaResult = await sendWabaTemplate(
-            {
-              phone: resident.phone!,
-              templateName: wabaTemplateName!,
-              language: wabaLanguage,
-              params,
-              mediaUrl: photo_url || undefined,
-              mediaType: "image",
-            },
+            wabaTemplateParams,
             {
               apiUrl: typedConfig.api_url,
               apiKey: typedConfig.api_key,
               instanceId: typedConfig.instance_id,
             }
           );
+
+          // ========== SAVE WABA DEBUG LOG ==========
+          try {
+            await supabase.from("whatsapp_notification_logs").insert({
+              function_name: "notify-package-arrival",
+              package_id: package_id,
+              resident_id: resident.id,
+              phone: resident.phone,
+              template_name: wabaTemplateName,
+              template_language: wabaLanguage,
+              request_payload: {
+                templateParams: wabaTemplateParams,
+                paramsOrder,
+                variables,
+              },
+              response_status: wabaResult.debug?.status || null,
+              response_body: wabaResult.debug?.response || null,
+              success: wabaResult.success,
+              message_id: wabaResult.messageId || null,
+              error_message: wabaResult.error || null,
+              debug_info: wabaResult.debug || null,
+            });
+          } catch (logError) {
+            console.error("[WABA] Failed to save debug log:", logError);
+          }
 
           if (wabaResult.success) {
             result = {
