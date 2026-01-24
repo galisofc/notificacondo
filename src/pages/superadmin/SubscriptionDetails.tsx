@@ -993,7 +993,7 @@ export default function SubscriptionDetails() {
 
       <div className="space-y-4 sm:space-y-6 animate-fade-up">
         <SuperAdminBreadcrumbs items={[
-          { label: "Assinaturas", href: "/superadmin/subscriptions" },
+          { label: "Assinantes", href: "/superadmin/subscriptions" },
           { label: condominium?.name || "Detalhes" }
         ]} />
         {/* Header */}
