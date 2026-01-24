@@ -170,8 +170,9 @@ Deno.serve(async (req) => {
         } else {
           deletedPackages++;
         }
-      } catch (e) {
-        errors.push(`Package ${pkg.id}: ${e.message}`);
+      } catch (e: unknown) {
+        const errorMessage = e instanceof Error ? e.message : String(e);
+        errors.push(`Package ${pkg.id}: ${errorMessage}`);
       }
     }
 
@@ -207,8 +208,9 @@ Deno.serve(async (req) => {
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (error) {
-    console.error("Error in cleanup-old-packages:", error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("Error in cleanup-old-packages:", errorMessage);
 
     // Update log with error
     if (logId) {
@@ -218,7 +220,7 @@ Deno.serve(async (req) => {
           .update({
             status: "error",
             finished_at: new Date().toISOString(),
-            result: { error: error.message },
+            result: { error: errorMessage },
           })
           .eq("id", logId);
       } catch {
@@ -227,7 +229,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ success: false, error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
