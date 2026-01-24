@@ -10,6 +10,8 @@ interface RequestBody {
   templateName?: string;
   language?: string;
   isClosed?: boolean;
+  params?: string[];
+  mediaUrl?: string;
 }
 
 Deno.serve(async (req) => {
@@ -24,6 +26,8 @@ Deno.serve(async (req) => {
       templateName = "hello_world",
       language = "en_US",
       isClosed = false,
+      params = [],
+      mediaUrl,
     }: RequestBody = await req.json();
 
     if (!phone) {
@@ -59,12 +63,51 @@ Deno.serve(async (req) => {
     const cleanPhone = phone.replace(/\D/g, "");
     const formattedPhone = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`;
 
-    // Build endpoint (per Postman: /template)
-    // Example: https://{BaseUrl}/v2/api/external/{ApiID}/template
+    // Build endpoint
     const endpoint = `${config.api_url}/template`;
 
-    // Build request body EXACTLY like the Postman example (SendTemplateWaba)
-    // Ref: /template expects `number`, `isClosed` and a nested `templateData` payload.
+    // Build template object
+    const templateObj: Record<string, unknown> = {
+      name: templateName,
+      language: {
+        code: language,
+      },
+    };
+
+    // Add components only if there are params or media
+    if (params.length > 0 || mediaUrl) {
+      const components: Array<Record<string, unknown>> = [];
+      
+      // Add header component for media
+      if (mediaUrl) {
+        components.push({
+          type: "header",
+          parameters: [
+            {
+              type: "image",
+              image: {
+                link: mediaUrl,
+              },
+            },
+          ],
+        });
+      }
+      
+      // Add body component for text params
+      if (params.length > 0) {
+        components.push({
+          type: "body",
+          parameters: params.map((value) => ({
+            type: "text",
+            text: value,
+          })),
+        });
+      }
+      
+      templateObj.components = components;
+    }
+
+    // Build request body
     const requestBody = {
       number: formattedPhone,
       isClosed,
@@ -72,18 +115,15 @@ Deno.serve(async (req) => {
         messaging_product: "whatsapp",
         to: formattedPhone,
         type: "template",
-        template: {
-          name: templateName,
-          language: {
-            code: language,
-          },
-        },
+        template: templateObj,
       },
     };
 
     console.log("[Template Test] Endpoint:", endpoint);
     console.log("[Template Test] Template:", templateName);
     console.log("[Template Test] Phone:", formattedPhone);
+    console.log("[Template Test] Params:", params);
+    console.log("[Template Test] MediaUrl:", mediaUrl);
     console.log("[Template Test] Request body:", JSON.stringify(requestBody, null, 2));
 
     // Send request to Z-PRO API
