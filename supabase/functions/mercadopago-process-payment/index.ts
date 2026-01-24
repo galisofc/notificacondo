@@ -58,20 +58,40 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Verify user authentication
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - No authorization header", success: false }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - Invalid token", success: false }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const { invoice_id, amount, form_data }: ProcessPaymentRequest = await req.json();
 
-    console.log("Processing payment for invoice:", invoice_id);
+    console.log("Processing payment for invoice:", invoice_id, "by user:", user.id);
     console.log("Payment type:", form_data.paymentType);
     console.log("Selected payment method:", form_data.selectedPaymentMethod);
     console.log("Amount:", amount);
 
-    // Get invoice details to validate - include condominium address for boleto
+    // Get invoice details to validate - include condominium address for boleto and owner_id for authorization
     const { data: invoice, error: invoiceError } = await supabase
       .from("invoices")
       .select(`
         *,
         condominium:condominiums(
           name,
+          owner_id,
           address,
           address_number,
           neighborhood,
@@ -85,6 +105,26 @@ Deno.serve(async (req) => {
 
     if (invoiceError || !invoice) {
       throw new Error(`Invoice not found: ${invoice_id}`);
+    }
+
+    // Verify user has permission (is condominium owner or super_admin)
+    const condoOwnerId = (invoice.condominium as { name: string; owner_id: string; address?: string; address_number?: string; neighborhood?: string; city?: string; state?: string; zip_code?: string })?.owner_id;
+    
+    if (condoOwnerId !== user.id) {
+      // Check if user is super_admin
+      const { data: roleCheck } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "super_admin")
+        .maybeSingle();
+      
+      if (!roleCheck) {
+        return new Response(
+          JSON.stringify({ error: "Forbidden - You do not have permission to process payments for this invoice", success: false }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Validate amount matches invoice
@@ -143,6 +183,7 @@ Deno.serve(async (req) => {
       // Try to use address from form_data first, then from condominium
       const condo = invoice.condominium as {
         name?: string;
+        owner_id?: string;
         address?: string;
         address_number?: string;
         neighborhood?: string;

@@ -32,6 +32,25 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Verify user authentication
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - No authorization header" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - Invalid token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const body: CreatePixRequest = await req.json();
     const { 
       invoice_id, 
@@ -42,9 +61,9 @@ Deno.serve(async (req) => {
       payer_identification_number = "00000000000"
     } = body;
 
-    console.log("Creating PIX payment for invoice:", invoice_id);
+    console.log("Creating PIX payment for invoice:", invoice_id, "by user:", user.id);
 
-    // Get invoice details
+    // Get invoice details with condominium owner info
     const { data: invoice, error: invoiceError } = await supabase
       .from("invoices")
       .select(`
@@ -57,6 +76,26 @@ Deno.serve(async (req) => {
     if (invoiceError || !invoice) {
       console.error("Invoice not found:", invoice_id, invoiceError);
       throw new Error(`Invoice not found: ${invoice_id}`);
+    }
+
+    // Verify user has permission (is condominium owner or super_admin)
+    const condoOwnerId = (invoice.condominium as { name: string; owner_id: string })?.owner_id;
+    
+    if (condoOwnerId !== user.id) {
+      // Check if user is super_admin
+      const { data: roleCheck } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "super_admin")
+        .maybeSingle();
+      
+      if (!roleCheck) {
+        return new Response(
+          JSON.stringify({ error: "Forbidden - You do not have permission to create PIX payments for this invoice" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     console.log("Invoice found:", invoice.invoice_number, "Amount:", invoice.amount);
