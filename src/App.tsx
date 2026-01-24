@@ -49,6 +49,7 @@ import SubscriptionDetails from "./pages/superadmin/SubscriptionDetails";
 import SuperAdminInvoices from "./pages/superadmin/Invoices";
 import Logs from "./pages/superadmin/Logs";
 import MagicLinkLogs from "./pages/superadmin/MagicLinkLogs";
+import EdgeFunctionLogs from "./pages/superadmin/EdgeFunctionLogs";
 import CronJobs from "./pages/superadmin/CronJobs";
 import Transfers from "./pages/superadmin/Transfers";
 import WhatsApp from "./pages/superadmin/WhatsApp";
@@ -426,6 +427,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole="super_admin">
                     <MagicLinkLogs />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/superadmin/logs/edge-functions"
+                element={
+                  <ProtectedRoute requiredRole="super_admin">
+                    <EdgeFunctionLogs />
                   </ProtectedRoute>
                 }
               />
