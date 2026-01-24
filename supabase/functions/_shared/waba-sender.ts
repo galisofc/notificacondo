@@ -63,18 +63,23 @@ function buildTemplateComponents(
   const components: Array<Record<string, unknown>> = [];
 
   // Add header component if media is present (image/video/document)
+  // CRITICAL: For image/video/document headers, ONLY include the media object.
+  // Adding ANY other field (like "text": "") breaks Meta API with error 400.
   if (mediaUrl) {
-    const type = mediaType || "image";
+    const mediaTypeKey = mediaType || "image";
+    
+    // Build the parameter object with ONLY type and the media object
+    // Do NOT add "text" field - Meta rejects it even if empty
+    const headerParameter: Record<string, unknown> = {
+      type: mediaTypeKey,
+    };
+    headerParameter[mediaTypeKey] = {
+      link: mediaUrl,
+    };
+    
     components.push({
       type: "header",
-      parameters: [
-        {
-          type: type,
-          [type]: {
-            link: mediaUrl,
-          },
-        },
-      ],
+      parameters: [headerParameter],
     });
   }
 
