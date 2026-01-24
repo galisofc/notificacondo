@@ -296,7 +296,7 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
     }
   };
 
-  // Send WABA template test (hello_world)
+  // Send WABA template test (hello_world) via Edge Function
   const handleSendTemplateTest = async () => {
     if (!testPhone) {
       toast({
@@ -310,38 +310,17 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
     setIsSendingTemplateTest(true);
 
     try {
-      // Build WABA template request for hello_world (no params needed)
-      const externalKey = config.instance_id || config.api_key;
-      const endpoint = `${config.api_url}/templateBody`;
-      
-      // Format phone number
-      const formattedPhone = testPhone.replace(/\D/g, "");
-      const phoneWithPrefix = formattedPhone.startsWith("55") ? formattedPhone : `55${formattedPhone}`;
-      
-      const requestBody = {
-        number: phoneWithPrefix,
-        externalKey,
-        templateName: "hello_world",
-        language: "en_US",
-        params: []
-      };
-
-      console.log("[Template Test] Sending to:", endpoint);
-      console.log("[Template Test] Body:", JSON.stringify(requestBody, null, 2));
-
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${config.api_key}`,
+      const { data, error } = await supabase.functions.invoke("send-whatsapp-template-test", {
+        body: { 
+          phone: testPhone,
+          templateName: "hello_world",
+          language: "en_US"
         },
-        body: JSON.stringify(requestBody),
       });
 
-      const result = await response.json();
-      console.log("[Template Test] Response:", result);
+      if (error) throw error;
 
-      if (response.ok && (result.success !== false)) {
+      if (data.success) {
         toast({ 
           title: "✅ Template enviado!", 
           description: "O template hello_world foi enviado. Verifique seu WhatsApp." 
@@ -350,9 +329,10 @@ export function ConfigSheet({ open, onOpenChange }: ConfigSheetProps) {
       } else {
         toast({
           title: "❌ Erro ao enviar template",
-          description: result.error || result.message || `HTTP ${response.status}`,
+          description: data.error || "Falha ao enviar template",
           variant: "destructive",
         });
+        console.error("[Template Test] Debug:", data.debug);
       }
     } catch (error: any) {
       console.error("[Template Test] Error:", error);
