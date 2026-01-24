@@ -446,23 +446,45 @@ export default function WhatsAppConfig() {
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-lg border p-4">
+                <div className={`rounded-lg border p-4 transition-colors ${testResult === "success" ? "border-green-500/50 bg-green-500/5" : testResult === "error" ? "border-destructive/50 bg-destructive/5" : ""}`}>
                   <div className="flex items-center gap-2 mb-2">
-                    <CheckCircle className="h-4 w-4 text-primary" />
+                    {testResult === "success" ? (
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    ) : testResult === "error" ? (
+                      <XCircle className="h-4 w-4 text-destructive" />
+                    ) : (
+                      <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30" />
+                    )}
                     <code className="text-sm font-mono">META_WHATSAPP_PHONE_ID</code>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     ID do número de telefone configurado no Meta Business
                   </p>
+                  {testResult === "success" && connectionInfo?.phoneNumber && (
+                    <p className="text-xs text-green-600 dark:text-green-400 mt-1 font-medium">
+                      ✓ {connectionInfo.phoneNumber}
+                    </p>
+                  )}
                 </div>
-                <div className="rounded-lg border p-4">
+                <div className={`rounded-lg border p-4 transition-colors ${testResult === "success" ? "border-green-500/50 bg-green-500/5" : testResult === "error" ? "border-destructive/50 bg-destructive/5" : ""}`}>
                   <div className="flex items-center gap-2 mb-2">
-                    <CheckCircle className="h-4 w-4 text-primary" />
+                    {testResult === "success" ? (
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    ) : testResult === "error" ? (
+                      <XCircle className="h-4 w-4 text-destructive" />
+                    ) : (
+                      <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30" />
+                    )}
                     <code className="text-sm font-mono">META_WHATSAPP_ACCESS_TOKEN</code>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Token de acesso permanente gerado no Meta Business Manager
                   </p>
+                  {testResult === "success" && connectionInfo?.businessName && (
+                    <p className="text-xs text-green-600 dark:text-green-400 mt-1 font-medium">
+                      ✓ {connectionInfo.businessName}
+                    </p>
+                  )}
                 </div>
               </div>
             </CardContent>
