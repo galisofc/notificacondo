@@ -28,22 +28,61 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Verify user authentication
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - No authorization header" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - Invalid token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const { invoice_id, payer_email, back_url }: CreatePaymentRequest = await req.json();
 
-    console.log("Creating payment for invoice:", invoice_id);
+    console.log("Creating payment for invoice:", invoice_id, "by user:", user.id);
 
-    // Get invoice details
+    // Get invoice details with condominium owner info
     const { data: invoice, error: invoiceError } = await supabase
       .from("invoices")
       .select(`
         *,
-        condominium:condominiums(name)
+        condominium:condominiums(name, owner_id)
       `)
       .eq("id", invoice_id)
       .single();
 
     if (invoiceError || !invoice) {
       throw new Error(`Invoice not found: ${invoice_id}`);
+    }
+
+    // Verify user has permission (is condominium owner or super_admin)
+    const condoOwnerId = (invoice.condominium as { name: string; owner_id: string })?.owner_id;
+    
+    if (condoOwnerId !== user.id) {
+      // Check if user is super_admin
+      const { data: roleCheck } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "super_admin")
+        .maybeSingle();
+      
+      if (!roleCheck) {
+        return new Response(
+          JSON.stringify({ error: "Forbidden - You do not have permission to create payments for this invoice" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Check if MercadoPago is configured
