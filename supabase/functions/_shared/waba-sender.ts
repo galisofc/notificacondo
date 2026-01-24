@@ -132,36 +132,36 @@ export async function sendWabaTemplate(
   // Build components array in Meta Cloud API format
   const components = buildTemplateComponents(params, mediaUrl, mediaType, hasFooter);
 
-  // Build the templateData following exact Meta Cloud API format
-  // Match the structure that works for hello_world test
-  const buildRequestBody = (componentsToSend: Array<Record<string, unknown>>) => {
-    // The inner template object follows Meta Cloud API format exactly
-    const templateObject: Record<string, unknown> = {
-      name: templateName,
-      language: {
-        code: language,
+  // Build templateParams array for Z-PRO API format
+  // Z-PRO expects: templateParams: ["value1", "value2", ...]
+  // NOT the complex Meta Cloud API components structure
+  
+  // Build request body in Z-PRO format (same as successful hello_world test)
+  const requestBody: Record<string, unknown> = {
+    number: formattedPhone,
+    isClosed: false,
+    templateData: {
+      messaging_product: "whatsapp",
+      to: formattedPhone,
+      type: "template",
+      template: {
+        name: templateName,
+        language: {
+          code: language,
+        },
+        // Z-PRO uses "components" in Meta format for complex templates
+        components: components,
       },
-    };
-
-    // Only add components if there are any (header and/or body)
-    if (componentsToSend.length > 0) {
-      templateObject.components = componentsToSend;
-    }
-
-    // Use same structure as successful test: number, isClosed, templateData (NO externalKey)
-    return {
-      number: formattedPhone,
-      isClosed: false,
-      templateData: {
-        messaging_product: "whatsapp",
-        to: formattedPhone,
-        type: "template",
-        template: templateObject,
-      },
-    };
+    },
   };
 
-  const requestBody: Record<string, unknown> = buildRequestBody(components);
+  // If there's a media header, also add the "image" field at templateData level
+  // Some Z-PRO versions expect this for media templates
+  if (mediaUrl) {
+    (requestBody.templateData as Record<string, unknown>).image = mediaUrl;
+  }
+
+  
 
   console.log(`[WABA] Sending template "${templateName}" to ${phone}`);
   console.log(`[WABA] Endpoint: ${endpoint}`);
