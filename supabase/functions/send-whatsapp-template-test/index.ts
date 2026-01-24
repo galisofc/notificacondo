@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
     }
 
     // Build request body
-    const requestBody = {
+    const requestBody: Record<string, unknown> = {
       number: formattedPhone,
       isClosed,
       templateData: {
@@ -118,6 +118,11 @@ Deno.serve(async (req) => {
         template: templateObj,
       },
     };
+
+    // Z-PRO also expects mediaUrl at root level for templates with media header
+    if (mediaUrl) {
+      requestBody.mediaUrl = mediaUrl;
+    }
 
     console.log("[Template Test] Endpoint:", endpoint);
     console.log("[Template Test] Template:", templateName);
