@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SuperAdminBreadcrumbs from "@/components/superadmin/SuperAdminBreadcrumbs";
+import IntegrationsStatusCard from "@/components/superadmin/IntegrationsStatusCard";
 
 // Função para obter ícone baseado na ação
 const getActionIcon = (tableName: string, action: string, newData: any): LucideIcon => {
@@ -408,8 +409,8 @@ export default function SuperAdminDashboard() {
           </div>
         </div>
 
-        {/* Activity Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        {/* Activity & Integrations Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
           <Card className="bg-card border-border shadow-card">
             <CardContent className="p-4 md:p-6">
               <div className="flex items-center gap-3 mb-4 md:mb-6">
@@ -535,6 +536,9 @@ export default function SuperAdminDashboard() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Integrations Status */}
+          <IntegrationsStatusCard />
         </div>
       </div>
     </DashboardLayout>
