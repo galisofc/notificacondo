@@ -118,6 +118,50 @@ export default function EdgeFunctionLogs() {
     }
   };
 
+  const translateFunctionName = (name: string) => {
+    const translations: Record<string, string> = {
+      "notify-party-hall-reminders": "Lembretes Salão de Festas",
+      "start-party-hall-usage": "Iniciar Uso Salão de Festas",
+      "finish-party-hall-usage": "Finalizar Uso Salão de Festas",
+      "notify-trial-ending": "Notificar Fim do Trial",
+      "generate-invoices": "Gerar Faturas",
+      "cleanup-old-packages": "Limpar Encomendas Antigas",
+      "cleanup-orphan-package-photos": "Limpar Fotos Órfãs",
+      "cleanup-orphan-users": "Limpar Usuários Órfãos",
+      "notify-package-arrival": "Notificar Chegada Encomenda",
+      "notify-resident-decision": "Notificar Decisão Morador",
+      "notify-sindico-defense": "Notificar Defesa Síndico",
+      "notify-transfer": "Notificar Transferência",
+      "send-party-hall-notification": "Enviar Notif. Salão Festas",
+      "send-password-recovery": "Enviar Recuperação Senha",
+      "send-whatsapp-notification": "Enviar Notif. WhatsApp",
+      "send-whatsapp-test": "Teste WhatsApp",
+      "send-whatsapp-image-test": "Teste Imagem WhatsApp",
+      "send-whatsapp-template-test": "Teste Template WhatsApp",
+      "test-whatsapp-connection": "Testar Conexão WhatsApp",
+      "create-porteiro": "Criar Porteiro",
+      "create-sindico": "Criar Síndico",
+      "create-super-admin": "Criar Super Admin",
+      "delete-porteiro": "Excluir Porteiro",
+      "delete-sindico": "Excluir Síndico",
+      "update-porteiro": "Atualizar Porteiro",
+      "resend-porter-credentials": "Reenviar Credenciais Porteiro",
+      "validate-access-token": "Validar Token Acesso",
+      "check-rls-policies": "Verificar Políticas RLS",
+      "mercadopago-webhook": "Webhook MercadoPago",
+      "mercadopago-create-payment": "Criar Pagamento MP",
+      "mercadopago-create-pix": "Criar PIX MP",
+      "mercadopago-create-subscription": "Criar Assinatura MP",
+      "mercadopago-cancel-subscription": "Cancelar Assinatura MP",
+      "mercadopago-process-payment": "Processar Pagamento MP",
+      "mercadopago-test-connection": "Testar Conexão MP",
+      "get-mercadopago-public-config": "Config Pública MP",
+      "whatsapp-webhook": "Webhook WhatsApp",
+      "sync-notification-status": "Sincronizar Status Notif.",
+    };
+    return translations[name] || name;
+  };
+
   return (
     <DashboardLayout>
       <Helmet>
@@ -191,7 +235,7 @@ export default function EdgeFunctionLogs() {
                               {getStatusIcon(log.status)}
                               <div className="text-left">
                                 <div className="font-medium text-sm">
-                                  {log.function_name}
+                                  {translateFunctionName(log.function_name)}
                                 </div>
                                 <div className="text-xs text-muted-foreground mt-0.5">
                                   {formatDistanceToNow(new Date(log.started_at), {
