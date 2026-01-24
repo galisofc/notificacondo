@@ -66,63 +66,36 @@ Deno.serve(async (req) => {
     // Build endpoint
     const endpoint = `${config.api_url}/template`;
 
-    // Build template object
-    const templateObj: Record<string, unknown> = {
+    // Build templateData in Z-PRO simplified format
+    const templateData: Record<string, unknown> = {
       name: templateName,
-      language: {
-        code: language,
-      },
+      language: language,
     };
 
-    // Add components only if there are params or media
-    if (params.length > 0 || mediaUrl) {
-      const components: Array<Record<string, unknown>> = [];
-      
-      // Add header component for media
-      if (mediaUrl) {
-        components.push({
-          type: "header",
-          parameters: [
-            {
-              type: "image",
-              image: {
-                link: mediaUrl,
-              },
-            },
-          ],
-        });
-      }
-      
-      // Add body component for text params
-      if (params.length > 0) {
-        components.push({
-          type: "body",
-          parameters: params.map((value) => ({
-            type: "text",
-            text: value,
-          })),
-        });
-      }
-      
-      templateObj.components = components;
+    // Add header for media (Z-PRO format)
+    if (mediaUrl) {
+      templateData.header = {
+        type: "image",
+        image: {
+          link: mediaUrl,
+        },
+      };
     }
+
+    // Add body params as simple array (Z-PRO format)
+    if (params.length > 0) {
+      templateData.body = params;
+    }
+
+    // Add footer flag (Z-PRO expects this for templates with footer)
+    templateData.footer = true;
 
     // Build request body
     const requestBody: Record<string, unknown> = {
       number: formattedPhone,
       isClosed,
-      templateData: {
-        messaging_product: "whatsapp",
-        to: formattedPhone,
-        type: "template",
-        template: templateObj,
-      },
+      templateData,
     };
-
-    // Z-PRO also expects mediaUrl at root level for templates with media header
-    if (mediaUrl) {
-      requestBody.mediaUrl = mediaUrl;
-    }
 
     console.log("[Template Test] Endpoint:", endpoint);
     console.log("[Template Test] Template:", templateName);
