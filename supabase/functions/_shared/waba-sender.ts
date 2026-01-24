@@ -216,44 +216,10 @@ export async function sendWabaTemplate(
       };
     }
 
-    // Some setups reject templates if we send a header image but the template doesn't have a header.
-    // Z-PRO sometimes returns 500 while embedding a Meta 400 inside the message (AxiosError).
-    // Retry once without header component on:
-    // - direct 400
-    // - 500 containing "status code 400"
-    const indicatesMeta400 = response.status === 500 && responseText.includes("status code 400");
-
-    if (!response.ok && mediaUrl && (response.status === 400 || indicatesMeta400)) {
-      const componentsWithoutHeader = components.filter((c) => c.type !== "header");
-      const retryBody = buildRequestBody(componentsWithoutHeader);
-      console.log(`[WABA] Error received (${response.status}${indicatesMeta400 ? "/meta400" : ""}). Retrying without header media...`);
-
-      const retry = await doRequest(retryBody);
-      response = retry.response;
-      responseText = retry.responseText;
-      console.log(`[WABA] Retry status: ${response.status}`);
-      console.log(`[WABA] Retry body: ${responseText.substring(0, 500)}`);
-
-      // Re-parse after retry
-      try {
-        responseData = JSON.parse(responseText);
-      } catch {
-        responseData = { raw: responseText };
-      }
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: responseData?.message || responseData?.error || `HTTP ${response.status}`,
-          debug: {
-            endpoint,
-            status: response.status,
-            response: responseText.substring(0, 200),
-            payload: retryBody,
-          }
-        };
-      }
-    }
+    // If the request failed, return error immediately
+    // NOTE: Previously we had retry logic that removed the header, but this breaks
+    // templates that REQUIRE a header image (like encomenda_management_5).
+    // If you need retry-without-header for templates WITHOUT header, add a flag to WabaTemplateParams.
 
     if (!response.ok) {
       return {
