@@ -108,12 +108,48 @@ Deno.serve(async (req) => {
       result = { raw: responseText };
     }
 
-    if (response.ok && result.success !== false && !result.error && !result.message?.includes("Missing")) {
+    const isSuccess = response.ok && result.success !== false && !result.error && !result.message?.includes("Missing");
+    const messageId = result.messageId || result.key?.id || result.id || result.messages?.[0]?.id;
+
+    // ========== SAVE WABA TEST LOG ==========
+    try {
+      await supabase.from("whatsapp_notification_logs").insert({
+        function_name: "send-whatsapp-template-test",
+        package_id: null,
+        resident_id: null,
+        phone: formattedPhone,
+        template_name: templateName,
+        template_language: language,
+        request_payload: {
+          templateParams: {
+            phone: formattedPhone,
+            templateName,
+            language,
+          },
+          endpoint,
+          isClosed,
+        },
+        response_status: response.status,
+        response_body: responseText.substring(0, 2000),
+        success: isSuccess,
+        message_id: messageId || null,
+        error_message: isSuccess ? null : (result.error || result.message || `HTTP ${response.status}`),
+        debug_info: {
+          requestBodySent: requestBody,
+          isTestMessage: true,
+        },
+      });
+      console.log("[Template Test] Log saved to whatsapp_notification_logs");
+    } catch (logError) {
+      console.error("[Template Test] Failed to save log:", logError);
+    }
+
+    if (isSuccess) {
       return new Response(
         JSON.stringify({ 
           success: true, 
           message: `Template ${templateName} enviado com sucesso`,
-          messageId: result.messageId || result.key?.id || result.id || result.messages?.[0]?.id,
+          messageId,
           response: result 
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
