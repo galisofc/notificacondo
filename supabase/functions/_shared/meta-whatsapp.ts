@@ -37,6 +37,8 @@ export interface MetaTemplateParams {
   bodyParams?: string[];
   headerMediaUrl?: string;
   headerMediaType?: "image" | "video" | "document";
+  // Support for named parameters (some templates require explicit parameter names)
+  bodyParamNames?: string[];
 }
 
 export interface MetaTextMessageParams {
@@ -138,14 +140,27 @@ export async function sendMetaTemplate(
   
   // Add body component with text parameters
   // IMPORTANT: Meta API rejects empty text values - must use placeholder "-" for empty/null values
+  // Some templates require named parameters (parameter_name field)
   if (params.bodyParams && params.bodyParams.length > 0) {
-    const validParams = params.bodyParams.map((value) => {
+    const validParams = params.bodyParams.map((value, index) => {
       // Convert to string and trim
       const strValue = String(value ?? "").trim();
-      // Use "-" as placeholder if empty (Meta rejects empty strings)
+      const textValue = strValue || "-";
+      
+      // Check if we have named parameters for this template
+      if (params.bodyParamNames && params.bodyParamNames[index]) {
+        // Use named parameter format (required by some templates)
+        return {
+          type: "text",
+          parameter_name: params.bodyParamNames[index],
+          text: textValue,
+        };
+      }
+      
+      // Use positional parameter format (default)
       return {
         type: "text",
-        text: strValue || "-",
+        text: textValue,
       };
     });
     
@@ -409,18 +424,23 @@ export async function sendMetaImage(
  * 
  * @param variables - Object with variable names and values (e.g., { nome: "João", bloco: "A" })
  * @param paramsOrder - Array with the order of variables (e.g., ["nome", "bloco", "apartamento"])
- * @returns Array of string values in the correct order
+ * @returns Object with values array and names array
  */
 export function buildParamsArray(
   variables: Record<string, string | undefined>,
   paramsOrder: string[]
-): string[] {
-  return paramsOrder.map(varName => {
+): { values: string[]; names: string[] } {
+  const values = paramsOrder.map(varName => {
     const value = variables[varName];
     // Use "-" as placeholder if empty (Meta API rejects empty strings)
     const strValue = String(value ?? "").trim();
     return strValue || "-";
   });
+  
+  return {
+    values,
+    names: paramsOrder,
+  };
 }
 
 /**

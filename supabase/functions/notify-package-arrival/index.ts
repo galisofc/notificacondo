@@ -282,13 +282,14 @@ serve(async (req) => {
       if (wabaTemplateName && paramsOrder.length > 0) {
         console.log(`Using WABA template: ${wabaTemplateName}`);
         
-        const bodyParams = buildParamsArray(variables, paramsOrder);
+        const { values: bodyParams, names: bodyParamNames } = buildParamsArray(variables, paramsOrder);
         
         result = await sendMetaTemplate({
           phone: resident.phone!,
           templateName: wabaTemplateName,
           language: wabaLanguage,
           bodyParams,
+          bodyParamNames,
           headerMediaUrl: photo_url || undefined,
           headerMediaType: photo_url ? "image" : undefined,
         });
