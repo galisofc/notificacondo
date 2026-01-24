@@ -1,11 +1,11 @@
-import { useState } from "react";
 import { Helmet } from "react-helmet-async";
+import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SuperAdminBreadcrumbs from "@/components/superadmin/SuperAdminBreadcrumbs";
-import { ConnectionStatus, TemplatesList, ConfigSheet } from "@/components/superadmin/whatsapp";
+import { ConnectionStatus, TemplatesList } from "@/components/superadmin/whatsapp";
 
 export default function WhatsApp() {
-  const [configOpen, setConfigOpen] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <DashboardLayout>
@@ -25,13 +25,10 @@ export default function WhatsApp() {
         </div>
 
         {/* Connection Status Card */}
-        <ConnectionStatus onConfigure={() => setConfigOpen(true)} />
+        <ConnectionStatus onConfigure={() => navigate("/superadmin/whatsapp/config")} />
 
         {/* Templates List with Categories */}
         <TemplatesList />
-
-        {/* Config Sheet */}
-        <ConfigSheet open={configOpen} onOpenChange={setConfigOpen} />
       </div>
     </DashboardLayout>
   );
