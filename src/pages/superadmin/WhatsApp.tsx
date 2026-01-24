@@ -7,10 +7,10 @@ export default function WhatsApp() {
   return (
     <DashboardLayout>
       <Helmet>
-        <title>Configuração WhatsApp | Super Admin</title>
+        <title>Templates WhatsApp | Super Admin</title>
       </Helmet>
       <div className="space-y-4 sm:space-y-6 animate-fade-up">
-        <SuperAdminBreadcrumbs items={[{ label: "WhatsApp" }]} />
+        <SuperAdminBreadcrumbs items={[{ label: "WhatsApp" }, { label: "Templates" }]} />
         
         <div>
           <h1 className="font-display text-lg sm:text-xl md:text-3xl font-bold text-foreground">
