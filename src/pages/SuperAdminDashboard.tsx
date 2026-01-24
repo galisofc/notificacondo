@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SuperAdminBreadcrumbs from "@/components/superadmin/SuperAdminBreadcrumbs";
+import { IntegrationsStatus } from "@/components/superadmin/IntegrationsStatus";
 
 // Função para obter ícone baseado na ação
 const getActionIcon = (tableName: string, action: string, newData: any): LucideIcon => {
@@ -407,6 +408,9 @@ export default function SuperAdminDashboard() {
             ))}
           </div>
         </div>
+
+        {/* Integrations Status */}
+        <IntegrationsStatus />
 
         {/* Activity Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">

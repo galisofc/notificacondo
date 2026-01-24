@@ -95,10 +95,6 @@ export const useUserRole = (): UseUserRoleReturn => {
   }, [allResidentProfiles]);
 
   useEffect(() => {
-    let isMounted = true;
-    let retryCount = 0;
-    const maxRetries = 3;
-
     const fetchUserRole = async () => {
       if (!user) {
         setRole(null);
@@ -110,33 +106,16 @@ export const useUserRole = (): UseUserRoleReturn => {
       }
 
       try {
-        // Fetch all user roles from user_roles table with retry logic
-        let rolesData = null;
-        let roleError = null;
+        // Fetch all user roles from user_roles table
+        const { data: rolesData, error: roleError } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
 
-        while (retryCount < maxRetries) {
-          const result = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", user.id)
-            .order("created_at", { ascending: false });
-
-          if (result.error) {
-            console.error(`Error fetching user role (attempt ${retryCount + 1}):`, result.error);
-            retryCount++;
-            if (retryCount < maxRetries) {
-              // Wait before retrying (exponential backoff)
-              await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-              continue;
-            }
-            roleError = result.error;
-          } else {
-            rolesData = result.data;
-            break;
-          }
+        if (roleError) {
+          console.error("Error fetching user role:", roleError);
         }
-
-        if (!isMounted) return;
 
         // Priority order for roles:
         // super_admin > porteiro > sindico > morador
@@ -246,22 +225,12 @@ export const useUserRole = (): UseUserRoleReturn => {
         }
       } catch (error) {
         console.error("Error in useUserRole:", error);
-        // Even on error, set a default role to prevent infinite loading
-        if (isMounted) {
-          setRole("morador");
-        }
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
     };
 
     fetchUserRole();
-
-    return () => {
-      isMounted = false;
-    };
   }, [user, fetchProfileInfo]);
 
   // Subscribe to realtime profile updates
