@@ -17,6 +17,7 @@ export interface WabaSendResult {
     endpoint?: string;
     status?: number;
     response?: string;
+    payload?: unknown;
   };
 }
 
@@ -47,6 +48,46 @@ export function formatPhoneForWaba(phone: string): string {
 }
 
 /**
+ * Builds the components array for WABA template in Meta Cloud API format
+ * Required by Z-PRO /templateBody endpoint
+ */
+function buildTemplateComponents(
+  params: string[],
+  mediaUrl?: string,
+  mediaType?: string
+): Array<Record<string, unknown>> {
+  const components: Array<Record<string, unknown>> = [];
+
+  // Add header component if media is present
+  if (mediaUrl) {
+    components.push({
+      type: "header",
+      parameters: [
+        {
+          type: mediaType || "image",
+          [mediaType || "image"]: {
+            link: mediaUrl,
+          },
+        },
+      ],
+    });
+  }
+
+  // Add body component with text parameters
+  if (params.length > 0) {
+    components.push({
+      type: "body",
+      parameters: params.map((value) => ({
+        type: "text",
+        text: value,
+      })),
+    });
+  }
+
+  return components;
+}
+
+/**
  * Sends a WABA template message via Z-PRO /templateBody endpoint
  * 
  * @param template - Template parameters (phone, templateName, language, params)
@@ -65,30 +106,22 @@ export async function sendWabaTemplate(
 
   const endpoint = `${apiUrl}/templateBody`;
   
-  // Build request body with optional media header
+  // Build components array in Meta Cloud API format
+  const components = buildTemplateComponents(params, mediaUrl, mediaType);
+
+  // Build request body with proper Meta WABA structure
   const requestBody: Record<string, unknown> = {
     number: formatPhoneForWaba(phone),
     externalKey,
     templateName,
     language,
-    params
+    components,  // Meta Cloud API format with typed parameters
   };
-
-  // Add media header if present (for templates with dynamic image/video header)
-  if (mediaUrl) {
-    // Z-PRO format for media headers in WABA templates
-    requestBody.image = mediaUrl;
-    // Also include header object for compatibility with some Z-PRO versions
-    requestBody.header = {
-      type: mediaType || "image",
-      url: mediaUrl
-    };
-    console.log(`[WABA] Including media header: ${mediaType || "image"} - ${mediaUrl.substring(0, 60)}...`);
-  }
 
   console.log(`[WABA] Sending template "${templateName}" to ${phone}`);
   console.log(`[WABA] Endpoint: ${endpoint}`);
   console.log(`[WABA] Params count: ${params.length}`);
+  console.log(`[WABA] Components: ${JSON.stringify(components).substring(0, 300)}...`);
   if (mediaUrl) {
     console.log(`[WABA] Has media header: ${mediaType || "image"}`);
   }
@@ -123,7 +156,8 @@ export async function sendWabaTemplate(
         debug: {
           endpoint,
           status: response.status,
-          response: responseText.substring(0, 200)
+          response: responseText.substring(0, 200),
+          payload: requestBody,
         }
       };
     }
@@ -135,7 +169,8 @@ export async function sendWabaTemplate(
         debug: {
           endpoint,
           status: response.status,
-          response: responseText.substring(0, 200)
+          response: responseText.substring(0, 200),
+          payload: requestBody,
         }
       };
     }
@@ -161,7 +196,8 @@ export async function sendWabaTemplate(
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
       debug: {
-        endpoint
+        endpoint,
+        payload: requestBody,
       }
     };
   }
