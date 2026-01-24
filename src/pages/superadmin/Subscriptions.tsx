@@ -9,7 +9,7 @@ export default function Subscriptions() {
       </Helmet>
       <div className="space-y-6 animate-fade-up">
         <SuperAdminBreadcrumbs items={[{
-        label: "Assinaturas"
+        label: "Assinantes"
       }]} />
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground">Assinantes</h1>
