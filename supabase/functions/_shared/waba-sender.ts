@@ -1,6 +1,6 @@
 /**
  * WABA Template Sender - Shared utility for sending WhatsApp messages via WABA templates
- * Uses the /templateBody endpoint for Meta-approved templates
+ * Uses the /template endpoint for Meta-approved templates (Z-PRO / Atende Aí Chat)
  */
 
 export interface WabaConfig {
@@ -49,7 +49,7 @@ export function formatPhoneForWaba(phone: string): string {
 
 /**
  * Builds the components array for WABA template in Meta Cloud API format
- * Required by Z-PRO /templateBody endpoint
+ * Required by Z-PRO /template endpoint inside templateData
  */
 function buildTemplateComponents(
   params: string[],
@@ -88,7 +88,8 @@ function buildTemplateComponents(
 }
 
 /**
- * Sends a WABA template message via Z-PRO /templateBody endpoint
+ * Sends a WABA template message via Z-PRO /template endpoint
+ * Uses the templateData structure required by Atende Aí Chat API
  * 
  * @param template - Template parameters (phone, templateName, language, params)
  * @param config - WhatsApp API configuration (apiUrl, apiKey, instanceId)
@@ -101,21 +102,30 @@ export async function sendWabaTemplate(
   const { phone, templateName, language, params, mediaUrl, mediaType } = template;
   const { apiUrl, apiKey, instanceId } = config;
 
-  // Determine externalKey (fallback logic for zpro-embedded or null instanceId)
-  const externalKey = (!instanceId || instanceId === "zpro-embedded") ? apiKey : instanceId;
-
-  const endpoint = `${apiUrl}/templateBody`;
+  const formattedPhone = formatPhoneForWaba(phone);
+  
+  // Use /template endpoint (correct for Z-PRO / Atende Aí Chat)
+  const endpoint = `${apiUrl}/template`;
   
   // Build components array in Meta Cloud API format
   const components = buildTemplateComponents(params, mediaUrl, mediaType);
 
-  // Build request body with proper Meta WABA structure
+  // Build request body with templateData structure (required by Z-PRO)
   const requestBody: Record<string, unknown> = {
-    number: formatPhoneForWaba(phone),
-    externalKey,
-    templateName,
-    language,
-    components,  // Meta Cloud API format with typed parameters
+    number: formattedPhone,
+    isClosed: false,
+    templateData: {
+      messaging_product: "whatsapp",
+      to: formattedPhone,
+      type: "template",
+      template: {
+        name: templateName,
+        language: {
+          code: language,
+        },
+        components,  // Meta Cloud API format with typed parameters
+      },
+    },
   };
 
   console.log(`[WABA] Sending template "${templateName}" to ${phone}`);
@@ -162,6 +172,20 @@ export async function sendWabaTemplate(
       };
     }
 
+    // Check for missing fields error
+    if (responseText.includes("Missing required fields") || responseText.includes("Missing")) {
+      return {
+        success: false,
+        error: responseData?.message || "Missing required fields in template",
+        debug: {
+          endpoint,
+          status: response.status,
+          response: responseText.substring(0, 200),
+          payload: requestBody,
+        }
+      };
+    }
+
     if (!response.ok) {
       return {
         success: false,
@@ -179,7 +203,8 @@ export async function sendWabaTemplate(
     const messageId = responseData?.messageId || 
                       responseData?.key?.id || 
                       responseData?.id || 
-                      responseData?.data?.key?.id;
+                      responseData?.data?.key?.id ||
+                      responseData?.messages?.[0]?.id;
 
     return {
       success: true,
