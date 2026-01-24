@@ -49,20 +49,26 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Format phone number
+    // Format phone number (Brazilian format)
     const cleanPhone = phone.replace(/\D/g, "");
     const formattedPhone = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`;
 
-    // Build WABA template request
-    const externalKey = config.instance_id || config.api_key;
+    // Build endpoint
     const endpoint = `${config.api_url}/templateBody`;
     
+    // Build request body - Meta/WABA standard format with "to" field
+    // The Z-PRO/Atende Aí Chat API may require the nested "template" structure
     const requestBody = {
-      number: formattedPhone,
-      externalKey,
-      templateName,
-      language,
-      params: []
+      to: formattedPhone,
+      number: formattedPhone, // Include both for compatibility
+      type: "template",
+      template: {
+        name: templateName,
+        language: {
+          code: language
+        },
+        components: [] // hello_world has no dynamic components
+      }
     };
 
     console.log("[Template Test] Endpoint:", endpoint);
@@ -80,15 +86,24 @@ Deno.serve(async (req) => {
       body: JSON.stringify(requestBody),
     });
 
-    const result = await response.json();
+    const responseText = await response.text();
     console.log("[Template Test] Response status:", response.status);
-    console.log("[Template Test] Response:", JSON.stringify(result, null, 2));
+    console.log("[Template Test] Response body:", responseText);
 
-    if (response.ok && result.success !== false) {
+    // Parse response
+    let result: any;
+    try {
+      result = JSON.parse(responseText);
+    } catch {
+      result = { raw: responseText };
+    }
+
+    if (response.ok && result.success !== false && !result.error) {
       return new Response(
         JSON.stringify({ 
           success: true, 
           message: `Template ${templateName} enviado com sucesso`,
+          messageId: result.messageId || result.key?.id || result.id || result.messages?.[0]?.id,
           response: result 
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
