@@ -114,7 +114,7 @@ const getBaseSuperAdminNavItems = (): NavStructure => [
     title: "WhatsApp",
     icon: MessageCircle,
     items: [
-      { title: "Dashboard", url: "/superadmin/whatsapp", icon: BarChart3 },
+      { title: "Templates", url: "/superadmin/whatsapp", icon: BarChart3 },
       { title: "Configurações", url: "/superadmin/whatsapp/config", icon: Cog },
     ],
   },
