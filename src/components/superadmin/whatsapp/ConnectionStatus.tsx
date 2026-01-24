@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useDateFormatter } from "@/hooks/useFormattedDate";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,17 +12,14 @@ import {
   AlertCircle, 
   Loader2, 
   RefreshCw,
-  Settings
+  ChevronRight
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type ConnectionStatus = "checking" | "connected" | "disconnected" | "not_configured";
 
-interface ConnectionStatusProps {
-  onConfigure: () => void;
-}
-
-export function ConnectionStatus({ onConfigure }: ConnectionStatusProps) {
+export function ConnectionStatus() {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [status, setStatus] = useState<ConnectionStatus>("checking");
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -150,7 +148,10 @@ export function ConnectionStatus({ onConfigure }: ConnectionStatusProps) {
   const Icon = statusConfig.icon;
 
   return (
-    <Card className={`${statusConfig.borderClass} ${statusConfig.bgClass}`}>
+    <Card 
+      className={`${statusConfig.borderClass} ${statusConfig.bgClass} cursor-pointer transition-all hover:shadow-md`}
+      onClick={() => navigate("/superadmin/whatsapp/config")}
+    >
       <CardContent className="pt-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3 sm:gap-4">
@@ -176,16 +177,16 @@ export function ConnectionStatus({ onConfigure }: ConnectionStatusProps) {
             <Button
               variant="ghost"
               size="icon"
-              onClick={handleRefresh}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleRefresh();
+              }}
               disabled={isRefreshing}
               className="h-9 w-9"
             >
               <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
             </Button>
-            <Button variant="outline" onClick={onConfigure} className="gap-2 h-9 text-sm">
-              <Settings className="h-4 w-4" />
-              <span className="hidden xs:inline">Configurar</span>
-            </Button>
+            <ChevronRight className="h-5 w-5 text-muted-foreground" />
           </div>
         </div>
       </CardContent>
