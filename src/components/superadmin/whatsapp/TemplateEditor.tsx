@@ -78,8 +78,21 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
   // Test dialog state
   const [showTestDialog, setShowTestDialog] = useState(false);
   const [testPhone, setTestPhone] = useState("");
+  const [testParams, setTestParams] = useState<Record<string, string>>({});
+  const [testImageUrl, setTestImageUrl] = useState("");
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [isTesting, setIsTesting] = useState(false);
+
+  // Initialize test params when dialog opens
+  const initializeTestParams = () => {
+    const initialParams: Record<string, string> = {};
+    paramsOrder.forEach((param) => {
+      initialParams[param] = "";
+    });
+    setTestParams(initialParams);
+    setTestImageUrl("");
+    setTestResult(null);
+  };
 
   const category = getCategoryForSlug(template.slug);
   const CategoryIcon = category?.icon;
@@ -198,6 +211,9 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
 
     const templateToTest = wabaTemplateName.trim() || "hello_world";
     const languageToTest = wabaTemplateName.trim() ? wabaLanguage : "en_US";
+    
+    // Build params array in order
+    const paramsArray = paramsOrder.map((param) => testParams[param] || `[${param}]`);
 
     setIsTesting(true);
     setTestResult(null);
@@ -208,6 +224,8 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
           phone: testPhone.replace(/\D/g, ""),
           templateName: templateToTest,
           language: languageToTest,
+          params: paramsArray.length > 0 ? paramsArray : undefined,
+          mediaUrl: testImageUrl.trim() || undefined,
         },
       });
 
@@ -514,7 +532,7 @@ ${paramsOrder.map((p, i) => `    "${p}"`).join(",\n")}
                     <Button 
                       size="sm" 
                       onClick={() => {
-                        setTestResult(null);
+                        initializeTestParams();
                         setShowTestDialog(true);
                       }}
                       className="shrink-0 gap-1.5"
@@ -582,7 +600,7 @@ ${paramsOrder.map((p, i) => `    "${p}"`).join(",\n")}
 
       {/* Test Dialog */}
       <Dialog open={showTestDialog} onOpenChange={setShowTestDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Testar Template WABA</DialogTitle>
             <DialogDescription>
@@ -593,8 +611,9 @@ ${paramsOrder.map((p, i) => `    "${p}"`).join(",\n")}
           </DialogHeader>
 
           <div className="space-y-4 py-4">
+            {/* Phone Number */}
             <div className="space-y-2">
-              <Label htmlFor="test-phone">Número do WhatsApp</Label>
+              <Label htmlFor="test-phone">Número do WhatsApp *</Label>
               <Input
                 id="test-phone"
                 value={testPhone}
@@ -607,6 +626,53 @@ ${paramsOrder.map((p, i) => `    "${p}"`).join(",\n")}
               </p>
             </div>
 
+            {/* Image URL (if template has media) */}
+            {wabaTemplateName && (
+              <div className="space-y-2">
+                <Label htmlFor="test-image">URL da Imagem (Header)</Label>
+                <Input
+                  id="test-image"
+                  value={testImageUrl}
+                  onChange={(e) => setTestImageUrl(e.target.value)}
+                  placeholder="https://exemplo.com/imagem.jpg"
+                  className="font-mono text-xs"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Deixe em branco se o template não usar imagem de cabeçalho
+                </p>
+              </div>
+            )}
+
+            {/* Dynamic Params */}
+            {wabaTemplateName && paramsOrder.length > 0 && (
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Parâmetros do Template</Label>
+                <div className="space-y-2 p-3 rounded-lg bg-muted/50 border">
+                  {paramsOrder.map((param, index) => (
+                    <div key={param} className="space-y-1">
+                      <Label htmlFor={`param-${param}`} className="text-xs flex items-center gap-2">
+                        <Badge variant="outline" className="font-mono text-[10px] py-0">
+                          {`{{${index + 1}}}`}
+                        </Badge>
+                        <span>{param}</span>
+                      </Label>
+                      <Input
+                        id={`param-${param}`}
+                        value={testParams[param] || ""}
+                        onChange={(e) => setTestParams((prev) => ({ ...prev, [param]: e.target.value }))}
+                        placeholder={`Valor para ${param}`}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Preencha os valores que serão substituídos no template
+                </p>
+              </div>
+            )}
+
+            {/* Result feedback */}
             {testResult && (
               <div className={`rounded-lg p-3 flex items-start gap-2 ${
                 testResult.success 
