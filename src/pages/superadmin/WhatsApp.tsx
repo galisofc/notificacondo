@@ -14,7 +14,7 @@ export default function WhatsApp() {
         
         <div>
           <h1 className="font-display text-lg sm:text-xl md:text-3xl font-bold text-foreground">
-            WhatsApp
+            Templates
           </h1>
           <p className="text-xs sm:text-sm md:text-base text-muted-foreground mt-1">
             Gerencie os templates de mensagens
