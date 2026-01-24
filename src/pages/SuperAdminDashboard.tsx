@@ -132,6 +132,11 @@ const formatAuditAction = (tableName: string, action: string, newData: any): str
     whatsapp_templates: "Template WhatsApp",
     mercadopago_config: "Config MercadoPago",
     audit_logs: "Log de Auditoria",
+    packages: "Encomenda",
+    package_types: "Tipo de Encomenda",
+    party_hall_bookings: "Reserva Salão",
+    party_hall_settings: "Config Salão",
+    contact_messages: "Mensagem de Contato",
   };
 
   const actionNames: Record<string, string> = {
