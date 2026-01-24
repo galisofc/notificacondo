@@ -37,7 +37,6 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import {
   Settings,
-  Bell,
   Shield,
   Database,
   CreditCard,
@@ -67,7 +66,7 @@ import { useToast } from "@/hooks/use-toast";
 import { MercadoPagoSettings } from "@/components/superadmin/MercadoPagoSettings";
 import { MercadoPagoWebhookLogs } from "@/components/superadmin/MercadoPagoWebhookLogs";
 import { RlsPoliciesCard } from "@/components/superadmin/RlsPoliciesCard";
-import { WhatsAppStatusCard } from "@/components/superadmin/WhatsAppStatusCard";
+
 import SuperAdminBreadcrumbs from "@/components/superadmin/SuperAdminBreadcrumbs";
 
 interface Plan {
@@ -548,10 +547,6 @@ export default function SuperAdminSettings() {
             <TabsTrigger value="mercadopago" className="gap-2">
               <CreditCard className="w-4 h-4" />
               Mercado Pago
-            </TabsTrigger>
-            <TabsTrigger value="notifications" className="gap-2">
-              <Bell className="w-4 h-4" />
-              Notificações
             </TabsTrigger>
             <TabsTrigger value="security" className="gap-2">
               <Shield className="w-4 h-4" />
@@ -1407,10 +1402,6 @@ export default function SuperAdminSettings() {
             <MercadoPagoWebhookLogs />
           </TabsContent>
 
-          {/* Notifications Tab */}
-          <TabsContent value="notifications" className="space-y-6">
-            <WhatsAppStatusCard />
-          </TabsContent>
 
           {/* Security Tab */}
           <TabsContent value="security" className="space-y-6">
