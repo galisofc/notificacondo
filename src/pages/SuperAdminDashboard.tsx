@@ -113,36 +113,44 @@ const getActionIconColor = (action: string, newData: any, tableName?: string): s
 
 // Função para formatar ações de auditoria
 const formatAuditAction = (tableName: string, action: string, newData: any): string => {
-  const tableNames: Record<string, string> = {
-    user_roles: "Usuário",
-    condominiums: "Condomínio",
-    subscriptions: "Assinatura",
-    profiles: "Perfil",
-    occurrences: "Ocorrência",
-    notifications_sent: "Notificação",
-    invoices: "Fatura",
-    residents: "Morador",
-    blocks: "Bloco",
-    apartments: "Apartamento",
-    plans: "Plano",
-    fines: "Multa",
-    defenses: "Defesa",
-    decisions: "Decisão",
-    whatsapp_config: "Config WhatsApp",
-    whatsapp_templates: "Template WhatsApp",
-    mercadopago_config: "Config MercadoPago",
-    audit_logs: "Log de Auditoria",
-    packages: "Encomenda",
-    package_types: "Tipo de Encomenda",
-    party_hall_bookings: "Reserva Salão",
-    party_hall_settings: "Config Salão",
-    contact_messages: "Mensagem de Contato",
+  // Nomes das tabelas com gênero (true = feminino, false = masculino)
+  const tableInfo: Record<string, { name: string; feminine: boolean }> = {
+    user_roles: { name: "Usuário", feminine: false },
+    condominiums: { name: "Condomínio", feminine: false },
+    subscriptions: { name: "Assinatura", feminine: true },
+    profiles: { name: "Perfil", feminine: false },
+    occurrences: { name: "Ocorrência", feminine: true },
+    notifications_sent: { name: "Notificação", feminine: true },
+    invoices: { name: "Fatura", feminine: true },
+    residents: { name: "Morador", feminine: false },
+    blocks: { name: "Bloco", feminine: false },
+    apartments: { name: "Apartamento", feminine: false },
+    plans: { name: "Plano", feminine: false },
+    fines: { name: "Multa", feminine: true },
+    defenses: { name: "Defesa", feminine: true },
+    decisions: { name: "Decisão", feminine: true },
+    whatsapp_config: { name: "Config WhatsApp", feminine: true },
+    whatsapp_templates: { name: "Template WhatsApp", feminine: false },
+    mercadopago_config: { name: "Config MercadoPago", feminine: true },
+    audit_logs: { name: "Log de Auditoria", feminine: false },
+    packages: { name: "Encomenda", feminine: true },
+    package_types: { name: "Tipo de Encomenda", feminine: false },
+    party_hall_bookings: { name: "Reserva de Salão", feminine: true },
+    party_hall_settings: { name: "Config Salão de Festas", feminine: true },
+    contact_messages: { name: "Mensagem de Contato", feminine: true },
   };
 
-  const actionNames: Record<string, string> = {
+  const actionNamesMasc: Record<string, string> = {
     INSERT: "criado",
     UPDATE: "atualizado",
     DELETE: "removido",
+    ADD_EXTRA_DAYS: "dias extras adicionados",
+  };
+
+  const actionNamesFem: Record<string, string> = {
+    INSERT: "criada",
+    UPDATE: "atualizada",
+    DELETE: "removida",
     ADD_EXTRA_DAYS: "dias extras adicionados",
   };
 
@@ -157,8 +165,12 @@ const formatAuditAction = (tableName: string, action: string, newData: any): str
     return `+${newData.days_added} dias: ${newData.condominium_name || "Assinatura"}`;
   }
 
-  const table = tableNames[tableName] || tableName;
-  const actionText = actionNames[action] || action.toLowerCase();
+  const info = tableInfo[tableName];
+  const table = info?.name || tableName;
+  const isFeminine = info?.feminine ?? false;
+  const actionText = isFeminine 
+    ? (actionNamesFem[action] || action.toLowerCase())
+    : (actionNamesMasc[action] || action.toLowerCase());
 
   return `${table} ${actionText}`;
 };
