@@ -137,13 +137,21 @@ export async function sendMetaTemplate(
   }
   
   // Add body component with text parameters
+  // IMPORTANT: Meta API rejects empty text values - must use placeholder "-" for empty/null values
   if (params.bodyParams && params.bodyParams.length > 0) {
+    const validParams = params.bodyParams.map((value) => {
+      // Convert to string and trim
+      const strValue = String(value ?? "").trim();
+      // Use "-" as placeholder if empty (Meta rejects empty strings)
+      return {
+        type: "text",
+        text: strValue || "-",
+      };
+    });
+    
     components.push({
       type: "body",
-      parameters: params.bodyParams.map((value) => ({
-        type: "text",
-        text: String(value || ""),
-      })),
+      parameters: validParams,
     });
   }
   
@@ -409,7 +417,9 @@ export function buildParamsArray(
 ): string[] {
   return paramsOrder.map(varName => {
     const value = variables[varName];
-    return value ?? "";
+    // Use "-" as placeholder if empty (Meta API rejects empty strings)
+    const strValue = String(value ?? "").trim();
+    return strValue || "-";
   });
 }
 
