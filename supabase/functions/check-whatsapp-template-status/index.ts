@@ -151,7 +151,7 @@ serve(async (req) => {
     const pending = templates.filter((t: any) => t.status === "PENDING").length;
     const rejected = templates.filter((t: any) => t.status === "REJECTED").length;
 
-    // Return all templates with format expected by frontend
+    // Return all templates with format expected by frontend (including components)
     return new Response(JSON.stringify({
       configured: true,
       success: true,
@@ -161,6 +161,8 @@ serve(async (req) => {
         language: t.language,
         category: t.category,
         qualityScore: t.quality_score,
+        components: t.components || [],
+        rejectedReason: t.rejected_reason,
       })),
       total: templates.length,
       approved,
