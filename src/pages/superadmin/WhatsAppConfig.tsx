@@ -74,6 +74,13 @@ export default function WhatsAppConfig() {
       language: string;
       qualityScore?: string;
       rejectedReason?: string;
+      components?: Array<{
+        type: string;
+        format?: string;
+        text?: string;
+        example?: any;
+        buttons?: Array<{ type: string; text?: string; url?: string; phone_number?: string }>;
+      }>;
     }>;
     total?: number;
     approved?: number;
@@ -81,6 +88,7 @@ export default function WhatsAppConfig() {
     rejected?: number;
     error?: string;
   } | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
 
   // Persist lastTestedAt to localStorage
   useEffect(() => {
@@ -327,6 +335,26 @@ export default function WhatsAppConfig() {
           </Badge>
         );
     }
+  };
+
+  const getComponentIcon = (type: string) => {
+    switch (type) {
+      case "HEADER":
+        return "📋";
+      case "BODY":
+        return "📝";
+      case "FOOTER":
+        return "📎";
+      case "BUTTONS":
+        return "🔘";
+      default:
+        return "📄";
+    }
+  };
+
+  const getSelectedTemplateData = () => {
+    if (!selectedTemplate || !templateStatusData?.templates) return null;
+    return templateStatusData.templates.find(t => t.name === selectedTemplate);
   };
 
   return (
@@ -656,54 +684,160 @@ export default function WhatsAppConfig() {
                             </div>
                           </div>
 
-                          {/* Templates Table */}
-                          <ScrollArea className="h-[400px] rounded-md border">
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>Nome</TableHead>
-                                  <TableHead>Status</TableHead>
-                                  <TableHead>Categoria</TableHead>
-                                  <TableHead>Idioma</TableHead>
-                                  <TableHead>Qualidade</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {templateStatusData.templates?.map((template, index) => (
-                                  <TableRow key={index}>
-                                    <TableCell className="font-mono text-sm">
-                                      {template.name}
-                                    </TableCell>
-                                    <TableCell>
-                                      {getStatusBadge(template.status)}
-                                    </TableCell>
-                                    <TableCell className="text-sm text-muted-foreground">
-                                      {template.category}
-                                    </TableCell>
-                                    <TableCell className="text-sm text-muted-foreground">
-                                      {template.language}
-                                    </TableCell>
-                                    <TableCell>
-                                      {template.qualityScore ? (
-                                        <Badge variant="outline" className="text-xs">
-                                          {template.qualityScore}
-                                        </Badge>
-                                      ) : (
-                                        <span className="text-xs text-muted-foreground">-</span>
-                                      )}
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
-                                {(!templateStatusData.templates || templateStatusData.templates.length === 0) && (
+                          {/* Templates Table or Detail View */}
+                          {selectedTemplate ? (
+                            <div className="space-y-4">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setSelectedTemplate(null)}
+                                className="gap-2"
+                              >
+                                <ArrowLeft className="h-4 w-4" />
+                                Voltar para lista
+                              </Button>
+                              
+                              {(() => {
+                                const template = getSelectedTemplateData();
+                                if (!template) return null;
+                                
+                                return (
+                                  <div className="space-y-4">
+                                    <div className="flex items-center gap-3 pb-3 border-b">
+                                      <div>
+                                        <h3 className="font-mono font-semibold text-lg">{template.name}</h3>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          {getStatusBadge(template.status)}
+                                          <Badge variant="outline" className="text-xs">{template.category}</Badge>
+                                          <Badge variant="outline" className="text-xs">{template.language}</Badge>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    
+                                    {template.rejectedReason && (
+                                      <Alert variant="destructive">
+                                        <XCircle className="h-4 w-4" />
+                                        <AlertDescription>
+                                          <strong>Motivo da rejeição:</strong> {template.rejectedReason}
+                                        </AlertDescription>
+                                      </Alert>
+                                    )}
+                                    
+                                    <ScrollArea className="h-[320px]">
+                                      <div className="space-y-4 pr-4">
+                                        {template.components && template.components.length > 0 ? (
+                                          template.components.map((component, idx) => (
+                                            <div key={idx} className="rounded-lg border p-4">
+                                              <div className="flex items-center gap-2 mb-3">
+                                                <span className="text-lg">{getComponentIcon(component.type)}</span>
+                                                <span className="font-semibold text-sm uppercase tracking-wide">
+                                                  {component.type}
+                                                </span>
+                                                {component.format && (
+                                                  <Badge variant="secondary" className="text-xs">
+                                                    {component.format}
+                                                  </Badge>
+                                                )}
+                                              </div>
+                                              
+                                              {component.text && (
+                                                <div className="bg-muted/50 rounded-md p-3 font-mono text-sm whitespace-pre-wrap">
+                                                  {component.text}
+                                                </div>
+                                              )}
+                                              
+                                              {component.buttons && component.buttons.length > 0 && (
+                                                <div className="mt-3 space-y-2">
+                                                  <p className="text-xs text-muted-foreground font-medium">Botões:</p>
+                                                  <div className="flex flex-wrap gap-2">
+                                                    {component.buttons.map((btn, btnIdx) => (
+                                                      <Badge key={btnIdx} variant="outline" className="gap-1 text-xs py-1">
+                                                        {btn.type === "URL" && "🔗"}
+                                                        {btn.type === "PHONE_NUMBER" && "📞"}
+                                                        {btn.type === "QUICK_REPLY" && "💬"}
+                                                        {btn.text || btn.url || btn.phone_number}
+                                                      </Badge>
+                                                    ))}
+                                                  </div>
+                                                </div>
+                                              )}
+                                              
+                                              {component.example && (
+                                                <details className="mt-3">
+                                                  <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+                                                    Ver exemplo de parâmetros
+                                                  </summary>
+                                                  <pre className="mt-2 text-xs bg-muted/50 p-2 rounded overflow-auto">
+                                                    {JSON.stringify(component.example, null, 2)}
+                                                  </pre>
+                                                </details>
+                                              )}
+                                            </div>
+                                          ))
+                                        ) : (
+                                          <div className="text-center text-muted-foreground py-8">
+                                            Nenhum componente encontrado para este template
+                                          </div>
+                                        )}
+                                      </div>
+                                    </ScrollArea>
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          ) : (
+                            <ScrollArea className="h-[400px] rounded-md border">
+                              <Table>
+                                <TableHeader>
                                   <TableRow>
-                                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                                      Nenhum template encontrado
-                                    </TableCell>
+                                    <TableHead>Nome</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Categoria</TableHead>
+                                    <TableHead>Idioma</TableHead>
+                                    <TableHead>Qualidade</TableHead>
                                   </TableRow>
-                                )}
-                              </TableBody>
-                            </Table>
-                          </ScrollArea>
+                                </TableHeader>
+                                <TableBody>
+                                  {templateStatusData.templates?.map((template, index) => (
+                                    <TableRow 
+                                      key={index}
+                                      className="cursor-pointer hover:bg-accent/50"
+                                      onClick={() => setSelectedTemplate(template.name)}
+                                    >
+                                      <TableCell className="font-mono text-sm">
+                                        {template.name}
+                                      </TableCell>
+                                      <TableCell>
+                                        {getStatusBadge(template.status)}
+                                      </TableCell>
+                                      <TableCell className="text-sm text-muted-foreground">
+                                        {template.category}
+                                      </TableCell>
+                                      <TableCell className="text-sm text-muted-foreground">
+                                        {template.language}
+                                      </TableCell>
+                                      <TableCell>
+                                        {template.qualityScore ? (
+                                          <Badge variant="outline" className="text-xs">
+                                            {template.qualityScore}
+                                          </Badge>
+                                        ) : (
+                                          <span className="text-xs text-muted-foreground">-</span>
+                                        )}
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                  {(!templateStatusData.templates || templateStatusData.templates.length === 0) && (
+                                    <TableRow>
+                                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                                        Nenhum template encontrado
+                                      </TableCell>
+                                    </TableRow>
+                                  )}
+                                </TableBody>
+                              </Table>
+                            </ScrollArea>
+                          )}
                         </>
                       )}
                     </div>
