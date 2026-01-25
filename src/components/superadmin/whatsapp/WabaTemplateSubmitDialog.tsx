@@ -242,6 +242,13 @@ export function WabaTemplateSubmitDialog({
     onOpenChange(false);
   };
 
+  // Mapeamento explícito de templates locais para templates WABA da Meta
+  const TEMPLATE_MAPPING: Record<string, string> = {
+    "package_arrival": "encomenda_management_5",
+    "notification_occurrence": "notificacao_ocorrencia",
+    "notify_sindico_defense": "nova_defesa",
+  };
+
   // Auto-sync templates by matching Meta template name to local slug
   const handleAutoSync = async () => {
     setIsSyncing(true);
@@ -250,15 +257,28 @@ export function WabaTemplateSubmitDialog({
       const approvedMeta = metaTemplates.filter(t => t.status === "APPROVED");
       
       // Find matches between local slugs and Meta template names
-      // Convert slug format (snake_case) to match Meta naming (also typically snake_case)
       const matches: { localId: string; localSlug: string; metaName: string; metaLanguage: string }[] = [];
       
       for (const local of localTemplates) {
         // Skip if already linked
         if (local.waba_template_name) continue;
         
-        // Try to find a matching Meta template
-        // Match by: exact name match, or slug matches Meta name
+        // 1. First check explicit mapping
+        const explicitMapping = TEMPLATE_MAPPING[local.slug];
+        if (explicitMapping) {
+          const metaMatch = approvedMeta.find(m => m.name === explicitMapping);
+          if (metaMatch) {
+            matches.push({
+              localId: local.id,
+              localSlug: local.slug,
+              metaName: metaMatch.name,
+              metaLanguage: metaMatch.language,
+            });
+            continue;
+          }
+        }
+        
+        // 2. Try to find a matching Meta template by name similarity
         const match = approvedMeta.find(meta => {
           const metaNameNormalized = meta.name.toLowerCase();
           const slugNormalized = local.slug.toLowerCase();
