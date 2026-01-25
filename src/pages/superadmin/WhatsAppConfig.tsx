@@ -42,6 +42,7 @@ export default function WhatsAppConfig() {
   const [connectionInfo, setConnectionInfo] = useState<{
     phoneNumber?: string;
     businessName?: string;
+    qualityRating?: string;
   } | null>(null);
 
   // Persist lastTestedAt to localStorage
@@ -71,6 +72,7 @@ export default function WhatsAppConfig() {
           setConnectionInfo({
             phoneNumber: data.phone_info?.display_phone_number,
             businessName: data.phone_info?.verified_name,
+            qualityRating: data.phone_info?.quality_rating,
           });
         } else {
           setTestResult("error");
@@ -105,6 +107,7 @@ export default function WhatsAppConfig() {
         setConnectionInfo({
           phoneNumber: data.phone_info?.display_phone_number,
           businessName: data.phone_info?.verified_name,
+          qualityRating: data.phone_info?.quality_rating,
         });
         toast({ title: "✅ Conexão bem-sucedida com a Meta Cloud API!" });
       } else {
@@ -309,7 +312,7 @@ export default function WhatsAppConfig() {
             {/* Connection Info */}
             {connectionInfo && testResult === "success" && (
               <div className="rounded-lg border bg-green-500/5 border-green-500/20 p-4">
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-3">
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Empresa</p>
                     <p className="text-sm font-medium text-green-600 dark:text-green-400">
@@ -321,6 +324,22 @@ export default function WhatsAppConfig() {
                     <p className="text-sm font-medium text-green-600 dark:text-green-400">
                       {connectionInfo.phoneNumber || "—"}
                     </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Qualidade</p>
+                    <Badge 
+                      className={`text-xs ${
+                        connectionInfo.qualityRating === "GREEN" 
+                          ? "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20" 
+                          : connectionInfo.qualityRating === "YELLOW"
+                          ? "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20"
+                          : connectionInfo.qualityRating === "RED"
+                          ? "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {connectionInfo.qualityRating || "—"}
+                    </Badge>
                   </div>
                 </div>
               </div>
