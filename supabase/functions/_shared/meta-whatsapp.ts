@@ -239,6 +239,8 @@ export async function sendMetaTemplate(
       debug: {
         endpoint,
         status: response.status,
+        response: responseText,
+        payload,
       },
     };
   } catch (error) {
@@ -321,6 +323,8 @@ export async function sendMetaText(
       debug: {
         endpoint,
         status: response.status,
+        response: responseText,
+        payload,
       },
     };
   } catch (error) {
@@ -403,6 +407,8 @@ export async function sendMetaImage(
       debug: {
         endpoint,
         status: response.status,
+        response: responseText,
+        payload,
       },
     };
   } catch (error) {
