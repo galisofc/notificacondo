@@ -25,8 +25,27 @@ import {
   Zap,
   Info,
   ExternalLink,
-  Clock
+  Clock,
+  FileCheck,
+  AlertTriangle
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function WhatsAppConfig() {
   const { toast } = useToast();
@@ -43,6 +62,24 @@ export default function WhatsAppConfig() {
   const [connectionInfo, setConnectionInfo] = useState<{
     phoneNumber?: string;
     businessName?: string;
+  } | null>(null);
+  const [isCheckingTemplates, setIsCheckingTemplates] = useState(false);
+  const [templateStatusOpen, setTemplateStatusOpen] = useState(false);
+  const [templateStatusData, setTemplateStatusData] = useState<{
+    configured: boolean;
+    templates?: Array<{
+      name: string;
+      status: string;
+      category: string;
+      language: string;
+      qualityScore?: string;
+      rejectedReason?: string;
+    }>;
+    total?: number;
+    approved?: number;
+    pending?: number;
+    rejected?: number;
+    error?: string;
   } | null>(null);
 
   // Persist lastTestedAt to localStorage
@@ -218,6 +255,77 @@ export default function WhatsAppConfig() {
       });
     } finally {
       setIsSendingTemplateTest(false);
+    }
+  };
+
+  const handleCheckTemplateStatus = async () => {
+    setIsCheckingTemplates(true);
+    setTemplateStatusData(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("check-whatsapp-template-status", {
+        body: {},
+      });
+
+      if (error) throw error;
+
+      setTemplateStatusData(data);
+      setTemplateStatusOpen(true);
+
+      if (!data?.configured) {
+        toast({
+          title: "Configuração incompleta",
+          description: "O META_WHATSAPP_BUSINESS_ACCOUNT_ID não está configurado.",
+          variant: "destructive",
+        });
+      } else if (data?.templates?.length === 0) {
+        toast({
+          title: "Nenhum template encontrado",
+          description: "Não foram encontrados templates na sua conta Meta Business.",
+        });
+      }
+    } catch (error: any) {
+      console.error("[Template Status] Error:", error);
+      toast({
+        title: "Erro ao verificar templates",
+        description: error.message || "Não foi possível verificar o status dos templates.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCheckingTemplates(false);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "APPROVED":
+        return (
+          <Badge className="bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20 gap-1">
+            <CheckCircle className="h-3 w-3" />
+            Aprovado
+          </Badge>
+        );
+      case "PENDING":
+        return (
+          <Badge className="bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20 gap-1">
+            <Clock className="h-3 w-3" />
+            Pendente
+          </Badge>
+        );
+      case "REJECTED":
+        return (
+          <Badge className="bg-destructive/10 text-destructive border-destructive/20 gap-1">
+            <XCircle className="h-3 w-3" />
+            Rejeitado
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="secondary" className="gap-1">
+            <AlertTriangle className="h-3 w-3" />
+            {status}
+          </Badge>
+        );
     }
   };
 
@@ -468,6 +576,146 @@ export default function WhatsAppConfig() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Template Status Check Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                <FileCheck className="h-5 w-5" />
+                Status dos Templates WABA
+              </CardTitle>
+              <CardDescription>
+                Verifique o status de aprovação dos seus templates no Meta Business Manager
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Consulte a API da Meta para verificar se seus templates estão aprovados e prontos para uso.
+              </p>
+              
+              <Dialog open={templateStatusOpen} onOpenChange={setTemplateStatusOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    onClick={handleCheckTemplateStatus}
+                    disabled={isCheckingTemplates}
+                    className="gap-2"
+                  >
+                    {isCheckingTemplates ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <FileCheck className="h-4 w-4" />
+                    )}
+                    Verificar Status dos Templates
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl max-h-[80vh]">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <FileCheck className="h-5 w-5" />
+                      Status dos Templates WABA
+                    </DialogTitle>
+                    <DialogDescription>
+                      Lista de templates registrados na sua conta Meta Business
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  {templateStatusData && (
+                    <div className="space-y-4">
+                      {!templateStatusData.configured ? (
+                        <Alert variant="destructive">
+                          <XCircle className="h-4 w-4" />
+                          <AlertDescription>
+                            O secret <code className="bg-muted px-1 rounded">META_WHATSAPP_BUSINESS_ACCOUNT_ID</code> não está configurado.
+                            Adicione-o no Supabase Secrets para verificar seus templates.
+                          </AlertDescription>
+                        </Alert>
+                      ) : templateStatusData.error ? (
+                        <Alert variant="destructive">
+                          <XCircle className="h-4 w-4" />
+                          <AlertDescription>{templateStatusData.error}</AlertDescription>
+                        </Alert>
+                      ) : (
+                        <>
+                          {/* Summary Stats */}
+                          <div className="grid grid-cols-4 gap-3">
+                            <div className="rounded-lg border bg-card p-3 text-center">
+                              <p className="text-2xl font-bold">{templateStatusData.total || 0}</p>
+                              <p className="text-xs text-muted-foreground">Total</p>
+                            </div>
+                            <div className="rounded-lg border bg-green-500/10 border-green-500/20 p-3 text-center">
+                              <p className="text-2xl font-bold text-green-600 dark:text-green-400">{templateStatusData.approved || 0}</p>
+                              <p className="text-xs text-muted-foreground">Aprovados</p>
+                            </div>
+                            <div className="rounded-lg border bg-yellow-500/10 border-yellow-500/20 p-3 text-center">
+                              <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{templateStatusData.pending || 0}</p>
+                              <p className="text-xs text-muted-foreground">Pendentes</p>
+                            </div>
+                            <div className="rounded-lg border bg-destructive/10 border-destructive/20 p-3 text-center">
+                              <p className="text-2xl font-bold text-destructive">{templateStatusData.rejected || 0}</p>
+                              <p className="text-xs text-muted-foreground">Rejeitados</p>
+                            </div>
+                          </div>
+
+                          {/* Templates Table */}
+                          <ScrollArea className="h-[400px] rounded-md border">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Nome</TableHead>
+                                  <TableHead>Status</TableHead>
+                                  <TableHead>Categoria</TableHead>
+                                  <TableHead>Idioma</TableHead>
+                                  <TableHead>Qualidade</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {templateStatusData.templates?.map((template, index) => (
+                                  <TableRow key={index}>
+                                    <TableCell className="font-mono text-sm">
+                                      {template.name}
+                                    </TableCell>
+                                    <TableCell>
+                                      {getStatusBadge(template.status)}
+                                    </TableCell>
+                                    <TableCell className="text-sm text-muted-foreground">
+                                      {template.category}
+                                    </TableCell>
+                                    <TableCell className="text-sm text-muted-foreground">
+                                      {template.language}
+                                    </TableCell>
+                                    <TableCell>
+                                      {template.qualityScore ? (
+                                        <Badge variant="outline" className="text-xs">
+                                          {template.qualityScore}
+                                        </Badge>
+                                      ) : (
+                                        <span className="text-xs text-muted-foreground">-</span>
+                                      )}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                                {(!templateStatusData.templates || templateStatusData.templates.length === 0) && (
+                                  <TableRow>
+                                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                                      Nenhum template encontrado
+                                    </TableCell>
+                                  </TableRow>
+                                )}
+                              </TableBody>
+                            </Table>
+                          </ScrollArea>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </DialogContent>
+              </Dialog>
+
+              <p className="text-xs text-muted-foreground">
+                💡 Certifique-se de que o secret <code className="bg-muted px-1 rounded">META_WHATSAPP_BUSINESS_ACCOUNT_ID</code> está configurado.
+              </p>
+            </CardContent>
+          </Card>
 
           {/* Configuration Secrets Info */}
           <Card>
