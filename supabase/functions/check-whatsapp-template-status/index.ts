@@ -146,8 +146,14 @@ serve(async (req) => {
       });
     }
 
-    // Return all templates
+    // Count by status
+    const approved = templates.filter((t: any) => t.status === "APPROVED").length;
+    const pending = templates.filter((t: any) => t.status === "PENDING").length;
+    const rejected = templates.filter((t: any) => t.status === "REJECTED").length;
+
+    // Return all templates with format expected by frontend
     return new Response(JSON.stringify({
+      configured: true,
       success: true,
       templates: templates.map((t: any) => ({
         name: t.name,
@@ -156,7 +162,10 @@ serve(async (req) => {
         category: t.category,
         qualityScore: t.quality_score,
       })),
-      totalCount: templates.length,
+      total: templates.length,
+      approved,
+      pending,
+      rejected,
     }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
