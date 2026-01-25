@@ -234,6 +234,52 @@ export function TemplateWabaLinkingCard() {
     }
   };
 
+  // Sanitize header text for Meta API - remove emojis, asterisks, formatting
+  const sanitizeHeaderText = (text: string): string => {
+    return text
+      // Remove emojis (unicode ranges for emojis)
+      .replace(/[\u{1F600}-\u{1F64F}]/gu, '') // Emoticons
+      .replace(/[\u{1F300}-\u{1F5FF}]/gu, '') // Misc Symbols and Pictographs
+      .replace(/[\u{1F680}-\u{1F6FF}]/gu, '') // Transport and Map
+      .replace(/[\u{1F1E0}-\u{1F1FF}]/gu, '') // Flags
+      .replace(/[\u{2600}-\u{26FF}]/gu, '')   // Misc symbols
+      .replace(/[\u{2700}-\u{27BF}]/gu, '')   // Dingbats
+      .replace(/[\u{FE00}-\u{FE0F}]/gu, '')   // Variation Selectors
+      .replace(/[\u{1F900}-\u{1F9FF}]/gu, '') // Supplemental Symbols
+      .replace(/[\u{1FA00}-\u{1FA6F}]/gu, '') // Chess Symbols
+      .replace(/[\u{1FA70}-\u{1FAFF}]/gu, '') // Symbols and Pictographs Extended-A
+      .replace(/[\u{231A}-\u{231B}]/gu, '')   // Watch, Hourglass
+      .replace(/[\u{23E9}-\u{23F3}]/gu, '')   // Various symbols
+      .replace(/[\u{23F8}-\u{23FA}]/gu, '')   // Various symbols
+      .replace(/[\u{25AA}-\u{25AB}]/gu, '')   // Squares
+      .replace(/[\u{25B6}]/gu, '')            // Play button
+      .replace(/[\u{25C0}]/gu, '')            // Reverse button
+      .replace(/[\u{25FB}-\u{25FE}]/gu, '')   // Squares
+      .replace(/[\u{2614}-\u{2615}]/gu, '')   // Umbrella, Hot beverage
+      .replace(/[\u{2648}-\u{2653}]/gu, '')   // Zodiac
+      .replace(/[\u{267F}]/gu, '')            // Wheelchair
+      .replace(/[\u{2693}]/gu, '')            // Anchor
+      .replace(/[\u{26A1}]/gu, '')            // High voltage
+      .replace(/[\u{26AA}-\u{26AB}]/gu, '')   // Circles
+      .replace(/[\u{26BD}-\u{26BE}]/gu, '')   // Soccer, Baseball
+      .replace(/[\u{26C4}-\u{26C5}]/gu, '')   // Snowman, Sun
+      .replace(/[\u{26CE}]/gu, '')            // Ophiuchus
+      .replace(/[\u{26D4}]/gu, '')            // No entry
+      .replace(/[\u{26EA}]/gu, '')            // Church
+      .replace(/[\u{26F2}-\u{26F3}]/gu, '')   // Fountain, Golf
+      .replace(/[\u{26F5}]/gu, '')            // Sailboat
+      .replace(/[\u{26FA}]/gu, '')            // Tent
+      .replace(/[\u{26FD}]/gu, '')            // Fuel pump
+      // Remove asterisks and formatting characters
+      .replace(/\*/g, '')
+      // Remove newlines and carriage returns
+      .replace(/[\r\n]/g, ' ')
+      // Remove multiple spaces
+      .replace(/\s+/g, ' ')
+      // Trim whitespace
+      .trim();
+  };
+
   // Open create dialog for unlinked template
   const openCreateDialog = (template: LocalTemplate) => {
     setSelectedLocalTemplate(template);
@@ -242,14 +288,16 @@ export function TemplateWabaLinkingCard() {
     // Convert local content to WABA format
     const lines = template.content.split("\n").filter(l => l.trim());
     if (lines.length > 0) {
-      // First line as header
-      setHeaderText(lines[0].replace(/\*/g, "").replace(/\{(\w+)\}/g, "{{$1}}").substring(0, 60));
+      // First line as header - sanitize for Meta API
+      const rawHeader = lines[0].replace(/\{(\w+)\}/g, "{{$1}}");
+      setHeaderText(sanitizeHeaderText(rawHeader).substring(0, 60));
       // Rest as body
       setBodyText(template.content.replace(/\{(\w+)\}/g, "{{$1}}"));
     } else {
+      setHeaderText(""); // No header if content is empty
       setBodyText(template.content.replace(/\{(\w+)\}/g, "{{$1}}"));
     }
-    setFooterText("NotificaCondo");
+    setFooterText("Mensagem Automatica - NotificaCondo");
     setShowCreateDialog(true);
   };
 
@@ -278,8 +326,10 @@ export function TemplateWabaLinkingCard() {
     try {
       const components: any[] = [];
       
-      if (headerText.trim()) {
-        components.push({ type: "HEADER", format: "TEXT", text: headerText });
+      // Sanitize header before sending to Meta API
+      const sanitizedHeader = sanitizeHeaderText(headerText);
+      if (sanitizedHeader) {
+        components.push({ type: "HEADER", format: "TEXT", text: sanitizedHeader });
       }
       
       // Convert {var} to {{1}}, {{2}}, etc for Meta format
