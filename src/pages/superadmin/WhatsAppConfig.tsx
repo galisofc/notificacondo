@@ -27,7 +27,8 @@ import {
   ExternalLink,
   Clock,
   FileCheck,
-  AlertTriangle
+  AlertTriangle,
+  Copy
 } from "lucide-react";
 import {
   Dialog,
@@ -728,15 +729,33 @@ export default function WhatsAppConfig() {
                                         {template.components && template.components.length > 0 ? (
                                           template.components.map((component, idx) => (
                                             <div key={idx} className="rounded-lg border p-4">
-                                              <div className="flex items-center gap-2 mb-3">
-                                                <span className="text-lg">{getComponentIcon(component.type)}</span>
-                                                <span className="font-semibold text-sm uppercase tracking-wide">
-                                                  {component.type}
-                                                </span>
-                                                {component.format && (
-                                                  <Badge variant="secondary" className="text-xs">
-                                                    {component.format}
-                                                  </Badge>
+                                              <div className="flex items-center justify-between mb-3">
+                                                <div className="flex items-center gap-2">
+                                                  <span className="text-lg">{getComponentIcon(component.type)}</span>
+                                                  <span className="font-semibold text-sm uppercase tracking-wide">
+                                                    {component.type}
+                                                  </span>
+                                                  {component.format && (
+                                                    <Badge variant="secondary" className="text-xs">
+                                                      {component.format}
+                                                    </Badge>
+                                                  )}
+                                                </div>
+                                                {component.text && (
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-7 w-7"
+                                                    onClick={() => {
+                                                      navigator.clipboard.writeText(component.text || "");
+                                                      toast({
+                                                        title: "✅ Copiado!",
+                                                        description: `Conteúdo do ${component.type} copiado para a área de transferência.`,
+                                                      });
+                                                    }}
+                                                  >
+                                                    <Copy className="h-3.5 w-3.5" />
+                                                  </Button>
                                                 )}
                                               </div>
                                               
