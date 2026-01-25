@@ -33,6 +33,8 @@ import {
   FileText,
   Zap,
   AlertTriangle,
+  Image,
+  File,
 } from "lucide-react";
 
 interface LocalTemplate {
@@ -75,6 +77,13 @@ const TEMPLATE_CATEGORIES = [
   { value: "AUTHENTICATION", label: "Autenticação" },
 ];
 
+const HEADER_TYPES = [
+  { value: "NONE", label: "Sem Cabeçalho", icon: null },
+  { value: "TEXT", label: "Texto", icon: FileText },
+  { value: "IMAGE", label: "Imagem", icon: Image },
+  { value: "DOCUMENT", label: "Documento", icon: File },
+];
+
 export function TemplateWabaLinkingCard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -89,7 +98,9 @@ export function TemplateWabaLinkingCard() {
   const [selectedLocalTemplate, setSelectedLocalTemplate] = useState<LocalTemplate | null>(null);
   const [templateName, setTemplateName] = useState("");
   const [templateCategory, setTemplateCategory] = useState("UTILITY");
+  const [headerType, setHeaderType] = useState<"NONE" | "TEXT" | "IMAGE" | "DOCUMENT">("TEXT");
   const [headerText, setHeaderText] = useState("");
+  const [headerMediaUrl, setHeaderMediaUrl] = useState("");
   const [bodyText, setBodyText] = useState("");
   const [footerText, setFooterText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -290,11 +301,15 @@ export function TemplateWabaLinkingCard() {
     if (lines.length > 0) {
       // First line as header - sanitize for Meta API
       const rawHeader = lines[0].replace(/\{(\w+)\}/g, "{{$1}}");
+      setHeaderType("TEXT");
       setHeaderText(sanitizeHeaderText(rawHeader).substring(0, 60));
+      setHeaderMediaUrl("");
       // Rest as body
       setBodyText(template.content.replace(/\{(\w+)\}/g, "{{$1}}"));
     } else {
-      setHeaderText(""); // No header if content is empty
+      setHeaderType("NONE");
+      setHeaderText("");
+      setHeaderMediaUrl("");
       setBodyText(template.content.replace(/\{(\w+)\}/g, "{{$1}}"));
     }
     setFooterText("Mensagem Automatica - NotificaCondo");
@@ -326,10 +341,28 @@ export function TemplateWabaLinkingCard() {
     try {
       const components: any[] = [];
       
-      // Sanitize header before sending to Meta API
-      const sanitizedHeader = sanitizeHeaderText(headerText);
-      if (sanitizedHeader) {
-        components.push({ type: "HEADER", format: "TEXT", text: sanitizedHeader });
+      // Build header component based on type
+      if (headerType === "TEXT") {
+        const sanitizedHeader = sanitizeHeaderText(headerText);
+        if (sanitizedHeader) {
+          components.push({ type: "HEADER", format: "TEXT", text: sanitizedHeader });
+        }
+      } else if (headerType === "IMAGE" && headerMediaUrl.trim()) {
+        components.push({ 
+          type: "HEADER", 
+          format: "IMAGE",
+          example: { 
+            header_handle: [headerMediaUrl.trim()] 
+          }
+        });
+      } else if (headerType === "DOCUMENT" && headerMediaUrl.trim()) {
+        components.push({ 
+          type: "HEADER", 
+          format: "DOCUMENT",
+          example: { 
+            header_handle: [headerMediaUrl.trim()] 
+          }
+        });
       }
       
       // Convert {var} to {{1}}, {{2}}, etc for Meta format
@@ -403,7 +436,9 @@ export function TemplateWabaLinkingCard() {
   const resetForm = () => {
     setTemplateName("");
     setTemplateCategory("UTILITY");
+    setHeaderType("TEXT");
     setHeaderText("");
+    setHeaderMediaUrl("");
     setBodyText("");
     setFooterText("");
     setSelectedLocalTemplate(null);
@@ -722,14 +757,62 @@ export function TemplateWabaLinkingCard() {
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Label>Cabeçalho (opcional)</Label>
-              <Input
-                value={headerText}
-                onChange={(e) => setHeaderText(e.target.value)}
-                placeholder="Título da mensagem"
-                maxLength={60}
-              />
+              <div className="grid grid-cols-4 gap-2">
+                {HEADER_TYPES.map((type) => (
+                  <Button
+                    key={type.value}
+                    type="button"
+                    variant={headerType === type.value ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      setHeaderType(type.value as "NONE" | "TEXT" | "IMAGE" | "DOCUMENT");
+                      if (type.value === "NONE") {
+                        setHeaderText("");
+                        setHeaderMediaUrl("");
+                      }
+                    }}
+                    className="gap-1.5 text-xs"
+                  >
+                    {type.icon && <type.icon className="h-3.5 w-3.5" />}
+                    {type.label}
+                  </Button>
+                ))}
+              </div>
+              
+              {headerType === "TEXT" && (
+                <div className="space-y-1">
+                  <Input
+                    value={headerText}
+                    onChange={(e) => setHeaderText(e.target.value)}
+                    placeholder="Título da mensagem"
+                    maxLength={60}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Máximo 60 caracteres. Sem emojis ou formatação especial.
+                  </p>
+                </div>
+              )}
+              
+              {(headerType === "IMAGE" || headerType === "DOCUMENT") && (
+                <div className="space-y-1">
+                  <Input
+                    value={headerMediaUrl}
+                    onChange={(e) => setHeaderMediaUrl(e.target.value)}
+                    placeholder={headerType === "IMAGE" 
+                      ? "https://exemplo.com/imagem.jpg" 
+                      : "https://exemplo.com/documento.pdf"
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {headerType === "IMAGE" 
+                      ? "URL pública da imagem (JPG, PNG). A imagem será usada como exemplo para aprovação."
+                      : "URL pública do documento (PDF). O documento será usado como exemplo para aprovação."
+                    }
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
