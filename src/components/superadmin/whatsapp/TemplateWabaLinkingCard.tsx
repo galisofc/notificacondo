@@ -104,6 +104,7 @@ export function TemplateWabaLinkingCard() {
   const [bodyText, setBodyText] = useState("");
   const [footerText, setFooterText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [variableExamples, setVariableExamples] = useState<Record<string, string>>({});
 
   // Query local templates
   const { data: localTemplates, isLoading: isLoadingLocal } = useQuery({
@@ -291,12 +292,19 @@ export function TemplateWabaLinkingCard() {
       .trim();
   };
 
+  // Extract variables from body text
+  const extractVariables = (text: string): string[] => {
+    const matches = text.match(/\{\{(\w+)\}\}/g) || [];
+    return [...new Set(matches.map(m => m.replace(/\{\{|\}\}/g, '')))];
+  };
+
   // Open create dialog for unlinked template
   const openCreateDialog = (template: LocalTemplate) => {
     setSelectedLocalTemplate(template);
     // Suggest name based on slug
     setTemplateName(template.slug.toLowerCase().replace(/-/g, "_"));
     // Convert local content to WABA format
+    const convertedContent = template.content.replace(/\{(\w+)\}/g, "{{$1}}");
     const lines = template.content.split("\n").filter(l => l.trim());
     if (lines.length > 0) {
       // First line as header - sanitize for Meta API
@@ -305,14 +313,63 @@ export function TemplateWabaLinkingCard() {
       setHeaderText(sanitizeHeaderText(rawHeader).substring(0, 60));
       setHeaderMediaUrl("");
       // Rest as body
-      setBodyText(template.content.replace(/\{(\w+)\}/g, "{{$1}}"));
+      setBodyText(convertedContent);
     } else {
       setHeaderType("NONE");
       setHeaderText("");
       setHeaderMediaUrl("");
-      setBodyText(template.content.replace(/\{(\w+)\}/g, "{{$1}}"));
+      setBodyText(convertedContent);
     }
     setFooterText("Mensagem Automatica - NotificaCondo");
+    
+    // Initialize variable examples with defaults based on variable names
+    const vars = extractVariables(convertedContent);
+    const defaultExamples: Record<string, string> = {};
+    vars.forEach(v => {
+      // Generate sensible defaults based on common variable names
+      const lowerV = v.toLowerCase();
+      if (lowerV.includes('nome') || lowerV.includes('name')) {
+        defaultExamples[v] = 'João Silva';
+      } else if (lowerV.includes('condominio') || lowerV.includes('condominium')) {
+        defaultExamples[v] = 'Residencial Exemplo';
+      } else if (lowerV.includes('bloco') || lowerV.includes('block')) {
+        defaultExamples[v] = 'Bloco A';
+      } else if (lowerV.includes('apartamento') || lowerV.includes('apartment') || lowerV.includes('apto')) {
+        defaultExamples[v] = '101';
+      } else if (lowerV.includes('tipo') || lowerV.includes('type')) {
+        defaultExamples[v] = 'Advertência';
+      } else if (lowerV.includes('titulo') || lowerV.includes('title')) {
+        defaultExamples[v] = 'Ocorrência Exemplo';
+      } else if (lowerV.includes('link') || lowerV.includes('url')) {
+        defaultExamples[v] = 'https://notificacondo.com.br/acesso';
+      } else if (lowerV.includes('data') || lowerV.includes('date')) {
+        defaultExamples[v] = '25/01/2026';
+      } else if (lowerV.includes('valor') || lowerV.includes('value') || lowerV.includes('price')) {
+        defaultExamples[v] = 'R$ 150,00';
+      } else if (lowerV.includes('codigo') || lowerV.includes('code')) {
+        defaultExamples[v] = '123456';
+      } else if (lowerV.includes('porteiro') || lowerV.includes('porter')) {
+        defaultExamples[v] = 'Carlos Portaria';
+      } else if (lowerV.includes('rastreio') || lowerV.includes('tracking')) {
+        defaultExamples[v] = 'BR123456789';
+      } else if (lowerV.includes('encomenda') || lowerV.includes('package')) {
+        defaultExamples[v] = 'Correios';
+      } else if (lowerV.includes('justificativa')) {
+        defaultExamples[v] = 'Motivo da decisão informado aqui';
+      } else if (lowerV.includes('periodo') || lowerV.includes('period')) {
+        defaultExamples[v] = 'Janeiro/2026';
+      } else if (lowerV.includes('vencimento') || lowerV.includes('due')) {
+        defaultExamples[v] = '10/02/2026';
+      } else if (lowerV.includes('fatura') || lowerV.includes('invoice')) {
+        defaultExamples[v] = 'FAT-202600001';
+      } else if (lowerV.includes('metodo') || lowerV.includes('method')) {
+        defaultExamples[v] = 'PIX';
+      } else {
+        defaultExamples[v] = `exemplo_${v}`;
+      }
+    });
+    setVariableExamples(defaultExamples);
+    
     setShowCreateDialog(true);
   };
 
@@ -365,16 +422,28 @@ export function TemplateWabaLinkingCard() {
         });
       }
       
-      // Convert {var} to {{1}}, {{2}}, etc for Meta format
+      // Convert {{varName}} to {{1}}, {{2}}, etc for Meta format
       let bodyConverted = bodyText;
-      const vars = bodyText.match(/\{\{(\w+)\}\}/g) || [];
-      vars.forEach((v, i) => {
-        bodyConverted = bodyConverted.replace(v, `{{${i + 1}}}`);
+      const vars = extractVariables(bodyText);
+      const uniqueVars = [...new Set(vars)];
+      
+      // Create mapping of variable name to positional number
+      const varMapping: Record<string, number> = {};
+      uniqueVars.forEach((v, i) => {
+        varMapping[v] = i + 1;
+      });
+      
+      // Replace all occurrences with positional parameters
+      uniqueVars.forEach((v) => {
+        const regex = new RegExp(`\\{\\{${v}\\}\\}`, 'g');
+        bodyConverted = bodyConverted.replace(regex, `{{${varMapping[v]}}}`);
       });
       
       const bodyComponent: any = { type: "BODY", text: bodyConverted };
-      if (vars.length > 0) {
-        bodyComponent.example = { body_text: [vars.map((_, i) => `exemplo_${i + 1}`)] };
+      if (uniqueVars.length > 0) {
+        // Use the user-provided examples for each variable
+        const examples = uniqueVars.map(v => variableExamples[v] || `exemplo_${v}`);
+        bodyComponent.example = { body_text: [examples] };
       }
       components.push(bodyComponent);
       
@@ -442,7 +511,11 @@ export function TemplateWabaLinkingCard() {
     setBodyText("");
     setFooterText("");
     setSelectedLocalTemplate(null);
+    setVariableExamples({});
   };
+  
+  // Get current variables from body text for the form
+  const currentVariables = extractVariables(bodyText);
 
   const toggleExpanded = (id: string) => {
     const newSet = new Set(expandedTemplates);
@@ -827,6 +900,40 @@ export function TemplateWabaLinkingCard() {
                 Use {"{{variavel}}"} para variáveis dinâmicas
               </p>
             </div>
+
+            {/* Variable Examples Section */}
+            {currentVariables.length > 0 && (
+              <div className="space-y-3 p-4 rounded-lg border bg-muted/30">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                  <Label className="text-sm font-medium">Exemplos das Variáveis (obrigatório para aprovação)</Label>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  A Meta exige exemplos para cada variável. Estes valores serão usados apenas para revisão.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {currentVariables.map((varName, index) => (
+                    <div key={varName} className="space-y-1">
+                      <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                          {`{{${index + 1}}}`}
+                        </Badge>
+                        {varName}
+                      </Label>
+                      <Input
+                        value={variableExamples[varName] || ''}
+                        onChange={(e) => setVariableExamples(prev => ({
+                          ...prev,
+                          [varName]: e.target.value
+                        }))}
+                        placeholder={`Exemplo para ${varName}`}
+                        className="text-sm h-8"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>Rodapé (opcional)</Label>
