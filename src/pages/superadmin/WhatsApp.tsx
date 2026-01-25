@@ -1,7 +1,7 @@
 import { Helmet } from "react-helmet-async";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SuperAdminBreadcrumbs from "@/components/superadmin/SuperAdminBreadcrumbs";
-import { TemplatesList } from "@/components/superadmin/whatsapp";
+import { TemplatesList, WabaTemplateStatusCard } from "@/components/superadmin/whatsapp";
 
 export default function WhatsApp() {
   return (
@@ -20,6 +20,9 @@ export default function WhatsApp() {
             Gerencie os templates de mensagens
           </p>
         </div>
+
+        {/* WABA Template Status Card */}
+        <WabaTemplateStatusCard />
 
         {/* Templates List with Categories */}
         <TemplatesList />
