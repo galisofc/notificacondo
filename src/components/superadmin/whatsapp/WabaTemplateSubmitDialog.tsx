@@ -26,7 +26,9 @@ import {
   Clock,
   AlertCircle,
   RefreshCw,
+  Zap,
 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface MetaTemplate {
   id: string;
@@ -62,6 +64,7 @@ export function WabaTemplateSubmitDialog({
   onTemplateLinked 
 }: WabaTemplateSubmitDialogProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"create" | "link">("link");
   
   // Create new template state
@@ -78,13 +81,25 @@ export function WabaTemplateSubmitDialog({
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<MetaTemplate | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [localTemplates, setLocalTemplates] = useState<Array<{ id: string; slug: string; waba_template_name: string | null }>>([]);
 
-  // Load Meta templates when dialog opens on link tab
+  // Load Meta templates and local templates when dialog opens on link tab
   useEffect(() => {
     if (open && activeTab === "link") {
       loadMetaTemplates();
+      loadLocalTemplates();
     }
   }, [open, activeTab]);
+
+  const loadLocalTemplates = async () => {
+    const { data } = await supabase
+      .from("whatsapp_templates")
+      .select("id, slug, waba_template_name");
+    if (data) {
+      setLocalTemplates(data);
+    }
+  };
 
   const loadMetaTemplates = async () => {
     setIsLoadingTemplates(true);
@@ -225,6 +240,87 @@ export function WabaTemplateSubmitDialog({
       description: `Template "${selectedTemplate.name}" foi selecionado. Salve para confirmar.`,
     });
     onOpenChange(false);
+  };
+
+  // Auto-sync templates by matching Meta template name to local slug
+  const handleAutoSync = async () => {
+    setIsSyncing(true);
+    try {
+      // Get approved Meta templates
+      const approvedMeta = metaTemplates.filter(t => t.status === "APPROVED");
+      
+      // Find matches between local slugs and Meta template names
+      // Convert slug format (snake_case) to match Meta naming (also typically snake_case)
+      const matches: { localId: string; localSlug: string; metaName: string; metaLanguage: string }[] = [];
+      
+      for (const local of localTemplates) {
+        // Skip if already linked
+        if (local.waba_template_name) continue;
+        
+        // Try to find a matching Meta template
+        // Match by: exact name match, or slug matches Meta name
+        const match = approvedMeta.find(meta => {
+          const metaNameNormalized = meta.name.toLowerCase();
+          const slugNormalized = local.slug.toLowerCase();
+          
+          // Exact match or contains match
+          return metaNameNormalized === slugNormalized || 
+                 metaNameNormalized.includes(slugNormalized) ||
+                 slugNormalized.includes(metaNameNormalized);
+        });
+        
+        if (match) {
+          matches.push({
+            localId: local.id,
+            localSlug: local.slug,
+            metaName: match.name,
+            metaLanguage: match.language,
+          });
+        }
+      }
+      
+      if (matches.length === 0) {
+        toast({
+          title: "Nenhum match encontrado",
+          description: "Nenhum template local corresponde a templates aprovados na Meta",
+        });
+        setIsSyncing(false);
+        return;
+      }
+      
+      // Update local templates with matched Meta names
+      let successCount = 0;
+      for (const match of matches) {
+        const { error } = await supabase
+          .from("whatsapp_templates")
+          .update({
+            waba_template_name: match.metaName,
+            waba_language: match.metaLanguage,
+          })
+          .eq("id", match.localId);
+        
+        if (!error) {
+          successCount++;
+        }
+      }
+      
+      // Refresh data
+      await loadLocalTemplates();
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-templates"] });
+      
+      toast({
+        title: "✅ Sincronização concluída!",
+        description: `${successCount} de ${matches.length} templates foram vinculados automaticamente`,
+      });
+    } catch (err: any) {
+      toast({
+        title: "Erro na sincronização",
+        description: err.message || "Erro ao sincronizar templates",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const resetForm = () => {
@@ -371,17 +467,32 @@ export function WabaTemplateSubmitDialog({
               </ScrollArea>
             )}
 
-            <div className="flex justify-end gap-2 pt-4 border-t mt-4">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancelar
-              </Button>
+            <div className="flex flex-col sm:flex-row justify-between gap-2 pt-4 border-t mt-4">
               <Button 
-                onClick={handleLinkTemplate}
-                disabled={!selectedTemplate || selectedTemplate.status !== "APPROVED"}
+                variant="secondary"
+                onClick={handleAutoSync}
+                disabled={isSyncing || isLoadingTemplates || metaTemplates.length === 0}
+                className="gap-2"
               >
-                <Link2 className="h-4 w-4 mr-2" />
-                Vincular Template
+                {isSyncing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Zap className="h-4 w-4" />
+                )}
+                Sincronizar por Slug
               </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={handleLinkTemplate}
+                  disabled={!selectedTemplate || selectedTemplate.status !== "APPROVED"}
+                >
+                  <Link2 className="h-4 w-4 mr-2" />
+                  Vincular
+                </Button>
+              </div>
             </div>
           </TabsContent>
 
