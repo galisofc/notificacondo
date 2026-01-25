@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Pencil, Eye } from "lucide-react";
+import { Pencil, Link2, LinkIcon } from "lucide-react";
 import { TEMPLATE_COLORS, VARIABLE_EXAMPLES } from "./TemplateCategories";
 
 interface Template {
@@ -12,6 +12,7 @@ interface Template {
   content: string;
   variables: string[];
   is_active: boolean;
+  waba_template_name?: string | null;
 }
 
 interface TemplateCardProps {
@@ -39,6 +40,17 @@ export function TemplateCard({ template, onEdit }: TemplateCardProps) {
               <Badge className={`${colorClass} text-[10px] sm:text-xs`} variant="outline">
                 {template.name}
               </Badge>
+              {template.waba_template_name ? (
+                <Badge className="bg-green-500/10 text-green-600 border-green-500/20 text-[10px] sm:text-xs gap-1">
+                  <Link2 className="h-2.5 w-2.5" />
+                  WABA
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="text-[10px] sm:text-xs gap-1">
+                  <LinkIcon className="h-2.5 w-2.5" />
+                  Não vinculado
+                </Badge>
+              )}
               {!template.is_active && (
                 <Badge variant="secondary" className="text-[10px] sm:text-xs">Inativo</Badge>
               )}

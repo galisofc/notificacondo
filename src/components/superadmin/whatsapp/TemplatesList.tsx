@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useViewModePreference } from "@/hooks/useUserPreferences";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,11 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { Loader2, Search, MessageCircle, Info, LayoutGrid, List, Upload } from "lucide-react";
+import { Loader2, Search, MessageCircle, Info, LayoutGrid, List, Upload, Link2, LinkIcon, Send } from "lucide-react";
 import { TEMPLATE_CATEGORIES, getCategoryForSlug, type TemplateCategory } from "./TemplateCategories";
 import { TemplateCard } from "./TemplateCard";
 import { TemplateEditor } from "./TemplateEditor";
 import { WabaTemplateSubmitDialog } from "./WabaTemplateSubmitDialog";
+import { useToast } from "@/hooks/use-toast";
+
 interface Template {
   id: string;
   slug: string;
@@ -27,11 +29,14 @@ interface Template {
 }
 
 export function TemplatesList() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [showWabaDialog, setShowWabaDialog] = useState(false);
   const [viewMode, setViewMode] = useViewModePreference("whatsappTemplatesViewMode", "grid" as "grid" | "list");
+  const [syncingTemplates, setSyncingTemplates] = useState(false);
 
   const { data: templates, isLoading } = useQuery({
     queryKey: ["whatsapp-templates"],
@@ -78,6 +83,103 @@ export function TemplatesList() {
     return acc;
   }, {} as Record<string, Template[]>);
 
+  // Count linked vs unlinked
+  const linkedCount = templates?.filter(t => t.waba_template_name).length || 0;
+  const unlinkedCount = templates?.filter(t => !t.waba_template_name).length || 0;
+
+  // Mapeamento explícito de templates locais para templates WABA da Meta
+  const TEMPLATE_MAPPING: Record<string, string> = {
+    "package_arrival": "encomenda_management_5",
+    "notification_occurrence": "notificacao_ocorrencia",
+    "notify_sindico_defense": "nova_defesa",
+  };
+
+  const handleAutoSync = async () => {
+    setSyncingTemplates(true);
+    try {
+      // Fetch Meta templates
+      const { data: metaData, error: metaError } = await supabase.functions.invoke("list-waba-templates");
+      if (metaError) throw metaError;
+
+      const approvedMeta = (metaData?.templates || []).filter((t: any) => t.status === "APPROVED");
+      const localUnlinked = templates?.filter(t => !t.waba_template_name) || [];
+      
+      const matches: { localId: string; localSlug: string; metaName: string; metaLanguage: string }[] = [];
+      
+      for (const local of localUnlinked) {
+        // 1. First check explicit mapping
+        const explicitMapping = TEMPLATE_MAPPING[local.slug];
+        if (explicitMapping) {
+          const metaMatch = approvedMeta.find((m: any) => m.name === explicitMapping);
+          if (metaMatch) {
+            matches.push({
+              localId: local.id,
+              localSlug: local.slug,
+              metaName: metaMatch.name,
+              metaLanguage: metaMatch.language,
+            });
+            continue;
+          }
+        }
+        
+        // 2. Try name similarity
+        const match = approvedMeta.find((meta: any) => {
+          const metaNameNormalized = meta.name.toLowerCase();
+          const slugNormalized = local.slug.toLowerCase();
+          return metaNameNormalized === slugNormalized || 
+                 metaNameNormalized.includes(slugNormalized) ||
+                 slugNormalized.includes(metaNameNormalized);
+        });
+        
+        if (match) {
+          matches.push({
+            localId: local.id,
+            localSlug: local.slug,
+            metaName: match.name,
+            metaLanguage: match.language,
+          });
+        }
+      }
+      
+      if (matches.length === 0) {
+        toast({
+          title: "Nenhum match encontrado",
+          description: "Nenhum template local corresponde a templates aprovados na Meta",
+        });
+        setSyncingTemplates(false);
+        return;
+      }
+      
+      let successCount = 0;
+      for (const match of matches) {
+        const { error } = await supabase
+          .from("whatsapp_templates")
+          .update({
+            waba_template_name: match.metaName,
+            waba_language: match.metaLanguage,
+          })
+          .eq("id", match.localId);
+        
+        if (!error) successCount++;
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-templates"] });
+      
+      toast({
+        title: "✅ Sincronização concluída!",
+        description: `${successCount} de ${matches.length} templates foram vinculados`,
+      });
+    } catch (err: any) {
+      toast({
+        title: "Erro na sincronização",
+        description: err.message || "Erro ao sincronizar templates",
+        variant: "destructive",
+      });
+    } finally {
+      setSyncingTemplates(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-12">
@@ -88,6 +190,59 @@ export function TemplatesList() {
 
   return (
     <>
+      {/* Quick Stats - WABA Linking Status */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <MessageCircle className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{templates?.length || 0}</p>
+              <p className="text-xs text-muted-foreground">Total de Templates</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-green-500/20 bg-green-500/5">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-green-500/10">
+              <Link2 className="h-5 w-5 text-green-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-green-600">{linkedCount}</p>
+              <p className="text-xs text-muted-foreground">Vinculados WABA</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-amber-500/20 bg-amber-500/5">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-amber-500/10">
+              <LinkIcon className="h-5 w-5 text-amber-600" />
+            </div>
+            <div className="flex-1">
+              <p className="text-2xl font-bold text-amber-600">{unlinkedCount}</p>
+              <p className="text-xs text-muted-foreground">Não Vinculados</p>
+            </div>
+            {unlinkedCount > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAutoSync}
+                disabled={syncingTemplates}
+                className="gap-1.5 text-xs"
+              >
+                {syncingTemplates ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Link2 className="h-3.5 w-3.5" />
+                )}
+                Sincronizar
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
         <CardHeader className="pb-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -109,12 +264,9 @@ export function TemplatesList() {
                 onClick={() => setShowWabaDialog(true)}
                 className="gap-1.5 text-xs sm:text-sm"
               >
-                <Upload className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Gerenciar</span> WABA
+                <Send className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Enviar para</span> Meta
               </Button>
-              <Badge variant="secondary">
-                {templates?.length || 0} templates
-              </Badge>
             </div>
           </div>
         </CardHeader>
