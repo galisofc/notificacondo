@@ -8,11 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { Loader2, Search, MessageCircle, Info, LayoutGrid, List } from "lucide-react";
+import { Loader2, Search, MessageCircle, Info, LayoutGrid, List, Upload } from "lucide-react";
 import { TEMPLATE_CATEGORIES, getCategoryForSlug, type TemplateCategory } from "./TemplateCategories";
 import { TemplateCard } from "./TemplateCard";
 import { TemplateEditor } from "./TemplateEditor";
-
+import { WabaTemplateSubmitDialog } from "./WabaTemplateSubmitDialog";
 interface Template {
   id: string;
   slug: string;
@@ -30,6 +30,7 @@ export function TemplatesList() {
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [showWabaDialog, setShowWabaDialog] = useState(false);
   const [viewMode, setViewMode] = useViewModePreference("whatsappTemplatesViewMode", "grid" as "grid" | "list");
 
   const { data: templates, isLoading } = useQuery({
@@ -101,9 +102,20 @@ export function TemplatesList() {
                 </CardDescription>
               </div>
             </div>
-            <Badge variant="secondary" className="self-start sm:self-auto">
-              {templates?.length || 0} templates
-            </Badge>
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowWabaDialog(true)}
+                className="gap-1.5 text-xs sm:text-sm"
+              >
+                <Upload className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Gerenciar</span> WABA
+              </Button>
+              <Badge variant="secondary">
+                {templates?.length || 0} templates
+              </Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4 sm:space-y-6">
@@ -260,6 +272,22 @@ export function TemplatesList() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* WABA Template Dialog */}
+      <WabaTemplateSubmitDialog
+        open={showWabaDialog}
+        onOpenChange={setShowWabaDialog}
+        onTemplateLinked={(name, language) => {
+          // If editing a template, update the WABA fields
+          if (editingTemplate) {
+            setEditingTemplate({
+              ...editingTemplate,
+              waba_template_name: name,
+              waba_language: language,
+            });
+          }
+        }}
+      />
     </>
   );
 }
