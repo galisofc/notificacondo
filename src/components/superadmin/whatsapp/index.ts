@@ -6,5 +6,6 @@ export { TemplatePreview } from "./TemplatePreview";
 export { ConnectionStatus } from "./ConnectionStatus";
 export { ConfigSheet } from "./ConfigSheet";
 export { WabaTemplateSubmitDialog } from "./WabaTemplateSubmitDialog";
+export { TemplateWabaLinkingCard } from "./TemplateWabaLinkingCard";
 export { TEMPLATE_CATEGORIES, TEMPLATE_COLORS, VARIABLE_EXAMPLES, getCategoryForSlug } from "./TemplateCategories";
 export { DEFAULT_TEMPLATES } from "./DefaultTemplates";
