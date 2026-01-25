@@ -69,8 +69,8 @@ export default function WhatsAppConfig() {
           setTestResult("success");
           setLastTestedAt(new Date());
           setConnectionInfo({
-            phoneNumber: data.phoneNumber,
-            businessName: data.businessName,
+            phoneNumber: data.phone_info?.display_phone_number,
+            businessName: data.phone_info?.verified_name,
           });
         } else {
           setTestResult("error");
@@ -103,8 +103,8 @@ export default function WhatsAppConfig() {
         setTestResult("success");
         setLastTestedAt(new Date());
         setConnectionInfo({
-          phoneNumber: data.phoneNumber,
-          businessName: data.businessName,
+          phoneNumber: data.phone_info?.display_phone_number,
+          businessName: data.phone_info?.verified_name,
         });
         toast({ title: "✅ Conexão bem-sucedida com a Meta Cloud API!" });
       } else {
