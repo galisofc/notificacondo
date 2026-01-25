@@ -1,4 +1,5 @@
 export { TemplatesList } from "./TemplatesList";
+export { WabaTemplateStatusCard } from "./WabaTemplateStatusCard";
 export { TemplateEditor } from "./TemplateEditor";
 export { TemplateCard } from "./TemplateCard";
 export { TemplatePreview } from "./TemplatePreview";
