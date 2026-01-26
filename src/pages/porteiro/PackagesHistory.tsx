@@ -46,6 +46,13 @@ import {
   ChevronLeft,
   ChevronRight,
   Copy,
+  Eye,
+  MessageSquare,
+  User,
+  Hash,
+  MapPin,
+  Calendar,
+  Image as ImageIcon,
 } from "lucide-react";
 import { format, parseISO, differenceInMinutes } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -73,6 +80,9 @@ interface PackageWithRelations {
   photo_url: string;
   description: string | null;
   tracking_code: string | null;
+  notification_sent: boolean | null;
+  notification_sent_at: string | null;
+  notification_count: number | null;
   block: { id: string; name: string } | null;
   apartment: { id: string; number: string; residents: ApartmentResident[] } | null;
   condominium: { id: string; name: string } | null;
@@ -122,6 +132,8 @@ const PorteiroPackagesHistory = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [showPendingSummaryModal, setShowPendingSummaryModal] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState<PackageWithRelations | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
   const pageSize = 20;
 
   // Fetch porter's condominiums
@@ -239,6 +251,9 @@ const PorteiroPackagesHistory = () => {
           photo_url,
           description,
           tracking_code,
+          notification_sent,
+          notification_sent_at,
+          notification_count,
           block:blocks(id, name),
           apartment:apartments(id, number, residents(id, full_name, phone, is_responsible)),
           condominium:condominiums(id, name),
@@ -1010,11 +1025,12 @@ const PorteiroPackagesHistory = () => {
                         <TableHead>Retirado por</TableHead>
                         <TableHead>Data Retirada</TableHead>
                         <TableHead>Tempo Espera</TableHead>
+                        <TableHead className="text-center">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {packages.map((pkg) => (
-                        <TableRow key={pkg.id}>
+                        <TableRow key={pkg.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setSelectedPackage(pkg); setShowDetailsModal(true); }}>
                           <TableCell>
                             {format(parseISO(pkg.received_at), "dd/MM/yyyy HH:mm")}
                           </TableCell>
@@ -1041,6 +1057,15 @@ const PorteiroPackagesHistory = () => {
                               : "-"}
                           </TableCell>
                           <TableCell>{getWaitingTime(pkg)}</TableCell>
+                          <TableCell className="text-center">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => { e.stopPropagation(); setSelectedPackage(pkg); setShowDetailsModal(true); }}
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -1180,6 +1205,165 @@ const PorteiroPackagesHistory = () => {
                 </Button>
               </div>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Package Details Modal */}
+        <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Package className="w-5 h-5 text-primary" />
+                Detalhes da Encomenda
+              </DialogTitle>
+              <DialogDescription>
+                Informações completas da encomenda
+              </DialogDescription>
+            </DialogHeader>
+            
+            {selectedPackage && (
+              <div className="space-y-4">
+                {/* Photo */}
+                {selectedPackage.photo_url && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2">
+                      <ImageIcon className="w-4 h-4" />
+                      Foto da Encomenda
+                    </h4>
+                    <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
+                      <img
+                        src={selectedPackage.photo_url}
+                        alt="Foto da encomenda"
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Status */}
+                <div className="flex items-center gap-3">
+                  <Badge variant="outline" className={STATUS_CONFIG[selectedPackage.status].color + " text-sm px-3 py-1"}>
+                    {STATUS_CONFIG[selectedPackage.status].label}
+                  </Badge>
+                  <span className="text-sm text-muted-foreground">
+                    Código: <span className="font-mono font-bold">{selectedPackage.pickup_code}</span>
+                  </span>
+                </div>
+
+                {/* Location Info */}
+                <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
+                  <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2">
+                    <MapPin className="w-4 h-4" />
+                    Localização
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Bloco</p>
+                      <p className="font-medium">{selectedPackage.block?.name || "-"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Apartamento</p>
+                      <p className="font-medium">{selectedPackage.apartment?.number || "-"}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-xs text-muted-foreground">Morador</p>
+                      <p className="font-medium">{getResidentName(selectedPackage)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dates Info */}
+                <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
+                  <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    Datas
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Recebida em</p>
+                      <p className="font-medium">{format(parseISO(selectedPackage.received_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Recebida por</p>
+                      <p className="font-medium">{selectedPackage.received_by_profile?.full_name || "-"}</p>
+                    </div>
+                    {selectedPackage.picked_up_at && (
+                      <>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Retirada em</p>
+                          <p className="font-medium">{format(parseISO(selectedPackage.picked_up_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Retirada por</p>
+                          <p className="font-medium">{selectedPackage.picked_up_by_name || selectedPackage.picked_up_by_profile?.full_name || "-"}</p>
+                        </div>
+                      </>
+                    )}
+                    <div className="col-span-2">
+                      <p className="text-xs text-muted-foreground">Tempo de Espera</p>
+                      <p className="font-medium">{getWaitingTime(selectedPackage)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* WhatsApp Notification */}
+                <div className={`space-y-3 p-3 rounded-lg ${selectedPackage.notification_sent ? 'bg-green-500/10 border border-green-500/20' : 'bg-amber-500/10 border border-amber-500/20'}`}>
+                  <h4 className={`text-sm font-semibold uppercase tracking-wide flex items-center gap-2 ${selectedPackage.notification_sent ? 'text-green-600' : 'text-amber-600'}`}>
+                    <MessageSquare className="w-4 h-4" />
+                    Notificação WhatsApp
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Status</p>
+                      <Badge variant="outline" className={selectedPackage.notification_sent ? 'bg-green-100 text-green-700 border-green-300' : 'bg-amber-100 text-amber-700 border-amber-300'}>
+                        {selectedPackage.notification_sent ? 'Enviada' : 'Não Enviada'}
+                      </Badge>
+                    </div>
+                    {selectedPackage.notification_sent_at && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Enviada em</p>
+                        <p className="font-medium">{format(parseISO(selectedPackage.notification_sent_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
+                      </div>
+                    )}
+                    {selectedPackage.notification_count !== null && selectedPackage.notification_count > 0 && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Moradores Notificados</p>
+                        <p className="font-medium flex items-center gap-1">
+                          <User className="w-3 h-3" />
+                          {selectedPackage.notification_count}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Description & Tracking */}
+                {(selectedPackage.description || selectedPackage.tracking_code) && (
+                  <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
+                    <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2">
+                      <Hash className="w-4 h-4" />
+                      Informações Adicionais
+                    </h4>
+                    {selectedPackage.tracking_code && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Código de Rastreio</p>
+                        <p className="font-mono font-medium">{selectedPackage.tracking_code}</p>
+                      </div>
+                    )}
+                    {selectedPackage.description && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Descrição</p>
+                        <p className="font-medium">{selectedPackage.description}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <Button variant="outline" className="w-full" onClick={() => setShowDetailsModal(false)}>
+                  Fechar
+                </Button>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>
