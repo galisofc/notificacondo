@@ -62,6 +62,7 @@ import {
   Eye,
   Image as ImageIcon,
   History,
+  MessageSquare,
 } from "lucide-react";
 import { format, parseISO, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -80,6 +81,9 @@ interface PackageWithRelations {
   photo_url: string;
   description: string | null;
   tracking_code: string | null;
+  notification_sent: boolean | null;
+  notification_sent_at: string | null;
+  notification_count: number | null;
   block: { id: string; name: string } | null;
   apartment: { id: string; number: string } | null;
   condominium: { id: string; name: string } | null;
@@ -161,6 +165,9 @@ const SindicoPackages = () => {
           photo_url,
           description,
           tracking_code,
+          notification_sent,
+          notification_sent_at,
+          notification_count,
           apartment_id,
           block:blocks(id, name),
           apartment:apartments(id, number),
@@ -776,6 +783,34 @@ const SindicoPackages = () => {
                     <p className="text-xs text-muted-foreground">Cadastrada por</p>
                     <p className="font-medium">{selectedPackage.received_by_profile?.full_name || "N/A"}</p>
                   </div>
+                </div>
+              </div>
+
+              {/* Notificação WhatsApp */}
+              <div className={`space-y-3 p-3 rounded-lg ${selectedPackage.notification_sent ? 'bg-green-500/10 border border-green-500/20' : 'bg-amber-500/10 border border-amber-500/20'}`}>
+                <h4 className={`text-sm font-semibold uppercase tracking-wide flex items-center gap-2 ${selectedPackage.notification_sent ? 'text-green-600' : 'text-amber-600'}`}>
+                  <MessageSquare className="w-4 h-4" />
+                  Notificação WhatsApp
+                </h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Status</p>
+                    <Badge variant="outline" className={selectedPackage.notification_sent ? 'bg-green-100 text-green-700 border-green-300' : 'bg-amber-100 text-amber-700 border-amber-300'}>
+                      {selectedPackage.notification_sent ? 'Enviada' : 'Não Enviada'}
+                    </Badge>
+                  </div>
+                  {selectedPackage.notification_sent_at && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Enviada em</p>
+                      <p className="font-medium">{formatDateTime(selectedPackage.notification_sent_at)}</p>
+                    </div>
+                  )}
+                  {selectedPackage.notification_count !== null && selectedPackage.notification_count > 0 && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Tentativas</p>
+                      <p className="font-medium">{selectedPackage.notification_count}</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
