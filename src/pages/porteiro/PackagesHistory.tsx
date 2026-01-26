@@ -1245,9 +1245,6 @@ const PorteiroPackagesHistory = () => {
                   <Badge variant="outline" className={STATUS_CONFIG[selectedPackage.status].color + " text-sm px-3 py-1"}>
                     {STATUS_CONFIG[selectedPackage.status].label}
                   </Badge>
-                  <span className="text-sm text-muted-foreground">
-                    Código: <span className="font-mono font-bold">{selectedPackage.pickup_code}</span>
-                  </span>
                 </div>
 
                 {/* Location Info */}
