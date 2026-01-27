@@ -237,4 +237,21 @@ Você tem uma encomenda aguardando na portaria.
 Apresente este código na portaria para retirar sua encomenda.
 
 _Mensagem automática - NotificaCondo_`,
+  resend_porter_credentials: `🔐 *Credenciais de Acesso*
+
+🏢 *{condominio}*
+
+Olá, *{nome}*!
+
+Suas credenciais de acesso ao sistema foram geradas:
+
+📧 *E-mail:* {email}
+🔑 *Senha:* {senha}
+
+Acesse o sistema através do link:
+👉 {link}
+
+⚠️ *Importante:* Recomendamos que você altere sua senha após o primeiro acesso.
+
+_Mensagem automática - NotificaCondo_`,
 };
