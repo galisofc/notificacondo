@@ -18,12 +18,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { DoorOpen, Plus, Trash2, Building2, Mail, Phone, Search, UserPlus, MessageCircle, Copy, Check, Key, AlertCircle, UserX, RefreshCw, Loader2, Pencil, ArrowLeft, ShieldCheck, Send } from "lucide-react";
+import { DoorOpen, Plus, Trash2, Building2, Mail, Phone, Search, UserPlus, MessageCircle, Copy, Check, Key, AlertCircle, UserX, RefreshCw, Loader2, Pencil, ArrowLeft, ShieldCheck, Send, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { PorterPasswordDialog } from "@/components/porteiro/PorterPasswordDialog";
 
 interface Condominium {
   id: string;
@@ -108,6 +109,14 @@ export default function Porteiros() {
     message: string;
   } | null>(null);
 
+  // Password management state
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [selectedPorterForPassword, setSelectedPorterForPassword] = useState<Porter | null>(null);
+
+  const handleOpenPasswordDialog = (porter: Porter) => {
+    setSelectedPorterForPassword(porter);
+    setPasswordDialogOpen(true);
+  };
   // Use email validation hook with porter-specific options
   const { 
     emailStatus, 
@@ -1022,6 +1031,19 @@ export default function Porteiros() {
                               </TooltipTrigger>
                               <TooltipContent>Reenviar credenciais</TooltipContent>
                             </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => handleOpenPasswordDialog(porter)}
+                                >
+                                  <Lock className="w-3.5 h-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Definir senha</TooltipContent>
+                            </Tooltip>
                           </TooltipProvider>
                           <Button
                             variant="ghost"
@@ -1142,6 +1164,18 @@ export default function Porteiros() {
                                     ? "Reenviar credenciais por WhatsApp" 
                                     : "Adicione um telefone para enviar credenciais"}
                                 </TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon"
+                                    onClick={() => handleOpenPasswordDialog(porter)}
+                                  >
+                                    <Lock className="w-4 h-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Definir senha</TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
                             <Button 
@@ -1531,6 +1565,13 @@ export default function Porteiros() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Password Management Dialog */}
+      <PorterPasswordDialog
+        open={passwordDialogOpen}
+        onOpenChange={setPasswordDialogOpen}
+        porter={selectedPorterForPassword}
+      />
     </DashboardLayout>
   );
 }
