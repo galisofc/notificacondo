@@ -919,19 +919,17 @@ const SindicoPackages = () => {
                 </div>
               )}
 
-              {/* Botão de excluir para encomendas pendentes */}
-              {selectedPackage.status === "pendente" && (
-                <div className="pt-2 border-t">
-                  <Button
-                    variant="destructive"
-                    className="w-full"
-                    onClick={() => handleDeletePackage(selectedPackage)}
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Excluir Encomenda
-                  </Button>
-                </div>
-              )}
+              {/* Botão de excluir */}
+              <div className="pt-2 border-t">
+                <Button
+                  variant="destructive"
+                  className="w-full"
+                  onClick={() => handleDeletePackage(selectedPackage)}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Excluir Encomenda
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
