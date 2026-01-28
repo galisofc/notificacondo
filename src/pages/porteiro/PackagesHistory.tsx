@@ -126,6 +126,7 @@ const PorteiroPackagesHistory = () => {
   const [condominiumIds, setCondominiumIds] = useState<string[]>([]);
   const [selectedCondominium, setSelectedCondominium] = useState<string>("");
   const [selectedBlock, setSelectedBlock] = useState<string>("all");
+  const [selectedApartment, setSelectedApartment] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
@@ -191,14 +192,30 @@ const PorteiroPackagesHistory = () => {
     enabled: !!selectedCondominium,
   });
 
+  // Fetch apartments for selected block
+  const { data: apartments = [] } = useQuery({
+    queryKey: ["apartments", selectedBlock],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("apartments")
+        .select("id, number")
+        .eq("block_id", selectedBlock);
+      if (error) throw error;
+      return (data || []).sort((a, b) =>
+        a.number.localeCompare(b.number, "pt-BR", { numeric: true, sensitivity: "base" })
+      );
+    },
+    enabled: selectedBlock !== "all",
+  });
+
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCondominium, selectedBlock, statusFilter, dateFrom, dateTo]);
+  }, [selectedCondominium, selectedBlock, selectedApartment, statusFilter, dateFrom, dateTo]);
 
   // Fetch total count for pagination
   const { data: totalCount = 0 } = useQuery({
-    queryKey: ["porteiro-packages-count", selectedCondominium, selectedBlock, statusFilter, dateFrom, dateTo],
+    queryKey: ["porteiro-packages-count", selectedCondominium, selectedBlock, selectedApartment, statusFilter, dateFrom, dateTo],
     queryFn: async () => {
       let query = supabase
         .from("packages")
@@ -207,6 +224,10 @@ const PorteiroPackagesHistory = () => {
 
       if (selectedBlock !== "all") {
         query = query.eq("block_id", selectedBlock);
+      }
+
+      if (selectedApartment !== "all") {
+        query = query.eq("apartment_id", selectedApartment);
       }
 
       if (statusFilter !== "all") {
@@ -232,7 +253,7 @@ const PorteiroPackagesHistory = () => {
 
   // Fetch packages for selected condominium with pagination
   const { data: packages = [], isLoading } = useQuery({
-    queryKey: ["porteiro-condominium-packages", selectedCondominium, selectedBlock, statusFilter, dateFrom, dateTo, currentPage],
+    queryKey: ["porteiro-condominium-packages", selectedCondominium, selectedBlock, selectedApartment, statusFilter, dateFrom, dateTo, currentPage],
     queryFn: async () => {
       const from = (currentPage - 1) * pageSize;
       const to = from + pageSize - 1;
@@ -266,6 +287,10 @@ const PorteiroPackagesHistory = () => {
 
       if (selectedBlock !== "all") {
         query = query.eq("block_id", selectedBlock);
+      }
+
+      if (selectedApartment !== "all") {
+        query = query.eq("apartment_id", selectedApartment);
       }
 
       if (statusFilter !== "all") {
@@ -362,7 +387,7 @@ const PorteiroPackagesHistory = () => {
 
   // Fetch stats for ALL filtered packages (not just current page)
   const { data: statsData, isLoading: isLoadingStats } = useQuery({
-    queryKey: ["porteiro-packages-stats", selectedCondominium, selectedBlock, statusFilter, dateFrom, dateTo],
+    queryKey: ["porteiro-packages-stats", selectedCondominium, selectedBlock, selectedApartment, statusFilter, dateFrom, dateTo],
     queryFn: async () => {
       let query = supabase
         .from("packages")
@@ -377,6 +402,10 @@ const PorteiroPackagesHistory = () => {
 
       if (selectedBlock !== "all") {
         query = query.eq("block_id", selectedBlock);
+      }
+
+      if (selectedApartment !== "all") {
+        query = query.eq("apartment_id", selectedApartment);
       }
 
       if (statusFilter !== "all") {
@@ -846,6 +875,7 @@ const PorteiroPackagesHistory = () => {
                     onValueChange={(v) => {
                       setSelectedCondominium(v);
                       setSelectedBlock("all");
+                      setSelectedApartment("all");
                     }}
                   >
                     <SelectTrigger>
@@ -867,7 +897,10 @@ const PorteiroPackagesHistory = () => {
                 <label className="text-sm font-medium">Bloco (opcional)</label>
                 <Select
                   value={selectedBlock}
-                  onValueChange={setSelectedBlock}
+                  onValueChange={(v) => {
+                    setSelectedBlock(v);
+                    setSelectedApartment("all");
+                  }}
                   disabled={!selectedCondominium}
                 >
                   <SelectTrigger>
@@ -878,6 +911,28 @@ const PorteiroPackagesHistory = () => {
                     {blocks.map((b) => (
                       <SelectItem key={b.id} value={b.id}>
                         {b.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Apartment Select */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Apartamento (opcional)</label>
+                <Select
+                  value={selectedApartment}
+                  onValueChange={setSelectedApartment}
+                  disabled={selectedBlock === "all"}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos os apartamentos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os apartamentos</SelectItem>
+                    {apartments.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.number}
                       </SelectItem>
                     ))}
                   </SelectContent>
