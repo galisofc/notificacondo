@@ -408,6 +408,19 @@ const Dashboard = () => {
             </div>
           </div>
 
+          {/* Visual indicator for selected condominium */}
+          {selectedCondominium !== "all" && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 border border-primary/20 rounded-lg">
+              <Building2 className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium text-foreground">
+                Exibindo dados de:{" "}
+                <span className="text-primary">
+                  {condominiums.find((c) => c.id === selectedCondominium)?.name || "Condomínio selecionado"}
+                </span>
+              </span>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
             {statCards.map((stat, index) => (
               <Card
