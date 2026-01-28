@@ -62,6 +62,7 @@ import {
   Eye,
   Image as ImageIcon,
   History,
+  Home,
   MessageSquare,
 } from "lucide-react";
 import { format, parseISO, formatDistanceToNow } from "date-fns";
@@ -120,6 +121,8 @@ const SindicoPackages = () => {
 
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [condominiumFilter, setCondominiumFilter] = useState<string>("all");
+  const [selectedBlock, setSelectedBlock] = useState<string>("all");
+  const [selectedApartment, setSelectedApartment] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useItemsPerPagePreference("sindico-packages-items-per-page", 10);
@@ -141,9 +144,41 @@ const SindicoPackages = () => {
     enabled: !!user,
   });
 
+  // Fetch blocks for selected condominium
+  const { data: blocks = [] } = useQuery({
+    queryKey: ["sindico-blocks", condominiumFilter],
+    queryFn: async () => {
+      if (condominiumFilter === "all") return [];
+      const { data, error } = await supabase
+        .from("blocks")
+        .select("id, name")
+        .eq("condominium_id", condominiumFilter)
+        .order("name");
+      if (error) throw error;
+      return data as { id: string; name: string }[];
+    },
+    enabled: condominiumFilter !== "all",
+  });
+
+  // Fetch apartments for selected block
+  const { data: apartments = [] } = useQuery({
+    queryKey: ["sindico-apartments", selectedBlock],
+    queryFn: async () => {
+      if (selectedBlock === "all") return [];
+      const { data, error } = await supabase
+        .from("apartments")
+        .select("id, number")
+        .eq("block_id", selectedBlock)
+        .order("number");
+      if (error) throw error;
+      return data as { id: string; number: string }[];
+    },
+    enabled: selectedBlock !== "all",
+  });
+
   // Fetch packages
   const { data: packages = [], isLoading, refetch } = useQuery({
-    queryKey: ["sindico-packages", user?.id, condominiumFilter],
+    queryKey: ["sindico-packages", user?.id, condominiumFilter, selectedBlock, selectedApartment],
     queryFn: async () => {
       const condoIds = condominiumFilter === "all"
         ? condominiums.map((c) => c.id)
@@ -151,7 +186,7 @@ const SindicoPackages = () => {
 
       if (condoIds.length === 0) return [];
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("packages")
         .select(`
           id,
@@ -177,6 +212,18 @@ const SindicoPackages = () => {
         `)
         .in("condominium_id", condoIds)
         .order("received_at", { ascending: false });
+
+      // Apply block filter
+      if (selectedBlock !== "all") {
+        query = query.eq("block_id", selectedBlock);
+      }
+
+      // Apply apartment filter
+      if (selectedApartment !== "all") {
+        query = query.eq("apartment_id", selectedApartment);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -447,6 +494,8 @@ const SindicoPackages = () => {
                 value={condominiumFilter}
                 onValueChange={(v) => {
                   setCondominiumFilter(v);
+                  setSelectedBlock("all");
+                  setSelectedApartment("all");
                   setCurrentPage(1);
                 }}
               >
@@ -459,6 +508,49 @@ const SindicoPackages = () => {
                   {condominiums.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={selectedBlock}
+                onValueChange={(v) => {
+                  setSelectedBlock(v);
+                  setSelectedApartment("all");
+                  setCurrentPage(1);
+                }}
+                disabled={condominiumFilter === "all"}
+              >
+                <SelectTrigger className="w-full md:w-[160px]">
+                  <Building2 className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Bloco (opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os blocos</SelectItem>
+                  {blocks.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={selectedApartment}
+                onValueChange={(v) => {
+                  setSelectedApartment(v);
+                  setCurrentPage(1);
+                }}
+                disabled={selectedBlock === "all"}
+              >
+                <SelectTrigger className="w-full md:w-[160px]">
+                  <Home className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Apto (opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os aptos</SelectItem>
+                  {apartments.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.number}
                     </SelectItem>
                   ))}
                 </SelectContent>
