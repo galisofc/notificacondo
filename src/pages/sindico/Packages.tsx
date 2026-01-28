@@ -124,7 +124,7 @@ const SindicoPackages = () => {
   const [condominiumFilter, setCondominiumFilter] = useState<string>("all");
   const [selectedBlock, setSelectedBlock] = useState<string>("all");
   const [selectedApartment, setSelectedApartment] = useState<string>("all");
-  const [searchQuery, setSearchQuery] = useState("");
+  
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useItemsPerPagePreference("sindico-packages-items-per-page", 10);
   const [selectedPackage, setSelectedPackage] = useState<PackageWithRelations | null>(null);
@@ -282,30 +282,9 @@ const SindicoPackages = () => {
     return packages.filter((pkg) => {
       // Status filter
       if (statusFilter !== "all" && pkg.status !== statusFilter) return false;
-
-      // Search filter
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        const residentName = pkg.resident?.full_name?.toLowerCase() || "";
-        const blockName = pkg.block?.name?.toLowerCase() || "";
-        const aptNumber = pkg.apartment?.number?.toLowerCase() || "";
-        const pickupCode = pkg.pickup_code?.toLowerCase() || "";
-        const trackingCode = pkg.tracking_code?.toLowerCase() || "";
-
-        if (
-          !residentName.includes(query) &&
-          !blockName.includes(query) &&
-          !aptNumber.includes(query) &&
-          !pickupCode.includes(query) &&
-          !trackingCode.includes(query)
-        ) {
-          return false;
-        }
-      }
-
       return true;
     });
-  }, [packages, statusFilter, searchQuery]);
+  }, [packages, statusFilter]);
 
   // Pagination
   const totalPages = Math.ceil(filteredPackages.length / itemsPerPage);
@@ -476,127 +455,113 @@ const SindicoPackages = () => {
         {/* Filters */}
         <Card>
           <CardContent className="pt-6">
-            <div className="flex flex-col gap-4">
-              {/* Quick Search Row */}
+            <div className="flex flex-col md:flex-row gap-4 flex-wrap">
+              {/* Condominium Select */}
+              <Select
+                value={condominiumFilter}
+                onValueChange={(v) => {
+                  setCondominiumFilter(v);
+                  setSelectedBlock("all");
+                  setSelectedApartment("all");
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full md:w-[220px]">
+                  <Building2 className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Condomínio" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os condomínios</SelectItem>
+                  {condominiums.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Quick Search - visible when condominium is selected */}
               {condominiumFilter !== "all" && (
-                <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
-                  <span className="text-sm text-muted-foreground whitespace-nowrap">Busca rápida:</span>
-                  <QuickBlockApartmentSearch
-                    condominiumId={condominiumFilter}
-                    onBlockFound={(blockId) => {
-                      setSelectedBlock(blockId);
-                      setCurrentPage(1);
-                    }}
-                    onApartmentFound={(apartmentId) => {
-                      setSelectedApartment(apartmentId);
-                      setCurrentPage(1);
-                    }}
-                    disabled={condominiumFilter === "all"}
-                    className="flex-1 max-w-xs"
-                    placeholder="Ex: 0344, A44, ARM101"
-                  />
-                </div>
+                <QuickBlockApartmentSearch
+                  condominiumId={condominiumFilter}
+                  onBlockFound={(blockId) => {
+                    setSelectedBlock(blockId);
+                    setCurrentPage(1);
+                  }}
+                  onApartmentFound={(apartmentId) => {
+                    setSelectedApartment(apartmentId);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full md:w-[200px]"
+                  placeholder="Ex: 0344, ARM101"
+                />
               )}
-              
-              {/* Main Filters Row */}
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Buscar por morador, bloco, apartamento, código..."
-                      value={searchQuery}
-                      onChange={(e) => {
-                        setSearchQuery(e.target.value);
-                        setCurrentPage(1);
-                      }}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-                <Select
-                  value={condominiumFilter}
-                  onValueChange={(v) => {
-                    setCondominiumFilter(v);
-                    setSelectedBlock("all");
-                    setSelectedApartment("all");
-                    setCurrentPage(1);
-                  }}
-                >
-                  <SelectTrigger className="w-full md:w-[200px]">
-                    <Building2 className="w-4 h-4 mr-2" />
-                    <SelectValue placeholder="Condomínio" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os condomínios</SelectItem>
-                    {condominiums.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={selectedBlock}
-                  onValueChange={(v) => {
-                    setSelectedBlock(v);
-                    setSelectedApartment("all");
-                    setCurrentPage(1);
-                  }}
-                  disabled={condominiumFilter === "all"}
-                >
-                  <SelectTrigger className="w-full md:w-[160px]">
-                    <Building2 className="w-4 h-4 mr-2" />
-                    <SelectValue placeholder="Bloco (opcional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os blocos</SelectItem>
-                    {blocks.map((b) => (
-                      <SelectItem key={b.id} value={b.id}>
-                        {b.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={selectedApartment}
-                  onValueChange={(v) => {
-                    setSelectedApartment(v);
-                    setCurrentPage(1);
-                  }}
-                  disabled={selectedBlock === "all"}
-                >
-                  <SelectTrigger className="w-full md:w-[160px]">
-                    <Home className="w-4 h-4 mr-2" />
-                    <SelectValue placeholder="Apto (opcional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os aptos</SelectItem>
-                    {apartments.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {a.number}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={statusFilter}
-                  onValueChange={(v) => {
-                    setStatusFilter(v);
-                    setCurrentPage(1);
-                  }}
-                >
-                  <SelectTrigger className="w-full md:w-[160px]">
-                    <Filter className="w-4 h-4 mr-2" />
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="pendente">Pendentes</SelectItem>
-                    <SelectItem value="retirada">Retiradas</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+
+              {/* Block Select */}
+              <Select
+                value={selectedBlock}
+                onValueChange={(v) => {
+                  setSelectedBlock(v);
+                  setSelectedApartment("all");
+                  setCurrentPage(1);
+                }}
+                disabled={condominiumFilter === "all"}
+              >
+                <SelectTrigger className="w-full md:w-[160px]">
+                  <Building2 className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Bloco" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os blocos</SelectItem>
+                  {blocks.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Apartment Select */}
+              <Select
+                value={selectedApartment}
+                onValueChange={(v) => {
+                  setSelectedApartment(v);
+                  setCurrentPage(1);
+                }}
+                disabled={selectedBlock === "all"}
+              >
+                <SelectTrigger className="w-full md:w-[140px]">
+                  <Home className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Apto" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {apartments.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.number}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Status Select */}
+              <Select
+                value={statusFilter}
+                onValueChange={(v) => {
+                  setStatusFilter(v);
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full md:w-[140px]">
+                  <Filter className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="pendente">Pendentes</SelectItem>
+                  <SelectItem value="retirada">Retiradas</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
@@ -615,9 +580,7 @@ const SindicoPackages = () => {
                 <Package className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
                 <h3 className="text-lg font-medium">Nenhuma encomenda encontrada</h3>
                 <p className="text-muted-foreground mt-1">
-                  {searchQuery
-                    ? "Tente ajustar os filtros de busca"
-                    : "As encomendas aparecerão aqui quando forem registradas"}
+                  Tente ajustar os filtros ou as encomendas aparecerão aqui quando forem registradas
                 </p>
               </div>
             ) : (
