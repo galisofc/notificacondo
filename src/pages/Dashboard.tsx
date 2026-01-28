@@ -24,6 +24,13 @@ import TrialBanner from "@/components/sindico/TrialBanner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { subDays, subMonths, subYears, startOfDay } from "date-fns";
 import { SindicoOnboardingModal } from "@/components/onboarding/SindicoOnboardingModal";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type PeriodFilter = "7d" | "1m" | "1y";
 
@@ -42,10 +49,17 @@ interface ProfileData {
   onboarding_completed: boolean | null;
 }
 
+interface Condominium {
+  id: string;
+  name: string;
+}
+
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("1m");
+  const [selectedCondominium, setSelectedCondominium] = useState<string>("all");
+  const [condominiums, setCondominiums] = useState<Condominium[]>([]);
   const [stats, setStats] = useState<DashboardStats>({
     condominiums: 0,
     residents: 0,
@@ -80,10 +94,33 @@ const Dashboard = () => {
     { value: "1y", label: "1 ano" },
   ];
 
+  // Fetch condominiums list
+  useEffect(() => {
+    const fetchCondominiums = async () => {
+      if (!user) return;
+
+      const { data: condos } = await supabase
+        .from("condominiums")
+        .select("id, name")
+        .eq("owner_id", user.id)
+        .order("name");
+
+      setCondominiums(condos || []);
+      
+      // Store the first condominium ID for onboarding navigation
+      if (condos && condos.length > 0) {
+        setFirstCondominiumId(condos[0].id);
+      }
+    };
+
+    fetchCondominiums();
+  }, [user]);
+
   useEffect(() => {
     const fetchData = async () => {
       if (!user) return;
 
+      setLoading(true);
       const dateFilter = getDateFilter(periodFilter);
 
       try {
@@ -100,21 +137,21 @@ const Dashboard = () => {
           setShowOnboarding(true);
         }
 
-        const { count: condoCount } = await supabase
-          .from("condominiums")
-          .select("*", { count: "exact", head: true })
-          .eq("owner_id", user.id);
+        // Determine which condominium IDs to filter by
+        let condoIds: string[] = [];
+        let condoCount = 0;
 
-        const { data: condos } = await supabase
-          .from("condominiums")
-          .select("id")
-          .eq("owner_id", user.id);
+        if (selectedCondominium === "all") {
+          const { data: condos, count } = await supabase
+            .from("condominiums")
+            .select("id", { count: "exact" })
+            .eq("owner_id", user.id);
 
-        const condoIds = condos?.map((c) => c.id) || [];
-        
-        // Store the first condominium ID for onboarding navigation
-        if (condos && condos.length > 0) {
-          setFirstCondominiumId(condos[0].id);
+          condoIds = condos?.map((c) => c.id) || [];
+          condoCount = count || 0;
+        } else {
+          condoIds = [selectedCondominium];
+          condoCount = 1;
         }
 
         let residentsCount = 0;
@@ -208,7 +245,7 @@ const Dashboard = () => {
         }
 
         setStats({
-          condominiums: condoCount || 0,
+          condominiums: condoCount,
           residents: residentsCount,
           occurrences: occurrencesCount,
           pendingFines: finesCount,
@@ -224,7 +261,7 @@ const Dashboard = () => {
     };
 
     fetchData();
-  }, [user, periodFilter]);
+  }, [user, periodFilter, selectedCondominium]);
 
   const statCards = [
     {
@@ -330,25 +367,44 @@ const Dashboard = () => {
 
         {/* Period Filter + Stats Grid */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <h2 className="font-display text-lg font-semibold text-foreground flex items-center gap-2">
               <Calendar className="w-5 h-5 text-primary" />
               Estatísticas
             </h2>
-            <div className="flex items-center gap-1 p-1 bg-muted rounded-lg">
-              {periodOptions.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => setPeriodFilter(option.value)}
-                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                    periodFilter === option.value
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              {/* Condominium Selector */}
+              <Select value={selectedCondominium} onValueChange={setSelectedCondominium}>
+                <SelectTrigger className="w-full sm:w-[200px]">
+                  <Building2 className="w-4 h-4 mr-2 text-muted-foreground" />
+                  <SelectValue placeholder="Selecione o condomínio" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os condomínios</SelectItem>
+                  {condominiums.map((condo) => (
+                    <SelectItem key={condo.id} value={condo.id}>
+                      {condo.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Period Filter */}
+              <div className="flex items-center gap-1 p-1 bg-muted rounded-lg">
+                {periodOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => setPeriodFilter(option.value)}
+                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                      periodFilter === option.value
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
