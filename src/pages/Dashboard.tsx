@@ -249,20 +249,6 @@ const Dashboard = () => {
       action: () => navigate("/occurrences"),
     },
     {
-      title: "Encomendas Cadastradas",
-      value: stats.packagesRegistered,
-      icon: Package,
-      gradient: "from-cyan-500 to-teal-500",
-      action: () => navigate("/sindico/packages"),
-    },
-    {
-      title: "Encomendas Pendentes",
-      value: stats.packagesPending,
-      icon: Package,
-      gradient: "from-orange-500 to-amber-500",
-      action: () => navigate("/sindico/packages"),
-    },
-    {
       title: "Defesas Pendentes",
       value: stats.pendingDefenses,
       icon: Shield,
@@ -275,6 +261,20 @@ const Dashboard = () => {
       icon: DollarSign,
       gradient: "from-rose-500 to-red-500",
       action: () => navigate("/occurrences"),
+    },
+    {
+      title: "Encomendas Cadastradas",
+      value: stats.packagesRegistered,
+      icon: Package,
+      gradient: "from-cyan-500 to-teal-500",
+      action: () => navigate("/sindico/packages"),
+    },
+    {
+      title: "Encomendas Pendentes",
+      value: stats.packagesPending,
+      icon: Package,
+      gradient: "from-orange-500 to-amber-500",
+      action: () => navigate("/sindico/packages"),
     },
   ];
 
