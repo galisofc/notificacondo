@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PackageStatusBadge } from "./PackageStatusBadge";
-import { PickupCodeDisplay } from "./PickupCodeDisplay";
+import { PackageCardImage } from "./PackageCardImage";
 import { PackageStatus } from "@/lib/packageConstants";
 import { cn } from "@/lib/utils";
 
@@ -64,12 +64,8 @@ export function PackageCard({
         onClick={onClick}
       >
         <CardContent className="p-3 flex items-center gap-3">
-          <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted shrink-0">
-            <img
-              src={photoUrl}
-              alt="Encomenda"
-              className="w-full h-full object-cover"
-            />
+          <div className="shrink-0 relative">
+            <PackageCardImage src={photoUrl} compact />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
@@ -100,12 +96,8 @@ export function PackageCard({
       )}
       onClick={onClick}
     >
-      <div className="aspect-video relative overflow-hidden bg-muted">
-        <img
-          src={photoUrl}
-          alt="Encomenda"
-          className="w-full h-full object-cover"
-        />
+      <div className="relative overflow-hidden bg-muted">
+        <PackageCardImage src={photoUrl} />
         <div className="absolute top-3 right-3 flex items-center gap-2">
           <PackageStatusBadge status={status} />
           {(onResendNotification || onViewDetails) && (
