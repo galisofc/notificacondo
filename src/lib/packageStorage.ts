@@ -59,6 +59,42 @@ export async function deletePackagePhoto(photoUrl: string): Promise<{ success: b
 }
 
 /**
+ * Generates a signed URL for accessing a private package photo
+ * @param photoUrl - The full public URL of the photo (used to extract file path)
+ * @param expiresIn - Expiration time in seconds (default: 1 hour)
+ * @returns Signed URL or null if generation fails
+ */
+export async function getSignedPackagePhotoUrl(
+  photoUrl: string,
+  expiresIn: number = 3600
+): Promise<string | null> {
+  if (!photoUrl) return null;
+
+  const filePath = extractFilePathFromUrl(photoUrl);
+  
+  if (!filePath) {
+    console.warn("Could not extract file path from photo URL:", photoUrl);
+    return null;
+  }
+
+  try {
+    const { data, error } = await supabase.storage
+      .from("package-photos")
+      .createSignedUrl(filePath, expiresIn);
+
+    if (error) {
+      console.error("Error creating signed URL:", error);
+      return null;
+    }
+
+    return data?.signedUrl || null;
+  } catch (error) {
+    console.error("Error creating signed URL:", error);
+    return null;
+  }
+}
+
+/**
  * Deletes multiple package photos from Supabase Storage
  * @param photoUrls - Array of full public URLs of photos to delete
  * @returns Object with success status and count of deleted photos
