@@ -6,8 +6,10 @@ import {
   Loader2, 
   AlertCircle,
   KeyRound,
-  Camera
+  Package as PackageIcon
 } from "lucide-react";
+import { getSignedPackagePhotoUrl } from "@/lib/packageStorage";
+import { PackageCardImage } from "./PackageCardImage";
 import {
   Dialog,
   DialogContent,
@@ -44,6 +46,8 @@ export function PackagePickupDialog({
   const [pickedUpByName, setPickedUpByName] = useState("");
   const [codeValid, setCodeValid] = useState<boolean | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [signedPhotoUrl, setSignedPhotoUrl] = useState<string | null>(null);
+  const [isLoadingPhoto, setIsLoadingPhoto] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Reset state when dialog opens
@@ -54,10 +58,25 @@ export function PackagePickupDialog({
       setPickedUpByName("");
       setCodeValid(null);
       setErrorMessage("");
+      setSignedPhotoUrl(null);
       // Focus input after dialog opens
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [open]);
+
+  // Generate signed URL for package photo
+  useEffect(() => {
+    if (open && package_?.photo_url) {
+      setIsLoadingPhoto(true);
+      getSignedPackagePhotoUrl(package_.photo_url)
+        .then((url) => setSignedPhotoUrl(url))
+        .catch(() => setSignedPhotoUrl(null))
+        .finally(() => setIsLoadingPhoto(false));
+    } else {
+      setSignedPhotoUrl(null);
+      setIsLoadingPhoto(false);
+    }
+  }, [open, package_?.photo_url]);
 
   // Validate code as user types
   useEffect(() => {
@@ -113,11 +132,22 @@ export function PackagePickupDialog({
               {/* Package Preview */}
               <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
                 <div className="w-20 h-20 rounded-lg overflow-hidden bg-background shrink-0">
-                  <img
-                    src={package_.photo_url}
-                    alt="Encomenda"
-                    className="w-full h-full object-cover"
-                  />
+                  {isLoadingPhoto ? (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : signedPhotoUrl ? (
+                    <PackageCardImage
+                      src={signedPhotoUrl}
+                      alt="Encomenda"
+                      className="w-full h-full rounded-lg"
+                      compact
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                      <PackageIcon className="w-6 h-6" />
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   {revealPickupCode && (
