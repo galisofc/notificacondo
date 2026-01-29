@@ -1031,8 +1031,8 @@ const PorteiroPackagesHistory = () => {
           </div>
         )}
 
-        {/* Block Stats - Pending only (when showing all blocks) */}
-        {selectedCondominium && selectedBlock === "all" && Object.values(stats.blockStats).some((s) => s.pendente > 0) && (
+        {/* Block Stats - Pending only */}
+        {selectedCondominium && Object.values(stats.blockStats).some((s) => s.pendente > 0) && (
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
