@@ -69,6 +69,7 @@ import { format, parseISO, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import BlockApartmentDisplay from "@/components/common/BlockApartmentDisplay";
 import { QuickBlockApartmentSearch } from "@/components/packages/QuickBlockApartmentSearch";
+import { PackagePhoto } from "@/components/packages/PackagePhoto";
 import { useNavigate } from "react-router-dom";
 
 interface PackageWithRelations {
@@ -792,10 +793,10 @@ const SindicoPackages = () => {
               {/* Photo */}
               {selectedPackage.photo_url && (
                 <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
-                  <img
-                    src={selectedPackage.photo_url}
-                    alt="Foto da encomenda"
-                    className="w-full h-full object-cover"
+                  <PackagePhoto
+                    photoUrl={selectedPackage.photo_url}
+                    aspectRatio="auto"
+                    className="w-full h-full"
                   />
                 </div>
               )}

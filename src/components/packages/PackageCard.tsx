@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PackageStatusBadge } from "./PackageStatusBadge";
-import { PickupCodeDisplay } from "./PickupCodeDisplay";
+import { PackagePhoto } from "./PackagePhoto";
 import { PackageStatus } from "@/lib/packageConstants";
 import { cn } from "@/lib/utils";
 
@@ -65,10 +65,11 @@ export function PackageCard({
       >
         <CardContent className="p-3 flex items-center gap-3">
           <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted shrink-0">
-            <img
-              src={photoUrl}
-              alt="Encomenda"
-              className="w-full h-full object-cover"
+            <PackagePhoto
+              photoUrl={photoUrl}
+              aspectRatio="square"
+              className="w-full h-full"
+              showLoadingState={false}
             />
           </div>
           <div className="flex-1 min-w-0">
@@ -101,10 +102,10 @@ export function PackageCard({
       onClick={onClick}
     >
       <div className="aspect-video relative overflow-hidden bg-muted">
-        <img
-          src={photoUrl}
-          alt="Encomenda"
-          className="w-full h-full object-cover"
+        <PackagePhoto
+          photoUrl={photoUrl}
+          aspectRatio="auto"
+          className="w-full h-full"
         />
         <div className="absolute top-3 right-3 flex items-center gap-2">
           <PackageStatusBadge status={status} />

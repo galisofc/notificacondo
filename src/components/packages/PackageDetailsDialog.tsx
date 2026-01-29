@@ -28,6 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Package } from "@/hooks/usePackages";
 import { PackageStatusBadge } from "./PackageStatusBadge";
+import { PackagePhoto } from "./PackagePhoto";
 import { cn } from "@/lib/utils";
 
 interface PackageDetailsDialogProps {
@@ -146,10 +147,10 @@ export function PackageDetailsDialog({
           {/* Package Photo & Info */}
           <div className="flex gap-4">
             <div className="w-28 h-28 rounded-lg overflow-hidden bg-muted shrink-0">
-              <img
-                src={package_.photo_url}
-                alt="Encomenda"
-                className="w-full h-full object-cover"
+              <PackagePhoto
+                photoUrl={package_.photo_url}
+                aspectRatio="square"
+                className="w-full h-full"
               />
             </div>
             <div className="flex-1 space-y-2">
