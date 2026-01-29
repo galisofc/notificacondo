@@ -9,14 +9,54 @@ export function extractFilePathFromUrl(photoUrl: string): string | null {
   if (!photoUrl) return null;
   
   try {
-    // URL format: https://[project].supabase.co/storage/v1/object/public/package-photos/[filepath]
     const bucketName = "package-photos";
-    const bucketIndex = photoUrl.indexOf(`/public/${bucketName}/`);
     
-    if (bucketIndex === -1) return null;
+    // Handle multiple URL formats:
+    // Format 1: https://[project].supabase.co/storage/v1/object/public/package-photos/[filepath]
+    // Format 2: https://[project].supabase.co/storage/v1/object/sign/package-photos/[filepath]?token=...
+    // Format 3: Just the filename like "1769657825816_395604.jpg"
     
-    const filePath = photoUrl.substring(bucketIndex + `/public/${bucketName}/`.length);
-    return filePath || null;
+    // Check if it's just a filename (no slashes or http)
+    if (!photoUrl.includes('/') && !photoUrl.startsWith('http')) {
+      return photoUrl;
+    }
+    
+    // Try to extract from full Supabase URL
+    // Pattern: /object/public/package-photos/ or /object/sign/package-photos/
+    const patterns = [
+      `/object/public/${bucketName}/`,
+      `/object/sign/${bucketName}/`,
+      `/public/${bucketName}/`,
+    ];
+    
+    for (const pattern of patterns) {
+      const patternIndex = photoUrl.indexOf(pattern);
+      if (patternIndex !== -1) {
+        let filePath = photoUrl.substring(patternIndex + pattern.length);
+        // Remove query parameters if present (like ?token=...)
+        const queryIndex = filePath.indexOf('?');
+        if (queryIndex !== -1) {
+          filePath = filePath.substring(0, queryIndex);
+        }
+        return filePath || null;
+      }
+    }
+    
+    // Fallback: if URL contains bucket name, extract everything after it
+    if (photoUrl.includes(`/${bucketName}/`)) {
+      const parts = photoUrl.split(`/${bucketName}/`);
+      if (parts.length > 1) {
+        let filePath = parts[parts.length - 1];
+        const queryIndex = filePath.indexOf('?');
+        if (queryIndex !== -1) {
+          filePath = filePath.substring(0, queryIndex);
+        }
+        return filePath || null;
+      }
+    }
+    
+    console.warn("Could not extract file path from URL format:", photoUrl);
+    return null;
   } catch (error) {
     console.error("Error extracting file path from URL:", error);
     return null;
