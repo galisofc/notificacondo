@@ -1,5 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
 
+type SignedUrlFunctionResponse = {
+  signedUrl: string | null;
+};
+
 /**
  * Extracts the file path from a Supabase Storage public URL
  * @param photoUrl - The full public URL of the photo
@@ -127,6 +131,28 @@ export async function getSignedPackagePhotoUrl(
         .createSignedUrl(filePath, expiresIn);
 
       if (error) {
+        // If the bucket is private and the current user doesn't have storage permissions,
+        // the Storage API often responds with a misleading "Object not found".
+        // In that case, fallback to a backend function that signs the URL with elevated privileges.
+        const message = (error as any)?.message ?? String(error);
+        const shouldFallbackToFunction =
+          typeof message === "string" &&
+          (message.toLowerCase().includes("object not found") || message.toLowerCase().includes("not_found"));
+
+        if (shouldFallbackToFunction) {
+          try {
+            const { data: fnData, error: fnError } = await supabase.functions.invoke<SignedUrlFunctionResponse>(
+              "get-package-photo-signed-url",
+              { body: { filePath, expiresIn } }
+            );
+
+            if (!fnError && fnData?.signedUrl) return fnData.signedUrl;
+            console.warn(`Attempt ${attempt}/${maxRetries} - Function fallback failed:`, fnError);
+          } catch (fnInvokeError) {
+            console.warn(`Attempt ${attempt}/${maxRetries} - Function fallback exception:`, fnInvokeError);
+          }
+        }
+
         lastError = error as Error;
         console.warn(`Attempt ${attempt}/${maxRetries} - Error creating signed URL:`, error);
         
