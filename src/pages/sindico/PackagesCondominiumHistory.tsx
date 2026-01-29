@@ -992,7 +992,8 @@ const PackagesCondominiumHistory = () => {
                 <Button 
                   variant="outline" 
                   onClick={() => {
-                    const text = pendingSummary
+                    const header = "*Encomendas Cadastradas no Sistema NotificaCondo Pendentes de Entrega:*\n\n";
+                    const text = header + pendingSummary
                       .map(item => `${item.blockName} / ${item.apartmentNumber} - ${item.count} ${item.count === 1 ? 'encomenda' : 'encomendas'}`)
                       .join('\n') + `\n\nTotal: ${pendingPackages.length} pendentes`;
                     navigator.clipboard.writeText(text);
