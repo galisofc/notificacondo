@@ -91,6 +91,39 @@ serve(async (req) => {
 
     console.log(`Notifying package arrival: ${package_id} for apartment ${apartment_id}`);
 
+    // ========== GENERATE SIGNED URL FOR PHOTO ==========
+    // The package-photos bucket is private, so we need a signed URL for Meta to access
+    let signedPhotoUrl: string | null = null;
+    
+    if (photo_url) {
+      // Extract file path from the photo_url (remove bucket prefix if present)
+      let filePath = photo_url;
+      
+      // Handle various URL formats
+      if (photo_url.includes("/package-photos/")) {
+        filePath = photo_url.split("/package-photos/").pop() || photo_url;
+      } else if (photo_url.startsWith("http")) {
+        // If it's already a full URL, extract just the filename
+        const urlParts = photo_url.split("/");
+        filePath = urlParts[urlParts.length - 1];
+      }
+      
+      console.log(`Generating signed URL for photo: ${filePath}`);
+      
+      // Generate signed URL valid for 1 hour (enough time for Meta to download)
+      const { data: signedData, error: signedError } = await supabase.storage
+        .from("package-photos")
+        .createSignedUrl(filePath, 3600); // 1 hour expiration
+      
+      if (signedError) {
+        console.error("Error generating signed URL:", signedError);
+        // Continue without photo rather than failing the notification
+      } else if (signedData?.signedUrl) {
+        signedPhotoUrl = signedData.signedUrl;
+        console.log(`Signed URL generated successfully`);
+      }
+    }
+
     // ========== AUTHORIZATION ==========
     const { data: apartment, error: aptError } = await supabase
       .from("apartments")
@@ -290,8 +323,8 @@ serve(async (req) => {
           language: wabaLanguage,
           bodyParams,
           bodyParamNames,
-          headerMediaUrl: photo_url || undefined,
-          headerMediaType: photo_url ? "image" : undefined,
+          headerMediaUrl: signedPhotoUrl || undefined,
+          headerMediaType: signedPhotoUrl ? "image" : undefined,
         });
       } else {
         // Fallback: Send image with caption
@@ -308,10 +341,10 @@ serve(async (req) => {
           `• Código de retirada: *${sanitize(pickup_code)}*\n\n` +
           `Recebido por: ${sanitize(porterName)}`;
         
-        if (photo_url) {
+        if (signedPhotoUrl) {
           result = await sendMetaImage({
             phone: resident.phone!,
-            imageUrl: photo_url,
+            imageUrl: signedPhotoUrl,
             caption,
           });
         } else {
@@ -338,7 +371,11 @@ serve(async (req) => {
         request_payload: result.debug?.payload || { variables, params_order: paramsOrder },
         response_body: result.debug?.response,
         response_status: result.debug?.status,
-        debug_info: { condominium_id: condoId, photo_url: photo_url || null },
+        debug_info: { 
+          condominium_id: condoId, 
+          original_photo_url: photo_url || null,
+          signed_photo_url: signedPhotoUrl || null,
+        },
       });
 
       results.push({
