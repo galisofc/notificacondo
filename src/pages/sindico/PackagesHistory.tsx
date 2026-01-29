@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useDateFormatter } from "@/hooks/useFormattedDate";
+import { getSignedPackagePhotoUrl } from "@/lib/packageStorage";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -369,14 +370,20 @@ const PackagesHistory = () => {
       description: "Carregando imagens das encomendas, aguarde...",
     });
 
-    // Pre-load all images as Base64
+    // Pre-load all images as Base64 (using signed URLs for private bucket)
     const imagesBase64: Record<string, string> = {};
     
     await Promise.all(
       packages.map(async (pkg) => {
         if (pkg.photo_url) {
           try {
-            imagesBase64[pkg.id] = await getBase64FromUrl(pkg.photo_url);
+            // Get signed URL first (photos are in private bucket)
+            const signedUrl = await getSignedPackagePhotoUrl(pkg.photo_url);
+            if (signedUrl) {
+              imagesBase64[pkg.id] = await getBase64FromUrl(signedUrl);
+            } else {
+              imagesBase64[pkg.id] = "";
+            }
           } catch {
             imagesBase64[pkg.id] = "";
           }
