@@ -16,6 +16,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { PackageStatus } from "@/lib/packageConstants";
+import { getSignedPackagePhotoUrl } from "@/lib/packageStorage";
+
+// Extended type for packages with signed URLs
+interface PackageWithSignedUrl extends PackageType {
+  signedPhotoUrl?: string;
+}
 
 interface ApartmentInfo {
   id: string;
@@ -37,13 +43,13 @@ export default function PorteiroPackages() {
   const [isSearching, setIsSearching] = useState(false);
   const [selectedApartment, setSelectedApartment] = useState<ApartmentInfo | null>(null);
   
-  const [packages, setPackages] = useState<PackageType[]>([]);
+  const [packages, setPackages] = useState<PackageWithSignedUrl[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"pendente" | "retirada" | "all">("pendente");
   
-  const [selectedPackage, setSelectedPackage] = useState<PackageType | null>(null);
+  const [selectedPackage, setSelectedPackage] = useState<PackageWithSignedUrl | null>(null);
   const [isPickupDialogOpen, setIsPickupDialogOpen] = useState(false);
-  const [detailsPackage, setDetailsPackage] = useState<PackageType | null>(null);
+  const [detailsPackage, setDetailsPackage] = useState<PackageWithSignedUrl | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
 
   // Fetch porter's condominiums
@@ -81,7 +87,19 @@ export default function PorteiroPackages() {
         .order("received_at", { ascending: false });
 
       if (error) throw error;
-      setPackages(data || []);
+      
+      // Generate signed URLs for all packages in parallel
+      const packagesWithSignedUrls = await Promise.all(
+        (data || []).map(async (pkg) => {
+          const signedPhotoUrl = await getSignedPackagePhotoUrl(pkg.photo_url);
+          return {
+            ...pkg,
+            signedPhotoUrl: signedPhotoUrl || pkg.photo_url, // Fallback to original URL
+          };
+        })
+      );
+      
+      setPackages(packagesWithSignedUrls);
     } catch (error) {
       console.error("Error fetching packages:", error);
       toast({
@@ -417,7 +435,7 @@ export default function PorteiroPackages() {
                       <PackageCard
                         key={pkg.id}
                         id={pkg.id}
-                        photoUrl={pkg.photo_url}
+                        photoUrl={pkg.signedPhotoUrl || pkg.photo_url}
                         pickupCode={pkg.pickup_code}
                         status={pkg.status}
                         apartmentNumber={pkg.apartment?.number || ""}
