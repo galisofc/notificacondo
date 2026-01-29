@@ -52,6 +52,7 @@ import {
   Mail,
   Loader2,
   Home,
+  X,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { MaskedInput, formatCPF } from "@/components/ui/masked-input";
@@ -616,6 +617,23 @@ export default function PorteiroCondominio() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
+
+              {/* Clear Filters Button */}
+              {(selectedBlockFilter !== "all" || selectedApartmentFilter !== "all" || searchTerm) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedBlockFilter("all");
+                    setSelectedApartmentFilter("all");
+                    setSearchTerm("");
+                  }}
+                  className="gap-2"
+                >
+                  <X className="h-4 w-4" />
+                  Limpar filtros
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
