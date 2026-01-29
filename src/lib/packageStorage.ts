@@ -66,7 +66,8 @@ export async function deletePackagePhoto(photoUrl: string): Promise<{ success: b
  */
 export async function getSignedPackagePhotoUrl(
   photoUrl: string,
-  expiresIn: number = 3600
+  expiresIn: number = 3600,
+  maxRetries: number = 3
 ): Promise<string | null> {
   if (!photoUrl) return null;
 
@@ -77,21 +78,39 @@ export async function getSignedPackagePhotoUrl(
     return null;
   }
 
-  try {
-    const { data, error } = await supabase.storage
-      .from("package-photos")
-      .createSignedUrl(filePath, expiresIn);
+  let lastError: Error | null = null;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const { data, error } = await supabase.storage
+        .from("package-photos")
+        .createSignedUrl(filePath, expiresIn);
 
-    if (error) {
-      console.error("Error creating signed URL:", error);
-      return null;
+      if (error) {
+        lastError = error as Error;
+        console.warn(`Attempt ${attempt}/${maxRetries} - Error creating signed URL:`, error);
+        
+        // Wait before retrying (exponential backoff)
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          continue;
+        }
+      } else {
+        return data?.signedUrl || null;
+      }
+    } catch (error) {
+      lastError = error as Error;
+      console.warn(`Attempt ${attempt}/${maxRetries} - Exception creating signed URL:`, error);
+      
+      // Wait before retrying
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+      }
     }
-
-    return data?.signedUrl || null;
-  } catch (error) {
-    console.error("Error creating signed URL:", error);
-    return null;
   }
+
+  console.error("Failed to create signed URL after all retries:", lastError);
+  return null;
 }
 
 /**
