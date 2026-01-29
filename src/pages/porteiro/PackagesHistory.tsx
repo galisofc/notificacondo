@@ -60,6 +60,7 @@ import BlockApartmentDisplay from "@/components/common/BlockApartmentDisplay";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useNavigate } from "react-router-dom";
+import { getSignedPackagePhotoUrl } from "@/lib/packageStorage";
 
 interface ApartmentResident {
   id: string;
@@ -135,6 +136,8 @@ const PorteiroPackagesHistory = () => {
   const [showPendingSummaryModal, setShowPendingSummaryModal] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<PackageWithRelations | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [signedPhotoUrl, setSignedPhotoUrl] = useState<string | null>(null);
+  const [isLoadingPhoto, setIsLoadingPhoto] = useState(false);
   const pageSize = 20;
 
   // Fetch porter's condominiums
@@ -212,6 +215,24 @@ const PorteiroPackagesHistory = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedCondominium, selectedBlock, selectedApartment, statusFilter, dateFrom, dateTo]);
+
+  // Fetch signed URL when package details modal opens
+  useEffect(() => {
+    const fetchSignedUrl = async () => {
+      if (showDetailsModal && selectedPackage?.photo_url) {
+        setIsLoadingPhoto(true);
+        setSignedPhotoUrl(null);
+        
+        const signedUrl = await getSignedPackagePhotoUrl(selectedPackage.photo_url);
+        setSignedPhotoUrl(signedUrl);
+        setIsLoadingPhoto(false);
+      } else {
+        setSignedPhotoUrl(null);
+      }
+    };
+
+    fetchSignedUrl();
+  }, [showDetailsModal, selectedPackage?.photo_url]);
 
   // Fetch total count for pagination
   const { data: totalCount = 0 } = useQuery({
@@ -1295,11 +1316,21 @@ const PorteiroPackagesHistory = () => {
                       Foto da Encomenda
                     </h4>
                     <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
-                      <img
-                        src={selectedPackage.photo_url}
-                        alt="Foto da encomenda"
-                        className="w-full h-full object-contain"
-                      />
+                      {isLoadingPhoto ? (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        </div>
+                      ) : signedPhotoUrl ? (
+                        <img
+                          src={signedPhotoUrl}
+                          alt="Foto da encomenda"
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                          <span className="text-sm">Não foi possível carregar a imagem</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
