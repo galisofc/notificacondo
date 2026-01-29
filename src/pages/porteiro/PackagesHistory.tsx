@@ -53,6 +53,9 @@ import {
   MapPin,
   Calendar,
   Image as ImageIcon,
+  Filter,
+  Home,
+  Search,
 } from "lucide-react";
 import { format, parseISO, differenceInMinutes } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -60,6 +63,7 @@ import BlockApartmentDisplay from "@/components/common/BlockApartmentDisplay";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useNavigate } from "react-router-dom";
+import { QuickBlockApartmentSearch } from "@/components/packages/QuickBlockApartmentSearch";
 import { getSignedPackagePhotoUrl } from "@/lib/packageStorage";
 
 interface ApartmentResident {
@@ -878,123 +882,116 @@ const PorteiroPackagesHistory = () => {
           )}
         </div>
 
-        {/* Filters */}
+        {/* Filters - Horizontal layout like Síndico */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Building2 className="w-5 h-5" />
-              Filtros
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CardContent className="pt-6">
+            <div className="flex flex-col md:flex-row gap-4 flex-wrap">
               {/* Condominium Select */}
               {condominiums.length > 1 && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Condomínio</label>
-                  <Select
-                    value={selectedCondominium}
-                    onValueChange={(v) => {
-                      setSelectedCondominium(v);
-                      setSelectedBlock("all");
-                      setSelectedApartment("all");
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o condomínio" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {condominiums.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Select
+                  value={selectedCondominium}
+                  onValueChange={(v) => {
+                    setSelectedCondominium(v);
+                    setSelectedBlock("all");
+                    setSelectedApartment("all");
+                  }}
+                >
+                  <SelectTrigger className="w-full md:w-[220px]">
+                    <Building2 className="w-4 h-4 mr-2" />
+                    <SelectValue placeholder="Condomínio" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {condominiums.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
+              {/* Quick Search - visible when condominium is selected */}
+              {selectedCondominium && (
+                <QuickBlockApartmentSearch
+                  condominiumId={selectedCondominium}
+                  onBlockFound={(blockId) => {
+                    setSelectedBlock(blockId);
+                    setCurrentPage(1);
+                  }}
+                  onApartmentFound={(apartmentId) => {
+                    setSelectedApartment(apartmentId);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full md:w-[200px]"
+                  placeholder="Ex: 0344, AF"
+                />
               )}
 
               {/* Block Select */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Bloco (opcional)</label>
-                <Select
-                  value={selectedBlock}
-                  onValueChange={(v) => {
-                    setSelectedBlock(v);
-                    setSelectedApartment("all");
-                  }}
-                  disabled={!selectedCondominium}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todos os blocos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os blocos</SelectItem>
-                    {blocks.map((b) => (
-                      <SelectItem key={b.id} value={b.id}>
-                        {b.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select
+                value={selectedBlock}
+                onValueChange={(v) => {
+                  setSelectedBlock(v);
+                  setSelectedApartment("all");
+                  setCurrentPage(1);
+                }}
+                disabled={!selectedCondominium}
+              >
+                <SelectTrigger className="w-full md:w-[160px]">
+                  <Building2 className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Bloco" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os blocos</SelectItem>
+                  {blocks.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
               {/* Apartment Select */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Apartamento (opcional)</label>
-                <Select
-                  value={selectedApartment}
-                  onValueChange={setSelectedApartment}
-                  disabled={selectedBlock === "all"}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todos os apartamentos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os apartamentos</SelectItem>
-                    {apartments.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {a.number}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+              <Select
+                value={selectedApartment}
+                onValueChange={(v) => {
+                  setSelectedApartment(v);
+                  setCurrentPage(1);
+                }}
+                disabled={selectedBlock === "all"}
+              >
+                <SelectTrigger className="w-full md:w-[140px]">
+                  <Home className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Apto" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {apartments.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.number}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-            {/* Additional Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Data Inicial</label>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Data Final</label>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Status</label>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="pendente">Pendentes</SelectItem>
-                    <SelectItem value="retirada">Retiradas</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Status Select */}
+              <Select
+                value={statusFilter}
+                onValueChange={(v) => {
+                  setStatusFilter(v);
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full md:w-[150px]">
+                  <Filter className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="pendente">Pendentes</SelectItem>
+                  <SelectItem value="retirada">Retiradas</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
