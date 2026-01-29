@@ -115,6 +115,10 @@ export const useUserRole = (): UseUserRoleReturn => {
 
         if (roleError) {
           console.error("Error fetching user role:", roleError);
+          // Em caso de erro na query, não definir role ainda - manter loading
+          // para evitar fallback incorreto para "morador"
+          setLoading(false);
+          return;
         }
 
         // Priority order for roles:
@@ -128,7 +132,7 @@ export const useUserRole = (): UseUserRoleReturn => {
           morador: 1,
         };
 
-        let userRole: UserRole = "morador";
+        let userRole: UserRole = null;
 
         if (rolesData && rolesData.length > 0) {
           // Sort roles by priority (highest first) and select the highest
@@ -136,6 +140,9 @@ export const useUserRole = (): UseUserRoleReturn => {
             (a, b) => (rolePriority[b.role] || 0) - (rolePriority[a.role] || 0)
           );
           userRole = sortedRoles[0].role as UserRole;
+        } else {
+          // Usuário autenticado sem role definida - fallback para morador
+          userRole = "morador";
         }
         
         setRole(userRole);
