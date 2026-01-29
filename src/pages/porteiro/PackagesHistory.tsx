@@ -1048,25 +1048,42 @@ const PorteiroPackagesHistory = () => {
                 {Object.values(stats.blockStats)
                   .filter((blockStats) => blockStats.pendente > 0)
                   .sort((a, b) => a.blockName.localeCompare(b.blockName, "pt-BR", { numeric: true }))
-                  .map((blockStats) => (
-                    <div
-                      key={blockStats.blockId}
-                      onClick={() => {
-                        setSelectedBlock(blockStats.blockId);
-                        setSelectedApartment("all");
-                        setStatusFilter("pendente");
-                      }}
-                      className="p-3 rounded-lg border bg-card cursor-pointer hover:bg-accent hover:border-primary/50 transition-colors"
-                    >
-                      <p className="font-medium text-sm">{blockStats.blockName}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-lg font-bold text-amber-500">{blockStats.pendente}</span>
-                        <span className="text-xs text-muted-foreground">
-                          pendente{blockStats.pendente !== 1 ? 's' : ''}
-                        </span>
+                  .map((blockStats) => {
+                    const isSelected = selectedBlock === blockStats.blockId;
+                    return (
+                      <div
+                        key={blockStats.blockId}
+                        onClick={() => {
+                          if (isSelected) {
+                            // Deselect if clicking on already selected block
+                            setSelectedBlock("all");
+                            setStatusFilter("all");
+                          } else {
+                            setSelectedBlock(blockStats.blockId);
+                            setSelectedApartment("all");
+                            setStatusFilter("pendente");
+                          }
+                        }}
+                        className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                          isSelected
+                            ? "bg-emerald-500/20 border-emerald-500 dark:bg-emerald-500/30"
+                            : "bg-card hover:bg-accent hover:border-primary/50"
+                        }`}
+                      >
+                        <p className={`font-medium text-sm ${isSelected ? "text-emerald-700 dark:text-emerald-300" : ""}`}>
+                          {blockStats.blockName}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={`text-lg font-bold ${isSelected ? "text-emerald-600 dark:text-emerald-400" : "text-amber-500"}`}>
+                            {blockStats.pendente}
+                          </span>
+                          <span className={`text-xs ${isSelected ? "text-emerald-600/70 dark:text-emerald-400/70" : "text-muted-foreground"}`}>
+                            pendente{blockStats.pendente !== 1 ? 's' : ''}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
               </div>
             </CardContent>
           </Card>
