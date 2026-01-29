@@ -764,10 +764,10 @@ const PorteiroPackagesHistory = () => {
       autoTable(doc, {
         startY: blockTableStartY + 4,
         head: [["Bloco", "Total", "Retiradas", "Pendentes"]],
-        body: Object.entries(stats.blockStats)
-          .sort(([a], [b]) => a.localeCompare(b, "pt-BR", { numeric: true }))
-          .map(([blockName, blockStats]) => [
-            blockName,
+        body: Object.values(stats.blockStats)
+          .sort((a, b) => a.blockName.localeCompare(b.blockName, "pt-BR", { numeric: true }))
+          .map((blockStats) => [
+            blockStats.blockName,
             blockStats.total.toString(),
             blockStats.retirada.toString(),
             blockStats.pendente.toString(),
