@@ -452,6 +452,37 @@ const PorteiroPackagesHistory = () => {
     enabled: !!selectedCondominium,
   });
 
+  // Fetch block stats for cards (ignores selectedBlock/selectedApartment/statusFilter so cards don't disappear)
+  const { data: blockStatsData } = useQuery({
+    queryKey: ["porteiro-packages-block-stats", selectedCondominium, dateFrom, dateTo],
+    queryFn: async () => {
+      let query = supabase
+        .from("packages")
+        .select(
+          `
+          id,
+          status,
+          received_at,
+          block:blocks(id, name)
+        `
+        )
+        .eq("condominium_id", selectedCondominium);
+
+      if (dateFrom) {
+        query = query.gte("received_at", dateFrom);
+      }
+
+      if (dateTo) {
+        query = query.lte("received_at", `${dateTo}T23:59:59`);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!selectedCondominium,
+  });
+
   // Statistics calculated from ALL filtered data
   const stats = useMemo(() => {
     const allPackages = statsData || [];
@@ -495,6 +526,28 @@ const PorteiroPackagesHistory = () => {
 
     return s;
   }, [statsData]);
+
+  const blockCardsStats = useMemo(() => {
+    const allPackages = blockStatsData || [];
+    const s = {
+      blockStats: {} as Record<string, { blockId: string; blockName: string; total: number; pendente: number; retirada: number }>,
+    };
+
+    allPackages.forEach((pkg) => {
+      const status = pkg.status as "pendente" | "retirada";
+      const blockId = pkg.block?.id || "no-block";
+      const blockName = pkg.block?.name || "Sem Bloco";
+
+      if (!s.blockStats[blockId]) {
+        s.blockStats[blockId] = { blockId, blockName, total: 0, pendente: 0, retirada: 0 };
+      }
+
+      s.blockStats[blockId].total++;
+      s.blockStats[blockId][status]++;
+    });
+
+    return s;
+  }, [blockStatsData]);
 
   const formatPickupTime = (minutes: number) => {
     if (minutes < 60) return `${minutes} min`;
@@ -1032,7 +1085,7 @@ const PorteiroPackagesHistory = () => {
         )}
 
         {/* Block Stats - Pending only */}
-        {selectedCondominium && Object.values(stats.blockStats).some((s) => s.pendente > 0) && (
+        {selectedCondominium && Object.values(blockCardsStats.blockStats).some((s) => s.pendente > 0) && (
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
@@ -1045,7 +1098,7 @@ const PorteiroPackagesHistory = () => {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                {Object.values(stats.blockStats)
+                {Object.values(blockCardsStats.blockStats)
                   .filter((blockStats) => blockStats.pendente > 0)
                   .sort((a, b) => a.blockName.localeCompare(b.blockName, "pt-BR", { numeric: true }))
                   .map((blockStats) => {
