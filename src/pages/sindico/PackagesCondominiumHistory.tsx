@@ -272,7 +272,7 @@ const PackagesCondominiumHistory = () => {
       pendente: 0,
       retirada: 0,
       avgPickupTime: 0,
-      blockStats: {} as Record<string, { total: number; pendente: number; retirada: number }>,
+      blockStats: {} as Record<string, { blockId: string; blockName: string; total: number; pendente: number; retirada: number }>,
     };
 
     let totalPickupTimeMinutes = 0;
@@ -283,12 +283,13 @@ const PackagesCondominiumHistory = () => {
       s[status]++;
 
       // Track per-block stats
+      const blockId = pkg.block?.id || "no-block";
       const blockName = pkg.block?.name || "Sem Bloco";
-      if (!s.blockStats[blockName]) {
-        s.blockStats[blockName] = { total: 0, pendente: 0, retirada: 0 };
+      if (!s.blockStats[blockId]) {
+        s.blockStats[blockId] = { blockId, blockName, total: 0, pendente: 0, retirada: 0 };
       }
-      s.blockStats[blockName].total++;
-      s.blockStats[blockName][status]++;
+      s.blockStats[blockId].total++;
+      s.blockStats[blockId][status]++;
 
       if (status === "retirada" && pkg.picked_up_at) {
         const minutes = differenceInMinutes(
@@ -798,34 +799,58 @@ const PackagesCondominiumHistory = () => {
           </div>
         )}
 
-        {/* Block Stats - Pending only (when showing all blocks) */}
-        {selectedCondominium && selectedBlock === "all" && Object.entries(stats.blockStats).some(([_, s]) => s.pendente > 0) && (
+        {/* Block Stats - Pending only */}
+        {selectedCondominium && Object.values(stats.blockStats).some((s) => s.pendente > 0) && (
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Layers className="w-5 h-5" />
                 Pendentes por Bloco
+                <span className="text-xs font-normal text-muted-foreground ml-2">
+                  (clique para filtrar)
+                </span>
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                {Object.entries(stats.blockStats)
-                  .filter(([_, blockStats]) => blockStats.pendente > 0)
-                  .sort(([a], [b]) => a.localeCompare(b, "pt-BR", { numeric: true }))
-                  .map(([blockName, blockStats]) => (
-                    <div
-                      key={blockName}
-                      className="p-3 rounded-lg border bg-card"
-                    >
-                      <p className="font-medium text-sm">{blockName}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-lg font-bold text-amber-500">{blockStats.pendente}</span>
-                        <span className="text-xs text-muted-foreground">
-                          pendente{blockStats.pendente !== 1 ? 's' : ''}
-                        </span>
+                {Object.values(stats.blockStats)
+                  .filter((blockStats) => blockStats.pendente > 0)
+                  .sort((a, b) => a.blockName.localeCompare(b.blockName, "pt-BR", { numeric: true }))
+                  .map((blockStats) => {
+                    const isSelected = selectedBlock === blockStats.blockId;
+                    return (
+                      <div
+                        key={blockStats.blockId}
+                        onClick={() => {
+                          if (isSelected) {
+                            // Deselect if clicking on already selected block
+                            setSelectedBlock("all");
+                            setStatusFilter("all");
+                          } else {
+                            setSelectedBlock(blockStats.blockId);
+                            setStatusFilter("pendente");
+                          }
+                        }}
+                        className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                          isSelected
+                            ? "bg-emerald-500/20 border-emerald-500 dark:bg-emerald-500/30"
+                            : "bg-card hover:bg-accent hover:border-primary/50"
+                        }`}
+                      >
+                        <p className={`font-medium text-sm ${isSelected ? "text-emerald-700 dark:text-emerald-300" : ""}`}>
+                          {blockStats.blockName}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={`text-lg font-bold ${isSelected ? "text-emerald-600 dark:text-emerald-400" : "text-amber-500"}`}>
+                            {blockStats.pendente}
+                          </span>
+                          <span className={`text-xs ${isSelected ? "text-emerald-600/70 dark:text-emerald-400/70" : "text-muted-foreground"}`}>
+                            pendente{blockStats.pendente !== 1 ? 's' : ''}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
               </div>
             </CardContent>
           </Card>
