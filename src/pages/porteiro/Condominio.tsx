@@ -51,6 +51,7 @@ import {
   Phone,
   Mail,
   Loader2,
+  Home,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { MaskedInput, formatCPF } from "@/components/ui/masked-input";
@@ -115,6 +116,8 @@ export default function PorteiroCondominio() {
   const queryClient = useQueryClient();
   const [selectedCondoId, setSelectedCondoId] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedBlockFilter, setSelectedBlockFilter] = useState<string>("all");
+  const [selectedApartmentFilter, setSelectedApartmentFilter] = useState<string>("all");
   const [expandedBlocks, setExpandedBlocks] = useState<Set<string>>(new Set());
   const [expandedApartments, setExpandedApartments] = useState<Set<string>>(new Set());
   const [highlightedApartmentId, setHighlightedApartmentId] = useState<string | null>(null);
@@ -226,37 +229,69 @@ export default function PorteiroCondominio() {
     enabled: !!selectedCondoId,
   });
 
-  // Filter blocks based on search
+  // Get unique blocks for filter dropdown
+  const blocksForFilter = useMemo(() => {
+    if (!blocks) return [];
+    return blocks.map(b => ({ id: b.id, name: b.name }));
+  }, [blocks]);
+
+  // Get apartments for selected block filter
+  const apartmentsForFilter = useMemo(() => {
+    if (!blocks || selectedBlockFilter === "all") return [];
+    const block = blocks.find(b => b.id === selectedBlockFilter);
+    return block?.apartments.map(a => ({ id: a.id, number: a.number })) || [];
+  }, [blocks, selectedBlockFilter]);
+
+  // Filter blocks based on search and filters
   const filteredBlocks = useMemo(() => {
     if (!blocks) return [];
-    if (!searchTerm.trim()) return blocks;
-
-    const term = searchTerm.toLowerCase();
-    return blocks
-      .map((block) => ({
+    
+    let result = blocks;
+    
+    // Apply block filter
+    if (selectedBlockFilter !== "all") {
+      result = result.filter(block => block.id === selectedBlockFilter);
+    }
+    
+    // Apply apartment filter
+    if (selectedApartmentFilter !== "all") {
+      result = result.map(block => ({
         ...block,
-        apartments: block.apartments
-          .map((apt) => ({
-            ...apt,
-            residents: apt.residents.filter(
-              (r) =>
-                r.full_name.toLowerCase().includes(term) ||
-                r.email.toLowerCase().includes(term) ||
-                r.phone?.includes(term)
+        apartments: block.apartments.filter(apt => apt.id === selectedApartmentFilter)
+      })).filter(block => block.apartments.length > 0);
+    }
+    
+    // Apply search term
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      result = result
+        .map((block) => ({
+          ...block,
+          apartments: block.apartments
+            .map((apt) => ({
+              ...apt,
+              residents: apt.residents.filter(
+                (r) =>
+                  r.full_name.toLowerCase().includes(term) ||
+                  r.email.toLowerCase().includes(term) ||
+                  r.phone?.includes(term)
+              ),
+            }))
+            .filter(
+              (apt) =>
+                apt.number.toLowerCase().includes(term) ||
+                apt.residents.length > 0
             ),
-          }))
-          .filter(
-            (apt) =>
-              apt.number.toLowerCase().includes(term) ||
-              apt.residents.length > 0
-          ),
-      }))
-      .filter(
-        (block) =>
-          block.name.toLowerCase().includes(term) ||
-          block.apartments.length > 0
-      );
-  }, [blocks, searchTerm]);
+        }))
+        .filter(
+          (block) =>
+            block.name.toLowerCase().includes(term) ||
+            block.apartments.length > 0
+        );
+    }
+    
+    return result;
+  }, [blocks, searchTerm, selectedBlockFilter, selectedApartmentFilter]);
 
   const toggleBlock = (blockId: string) => {
     setExpandedBlocks((prev) => {
@@ -498,41 +533,92 @@ export default function PorteiroCondominio() {
           </Card>
         </div>
 
-        {/* Search */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por nome, bloco ou apartamento..."
-              className="pl-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          {selectedCondoId && (
-            <QuickBlockApartmentSearch
-              condominiumId={selectedCondoId}
-              onBlockFound={(blockId) => {
-                setExpandedBlocks((prev) => new Set(prev).add(blockId));
-              }}
-              onApartmentFound={(apartmentId) => {
-                setExpandedApartments((prev) => new Set(prev).add(apartmentId));
-                setHighlightedApartmentId(apartmentId);
-                // Scroll to the apartment element after a brief delay
-                setTimeout(() => {
-                  const element = document.querySelector(`[data-apartment-id="${apartmentId}"]`);
-                  element?.scrollIntoView({ behavior: "smooth", block: "center" });
-                }, 200);
-                // Remove highlight after 5 seconds
-                setTimeout(() => {
-                  setHighlightedApartmentId(null);
-                }, 5000);
-              }}
-              className="sm:w-52"
-              placeholder="Busca rápida: 0344"
-            />
-          )}
-        </div>
+        {/* Search and Filters */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col md:flex-row gap-3 flex-wrap">
+              {/* Quick Search */}
+              {selectedCondoId && (
+                <QuickBlockApartmentSearch
+                  condominiumId={selectedCondoId}
+                  onBlockFound={(blockId) => {
+                    setSelectedBlockFilter(blockId);
+                    setSelectedApartmentFilter("all");
+                    setExpandedBlocks((prev) => new Set(prev).add(blockId));
+                  }}
+                  onApartmentFound={(apartmentId) => {
+                    setSelectedApartmentFilter(apartmentId);
+                    setExpandedApartments((prev) => new Set(prev).add(apartmentId));
+                    setHighlightedApartmentId(apartmentId);
+                    setTimeout(() => {
+                      const element = document.querySelector(`[data-apartment-id="${apartmentId}"]`);
+                      element?.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }, 200);
+                    setTimeout(() => {
+                      setHighlightedApartmentId(null);
+                    }, 5000);
+                  }}
+                  className="w-full md:w-[200px]"
+                  placeholder="Ex: 0344, ARM101"
+                />
+              )}
+
+              {/* Block Filter */}
+              <Select
+                value={selectedBlockFilter}
+                onValueChange={(v) => {
+                  setSelectedBlockFilter(v);
+                  setSelectedApartmentFilter("all");
+                }}
+                disabled={!selectedCondoId}
+              >
+                <SelectTrigger className="w-full md:w-[160px]">
+                  <Building2 className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Bloco" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os blocos</SelectItem>
+                  {blocksForFilter.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Apartment Filter */}
+              <Select
+                value={selectedApartmentFilter}
+                onValueChange={setSelectedApartmentFilter}
+                disabled={selectedBlockFilter === "all"}
+              >
+                <SelectTrigger className="w-full md:w-[140px]">
+                  <Home className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Apto" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {apartmentsForFilter.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.number}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Text Search */}
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por nome, e-mail ou telefone..."
+                  className="pl-10"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Blocks List */}
         {loadingCondos || loadingBlocks ? (
