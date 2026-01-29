@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { PackageCard } from "@/components/packages/PackageCard";
+import { PackagePhoto } from "@/components/packages/PackagePhoto";
 import { PickupCodeDisplay } from "@/components/packages/PickupCodeDisplay";
 import { usePackages, Package as PackageType } from "@/hooks/usePackages";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -220,10 +221,10 @@ export default function ResidentPackages() {
             <div className="space-y-6">
               {/* Package Image */}
               <div className="relative aspect-video rounded-xl overflow-hidden bg-muted">
-                <img
-                  src={selectedPackage.photo_url}
-                  alt="Foto da encomenda"
-                  className="w-full h-full object-cover"
+                <PackagePhoto
+                  photoUrl={selectedPackage.photo_url}
+                  aspectRatio="auto"
+                  className="w-full h-full"
                 />
                 <Badge
                   variant={selectedPackage.status === "pendente" ? "default" : "secondary"}

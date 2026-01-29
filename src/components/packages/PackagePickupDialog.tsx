@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { Package } from "@/hooks/usePackages";
+import { PackagePhoto } from "./PackagePhoto";
 
 interface PackagePickupDialogProps {
   open: boolean;
@@ -113,10 +114,11 @@ export function PackagePickupDialog({
               {/* Package Preview */}
               <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
                 <div className="w-20 h-20 rounded-lg overflow-hidden bg-background shrink-0">
-                  <img
-                    src={package_.photo_url}
-                    alt="Encomenda"
-                    className="w-full h-full object-cover"
+                  <PackagePhoto
+                    photoUrl={package_.photo_url}
+                    aspectRatio="square"
+                    className="w-full h-full"
+                    showLoadingState={false}
                   />
                 </div>
                 <div className="flex-1 min-w-0">
