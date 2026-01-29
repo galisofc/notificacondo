@@ -523,10 +523,10 @@ export default function PorteiroCondominio() {
                   const element = document.querySelector(`[data-apartment-id="${apartmentId}"]`);
                   element?.scrollIntoView({ behavior: "smooth", block: "center" });
                 }, 200);
-                // Remove highlight after 3 seconds
+                // Remove highlight after 5 seconds
                 setTimeout(() => {
                   setHighlightedApartmentId(null);
-                }, 3000);
+                }, 5000);
               }}
               className="sm:w-52"
               placeholder="Busca rápida: 0344"
