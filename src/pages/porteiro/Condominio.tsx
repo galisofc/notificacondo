@@ -117,6 +117,7 @@ export default function PorteiroCondominio() {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedBlocks, setExpandedBlocks] = useState<Set<string>>(new Set());
   const [expandedApartments, setExpandedApartments] = useState<Set<string>>(new Set());
+  const [highlightedApartmentId, setHighlightedApartmentId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingResident, setEditingResident] = useState<Resident | null>(null);
   const [selectedApartmentId, setSelectedApartmentId] = useState<string>("");
@@ -516,11 +517,16 @@ export default function PorteiroCondominio() {
               }}
               onApartmentFound={(apartmentId) => {
                 setExpandedApartments((prev) => new Set(prev).add(apartmentId));
+                setHighlightedApartmentId(apartmentId);
                 // Scroll to the apartment element after a brief delay
                 setTimeout(() => {
                   const element = document.querySelector(`[data-apartment-id="${apartmentId}"]`);
                   element?.scrollIntoView({ behavior: "smooth", block: "center" });
                 }, 200);
+                // Remove highlight after 3 seconds
+                setTimeout(() => {
+                  setHighlightedApartmentId(null);
+                }, 3000);
               }}
               className="sm:w-52"
               placeholder="Busca rápida: 0344"
@@ -587,7 +593,14 @@ export default function PorteiroCondominio() {
                             open={expandedApartments.has(apartment.id)}
                             onOpenChange={() => toggleApartment(apartment.id)}
                           >
-                            <div className="rounded-lg border bg-card" data-apartment-id={apartment.id}>
+                            <div 
+                              className={`rounded-lg border bg-card transition-all duration-500 ${
+                                highlightedApartmentId === apartment.id 
+                                  ? "ring-2 ring-primary ring-offset-2 ring-offset-background bg-primary/10" 
+                                  : ""
+                              }`} 
+                              data-apartment-id={apartment.id}
+                            >
                               <CollapsibleTrigger asChild>
                                 <div className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50 transition-colors">
                                   <div className="flex items-center gap-2">
