@@ -1,10 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useDateFormatter } from "@/hooks/useFormattedDate";
+import { getSignedPackagePhotoUrl } from "@/lib/packageStorage";
 import { useItemsPerPagePreference } from "@/hooks/useUserPreferences";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
@@ -129,6 +130,30 @@ const SindicoPackages = () => {
   const [itemsPerPage, setItemsPerPage] = useItemsPerPagePreference("sindico-packages-items-per-page", 10);
   const [selectedPackage, setSelectedPackage] = useState<PackageWithRelations | null>(null);
   const [packageToDelete, setPackageToDelete] = useState<PackageWithRelations | null>(null);
+  const [signedPhotoUrl, setSignedPhotoUrl] = useState<string | null>(null);
+  const [isLoadingPhoto, setIsLoadingPhoto] = useState(false);
+
+  // Generate signed URL when a package is selected
+  useEffect(() => {
+    if (selectedPackage?.photo_url) {
+      setIsLoadingPhoto(true);
+      setSignedPhotoUrl(null);
+      getSignedPackagePhotoUrl(selectedPackage.photo_url)
+        .then((url) => {
+          setSignedPhotoUrl(url);
+        })
+        .catch((err) => {
+          console.error("Error getting signed URL:", err);
+          setSignedPhotoUrl(null);
+        })
+        .finally(() => {
+          setIsLoadingPhoto(false);
+        });
+    } else {
+      setSignedPhotoUrl(null);
+      setIsLoadingPhoto(false);
+    }
+  }, [selectedPackage?.photo_url]);
 
   // Fetch condominiums
   const { data: condominiums = [] } = useQuery({
@@ -792,11 +817,22 @@ const SindicoPackages = () => {
               {/* Photo */}
               {selectedPackage.photo_url && (
                 <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
-                  <img
-                    src={selectedPackage.photo_url}
-                    alt="Foto da encomenda"
-                    className="w-full h-full object-cover"
-                  />
+                  {isLoadingPhoto ? (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : signedPhotoUrl ? (
+                    <img
+                      src={signedPhotoUrl}
+                      alt="Foto da encomenda"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                      <ImageIcon className="w-8 h-8" />
+                      <span className="text-sm">Foto não disponível</span>
+                    </div>
+                  )}
                 </div>
               )}
 
