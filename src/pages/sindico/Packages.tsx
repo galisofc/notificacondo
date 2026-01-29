@@ -65,6 +65,7 @@ import {
   History,
   Home,
   MessageSquare,
+  X,
 } from "lucide-react";
 import { format, parseISO, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -587,6 +588,25 @@ const SindicoPackages = () => {
                   <SelectItem value="retirada">Retiradas</SelectItem>
                 </SelectContent>
               </Select>
+
+              {/* Clear Filters Button */}
+              {(condominiumFilter !== "all" || selectedBlock !== "all" || selectedApartment !== "all" || statusFilter !== "all") && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setCondominiumFilter("all");
+                    setSelectedBlock("all");
+                    setSelectedApartment("all");
+                    setStatusFilter("all");
+                    setCurrentPage(1);
+                  }}
+                  className="gap-2"
+                >
+                  <X className="h-4 w-4" />
+                  Limpar filtros
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
