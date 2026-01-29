@@ -534,7 +534,7 @@ export default function PorteiroCondominio() {
                   <CollapsibleTrigger asChild>
                     <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-wrap">
                           {expandedBlocks.has(block.id) ? (
                             <ChevronDown className="h-5 w-5" />
                           ) : (
@@ -545,6 +545,14 @@ export default function PorteiroCondominio() {
                           <Badge variant="secondary">
                             {block.apartments.length} apto(s)
                           </Badge>
+                          {(() => {
+                            const emptyCount = block.apartments.filter(apt => apt.residents.length === 0).length;
+                            return emptyCount > 0 ? (
+                              <Badge variant="destructive" className="text-xs">
+                                {emptyCount} sem morador
+                              </Badge>
+                            ) : null;
+                          })()}
                         </div>
                       </div>
                     </CardHeader>
