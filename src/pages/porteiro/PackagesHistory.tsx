@@ -57,7 +57,6 @@ import {
 import { format, parseISO, differenceInMinutes } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import BlockApartmentDisplay from "@/components/common/BlockApartmentDisplay";
-import { PackagePhoto } from "@/components/packages/PackagePhoto";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useNavigate } from "react-router-dom";
@@ -1296,9 +1295,9 @@ const PorteiroPackagesHistory = () => {
                       Foto da Encomenda
                     </h4>
                     <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
-                      <PackagePhoto
-                        photoUrl={selectedPackage.photo_url}
-                        aspectRatio="auto"
+                      <img
+                        src={selectedPackage.photo_url}
+                        alt="Foto da encomenda"
                         className="w-full h-full object-contain"
                       />
                     </div>
