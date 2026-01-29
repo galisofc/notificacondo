@@ -54,6 +54,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { MaskedInput, formatCPF } from "@/components/ui/masked-input";
+import { QuickBlockApartmentSearch } from "@/components/packages/QuickBlockApartmentSearch";
 
 interface Resident {
   id: string;
@@ -497,14 +498,34 @@ export default function PorteiroCondominio() {
         </div>
 
         {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome, bloco ou apartamento..."
-            className="pl-10"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome, bloco ou apartamento..."
+              className="pl-10"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          {selectedCondoId && (
+            <QuickBlockApartmentSearch
+              condominiumId={selectedCondoId}
+              onBlockFound={(blockId) => {
+                setExpandedBlocks((prev) => new Set(prev).add(blockId));
+              }}
+              onApartmentFound={(apartmentId) => {
+                setExpandedApartments((prev) => new Set(prev).add(apartmentId));
+                // Scroll to the apartment element after a brief delay
+                setTimeout(() => {
+                  const element = document.querySelector(`[data-apartment-id="${apartmentId}"]`);
+                  element?.scrollIntoView({ behavior: "smooth", block: "center" });
+                }, 200);
+              }}
+              className="sm:w-52"
+              placeholder="Busca rápida: 0344"
+            />
+          )}
         </div>
 
         {/* Blocks List */}
@@ -566,7 +587,7 @@ export default function PorteiroCondominio() {
                             open={expandedApartments.has(apartment.id)}
                             onOpenChange={() => toggleApartment(apartment.id)}
                           >
-                            <div className="rounded-lg border bg-card">
+                            <div className="rounded-lg border bg-card" data-apartment-id={apartment.id}>
                               <CollapsibleTrigger asChild>
                                 <div className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50 transition-colors">
                                   <div className="flex items-center gap-2">
