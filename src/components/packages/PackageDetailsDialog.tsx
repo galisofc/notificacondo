@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
@@ -28,6 +28,8 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Package } from "@/hooks/usePackages";
 import { PackageStatusBadge } from "./PackageStatusBadge";
+import { PackageCardImage } from "./PackageCardImage";
+import { getSignedPackagePhotoUrl } from "@/lib/packageStorage";
 import { cn } from "@/lib/utils";
 
 interface PackageDetailsDialogProps {
@@ -56,6 +58,30 @@ export function PackageDetailsDialog({
   const [notificationStatus, setNotificationStatus] = useState<NotificationStatus>("idle");
   const [notificationResult, setNotificationResult] = useState<NotificationResult | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>("");
+  const [signedPhotoUrl, setSignedPhotoUrl] = useState<string | null>(null);
+  const [isLoadingPhoto, setIsLoadingPhoto] = useState(false);
+
+  // Generate signed URL when package changes
+  useEffect(() => {
+    if (open && package_?.photo_url) {
+      setIsLoadingPhoto(true);
+      setSignedPhotoUrl(null);
+      getSignedPackagePhotoUrl(package_.photo_url)
+        .then((url) => {
+          setSignedPhotoUrl(url);
+        })
+        .catch((err) => {
+          console.error("Error getting signed URL:", err);
+          setSignedPhotoUrl(null);
+        })
+        .finally(() => {
+          setIsLoadingPhoto(false);
+        });
+    } else {
+      setSignedPhotoUrl(null);
+      setIsLoadingPhoto(false);
+    }
+  }, [open, package_?.photo_url]);
 
   const handleResendNotification = async () => {
     if (!package_) return;
@@ -146,11 +172,22 @@ export function PackageDetailsDialog({
           {/* Package Photo & Info */}
           <div className="flex gap-4">
             <div className="w-28 h-28 rounded-lg overflow-hidden bg-muted shrink-0">
-              <img
-                src={package_.photo_url}
-                alt="Encomenda"
-                className="w-full h-full object-cover"
-              />
+              {isLoadingPhoto ? (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : signedPhotoUrl ? (
+                <PackageCardImage
+                  src={signedPhotoUrl}
+                  alt="Encomenda"
+                  className="w-full h-full rounded-lg"
+                  compact
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                  <PackageIcon className="w-8 h-8" />
+                </div>
+              )}
             </div>
             <div className="flex-1 space-y-2">
               <div className="flex items-center gap-2">
