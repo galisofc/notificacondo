@@ -825,9 +825,19 @@ export function TemplateWabaLinkingCard() {
                                   {metaTemplate && getStatusBadge(metaTemplate.status)}
                                 </div>
                                 {isLinked && template.waba_template_name && (
-                                  <p className="text-xs text-muted-foreground font-mono">
-                                    Meta: {template.waba_template_name}
-                                  </p>
+                                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                    <p className="text-xs text-muted-foreground font-mono">
+                                      Meta: {template.waba_template_name}
+                                    </p>
+                                    {metaTemplate?.category && (
+                                      <Badge variant="outline" className="text-xs font-normal">
+                                        {metaTemplate.category === "UTILITY" ? "Utilitário" : 
+                                         metaTemplate.category === "MARKETING" ? "Marketing" : 
+                                         metaTemplate.category === "AUTHENTICATION" ? "Autenticação" : 
+                                         metaTemplate.category}
+                                      </Badge>
+                                    )}
+                                  </div>
                                 )}
                               </div>
                             </div>
