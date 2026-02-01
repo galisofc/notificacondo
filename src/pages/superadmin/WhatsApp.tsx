@@ -1,7 +1,7 @@
 import { Helmet } from "react-helmet-async";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SuperAdminBreadcrumbs from "@/components/superadmin/SuperAdminBreadcrumbs";
-import { TemplatesList, WabaTemplateStatusCard, TemplateWabaLinkingCard } from "@/components/superadmin/whatsapp";
+import { WabaTemplateStatusCard, TemplateWabaLinkingCard } from "@/components/superadmin/whatsapp";
 
 export default function WhatsApp() {
   return (
@@ -26,9 +26,6 @@ export default function WhatsApp() {
 
         {/* WABA Template Linking Card */}
         <TemplateWabaLinkingCard />
-
-        {/* Templates List with Categories */}
-        <TemplatesList />
       </div>
     </DashboardLayout>
   );
