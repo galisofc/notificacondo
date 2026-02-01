@@ -757,22 +757,6 @@ export function TemplateWabaLinkingCard() {
                 )}
                 Verificar
               </Button>
-              {unlinkedCount > 0 && (
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={handleAutoSync}
-                  disabled={isSyncing || isLoadingMeta}
-                  className="gap-2"
-                >
-                  {isSyncing ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Zap className="h-4 w-4" />
-                  )}
-                  Sincronizar Todos
-                </Button>
-              )}
             </div>
           </div>
         </CardHeader>
