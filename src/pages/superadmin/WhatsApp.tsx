@@ -21,11 +21,11 @@ export default function WhatsApp() {
           </p>
         </div>
 
-        {/* WABA Template Linking Card - NEW redesigned section */}
-        <TemplateWabaLinkingCard />
-
-        {/* WABA Template Status Card */}
+        {/* WABA Template Status Card - No topo */}
         <WabaTemplateStatusCard />
+
+        {/* WABA Template Linking Card */}
+        <TemplateWabaLinkingCard />
 
         {/* Templates List with Categories */}
         <TemplatesList />
