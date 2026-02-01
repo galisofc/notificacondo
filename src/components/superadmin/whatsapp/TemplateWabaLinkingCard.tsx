@@ -36,6 +36,11 @@ import {
   Image,
   File,
   Search,
+  Plus,
+  Trash2,
+  MousePointerClick,
+  ExternalLink,
+  Phone,
 } from "lucide-react";
 
 interface LocalTemplate {
@@ -85,6 +90,20 @@ const HEADER_TYPES = [
   { value: "DOCUMENT", label: "Documento", icon: File },
 ];
 
+const BUTTON_TYPES = [
+  { value: "QUICK_REPLY", label: "Resposta Rápida", icon: MousePointerClick, description: "Botão simples que retorna um payload" },
+  { value: "URL", label: "Abrir Link", icon: ExternalLink, description: "Abre uma URL no navegador" },
+  { value: "PHONE_NUMBER", label: "Ligar", icon: Phone, description: "Inicia chamada telefônica" },
+];
+
+interface TemplateButton {
+  type: "QUICK_REPLY" | "URL" | "PHONE_NUMBER";
+  text: string;
+  url?: string;
+  phone_number?: string;
+  example?: string; // For URL with dynamic suffix
+}
+
 export function TemplateWabaLinkingCard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -107,6 +126,7 @@ export function TemplateWabaLinkingCard() {
   const [footerText, setFooterText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [variableExamples, setVariableExamples] = useState<Record<string, string>>({});
+  const [templateButtons, setTemplateButtons] = useState<TemplateButton[]>([]);
 
   // Query local templates
   const { data: localTemplates, isLoading: isLoadingLocal } = useQuery({
@@ -512,6 +532,43 @@ export function TemplateWabaLinkingCard() {
         components.push({ type: "FOOTER", text: footerText });
       }
 
+      // Add buttons if any
+      if (templateButtons.length > 0) {
+        const buttons: any[] = templateButtons.map((btn, index) => {
+          if (btn.type === "QUICK_REPLY") {
+            return {
+              type: "QUICK_REPLY",
+              text: btn.text,
+            };
+          } else if (btn.type === "URL") {
+            const buttonObj: any = {
+              type: "URL",
+              text: btn.text,
+              url: btn.url || "",
+            };
+            // If URL has dynamic suffix, add example
+            if (btn.url?.includes("{{1}}") && btn.example) {
+              buttonObj.example = [btn.example];
+            }
+            return buttonObj;
+          } else if (btn.type === "PHONE_NUMBER") {
+            return {
+              type: "PHONE_NUMBER",
+              text: btn.text,
+              phone_number: btn.phone_number || "",
+            };
+          }
+          return null;
+        }).filter(Boolean);
+
+        if (buttons.length > 0) {
+          components.push({
+            type: "BUTTONS",
+            buttons,
+          });
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke("create-waba-template", {
         body: {
           name: templateName,
@@ -573,6 +630,37 @@ export function TemplateWabaLinkingCard() {
     setFooterText("");
     setSelectedLocalTemplate(null);
     setVariableExamples({});
+    setTemplateButtons([]);
+  };
+
+  // Button management functions
+  const addButton = (type: "QUICK_REPLY" | "URL" | "PHONE_NUMBER") => {
+    if (templateButtons.length >= 3) {
+      toast({
+        title: "Limite atingido",
+        description: "Máximo de 3 botões por template",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const newButton: TemplateButton = {
+      type,
+      text: "",
+      url: type === "URL" ? "https://" : undefined,
+      phone_number: type === "PHONE_NUMBER" ? "+55" : undefined,
+    };
+    setTemplateButtons([...templateButtons, newButton]);
+  };
+
+  const updateButton = (index: number, updates: Partial<TemplateButton>) => {
+    const newButtons = [...templateButtons];
+    newButtons[index] = { ...newButtons[index], ...updates };
+    setTemplateButtons(newButtons);
+  };
+
+  const removeButton = (index: number) => {
+    setTemplateButtons(templateButtons.filter((_, i) => i !== index));
   };
   
   // Get current variables from body text for the form
@@ -1019,6 +1107,105 @@ export function TemplateWabaLinkingCard() {
                 placeholder="NotificaCondo"
                 maxLength={60}
               />
+            </div>
+
+            {/* Buttons Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Botões (opcional)</Label>
+                <span className="text-xs text-muted-foreground">{templateButtons.length}/3</span>
+              </div>
+              
+              {templateButtons.length > 0 && (
+                <div className="space-y-3">
+                  {templateButtons.map((btn, index) => (
+                    <div 
+                      key={index} 
+                      className="p-3 rounded-lg border bg-muted/30 space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {btn.type === "QUICK_REPLY" && <MousePointerClick className="h-4 w-4 text-muted-foreground" />}
+                          {btn.type === "URL" && <ExternalLink className="h-4 w-4 text-muted-foreground" />}
+                          {btn.type === "PHONE_NUMBER" && <Phone className="h-4 w-4 text-muted-foreground" />}
+                          <Badge variant="outline" className="text-xs">
+                            {btn.type === "QUICK_REPLY" ? "Resposta Rápida" : btn.type === "URL" ? "Abrir Link" : "Ligar"}
+                          </Badge>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                          onClick={() => removeButton(index)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      
+                      <Input
+                        value={btn.text}
+                        onChange={(e) => updateButton(index, { text: e.target.value })}
+                        placeholder="Texto do botão"
+                        maxLength={25}
+                        className="text-sm h-8"
+                      />
+                      
+                      {btn.type === "URL" && (
+                        <div className="space-y-1">
+                          <Input
+                            value={btn.url || ""}
+                            onChange={(e) => updateButton(index, { url: e.target.value })}
+                            placeholder="https://exemplo.com/pagina"
+                            className="text-sm h-8 font-mono"
+                          />
+                          <p className="text-[10px] text-muted-foreground">
+                            Use {"{{1}}"} para sufixo dinâmico (ex: https://site.com/{"{{1}}"})
+                          </p>
+                          {btn.url?.includes("{{1}}") && (
+                            <Input
+                              value={btn.example || ""}
+                              onChange={(e) => updateButton(index, { example: e.target.value })}
+                              placeholder="Exemplo do sufixo dinâmico"
+                              className="text-sm h-8"
+                            />
+                          )}
+                        </div>
+                      )}
+                      
+                      {btn.type === "PHONE_NUMBER" && (
+                        <Input
+                          value={btn.phone_number || ""}
+                          onChange={(e) => updateButton(index, { phone_number: e.target.value })}
+                          placeholder="+5511999999999"
+                          className="text-sm h-8 font-mono"
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {templateButtons.length < 3 && (
+                <div className="flex flex-wrap gap-2">
+                  {BUTTON_TYPES.map((type) => (
+                    <Button
+                      key={type.value}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => addButton(type.value as "QUICK_REPLY" | "URL" | "PHONE_NUMBER")}
+                      className="gap-1.5 text-xs"
+                    >
+                      <Plus className="h-3 w-3" />
+                      <type.icon className="h-3 w-3" />
+                      {type.label}
+                    </Button>
+                  ))}
+                </div>
+              )}
+              
+              <p className="text-xs text-muted-foreground">
+                Adicione até 3 botões interativos ao template
+              </p>
             </div>
 
             <div className="flex justify-end gap-2 pt-4 border-t">
