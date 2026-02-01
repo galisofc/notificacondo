@@ -35,6 +35,7 @@ import {
   AlertTriangle,
   Image,
   File,
+  Search,
 } from "lucide-react";
 
 interface LocalTemplate {
@@ -91,6 +92,7 @@ export function TemplateWabaLinkingCard() {
   const [metaTemplates, setMetaTemplates] = useState<MetaTemplate[]>([]);
   const [isLoadingMeta, setIsLoadingMeta] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
   const [expandedTemplates, setExpandedTemplates] = useState<Set<string>>(new Set());
   
   // Create new template dialog
@@ -243,6 +245,65 @@ export function TemplateWabaLinkingCard() {
       });
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  // Verify linked templates and unlink those not found in Meta
+  const handleVerifyAndUnlink = async () => {
+    setIsVerifying(true);
+    try {
+      // Reload Meta templates first to get fresh data
+      const { data, error } = await supabase.functions.invoke("list-waba-templates");
+      if (error) throw error;
+      
+      const freshMetaTemplates = data?.templates || [];
+      setMetaTemplates(freshMetaTemplates);
+      
+      // Get all Meta template names
+      const metaTemplateNames = new Set(freshMetaTemplates.map((t: MetaTemplate) => t.name));
+      
+      // Find local templates that are linked but don't exist in Meta
+      const linkedTemplates = localTemplates?.filter(t => t.waba_template_name) || [];
+      const orphanedTemplates = linkedTemplates.filter(t => !metaTemplateNames.has(t.waba_template_name!));
+      
+      if (orphanedTemplates.length === 0) {
+        toast({
+          title: "✅ Tudo certo!",
+          description: "Todos os templates vinculados existem no Meta",
+        });
+        setIsVerifying(false);
+        return;
+      }
+      
+      // Unlink orphaned templates
+      let successCount = 0;
+      for (const template of orphanedTemplates) {
+        const { error: updateError } = await supabase
+          .from("whatsapp_templates")
+          .update({
+            waba_template_name: null,
+            waba_language: null,
+          })
+          .eq("id", template.id);
+        
+        if (!updateError) successCount++;
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-templates-linking"] });
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-templates"] });
+      
+      toast({
+        title: "✅ Verificação concluída!",
+        description: `${successCount} template(s) desvinculado(s) - não existiam no Meta`,
+      });
+    } catch (err: any) {
+      toast({
+        title: "Erro na verificação",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -592,6 +653,21 @@ export function TemplateWabaLinkingCard() {
                 disabled={isLoadingMeta}
               >
                 <RefreshCw className={`h-4 w-4 ${isLoadingMeta ? "animate-spin" : ""}`} />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleVerifyAndUnlink}
+                disabled={isVerifying || isLoadingMeta}
+                className="gap-2"
+                title="Verifica templates vinculados e libera para edição os que não existem no Meta"
+              >
+                {isVerifying ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Search className="h-4 w-4" />
+                )}
+                Verificar
               </Button>
               {unlinkedCount > 0 && (
                 <Button
