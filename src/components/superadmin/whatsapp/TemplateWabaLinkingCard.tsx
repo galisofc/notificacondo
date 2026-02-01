@@ -17,6 +17,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2,
@@ -841,27 +847,53 @@ export function TemplateWabaLinkingCard() {
                                       </Badge>
                                     )}
                                     {metaTemplate?.quality_score && (
-                                      <Badge 
-                                        variant="outline" 
-                                        className={`text-xs font-normal gap-1 ${
-                                          metaTemplate.quality_score === "GREEN" ? "border-green-500/50 text-green-600" :
-                                          metaTemplate.quality_score === "YELLOW" ? "border-yellow-500/50 text-yellow-600" :
-                                          metaTemplate.quality_score === "RED" ? "border-red-500/50 text-red-600" :
-                                          ""
-                                        }`}
-                                      >
-                                        {metaTemplate.quality_score === "GREEN" ? (
-                                          <ShieldCheck className="h-3 w-3" />
-                                        ) : metaTemplate.quality_score === "YELLOW" ? (
-                                          <ShieldAlert className="h-3 w-3" />
-                                        ) : metaTemplate.quality_score === "RED" ? (
-                                          <ShieldX className="h-3 w-3" />
-                                        ) : null}
-                                        {metaTemplate.quality_score === "GREEN" ? "Alta" :
-                                         metaTemplate.quality_score === "YELLOW" ? "Média" :
-                                         metaTemplate.quality_score === "RED" ? "Baixa" :
-                                         metaTemplate.quality_score}
-                                      </Badge>
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Badge 
+                                              variant="outline" 
+                                              className={`text-xs font-normal gap-1 cursor-help ${
+                                                metaTemplate.quality_score === "GREEN" ? "border-green-500/50 text-green-600" :
+                                                metaTemplate.quality_score === "YELLOW" ? "border-yellow-500/50 text-yellow-600" :
+                                                metaTemplate.quality_score === "RED" ? "border-red-500/50 text-red-600" :
+                                                ""
+                                              }`}
+                                            >
+                                              {metaTemplate.quality_score === "GREEN" ? (
+                                                <ShieldCheck className="h-3 w-3" />
+                                              ) : metaTemplate.quality_score === "YELLOW" ? (
+                                                <ShieldAlert className="h-3 w-3" />
+                                              ) : metaTemplate.quality_score === "RED" ? (
+                                                <ShieldX className="h-3 w-3" />
+                                              ) : null}
+                                              {metaTemplate.quality_score === "GREEN" ? "Alta" :
+                                               metaTemplate.quality_score === "YELLOW" ? "Média" :
+                                               metaTemplate.quality_score === "RED" ? "Baixa" :
+                                               metaTemplate.quality_score}
+                                            </Badge>
+                                          </TooltipTrigger>
+                                          <TooltipContent side="top" className="max-w-xs">
+                                            {metaTemplate.quality_score === "GREEN" ? (
+                                              <p className="text-xs">
+                                                <strong>Qualidade Alta:</strong> Template com excelente taxa de engajamento. 
+                                                Os usuários interagem positivamente e raramente bloqueiam ou reportam.
+                                              </p>
+                                            ) : metaTemplate.quality_score === "YELLOW" ? (
+                                              <p className="text-xs">
+                                                <strong>Qualidade Média:</strong> Template com engajamento moderado. 
+                                                Considere otimizar o conteúdo para melhorar a experiência do usuário.
+                                              </p>
+                                            ) : metaTemplate.quality_score === "RED" ? (
+                                              <p className="text-xs">
+                                                <strong>Qualidade Baixa:</strong> Template com alto índice de bloqueios ou denúncias. 
+                                                Recomenda-se revisar o conteúdo ou pausar o uso para evitar restrições.
+                                              </p>
+                                            ) : (
+                                              <p className="text-xs">Qualidade não avaliada</p>
+                                            )}
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
                                     )}
                                   </div>
                                 )}
