@@ -41,6 +41,9 @@ import {
   MousePointerClick,
   ExternalLink,
   Phone,
+  ShieldCheck,
+  ShieldAlert,
+  ShieldX,
 } from "lucide-react";
 
 interface LocalTemplate {
@@ -840,19 +843,24 @@ export function TemplateWabaLinkingCard() {
                                     {metaTemplate?.quality_score && (
                                       <Badge 
                                         variant="outline" 
-                                        className={`text-xs font-normal ${
+                                        className={`text-xs font-normal gap-1 ${
                                           metaTemplate.quality_score === "GREEN" ? "border-green-500/50 text-green-600" :
                                           metaTemplate.quality_score === "YELLOW" ? "border-yellow-500/50 text-yellow-600" :
                                           metaTemplate.quality_score === "RED" ? "border-red-500/50 text-red-600" :
                                           ""
                                         }`}
                                       >
-                                        Qualidade: {
-                                          metaTemplate.quality_score === "GREEN" ? "Alta" :
-                                          metaTemplate.quality_score === "YELLOW" ? "Média" :
-                                          metaTemplate.quality_score === "RED" ? "Baixa" :
-                                          metaTemplate.quality_score
-                                        }
+                                        {metaTemplate.quality_score === "GREEN" ? (
+                                          <ShieldCheck className="h-3 w-3" />
+                                        ) : metaTemplate.quality_score === "YELLOW" ? (
+                                          <ShieldAlert className="h-3 w-3" />
+                                        ) : metaTemplate.quality_score === "RED" ? (
+                                          <ShieldX className="h-3 w-3" />
+                                        ) : null}
+                                        {metaTemplate.quality_score === "GREEN" ? "Alta" :
+                                         metaTemplate.quality_score === "YELLOW" ? "Média" :
+                                         metaTemplate.quality_score === "RED" ? "Baixa" :
+                                         metaTemplate.quality_score}
                                       </Badge>
                                     )}
                                   </div>
