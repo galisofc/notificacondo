@@ -18,6 +18,8 @@ import {
   RefreshCw,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   Search,
   Filter,
   Copy,
@@ -363,9 +365,12 @@ function LogItem({ log }: { log: WabaLogRow }) {
   );
 }
 
+const ITEMS_PER_PAGE = 50;
+
 export default function WabaLogs() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
+  const [currentPage, setCurrentPage] = useState(1);
   
   const { data: logs, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["waba-logs"],
@@ -373,8 +378,7 @@ export default function WabaLogs() {
       const { data, error } = await supabase
         .from("whatsapp_notification_logs")
         .select("*")
-        .order("created_at", { ascending: false })
-        .limit(100);
+        .order("created_at", { ascending: false });
       
       if (error) throw error;
       return data as WabaLogRow[];
@@ -396,6 +400,24 @@ export default function WabaLogs() {
     
     return matchesSearch && matchesStatus;
   }) || [];
+
+  // Pagination
+  const totalPages = Math.ceil(filteredLogs.length / ITEMS_PER_PAGE);
+  const paginatedLogs = filteredLogs.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  // Reset to page 1 when filters change
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  const handleStatusFilterChange = (value: FilterStatus) => {
+    setStatusFilter(value);
+    setCurrentPage(1);
+  };
 
   const successCount = logs?.filter(l => l.success).length || 0;
   const failCount = logs?.filter(l => !l.success).length || 0;
@@ -435,7 +457,7 @@ export default function WabaLogs() {
         <div className="grid grid-cols-2 gap-4">
           <Card 
             className={`cursor-pointer transition-all ${statusFilter === 'success' ? 'ring-2 ring-green-500' : ''}`}
-            onClick={() => setStatusFilter(statusFilter === 'success' ? 'all' : 'success')}
+            onClick={() => handleStatusFilterChange(statusFilter === 'success' ? 'all' : 'success')}
           >
             <CardContent className="pt-4">
               <div className="flex items-center gap-3">
@@ -451,7 +473,7 @@ export default function WabaLogs() {
           </Card>
           <Card 
             className={`cursor-pointer transition-all ${statusFilter === 'error' ? 'ring-2 ring-destructive' : ''}`}
-            onClick={() => setStatusFilter(statusFilter === 'error' ? 'all' : 'error')}
+            onClick={() => handleStatusFilterChange(statusFilter === 'error' ? 'all' : 'error')}
           >
             <CardContent className="pt-4">
               <div className="flex items-center gap-3">
@@ -476,11 +498,11 @@ export default function WabaLogs() {
                 <Input
                   placeholder="Buscar por template, telefone, erro..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   className="pl-9"
                 />
               </div>
-              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as FilterStatus)}>
+              <Select value={statusFilter} onValueChange={(v) => handleStatusFilterChange(v as FilterStatus)}>
                 <SelectTrigger className="w-full sm:w-[180px]">
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Filtrar por status" />
@@ -502,9 +524,16 @@ export default function WabaLogs() {
                 <MessageSquare className="h-4 w-4" />
                 Logs de Envio WABA
               </span>
-              <Badge variant="secondary" className="font-normal">
-                {filteredLogs.length} de {logs?.length || 0}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="font-normal">
+                  {paginatedLogs.length} de {filteredLogs.length}
+                </Badge>
+                {totalPages > 1 && (
+                  <Badge variant="outline" className="font-normal">
+                    Página {currentPage} de {totalPages}
+                  </Badge>
+                )}
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -522,7 +551,7 @@ export default function WabaLogs() {
                   <Button 
                     variant="link" 
                     size="sm" 
-                    onClick={() => setSearchTerm("")}
+                    onClick={() => handleSearchChange("")}
                     className="mt-2"
                   >
                     Limpar busca
@@ -531,9 +560,82 @@ export default function WabaLogs() {
               </div>
             ) : (
               <div className="space-y-3">
-                {filteredLogs.map((log) => (
+                {paginatedLogs.map((log) => (
                   <LogItem key={log.id} log={log} />
                 ))}
+              </div>
+            )}
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between pt-4 mt-4 border-t">
+                <div className="text-sm text-muted-foreground">
+                  Mostrando {((currentPage - 1) * ITEMS_PER_PAGE) + 1} a {Math.min(currentPage * ITEMS_PER_PAGE, filteredLogs.length)} de {filteredLogs.length} registros
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1}
+                  >
+                    Primeira
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum: number;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={currentPage === pageNum ? "default" : "outline"}
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => setCurrentPage(pageNum)}
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={currentPage === totalPages}
+                  >
+                    Última
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>
