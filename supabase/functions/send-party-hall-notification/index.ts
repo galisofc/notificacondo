@@ -565,16 +565,30 @@ Boa festa! 🎊`;
         console.log(`[PARTY-HALL] Sending via Meta WABA template: ${wabaTemplateName}`);
         
         // Build params array following the params_order
-        // Format checklist items as a simple string for template
+        // Format checklist items - Meta API doesn't allow newlines, tabs, or 4+ consecutive spaces
+        // Convert to a single-line comma-separated format
+        const sanitizeForWaba = (text: string): string => {
+          return text
+            .replace(/[\n\r\t]/g, " ")  // Replace newlines/tabs with space
+            .replace(/\s{4,}/g, "   ")  // Max 3 consecutive spaces
+            .replace(/\s+/g, " ")       // Collapse multiple spaces
+            .trim();
+        };
+        
+        // Build checklist as comma-separated items without formatting
         const checklistString = checklistItems.length > 0 
-          ? checklistItems.join("\n")
+          ? sanitizeForWaba(checklistItems
+              .filter(item => !item.startsWith("*"))  // Remove category headers like "*Limpeza:*"
+              .map(item => item.replace(/^\s*•\s*/, "").trim())  // Remove bullets
+              .filter(Boolean)
+              .join(", "))
           : "";
         
         const paramsMap: Record<string, string> = {
-          condominio: condo.name,
-          nome: resident.full_name.split(" ")[0],
-          espaco: hallSetting.name,
-          data: formattedDate,
+          condominio: sanitizeForWaba(condo.name),
+          nome: sanitizeForWaba(resident.full_name.split(" ")[0]),
+          espaco: sanitizeForWaba(hallSetting.name),
+          data: sanitizeForWaba(formattedDate),
           horario_inicio: booking.start_time.slice(0, 5),
           horario_fim: booking.end_time.slice(0, 5),
           checklist: checklistString,
