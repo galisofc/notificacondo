@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendWabaTemplate, formatPhoneForWaba, buildParamsArray } from "../_shared/waba-sender.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,6 +16,8 @@ interface WhatsAppConfig {
   api_key: string;
   instance_id: string;
   provider: string;
+  use_official_api?: boolean;
+  use_waba_templates?: boolean;
 }
 
 const formatPhoneNumber = (phone: string): string => {
@@ -42,13 +45,11 @@ const providers: Record<string, ProviderConfig> = {
       const formattedPhone = formatPhoneNumber(phone);
       const baseUrl = config.api_url.replace(/\/$/, "");
       
-      // If instance_id is empty or placeholder, fallback to api_key
       let externalKey = config.instance_id || "";
       if (!externalKey || externalKey === "zpro-embedded") {
         externalKey = config.api_key;
       }
       
-      // Z-PRO uses GET with query parameters
       const params = new URLSearchParams({
         body: message,
         number: formattedPhone,
@@ -73,7 +74,6 @@ const providers: Record<string, ProviderConfig> = {
         if (extractedMessageId) {
           return { messageId: String(extractedMessageId) };
         }
-        // Generate tracking ID if no message ID returned
         return { messageId: `zpro_${Date.now()}` };
       }
       
@@ -148,6 +148,68 @@ const providers: Record<string, ProviderConfig> = {
     },
   },
 };
+
+/**
+ * Send message via Meta WhatsApp Cloud API (official WABA)
+ * Uses direct text message since party_hall templates may not be approved in Meta
+ */
+async function sendViaMetaCloudApi(
+  phone: string,
+  message: string
+): Promise<{ messageId?: string; error?: string }> {
+  const accessToken = Deno.env.get("META_WHATSAPP_ACCESS_TOKEN");
+  const phoneNumberId = Deno.env.get("META_WHATSAPP_PHONE_ID");
+
+  if (!accessToken || !phoneNumberId) {
+    console.error("META_WHATSAPP_ACCESS_TOKEN or META_WHATSAPP_PHONE_ID not configured");
+    return { error: "Meta WhatsApp API não configurada" };
+  }
+
+  const formattedPhone = formatPhoneForWaba(phone);
+  const endpoint = `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`;
+
+  console.log(`[META] Sending direct message to ${formattedPhone}`);
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: formattedPhone,
+        type: "text",
+        text: {
+          body: message,
+        },
+      }),
+    });
+
+    const responseText = await response.text();
+    console.log(`[META] Response status: ${response.status}`);
+    console.log(`[META] Response body: ${responseText.substring(0, 500)}`);
+
+    let responseData: any;
+    try {
+      responseData = JSON.parse(responseText);
+    } catch {
+      return { error: `Meta API returned non-JSON: ${responseText.substring(0, 200)}` };
+    }
+
+    if (!response.ok) {
+      const errorMessage = responseData?.error?.message || responseData?.error?.error_data?.details || "Erro ao enviar via Meta API";
+      return { error: errorMessage };
+    }
+
+    const messageId = responseData?.messages?.[0]?.id;
+    return { messageId };
+  } catch (error) {
+    console.error("[META] Error sending message:", error);
+    return { error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -262,6 +324,10 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Check if we should use official Meta API
+    const useOfficialApi = whatsappConfig.use_official_api === true;
+    console.log(`[PARTY-HALL] use_official_api: ${useOfficialApi}`);
 
     // Get template based on notification type - first check for custom condominium template
     const templateSlug = notificationType === "cancelled" ? "party_hall_cancelled" : "party_hall_reminder";
@@ -397,20 +463,29 @@ Boa festa! 🎊`;
       );
     }
 
-    // Send message
-    const provider = providers[whatsappConfig.provider];
-    if (!provider) {
-      return new Response(
-        JSON.stringify({ error: `Unknown WhatsApp provider: ${whatsappConfig.provider}` }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    // Send message - use Meta API if configured, otherwise use legacy providers
+    let result: { messageId?: string; error?: string };
+
+    if (useOfficialApi) {
+      console.log("[PARTY-HALL] Sending via Meta WhatsApp Cloud API");
+      result = await sendViaMetaCloudApi(resident.phone, message);
+    } else {
+      // Legacy provider flow
+      const provider = providers[whatsappConfig.provider];
+      if (!provider) {
+        return new Response(
+          JSON.stringify({ error: `Unknown WhatsApp provider: ${whatsappConfig.provider}` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      console.log(`[PARTY-HALL] Sending via legacy provider: ${whatsappConfig.provider}`);
+      result = await provider.sendMessage(
+        whatsappConfig as WhatsAppConfig,
+        resident.phone,
+        message
       );
     }
-
-    const result = await provider.sendMessage(
-      whatsappConfig as WhatsAppConfig,
-      resident.phone,
-      message
-    );
 
     // Save notification to history
     const notificationRecord = {
