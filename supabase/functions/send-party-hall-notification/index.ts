@@ -150,10 +150,96 @@ const providers: Record<string, ProviderConfig> = {
 };
 
 /**
- * Send message via Meta WhatsApp Cloud API (official WABA)
- * Uses direct text message since party_hall templates may not be approved in Meta
+ * Send message via Meta WhatsApp Cloud API using WABA template
+ * Uses the approved templates: party_hall_reminder, party_hall_cancelled
  */
-async function sendViaMetaCloudApi(
+async function sendViaMetaCloudApiTemplate(
+  phone: string,
+  templateName: string,
+  language: string,
+  params: string[]
+): Promise<{ messageId?: string; error?: string }> {
+  const accessToken = Deno.env.get("META_WHATSAPP_ACCESS_TOKEN");
+  const phoneNumberId = Deno.env.get("META_WHATSAPP_PHONE_ID");
+
+  if (!accessToken || !phoneNumberId) {
+    console.error("META_WHATSAPP_ACCESS_TOKEN or META_WHATSAPP_PHONE_ID not configured");
+    return { error: "Meta WhatsApp API não configurada" };
+  }
+
+  const formattedPhone = formatPhoneForWaba(phone);
+  const endpoint = `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`;
+
+  console.log(`[META-WABA] Sending template "${templateName}" to ${formattedPhone}`);
+  console.log(`[META-WABA] Params: ${JSON.stringify(params)}`);
+
+  // Build template components - body only (no header image for party hall)
+  const components: Array<Record<string, unknown>> = [];
+  
+  if (params.length > 0) {
+    components.push({
+      type: "body",
+      parameters: params.map((value) => ({
+        type: "text",
+        text: String(value || ""),
+      })),
+    });
+  }
+
+  const requestBody = {
+    messaging_product: "whatsapp",
+    to: formattedPhone,
+    type: "template",
+    template: {
+      name: templateName,
+      language: {
+        code: language,
+      },
+      components,
+    },
+  };
+
+  console.log(`[META-WABA] Request body: ${JSON.stringify(requestBody)}`);
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    const responseText = await response.text();
+    console.log(`[META-WABA] Response status: ${response.status}`);
+    console.log(`[META-WABA] Response body: ${responseText.substring(0, 500)}`);
+
+    let responseData: any;
+    try {
+      responseData = JSON.parse(responseText);
+    } catch {
+      return { error: `Meta API returned non-JSON: ${responseText.substring(0, 200)}` };
+    }
+
+    if (!response.ok) {
+      const errorMessage = responseData?.error?.message || responseData?.error?.error_data?.details || "Erro ao enviar via Meta API";
+      return { error: errorMessage };
+    }
+
+    const messageId = responseData?.messages?.[0]?.id;
+    return { messageId };
+  } catch (error) {
+    console.error("[META-WABA] Error sending message:", error);
+    return { error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
+
+/**
+ * Send message via Meta WhatsApp Cloud API (official WABA)
+ * Falls back to direct text message when templates are not available
+ */
+async function sendViaMetaCloudApiText(
   phone: string,
   message: string
 ): Promise<{ messageId?: string; error?: string }> {
@@ -325,14 +411,18 @@ serve(async (req) => {
       );
     }
 
-    // Check if we should use official Meta API
+    // Check if we should use official Meta API and WABA templates
     const useOfficialApi = whatsappConfig.use_official_api === true;
-    console.log(`[PARTY-HALL] use_official_api: ${useOfficialApi}`);
+    const useWabaTemplates = whatsappConfig.use_waba_templates === true;
+    console.log(`[PARTY-HALL] use_official_api: ${useOfficialApi}, use_waba_templates: ${useWabaTemplates}`);
 
     // Get template based on notification type - first check for custom condominium template
     const templateSlug = notificationType === "cancelled" ? "party_hall_cancelled" : "party_hall_reminder";
     
     let templateContent: string | null = null;
+    let wabaTemplateName: string | null = null;
+    let wabaLanguage: string = "pt_BR";
+    let paramsOrder: string[] = [];
     
     // Check for custom condominium template first
     const { data: customTemplate } = await supabase
@@ -347,17 +437,20 @@ serve(async (req) => {
       templateContent = customTemplate.content;
       console.log("Using custom condominium template for", templateSlug);
     } else {
-      // Fall back to default template
+      // Fall back to default template with WABA metadata
       const { data: defaultTemplate } = await supabase
         .from("whatsapp_templates")
-        .select("content")
+        .select("content, waba_template_name, waba_language, params_order")
         .eq("slug", templateSlug)
         .eq("is_active", true)
         .maybeSingle();
       
-      if (defaultTemplate?.content) {
+      if (defaultTemplate) {
         templateContent = defaultTemplate.content;
-        console.log("Using default system template for", templateSlug);
+        wabaTemplateName = defaultTemplate.waba_template_name;
+        wabaLanguage = defaultTemplate.waba_language || "pt_BR";
+        paramsOrder = defaultTemplate.params_order || [];
+        console.log(`Using default system template for ${templateSlug}, WABA: ${wabaTemplateName}`);
       }
     }
     
@@ -467,8 +560,38 @@ Boa festa! 🎊`;
     let result: { messageId?: string; error?: string };
 
     if (useOfficialApi) {
-      console.log("[PARTY-HALL] Sending via Meta WhatsApp Cloud API");
-      result = await sendViaMetaCloudApi(resident.phone, message);
+      // Check if we should use WABA templates
+      if (useWabaTemplates && wabaTemplateName && paramsOrder.length > 0) {
+        console.log(`[PARTY-HALL] Sending via Meta WABA template: ${wabaTemplateName}`);
+        
+        // Build params array following the params_order
+        // Format checklist items as a simple string for template
+        const checklistString = checklistItems.length > 0 
+          ? checklistItems.join("\n")
+          : "";
+        
+        const paramsMap: Record<string, string> = {
+          condominio: condo.name,
+          nome: resident.full_name.split(" ")[0],
+          espaco: hallSetting.name,
+          data: formattedDate,
+          horario_inicio: booking.start_time.slice(0, 5),
+          horario_fim: booking.end_time.slice(0, 5),
+          checklist: checklistString,
+        };
+        
+        const templateParams = buildParamsArray(paramsMap, paramsOrder);
+        result = await sendViaMetaCloudApiTemplate(
+          resident.phone, 
+          wabaTemplateName, 
+          wabaLanguage, 
+          templateParams
+        );
+      } else {
+        // Fallback to direct text message (requires 24h window)
+        console.log("[PARTY-HALL] Sending via Meta WhatsApp Cloud API (text message)");
+        result = await sendViaMetaCloudApiText(resident.phone, message);
+      }
     } else {
       // Legacy provider flow
       const provider = providers[whatsappConfig.provider];
