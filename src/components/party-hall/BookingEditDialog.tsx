@@ -189,6 +189,8 @@ export default function BookingEditDialog({ open, onOpenChange, booking }: Booki
 
   const guestCountExceedsMax = spaceSettings?.max_guests && guestCount > spaceSettings.max_guests;
 
+  const shouldSendCancelledNotification = booking.status !== "cancelada" && status === "cancelada";
+
   // Update booking mutation
   const updateBookingMutation = useMutation({
     mutationFn: async () => {
@@ -235,6 +237,23 @@ export default function BookingEditDialog({ open, onOpenChange, booking }: Booki
         .eq("id", booking.id);
       
       if (error) throw error;
+
+      // If the user cancelled the booking via edit dialog, also trigger WhatsApp cancellation notification.
+      // Do NOT block the save if notification fails.
+      if (shouldSendCancelledNotification) {
+        try {
+          await ensureValidSession();
+          const { error: notifError } = await supabase.functions.invoke("send-party-hall-notification", {
+            body: { bookingId: booking.id, notificationType: "cancelled" },
+          });
+
+          if (notifError) {
+            console.error("[PARTY-HALL] Error sending cancellation notification (edit dialog):", notifError);
+          }
+        } catch (err) {
+          console.error("[PARTY-HALL] Error sending cancellation notification (edit dialog):", err);
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["party-hall-bookings"] });
