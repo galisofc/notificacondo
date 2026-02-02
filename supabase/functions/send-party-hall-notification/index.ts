@@ -630,7 +630,7 @@ Boa festa! 🎊`;
       );
     }
 
-    // Save notification to history
+    // Save notification to party_hall_notifications history
     const notificationRecord = {
       booking_id: bookingId,
       condominium_id: booking.condominium_id,
@@ -650,6 +650,48 @@ Boa festa! 🎊`;
 
     if (insertError) {
       console.error("Error saving notification history:", insertError);
+    }
+
+    // Also save to whatsapp_notification_logs for unified WABA logs view
+    if (useOfficialApi && useWabaTemplates && wabaTemplateName) {
+      const wabaLogRecord = {
+        function_name: "send-party-hall-notification",
+        phone: resident.phone,
+        template_name: wabaTemplateName,
+        template_language: wabaLanguage,
+        request_payload: {
+          to: resident.phone.replace(/\D/g, "").startsWith("55") 
+            ? resident.phone.replace(/\D/g, "") 
+            : "55" + resident.phone.replace(/\D/g, ""),
+          type: "template",
+          template: {
+            name: wabaTemplateName,
+            language: { code: wabaLanguage },
+          },
+          messaging_product: "whatsapp",
+        },
+        response_status: result.error ? 500 : 200,
+        response_body: result.error ? JSON.stringify({ error: result.error }) : JSON.stringify({ messageId: result.messageId }),
+        success: !result.error,
+        message_id: result.messageId || null,
+        error_message: result.error || null,
+        resident_id: resident.id,
+        debug_info: {
+          booking_id: bookingId,
+          condominium_id: booking.condominium_id,
+          notification_type: notificationType,
+        },
+      };
+
+      const { error: wabaLogError } = await supabase
+        .from("whatsapp_notification_logs")
+        .insert(wabaLogRecord);
+
+      if (wabaLogError) {
+        console.error("Error saving WABA log:", wabaLogError);
+      } else {
+        console.log("[PARTY-HALL] WABA log saved successfully");
+      }
     }
 
     if (result.error) {
