@@ -559,23 +559,23 @@ Boa festa! 🎊`;
     // Send message - use Meta API if configured, otherwise use legacy providers
     let result: { messageId?: string; error?: string };
 
+    // Helper function to sanitize text for WABA templates
+    // Meta API doesn't allow newlines, tabs, or 4+ consecutive spaces (#132018)
+    const sanitizeForWaba = (text: string): string => {
+      return text
+        .replace(/[\n\r\t]/g, " ")  // Replace newlines/tabs with space
+        .replace(/\s{4,}/g, "   ")  // Max 3 consecutive spaces
+        .replace(/\s+/g, " ")       // Collapse multiple spaces
+        .trim();
+    };
+
     if (useOfficialApi) {
       // Check if we should use WABA templates
       if (useWabaTemplates && wabaTemplateName && paramsOrder.length > 0) {
         console.log(`[PARTY-HALL] Sending via Meta WABA template: ${wabaTemplateName}`);
+        console.log(`[PARTY-HALL] Notification type: ${notificationType}, Template: ${wabaTemplateName}`);
         
-        // Build params array following the params_order
-        // Format checklist items - Meta API doesn't allow newlines, tabs, or 4+ consecutive spaces
-        // Convert to a single-line comma-separated format
-        const sanitizeForWaba = (text: string): string => {
-          return text
-            .replace(/[\n\r\t]/g, " ")  // Replace newlines/tabs with space
-            .replace(/\s{4,}/g, "   ")  // Max 3 consecutive spaces
-            .replace(/\s+/g, " ")       // Collapse multiple spaces
-            .trim();
-        };
-        
-        // Build checklist as comma-separated items without formatting
+        // Build checklist as comma-separated items without formatting (only for reminders)
         const checklistString = checklistItems.length > 0 
           ? sanitizeForWaba(checklistItems
               .filter(item => !item.startsWith("*"))  // Remove category headers like "*Limpeza:*"
@@ -584,6 +584,7 @@ Boa festa! 🎊`;
               .join(", "))
           : "";
         
+        // Build params map - sanitize ALL text values for Meta API compliance
         const paramsMap: Record<string, string> = {
           condominio: sanitizeForWaba(condo.name),
           nome: sanitizeForWaba(resident.full_name.split(" ")[0]),
@@ -594,7 +595,12 @@ Boa festa! 🎊`;
           checklist: checklistString,
         };
         
+        console.log(`[PARTY-HALL] Params order: ${JSON.stringify(paramsOrder)}`);
+        console.log(`[PARTY-HALL] Params map: ${JSON.stringify(paramsMap)}`);
+        
         const templateParams = buildParamsArray(paramsMap, paramsOrder);
+        console.log(`[PARTY-HALL] Final template params: ${JSON.stringify(templateParams)}`);
+        
         result = await sendViaMetaCloudApiTemplate(
           resident.phone, 
           wabaTemplateName, 
