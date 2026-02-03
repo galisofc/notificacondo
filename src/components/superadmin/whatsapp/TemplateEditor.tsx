@@ -199,6 +199,32 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
   const metaFooter = metaTemplate?.components?.find(c => c.type === "FOOTER");
   const metaButtons = metaTemplate?.components?.find(c => c.type === "BUTTONS");
 
+  // Sync button configuration from Meta when template is loaded
+  useEffect(() => {
+    if (metaTemplate && metaButtons?.buttons && metaButtons.buttons.length > 0) {
+      const firstButton = metaButtons.buttons[0];
+      setHasButton(true);
+      setButtonText(firstButton.text || "Ver Detalhes");
+      
+      // Determine button type from Meta
+      if (firstButton.type === "URL") {
+        setButtonType("url");
+        if (firstButton.url) {
+          // Check if URL has dynamic suffix (ends with {{1}})
+          const hasSuffix = firstButton.url.includes("{{1}}");
+          setHasDynamicSuffix(hasSuffix);
+          // Extract base URL (remove the {{1}} part if present)
+          const baseUrl = firstButton.url.replace(/\{\{1\}\}$/, "");
+          setButtonUrlBase(baseUrl);
+        }
+      } else if (firstButton.type === "QUICK_REPLY") {
+        setButtonType("quick_reply");
+      } else if (firstButton.type === "PHONE_NUMBER") {
+        setButtonType("call");
+      }
+    }
+  }, [metaTemplate, metaButtons]);
+
   // Determine which content to show in preview
   const isLinked = !!wabaTemplateName;
   const hasMetaContent = isLinked && metaBody?.text;
@@ -677,11 +703,20 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
                 {/* Button Configuration */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <Label className="text-xs sm:text-sm">Botão de Ação</Label>
-                      <p className="text-[10px] sm:text-xs text-muted-foreground">
-                        Adicione um botão interativo ao template
-                      </p>
+                    <div className="flex items-center gap-2">
+                      <div>
+                        <Label className="text-xs sm:text-sm">Botão de Ação</Label>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground">
+                          {metaButtons?.buttons && metaButtons.buttons.length > 0
+                            ? "Configuração sincronizada da Meta"
+                            : "Adicione um botão interativo ao template"}
+                        </p>
+                      </div>
+                      {metaButtons?.buttons && metaButtons.buttons.length > 0 && (
+                        <Badge variant="default" className="bg-green-600 text-[10px]">
+                          Meta
+                        </Badge>
+                      )}
                     </div>
                     <Switch
                       checked={hasButton}
