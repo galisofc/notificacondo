@@ -385,9 +385,72 @@ Deno.serve(async (req) => {
       notificationsSent: 0,
       notificationsFailed: 0,
       trialsEnded: 0,
+      lifetimeRenewed: 0,
       errors: [] as string[],
     };
 
+    // ============================================
+    // LIFETIME SUBSCRIPTIONS - Period renewal only (no invoices)
+    // ============================================
+    const { data: lifetimeSubscriptions, error: lifetimeFetchError } = await supabase
+      .from("subscriptions")
+      .select("id, condominium_id, plan, active, current_period_start, current_period_end, is_lifetime")
+      .eq("active", true)
+      .eq("is_lifetime", true);
+
+    if (lifetimeFetchError) {
+      console.error("Error fetching lifetime subscriptions:", lifetimeFetchError);
+    } else {
+      console.log(`Found ${lifetimeSubscriptions?.length || 0} lifetime subscriptions to evaluate for period renewal`);
+
+      for (const subscription of lifetimeSubscriptions || []) {
+        try {
+          // Check if period ended
+          if (subscription.current_period_end) {
+            const periodEnd = new Date(subscription.current_period_end);
+            const todayDate = new Date(today);
+
+            if (todayDate < periodEnd) {
+              console.log(`Lifetime subscription ${subscription.id} period not yet ended (ends ${subscription.current_period_end}). Skipping.`);
+              continue;
+            }
+          }
+
+          // Period ended - renew for another 30 days and reset counters
+          const periodStart = new Date(today);
+          const periodEnd = new Date(periodStart);
+          periodEnd.setMonth(periodEnd.getMonth() + 1);
+
+          const { error: updateError } = await supabase
+            .from("subscriptions")
+            .update({
+              current_period_start: periodStart.toISOString(),
+              current_period_end: periodEnd.toISOString(),
+              notifications_used: 0,
+              warnings_used: 0,
+              fines_used: 0,
+              package_notifications_used: 0,
+              package_notifications_extra: 0,
+            })
+            .eq("id", subscription.id);
+
+          if (updateError) {
+            console.error(`Error renewing lifetime subscription ${subscription.id}:`, updateError);
+            results.errors.push(`Lifetime subscription ${subscription.id}: ${updateError.message}`);
+          } else {
+            console.log(`Renewed lifetime subscription ${subscription.id} period to ${periodEnd.toISOString().split("T")[0]}`);
+            results.lifetimeRenewed++;
+          }
+        } catch (subError: any) {
+          console.error(`Error processing lifetime subscription ${subscription.id}:`, subError);
+          results.errors.push(`Lifetime subscription ${subscription.id}: ${subError.message}`);
+        }
+      }
+    }
+
+    // ============================================
+    // REGULAR SUBSCRIPTIONS - Invoice generation flow
+    // ============================================
     for (const subscription of subscriptions || []) {
       try {
         const price = PLAN_PRICES[subscription.plan] || 0;
