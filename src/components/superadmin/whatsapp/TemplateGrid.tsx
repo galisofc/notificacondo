@@ -30,6 +30,13 @@ import { TemplateDetailSheet } from "./TemplateDetailSheet";
 import { WabaTemplateSubmitDialog } from "./WabaTemplateSubmitDialog";
 import { TemplateEditor } from "./TemplateEditor";
 
+interface ButtonConfig {
+  type: "url" | "quick_reply" | "call";
+  text: string;
+  url_base?: string;
+  has_dynamic_suffix?: boolean;
+}
+
 interface LocalTemplate {
   id: string;
   slug: string;
@@ -40,6 +47,8 @@ interface LocalTemplate {
   is_active: boolean;
   waba_template_name: string | null;
   waba_language: string | null;
+  params_order?: string[] | null;
+  button_config?: ButtonConfig | null;
 }
 
 interface MetaTemplate {
@@ -79,7 +88,7 @@ export function TemplateGrid() {
         .select("*")
         .order("name");
       if (error) throw error;
-      return data as LocalTemplate[];
+      return data as unknown as LocalTemplate[];
     },
   });
 
