@@ -1198,20 +1198,6 @@ export default function SubscriptionDetails() {
                         {subscription.active ? "Ativo" : "Inativo"}
                       </Badge>
                     </div>
-                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1.5">
-                        <Bell className="w-4 h-4" />
-                        {subscription.notifications_limit} notificações/mês
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <AlertTriangle className="w-4 h-4" />
-                        {subscription.warnings_limit} advertências/mês
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <DollarSign className="w-4 h-4" />
-                        {subscription.fines_limit} multas/mês
-                      </div>
-                    </div>
                   </div>
                 </div>
               )}
