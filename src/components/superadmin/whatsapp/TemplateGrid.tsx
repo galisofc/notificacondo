@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2,
@@ -498,16 +499,28 @@ export function TemplateGrid() {
         }}
       />
 
-      {/* Template Editor Dialog */}
-      {editingTemplate && (
-        <TemplateEditor
-          template={editingTemplate}
-          onClose={() => {
-            queryClient.invalidateQueries({ queryKey: ["whatsapp-templates-grid"] });
-            setEditingTemplate(null);
-          }}
-        />
-      )}
+      {/* Template Editor Sheet */}
+      <Sheet open={!!editingTemplate} onOpenChange={(open) => {
+        if (!open) {
+          queryClient.invalidateQueries({ queryKey: ["whatsapp-templates-grid"] });
+          setEditingTemplate(null);
+        }
+      }}>
+        <SheetContent 
+          side="right" 
+          className="w-full sm:max-w-2xl lg:max-w-4xl p-0 overflow-hidden"
+        >
+          {editingTemplate && (
+            <TemplateEditor
+              template={editingTemplate}
+              onClose={() => {
+                queryClient.invalidateQueries({ queryKey: ["whatsapp-templates-grid"] });
+                setEditingTemplate(null);
+              }}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
 
       {/* Submit to Meta Dialog */}
       <WabaTemplateSubmitDialog
