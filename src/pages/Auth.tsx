@@ -652,6 +652,14 @@ const Auth = () => {
                           : `${selectedPlan.fines_limit} multas`}
                     </span>
                   </div>
+                  <div className="flex items-center gap-1.5 text-sm">
+                    <Check className="w-4 h-4 text-primary flex-shrink-0" />
+                    <span className="text-foreground">
+                      {selectedPlan.package_notifications_limit === -1 
+                        ? "Encomendas ilimitadas" 
+                        : `${selectedPlan.package_notifications_limit} encomendas`}
+                    </span>
+                  </div>
                 </div>
               </div>
 
