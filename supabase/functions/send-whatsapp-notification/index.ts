@@ -237,13 +237,13 @@ serve(async (req) => {
 
     console.log(`Template WABA config: name=${wabaTemplateName}, lang=${wabaLanguage}, params=${paramsOrder.join(",")}`);
 
-    // Build variables for template (order: condominio, nome, tipo, titulo, link)
+    // Build variables for template BODY (order: condominio, nome, tipo, titulo)
+    // NOTE: The "link" is passed as a BUTTON parameter, not body parameter
     const variables: Record<string, string> = {
       condominio: sanitizeForWaba(condoName),
       nome: sanitizeForWaba(resident.full_name || "Morador"),
       tipo: typeLabels[occurrenceData.type] || occurrenceData.type,
       titulo: sanitizeForWaba(occurrenceData.title),
-      link: secureLink,
     };
 
     // Build message content for notification record
@@ -293,12 +293,22 @@ Este link é pessoal e intransferível.`;
       console.log(`Body params: ${JSON.stringify(bodyParams)}`);
       console.log(`Body param names: ${JSON.stringify(bodyParamNames)}`);
       
+      // Build button params for the URL button (index 0 = first button)
+      // The button has a dynamic suffix that receives the secure link path
+      const buttonParams = [{
+        type: "button" as const,
+        subType: "url" as const,
+        index: 0,
+        parameters: [{ type: "text" as const, text: secureLink }],
+      }];
+      
       result = await sendMetaTemplate({
         phone: resident.phone,
         templateName: wabaTemplateName,
         language: wabaLanguage,
         bodyParams,
         bodyParamNames,
+        buttonParams,
       });
     } else {
       // Fallback to text message (will only work within 24h window)
