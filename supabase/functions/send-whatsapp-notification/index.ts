@@ -293,22 +293,14 @@ Este link é pessoal e intransferível.`;
       console.log(`Body params: ${JSON.stringify(bodyParams)}`);
       console.log(`Body param names: ${JSON.stringify(bodyParamNames)}`);
       
-      // Build button params for the URL button (index 0 = first button)
-      // The button has a dynamic suffix that receives the secure link path
-      const buttonParams = [{
-        type: "button" as const,
-        subType: "url" as const,
-        index: 0,
-        parameters: [{ type: "text" as const, text: secureLink }],
-      }];
-      
+      // NOTE: The button URL is STATIC in this template (no dynamic suffix)
+      // If you need a dynamic URL, you must update the template in Meta Business Manager
       result = await sendMetaTemplate({
         phone: resident.phone,
         templateName: wabaTemplateName,
         language: wabaLanguage,
         bodyParams,
         bodyParamNames,
-        buttonParams,
       });
     } else {
       // Fallback to text message (will only work within 24h window)
