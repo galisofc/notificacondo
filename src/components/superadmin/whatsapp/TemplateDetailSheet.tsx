@@ -82,11 +82,32 @@ export function TemplateDetailSheet({
   const CategoryIcon = category?.icon || MessageSquare;
   const isLinked = !!template.waba_template_name;
 
+  // Extract Meta WABA components for preview
+  const metaHeader = metaTemplate?.components?.find(c => c.type === "HEADER");
+  const metaBody = metaTemplate?.components?.find(c => c.type === "BODY");
+  const metaFooter = metaTemplate?.components?.find(c => c.type === "FOOTER");
+  const metaButtons = metaTemplate?.components?.find(c => c.type === "BUTTONS");
+
+  // Use Meta content if linked and available, otherwise use local content
+  const contentToPreview = (isLinked && metaBody?.text) ? metaBody.text : template.content;
+
+  // Replace Meta-style variables {{1}}, {{2}} with examples
+  const replaceMetaVariables = (text: string) => {
+    return text.replace(/\{\{(\d+)\}\}/g, (match, num) => {
+      const examples = ["Residencial Primavera", "Maria Santos", "Advertência", "Barulho após horário permitido", "https://app.exemplo.com/xyz123"];
+      return examples[parseInt(num) - 1] || match;
+    });
+  };
+
+  // Replace local-style variables {nome} with examples
+  const replaceLocalVariables = (text: string) => {
+    return text.replace(/\{(\w+)\}/g, (match, variable) => VARIABLE_EXAMPLES[variable] || `[${variable}]`);
+  };
+
   // Get preview content with example values
-  const previewContent = template.content.replace(
-    /\{(\w+)\}/g,
-    (match, variable) => VARIABLE_EXAMPLES[variable] || `[${variable}]`
-  );
+  const previewContent = isLinked && metaBody?.text
+    ? replaceMetaVariables(contentToPreview)
+    : replaceLocalVariables(contentToPreview);
 
   const handleUnlink = async () => {
     setIsUnlinking(true);
@@ -269,7 +290,32 @@ export function TemplateDetailSheet({
               
               <div className="rounded-lg bg-[#0B141A] p-4 space-y-2">
                 <div className="bg-[#005C4B] text-white rounded-lg rounded-tl-none p-3 max-w-[85%] shadow-sm">
+                  {/* Meta Header */}
+                  {isLinked && metaHeader?.text && (
+                    <p className="text-sm font-bold mb-2">{replaceMetaVariables(metaHeader.text)}</p>
+                  )}
+                  {/* Body */}
                   <p className="text-sm whitespace-pre-wrap">{previewContent}</p>
+                  {/* Meta Footer */}
+                  {isLinked && metaFooter?.text && (
+                    <p className="text-[11px] text-white/70 mt-2 pt-2 border-t border-white/10">
+                      {metaFooter.text}
+                    </p>
+                  )}
+                  {/* Meta Buttons */}
+                  {isLinked && metaButtons?.buttons && metaButtons.buttons.length > 0 && (
+                    <div className="mt-3 pt-2 border-t border-white/10 space-y-1">
+                      {metaButtons.buttons.map((btn, idx) => (
+                        <div 
+                          key={idx} 
+                          className="text-center py-1.5 text-[13px] text-[#00A884] font-medium flex items-center justify-center gap-1.5"
+                        >
+                          {btn.type === "URL" && <ExternalLink className="h-3.5 w-3.5" />}
+                          {btn.text}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <p className="text-[10px] text-white/60 text-right mt-1">12:00</p>
                 </div>
               </div>
