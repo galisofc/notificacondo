@@ -1633,7 +1633,7 @@ export default function SubscriptionDetails() {
                           <Info className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground/50 cursor-help" />
                         </TooltipTrigger>
                         <TooltipContent side="top" className="max-w-[250px]">
-                          <p>Notificações de encomendas enviadas via WhatsApp. Acima do limite: R$ 0,10 por envio extra.</p>
+                          <p>Notificações de encomendas enviadas via WhatsApp. Acima do limite: R$ 0,10 por envio extra (aplica-se a todos os módulos).</p>
                         </TooltipContent>
                       </Tooltip>
                     </div>
