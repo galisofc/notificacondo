@@ -119,8 +119,9 @@ Seu período de teste de *{dias_trial} dias* começou!
 📅 *Expira em:* {data_expiracao}
 
 Durante o trial você tem acesso a:
-✅ Até 10 notificações
-✅ Até 10 advertências  
+✅ Até {limite_notificacoes} notificações
+✅ Até {limite_advertencias} advertências
+✅ Até {limite_multas} multas
 ✅ Sistema completo de ocorrências
 
 Acesse agora e explore:
