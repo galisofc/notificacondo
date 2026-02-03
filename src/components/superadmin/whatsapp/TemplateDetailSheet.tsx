@@ -28,6 +28,8 @@ import {
   ShieldAlert,
   ShieldX,
   Copy,
+  Send,
+  Pencil,
 } from "lucide-react";
 import { getCategoryForSlug, VARIABLE_EXAMPLES } from "./TemplateCategories";
 
@@ -64,6 +66,8 @@ interface TemplateDetailSheetProps {
   metaTemplate?: MetaTemplate;
   onClose: () => void;
   onRefresh: () => void;
+  onEdit?: (template: LocalTemplate) => void;
+  onSubmitToMeta?: (template: LocalTemplate) => void;
 }
 
 export function TemplateDetailSheet({
@@ -71,6 +75,8 @@ export function TemplateDetailSheet({
   metaTemplate,
   onClose,
   onRefresh,
+  onEdit,
+  onSubmitToMeta,
 }: TemplateDetailSheetProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -409,9 +415,23 @@ export function TemplateDetailSheet({
                   Desvincular Template
                 </Button>
               ) : (
-                <p className="text-sm text-muted-foreground text-center">
-                  Para vincular este template, use o botão "Enviar para Meta" na seção de status acima.
-                </p>
+                <div className="space-y-2">
+                  <Button
+                    className="w-full gap-2"
+                    onClick={() => onSubmitToMeta?.(template)}
+                  >
+                    <Send className="h-4 w-4" />
+                    Enviar para Aprovação da Meta
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2"
+                    onClick={() => onEdit?.(template)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                    Editar Template
+                  </Button>
+                </div>
               )}
             </div>
           </div>
