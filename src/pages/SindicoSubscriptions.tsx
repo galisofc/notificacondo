@@ -48,6 +48,7 @@ import {
   Clock,
   Info,
   XOctagon,
+  Package,
 } from "lucide-react";
 import {
   Tooltip,
@@ -78,6 +79,9 @@ interface Subscription {
   notifications_limit: number;
   warnings_limit: number;
   fines_limit: number;
+  package_notifications_limit: number;
+  package_notifications_used: number;
+  package_notifications_extra: number;
   current_period_start: string | null;
   current_period_end: string | null;
   condominium: {
@@ -182,6 +186,9 @@ const SindicoSubscriptions = () => {
           notifications_limit,
           warnings_limit,
           fines_limit,
+          package_notifications_limit,
+          package_notifications_used,
+          package_notifications_extra,
           current_period_start,
           current_period_end,
           condominium:condominiums!inner(id, name, owner_id)
@@ -650,6 +657,10 @@ const SindicoSubscriptions = () => {
                   const finesPercent = sub.fines_limit > 0 
                     ? Math.round((sub.realUsage.fines / sub.fines_limit) * 100) 
                     : 0;
+                  const packageIsUnlimited = sub.package_notifications_limit === -1;
+                  const packagePercent = packageIsUnlimited ? 0 : (sub.package_notifications_limit > 0 
+                    ? Math.round((sub.package_notifications_used / sub.package_notifications_limit) * 100) 
+                    : 0);
 
                   return (
                     <div
@@ -844,6 +855,41 @@ const SindicoSubscriptions = () => {
                               </div>
                             </>
                           )}
+
+                          {/* Package Notifications */}
+                          <div className="flex items-center justify-between text-xs mt-2">
+                            <div className="flex items-center gap-1">
+                              <Package className="h-3 w-3 text-muted-foreground" />
+                              <span>Encomendas</span>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <Info className="h-3 w-3 text-muted-foreground/50 cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-[200px] text-xs">
+                                  <p>Notificações de encomendas enviadas. Acima do limite: R$ 0,10 por envio extra.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className={packagePercent >= 80 && !packageIsUnlimited ? "text-destructive" : "text-muted-foreground"}>
+                                {packageIsUnlimited 
+                                  ? `${sub.package_notifications_used} / ∞`
+                                  : `${sub.package_notifications_used}/${sub.package_notifications_limit}`
+                                }
+                              </span>
+                              {sub.package_notifications_extra > 0 && (
+                                <Badge variant="outline" className="text-[9px] h-4 px-1 bg-amber-500/10 text-amber-600 border-amber-500/20">
+                                  +{sub.package_notifications_extra}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full ${packagePercent >= 80 && !packageIsUnlimited ? "bg-destructive" : "bg-cyan-500"}`}
+                              style={{ width: packageIsUnlimited ? "0%" : `${Math.min(packagePercent, 100)}%` }}
+                            />
+                          </div>
                         </div>
                       </TooltipProvider>
 
