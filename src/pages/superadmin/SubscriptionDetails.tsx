@@ -139,6 +139,7 @@ export default function SubscriptionDetails() {
     notifications_limit: number;
     warnings_limit: number;
     fines_limit: number;
+    package_notifications_limit: number;
     is_lifetime: boolean;
   } | null>(null);
 
@@ -256,6 +257,7 @@ export default function SubscriptionDetails() {
         notifications_limit: updateData.notifications_limit,
         warnings_limit: updateData.warnings_limit,
         fines_limit: updateData.fines_limit,
+        package_notifications_limit: updateData.package_notifications_limit,
         is_lifetime: updateData.is_lifetime,
       };
 
@@ -881,6 +883,7 @@ export default function SubscriptionDetails() {
         notifications_limit: data.subscription.notifications_limit,
         warnings_limit: data.subscription.warnings_limit,
         fines_limit: data.subscription.fines_limit,
+        package_notifications_limit: data.subscription.package_notifications_limit,
         is_lifetime: data.subscription.is_lifetime || false,
       });
       setIsEditing(true);
@@ -1120,7 +1123,7 @@ export default function SubscriptionDetails() {
 
                   <Separator />
 
-                  <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <div className="space-y-2">
                       <Label>Limite de Notificações</Label>
                       <Input
@@ -1158,6 +1161,20 @@ export default function SubscriptionDetails() {
                           setEditedData({
                             ...editedData,
                             fines_limit: parseInt(e.target.value) || 0,
+                          })
+                        }
+                        disabled={editedData.is_lifetime}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Limite de Encomendas</Label>
+                      <Input
+                        type="number"
+                        value={editedData.package_notifications_limit}
+                        onChange={(e) =>
+                          setEditedData({
+                            ...editedData,
+                            package_notifications_limit: parseInt(e.target.value) || 0,
                           })
                         }
                         disabled={editedData.is_lifetime}
