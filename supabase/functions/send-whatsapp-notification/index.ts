@@ -237,8 +237,9 @@ serve(async (req) => {
 
     console.log(`Template WABA config: name=${wabaTemplateName}, lang=${wabaLanguage}, params=${paramsOrder.join(",")}`);
 
-    // Build variables for template (note: condominio is hardcoded in the template, not a variable)
+    // Build variables for template (order: condominio, nome, tipo, titulo, link)
     const variables: Record<string, string> = {
+      condominio: sanitizeForWaba(condoName),
       nome: sanitizeForWaba(resident.full_name || "Morador"),
       tipo: typeLabels[occurrenceData.type] || occurrenceData.type,
       titulo: sanitizeForWaba(occurrenceData.title),
