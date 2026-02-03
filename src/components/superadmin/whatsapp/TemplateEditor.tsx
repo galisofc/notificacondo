@@ -757,33 +757,6 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
                     </div>
                   )}
                 </div>
-
-                <Separator />
-
-                {/* Test Button */}
-                <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 sm:p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h4 className="text-sm font-medium mb-1">Testar Envio WABA</h4>
-                      <p className="text-[10px] sm:text-xs text-muted-foreground">
-                        {wabaTemplateName 
-                          ? `Enviar template "${wabaTemplateName}" para um número de teste`
-                          : "Configure o nome do template acima ou teste com 'hello_world'"}
-                      </p>
-                    </div>
-                    <Button 
-                      size="sm" 
-                      onClick={() => {
-                        initializeTestParams();
-                        setShowTestDialog(true);
-                      }}
-                      className="shrink-0 gap-1.5"
-                    >
-                      <Send className="h-3.5 w-3.5" />
-                      Testar
-                    </Button>
-                  </div>
-                </div>
               </div>
             )}
           </ScrollArea>
