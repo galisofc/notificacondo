@@ -837,20 +837,6 @@ export default function PorteiroCondominio() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                  placeholder="email@exemplo.com"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="phone">Telefone</Label>
                 <MaskedInput
                   id="phone"
@@ -858,17 +844,6 @@ export default function PorteiroCondominio() {
                   value={formData.phone}
                   onChange={(value) => setFormData({ ...formData, phone: value })}
                   placeholder="(11) 99999-9999"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cpf">CPF</Label>
-                <MaskedInput
-                  id="cpf"
-                  mask="cpf"
-                  value={formData.cpf}
-                  onChange={(value) => setFormData({ ...formData, cpf: value })}
-                  placeholder="000.000.000-00"
                 />
               </div>
 
