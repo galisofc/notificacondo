@@ -6,6 +6,7 @@ export { TemplatePreview } from "./TemplatePreview";
 export { ConnectionStatus } from "./ConnectionStatus";
 export { ConfigSheet } from "./ConfigSheet";
 export { WabaTemplateSubmitDialog } from "./WabaTemplateSubmitDialog";
+export { WabaTemplateSelector } from "./WabaTemplateSelector";
 export { TemplateWabaLinkingCard } from "./TemplateWabaLinkingCard";
 export { TemplateGrid } from "./TemplateGrid";
 export { TemplateDetailSheet } from "./TemplateDetailSheet";
