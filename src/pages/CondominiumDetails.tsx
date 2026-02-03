@@ -1314,37 +1314,15 @@ const CondominiumDetails = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="resEmail">Email *</Label>
-                <Input
-                  id="resEmail"
-                  type="email"
-                  value={residentForm.email}
-                  onChange={(e) => setResidentForm({ ...residentForm, email: e.target.value })}
-                  required
+                <Label htmlFor="resPhone">Telefone</Label>
+                <MaskedInput
+                  id="resPhone"
+                  mask="phone"
+                  value={residentForm.phone}
+                  onChange={(value) => setResidentForm({ ...residentForm, phone: value })}
+                  placeholder="(11) 99999-9999"
                   className="bg-secondary/50"
                 />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="resPhone">Telefone</Label>
-                  <MaskedInput
-                    id="resPhone"
-                    mask="phone"
-                    value={residentForm.phone}
-                    onChange={(value) => setResidentForm({ ...residentForm, phone: value })}
-                    className="bg-secondary/50"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="resCpf">CPF</Label>
-                  <MaskedInput
-                    id="resCpf"
-                    mask="cpf"
-                    value={residentForm.cpf}
-                    onChange={(value) => setResidentForm({ ...residentForm, cpf: value })}
-                    className="bg-secondary/50"
-                  />
-                </div>
               </div>
               <div className="flex gap-4">
                 <label className="flex items-center gap-2">
