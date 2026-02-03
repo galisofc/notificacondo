@@ -477,7 +477,7 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
       <div className="flex-1 min-h-0 overflow-hidden">
         <div className={`grid h-full ${showPreview && activeTab === "content" ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
           {/* Editor Panel */}
-          <ScrollArea className="h-[calc(90vh-180px)]">
+           <ScrollArea className="h-full">
             {activeTab === "content" ? (
               <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
                 <div className="space-y-1.5 sm:space-y-2">
