@@ -1886,6 +1886,7 @@ export type Database = {
       }
       whatsapp_templates: {
         Row: {
+          button_config: Json | null
           content: string
           created_at: string
           description: string | null
@@ -1900,6 +1901,7 @@ export type Database = {
           waba_template_name: string | null
         }
         Insert: {
+          button_config?: Json | null
           content: string
           created_at?: string
           description?: string | null
@@ -1914,6 +1916,7 @@ export type Database = {
           waba_template_name?: string | null
         }
         Update: {
+          button_config?: Json | null
           content?: string
           created_at?: string
           description?: string | null

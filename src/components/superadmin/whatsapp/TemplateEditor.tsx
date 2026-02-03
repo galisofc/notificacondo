@@ -38,6 +38,13 @@ import { TemplatePreview } from "./TemplatePreview";
 import { TEMPLATE_COLORS, getCategoryForSlug } from "./TemplateCategories";
 import { DEFAULT_TEMPLATES } from "./DefaultTemplates";
 
+interface ButtonConfig {
+  type: "url" | "quick_reply" | "call";
+  text: string;
+  url_base?: string;
+  has_dynamic_suffix?: boolean;
+}
+
 interface Template {
   id: string;
   slug: string;
@@ -49,6 +56,7 @@ interface Template {
   waba_template_name?: string | null;
   waba_language?: string | null;
   params_order?: string[] | null;
+  button_config?: ButtonConfig | null;
 }
 
 interface TemplateEditorProps {
@@ -76,12 +84,14 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
   const [paramsOrder, setParamsOrder] = useState<string[]>(template.params_order || template.variables);
   const [activeTab, setActiveTab] = useState<"content" | "waba">("content");
   
-  // Button configuration state
-  const [hasButton, setHasButton] = useState(false);
-  const [buttonType, setButtonType] = useState<"url" | "quick_reply" | "call">("url");
-  const [buttonText, setButtonText] = useState("Ver Detalhes");
-  const [buttonUrlBase, setButtonUrlBase] = useState("");
-  const [hasDynamicSuffix, setHasDynamicSuffix] = useState(false);
+  // Button configuration state - initialize from template
+  const [hasButton, setHasButton] = useState(!!template.button_config);
+  const [buttonType, setButtonType] = useState<"url" | "quick_reply" | "call">(
+    template.button_config?.type || "url"
+  );
+  const [buttonText, setButtonText] = useState(template.button_config?.text || "Ver Detalhes");
+  const [buttonUrlBase, setButtonUrlBase] = useState(template.button_config?.url_base || "");
+  const [hasDynamicSuffix, setHasDynamicSuffix] = useState(template.button_config?.has_dynamic_suffix || false);
   
   // Test dialog state
   const [showTestDialog, setShowTestDialog] = useState(false);
@@ -123,6 +133,7 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
       waba_template_name,
       waba_language,
       params_order,
+      button_config,
     }: {
       id: string;
       content: string;
@@ -131,6 +142,7 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
       waba_template_name: string | null;
       waba_language: string;
       params_order: string[];
+      button_config: ButtonConfig | null;
     }) => {
       const { error } = await supabase
         .from("whatsapp_templates")
@@ -141,6 +153,7 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
           waba_template_name: waba_template_name || null,
           waba_language,
           params_order,
+          button_config: button_config as any,
         })
         .eq("id", id);
 
@@ -148,6 +161,7 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["whatsapp-templates"] });
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-templates-grid"] });
       toast({ title: "Template atualizado com sucesso!" });
       onClose();
     },
@@ -188,6 +202,18 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
   });
 
   const handleSave = () => {
+    // Build button config if enabled
+    const buttonConfig: ButtonConfig | null = hasButton
+      ? {
+          type: buttonType,
+          text: buttonText,
+          ...(buttonType === "url" && {
+            url_base: buttonUrlBase,
+            has_dynamic_suffix: hasDynamicSuffix,
+          }),
+        }
+      : null;
+
     updateMutation.mutate({
       id: template.id,
       content: editContent,
@@ -196,6 +222,7 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
       waba_template_name: wabaTemplateName.trim() || null,
       waba_language: wabaLanguage,
       params_order: paramsOrder,
+      button_config: buttonConfig,
     });
   };
 
