@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { MaskedInput, formatPhone, formatCPF } from "@/components/ui/masked-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
@@ -19,6 +20,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Collapsible,
@@ -1309,9 +1311,9 @@ const CondominiumDetails = () => {
 
         {/* Resident Dialog */}
         <Dialog open={residentDialog} onOpenChange={setResidentDialog}>
-          <DialogContent className="bg-card border-border">
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>{editingResident ? "Editar Morador" : "Novo Morador"}</DialogTitle>
+              <DialogTitle>{editingResident ? "Editar Morador" : "Cadastrar Morador"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleResidentSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -1335,8 +1337,8 @@ const CondominiumDetails = () => {
                   id="resName"
                   value={residentForm.full_name}
                   onChange={(e) => setResidentForm({ ...residentForm, full_name: e.target.value })}
+                  placeholder="Nome completo do morador"
                   required
-                  className="bg-secondary/50"
                 />
               </div>
               <div className="space-y-2">
@@ -1347,37 +1349,56 @@ const CondominiumDetails = () => {
                   value={residentForm.phone}
                   onChange={(value) => setResidentForm({ ...residentForm, phone: value })}
                   placeholder="(11) 99999-9999"
-                  className="bg-secondary/50"
                 />
               </div>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
+              <div className="flex items-center gap-6">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="is_owner"
                     checked={residentForm.is_owner}
-                    onChange={(e) => setResidentForm({ ...residentForm, is_owner: e.target.checked })}
-                    className="rounded border-border"
+                    onCheckedChange={(checked) =>
+                      setResidentForm({ ...residentForm, is_owner: !!checked })
+                    }
                   />
-                  <span className="text-sm text-foreground">Proprietário</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
+                  <Label htmlFor="is_owner" className="cursor-pointer">
+                    Proprietário
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="is_responsible"
                     checked={residentForm.is_responsible}
-                    onChange={(e) => setResidentForm({ ...residentForm, is_responsible: e.target.checked })}
-                    className="rounded border-border"
+                    onCheckedChange={(checked) =>
+                      setResidentForm({ ...residentForm, is_responsible: !!checked })
+                    }
                   />
-                  <span className="text-sm text-foreground">Responsável</span>
-                </label>
+                  <Label htmlFor="is_responsible" className="cursor-pointer">
+                    Responsável
+                  </Label>
+                </div>
               </div>
-              <div className="flex justify-end gap-3">
-                <Button type="button" variant="outline" onClick={() => setResidentDialog(false)}>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setResidentDialog(false)}
+                  disabled={saving}
+                >
                   Cancelar
                 </Button>
-                <Button type="submit" variant="hero" disabled={saving}>
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Salvar"}
+                <Button type="submit" disabled={saving}>
+                  {saving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : editingResident ? (
+                    "Atualizar"
+                  ) : (
+                    "Cadastrar"
+                  )}
                 </Button>
-              </div>
+              </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
