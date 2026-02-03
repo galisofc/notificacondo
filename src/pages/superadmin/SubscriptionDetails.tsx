@@ -85,11 +85,11 @@ import { XOctagon } from "lucide-react";
 
 type PlanType = "start" | "essencial" | "profissional" | "enterprise";
 
-const PLAN_LIMITS: Record<PlanType, { notifications: number; warnings: number; fines: number }> = {
-  start: { notifications: 10, warnings: 10, fines: 0 },
-  essencial: { notifications: 50, warnings: 50, fines: 25 },
-  profissional: { notifications: 200, warnings: 200, fines: 100 },
-  enterprise: { notifications: 999999, warnings: 999999, fines: 999999 },
+const PLAN_LIMITS: Record<PlanType, { notifications: number; warnings: number; fines: number; packages: number }> = {
+  start: { notifications: 10, warnings: 10, fines: 0, packages: 20 },
+  essencial: { notifications: 50, warnings: 50, fines: 25, packages: 100 },
+  profissional: { notifications: 200, warnings: 200, fines: 100, packages: 500 },
+  enterprise: { notifications: 999999, warnings: 999999, fines: 999999, packages: -1 },
 };
 
 const PLAN_INFO: Record<PlanType, { name: string; color: string }> = {
@@ -899,6 +899,7 @@ export default function SubscriptionDetails() {
         notifications_limit: limits.notifications,
         warnings_limit: limits.warnings,
         fines_limit: limits.fines,
+        package_notifications_limit: limits.packages,
       });
     }
   };
