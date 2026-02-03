@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateRemainingTime } from "@/hooks/useRemainingTime";
-import { useTrialDays } from "@/hooks/useTrialDays";
 import { Clock, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -22,7 +21,6 @@ interface TrialSubscription {
 const TrialBanner = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { trialDays } = useTrialDays();
 
   const { data: trialSubscriptions } = useQuery({
     queryKey: ["trial-subscriptions", user?.id],
@@ -162,12 +160,12 @@ const TrialBanner = () => {
                       ? "bg-gradient-to-r from-amber-500 to-red-500"
                       : "bg-gradient-to-r from-primary to-accent"
                   }`}
-                  style={{ width: `${Math.max(5, ((trialDays - daysLeft) / trialDays) * 100)}%` }}
+                  style={{ width: `${Math.max(5, ((7 - daysLeft) / 7) * 100)}%` }}
                 />
               </div>
               <div className="flex justify-between mt-1.5 text-xs text-muted-foreground">
                 <span>Início</span>
-                <span>{trialDays} dias grátis</span>
+                <span>7 dias grátis</span>
               </div>
             </div>
           </div>
