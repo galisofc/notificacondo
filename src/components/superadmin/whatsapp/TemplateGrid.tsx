@@ -26,6 +26,8 @@ import {
 } from "lucide-react";
 import { TEMPLATE_CATEGORIES, getCategoryForSlug } from "./TemplateCategories";
 import { TemplateDetailSheet } from "./TemplateDetailSheet";
+import { WabaTemplateSubmitDialog } from "./WabaTemplateSubmitDialog";
+import { TemplateEditor } from "./TemplateEditor";
 
 interface LocalTemplate {
   id: string;
@@ -61,6 +63,8 @@ export function TemplateGrid() {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [selectedTemplate, setSelectedTemplate] = useState<LocalTemplate | null>(null);
+  const [editingTemplate, setEditingTemplate] = useState<LocalTemplate | null>(null);
+  const [submittingTemplate, setSubmittingTemplate] = useState<LocalTemplate | null>(null);
   const [metaTemplates, setMetaTemplates] = useState<MetaTemplate[]>([]);
   const [isLoadingMeta, setIsLoadingMeta] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -483,6 +487,36 @@ export function TemplateGrid() {
         onRefresh={() => {
           queryClient.invalidateQueries({ queryKey: ["whatsapp-templates-grid"] });
           loadMetaTemplates();
+        }}
+        onEdit={(template) => {
+          setSelectedTemplate(null);
+          setEditingTemplate(template);
+        }}
+        onSubmitToMeta={(template) => {
+          setSelectedTemplate(null);
+          setSubmittingTemplate(template);
+        }}
+      />
+
+      {/* Template Editor Dialog */}
+      {editingTemplate && (
+        <TemplateEditor
+          template={editingTemplate}
+          onClose={() => {
+            queryClient.invalidateQueries({ queryKey: ["whatsapp-templates-grid"] });
+            setEditingTemplate(null);
+          }}
+        />
+      )}
+
+      {/* Submit to Meta Dialog */}
+      <WabaTemplateSubmitDialog
+        open={!!submittingTemplate}
+        onOpenChange={(open) => !open && setSubmittingTemplate(null)}
+        onTemplateLinked={() => {
+          setSubmittingTemplate(null);
+          loadMetaTemplates();
+          handleAutoSync();
         }}
       />
     </>
