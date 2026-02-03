@@ -1,10 +1,29 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Pencil, Link2, LinkIcon } from "lucide-react";
-import { TEMPLATE_COLORS, VARIABLE_EXAMPLES } from "./TemplateCategories";
+import { 
+  CheckCircle, 
+  Clock, 
+  XCircle, 
+  LinkIcon,
+  Pencil,
+  Send,
+  Eye,
+  ShieldCheck,
+  ShieldAlert,
+  ShieldX,
+  MessageSquare,
+} from "lucide-react";
+import { getCategoryForSlug } from "./TemplateCategories";
 
-interface Template {
+interface ButtonConfig {
+  type: "url" | "quick_reply" | "call";
+  text: string;
+  url_base?: string;
+  has_dynamic_suffix?: boolean;
+}
+
+interface LocalTemplate {
   id: string;
   slug: string;
   name: string;
@@ -12,82 +31,177 @@ interface Template {
   content: string;
   variables: string[];
   is_active: boolean;
-  waba_template_name?: string | null;
+  waba_template_name: string | null;
+  waba_language: string | null;
+  params_order?: string[] | null;
+  button_config?: ButtonConfig | null;
+}
+
+interface MetaTemplate {
+  id: string;
+  name: string;
+  status: string;
+  category: string;
+  language: string;
+  quality_score?: string;
 }
 
 interface TemplateCardProps {
-  template: Template;
-  onEdit: (template: Template) => void;
+  template: LocalTemplate;
+  metaTemplate?: MetaTemplate;
+  onEdit: (template: LocalTemplate) => void;
+  onView: (template: LocalTemplate) => void;
+  onSubmitToMeta: (template: LocalTemplate) => void;
 }
 
-export function TemplateCard({ template, onEdit }: TemplateCardProps) {
-  const colorClass = TEMPLATE_COLORS[template.slug] || "bg-muted text-muted-foreground";
+export function TemplateCard({ 
+  template, 
+  metaTemplate,
+  onEdit, 
+  onView,
+  onSubmitToMeta 
+}: TemplateCardProps) {
+  const category = getCategoryForSlug(template.slug);
+  const CategoryIcon = category?.icon || MessageSquare;
+  const isLinked = !!template.waba_template_name;
+  
+  const getQualityIcon = () => {
+    if (!metaTemplate?.quality_score) return null;
+    
+    const config = {
+      GREEN: { icon: ShieldCheck, color: "text-green-500" },
+      YELLOW: { icon: ShieldAlert, color: "text-yellow-500" },
+      RED: { icon: ShieldX, color: "text-red-500" },
+    }[metaTemplate.quality_score];
+    
+    if (!config) return null;
+    const Icon = config.icon;
+    return <Icon className={`h-4 w-4 ${config.color}`} />;
+  };
 
-  // Get a preview of the message (first 100 chars with variables replaced)
-  const previewText = template.content
-    .replace(/\{(\w+)\}/g, (match, variable) => VARIABLE_EXAMPLES[variable] || match)
-    .slice(0, 100);
+  const getStatusBadge = () => {
+    if (!template.waba_template_name) {
+      return (
+        <Badge variant="secondary" className="text-xs gap-1">
+          <LinkIcon className="h-3 w-3" />
+          Não vinculado
+        </Badge>
+      );
+    }
+    
+    if (!metaTemplate) {
+      return (
+        <Badge className="bg-green-500/10 text-green-600 border-green-500/20 text-xs gap-1">
+          <CheckCircle className="h-3 w-3" />
+          WABA
+        </Badge>
+      );
+    }
+    
+    if (metaTemplate.status === "PENDING") {
+      return (
+        <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20 text-xs gap-1">
+          <Clock className="h-3 w-3" />
+          Pendente
+        </Badge>
+      );
+    }
+    
+    if (metaTemplate.status === "REJECTED") {
+      return (
+        <Badge className="bg-red-500/10 text-red-600 border-red-500/20 text-xs gap-1">
+          <XCircle className="h-3 w-3" />
+          Rejeitado
+        </Badge>
+      );
+    }
+    
+    return (
+      <Badge className="bg-green-500/10 text-green-600 border-green-500/20 text-xs gap-1">
+        <CheckCircle className="h-3 w-3" />
+        Aprovado
+      </Badge>
+    );
+  };
 
   return (
-    <Card 
-      className="group hover:shadow-md transition-all duration-200 hover:border-primary/30 cursor-pointer active:scale-[0.99]"
-      onClick={() => onEdit(template)}
-    >
-      <CardContent className="p-3 sm:p-4">
-        <div className="flex items-start justify-between gap-2 sm:gap-3">
+    <Card className={`group transition-all duration-200 hover:shadow-lg ${
+      isLinked 
+        ? "border-green-500/30 bg-gradient-to-br from-green-500/5 to-transparent" 
+        : "hover:border-primary/30"
+    }`}>
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          {/* Icon */}
+          <div className={`
+            shrink-0 p-2.5 rounded-xl transition-transform group-hover:scale-110
+            ${category ? `${category.bgColor}` : "bg-muted"}
+          `}>
+            <CategoryIcon className={`h-5 w-5 ${category?.color || "text-muted-foreground"}`} />
+          </div>
+          
+          {/* Content */}
           <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
-              <Badge className={`${colorClass} text-[10px] sm:text-xs`} variant="outline">
-                {template.name}
-              </Badge>
-              {template.waba_template_name ? (
-                <Badge className="bg-green-500/10 text-green-600 border-green-500/20 text-[10px] sm:text-xs gap-1">
-                  <Link2 className="h-2.5 w-2.5" />
-                  WABA
-                </Badge>
-              ) : (
-                <Badge variant="secondary" className="text-[10px] sm:text-xs gap-1">
-                  <LinkIcon className="h-2.5 w-2.5" />
-                  Não vinculado
-                </Badge>
-              )}
-              {!template.is_active && (
-                <Badge variant="secondary" className="text-[10px] sm:text-xs">Inativo</Badge>
-              )}
+            <div className="flex items-start justify-between gap-2 mb-1">
+              <h3 className="font-medium text-sm truncate">{template.name}</h3>
+              {getQualityIcon()}
             </div>
-            <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3 line-clamp-1">
-              {template.description}
+            
+            <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+              {template.description || template.content.slice(0, 80) + "..."}
             </p>
-            <div className="p-2 sm:p-3 rounded-lg bg-muted/50 border border-border/50">
-              <p className="text-[10px] sm:text-xs font-mono text-muted-foreground line-clamp-2">
-                {previewText}...
-              </p>
+            
+            <div className="flex items-center gap-2 flex-wrap mb-3">
+              {getStatusBadge()}
+              {template.waba_template_name && (
+                <span className="text-[10px] text-muted-foreground font-mono truncate max-w-[120px]">
+                  {template.waba_template_name}
+                </span>
+              )}
             </div>
-            <div className="flex flex-wrap gap-1 mt-2 sm:mt-3">
-              {template.variables.slice(0, 3).map((variable) => (
-                <Badge key={variable} variant="outline" className="text-[10px] sm:text-xs py-0 px-1 sm:px-1.5">
-                  {`{${variable}}`}
-                </Badge>
-              ))}
-              {template.variables.length > 3 && (
-                <Badge variant="outline" className="text-[10px] sm:text-xs py-0 px-1 sm:px-1.5">
-                  +{template.variables.length - 3}
-                </Badge>
+            
+            {/* Actions */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs gap-1"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onView(template);
+                }}
+              >
+                <Eye className="h-3 w-3" />
+                Ver
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs gap-1"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(template);
+                }}
+              >
+                <Pencil className="h-3 w-3" />
+                Editar
+              </Button>
+              {!isLinked && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs gap-1 text-primary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSubmitToMeta(template);
+                  }}
+                >
+                  <Send className="h-3 w-3" />
+                  Meta
+                </Button>
               )}
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(template);
-            }}
-            className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0 h-8 px-2 sm:px-3"
-          >
-            <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-1" />
-            <span className="hidden sm:inline">Editar</span>
-          </Button>
         </div>
       </CardContent>
     </Card>

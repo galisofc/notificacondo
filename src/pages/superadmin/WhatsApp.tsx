@@ -1,7 +1,7 @@
 import { Helmet } from "react-helmet-async";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SuperAdminBreadcrumbs from "@/components/superadmin/SuperAdminBreadcrumbs";
-import { TemplateGrid } from "@/components/superadmin/whatsapp/TemplateGrid";
+import { TemplatesPage } from "@/components/superadmin/whatsapp/TemplatesPage";
 
 export default function WhatsApp() {
   return (
@@ -21,7 +21,7 @@ export default function WhatsApp() {
           </p>
         </div>
 
-        <TemplateGrid />
+        <TemplatesPage />
       </div>
     </DashboardLayout>
   );
