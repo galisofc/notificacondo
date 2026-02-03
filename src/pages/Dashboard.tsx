@@ -32,7 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type PeriodFilter = "7d" | "1m" | "1y";
+type PeriodFilter = "today" | "7d" | "1m" | "1y";
 
 interface DashboardStats {
   condominiums: number;
@@ -77,6 +77,8 @@ const Dashboard = () => {
   const getDateFilter = (period: PeriodFilter): Date => {
     const now = new Date();
     switch (period) {
+      case "today":
+        return startOfDay(now);
       case "7d":
         return startOfDay(subDays(now, 7));
       case "1m":
@@ -89,6 +91,7 @@ const Dashboard = () => {
   };
 
   const periodOptions: { value: PeriodFilter; label: string }[] = [
+    { value: "today", label: "Hoje" },
     { value: "7d", label: "7 dias" },
     { value: "1m", label: "1 mês" },
     { value: "1y", label: "1 ano" },
