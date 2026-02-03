@@ -1,7 +1,7 @@
 import { Helmet } from "react-helmet-async";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SuperAdminBreadcrumbs from "@/components/superadmin/SuperAdminBreadcrumbs";
-import { WabaTemplateStatusCard, TemplateWabaLinkingCard } from "@/components/superadmin/whatsapp";
+import { TemplateGrid } from "@/components/superadmin/whatsapp/TemplateGrid";
 
 export default function WhatsApp() {
   return (
@@ -14,18 +14,14 @@ export default function WhatsApp() {
         
         <div>
           <h1 className="font-display text-lg sm:text-xl md:text-3xl font-bold text-foreground">
-            Templates
+            Templates WhatsApp
           </h1>
           <p className="text-xs sm:text-sm md:text-base text-muted-foreground mt-1">
-            Gerencie os templates de mensagens
+            Gerencie os templates de mensagens para a API oficial da Meta
           </p>
         </div>
 
-        {/* WABA Template Status Card - No topo */}
-        <WabaTemplateStatusCard />
-
-        {/* WABA Template Linking Card */}
-        <TemplateWabaLinkingCard />
+        <TemplateGrid />
       </div>
     </DashboardLayout>
   );
