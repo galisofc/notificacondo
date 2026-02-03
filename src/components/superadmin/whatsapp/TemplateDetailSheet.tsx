@@ -284,15 +284,38 @@ export function TemplateDetailSheet({
                 <h4 className="text-sm font-medium flex items-center gap-2">
                   <Eye className="h-4 w-4" />
                   Preview da Mensagem
+                  {isLinked && (
+                    <Badge 
+                      variant={metaBody?.text ? "default" : "secondary"} 
+                      className={`text-[10px] ${metaBody?.text ? "bg-green-500" : ""}`}
+                    >
+                      {metaBody?.text ? "Conteúdo Meta" : "Conteúdo Local"}
+                    </Badge>
+                  )}
                 </h4>
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => copyToClipboard(template.content, "Conteúdo")}
+                  onClick={() => copyToClipboard(contentToPreview, "Conteúdo")}
                 >
                   <Copy className="h-4 w-4" />
                 </Button>
               </div>
+              
+              {/* Warning when Meta content is not loaded */}
+              {isLinked && !metaBody?.text && (
+                <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 flex items-start gap-2">
+                  <Clock className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                      Conteúdo da Meta não carregado
+                    </p>
+                    <p className="text-xs text-amber-600 dark:text-amber-500 mt-0.5">
+                      Clique em "Atualizar Meta" para ver o conteúdo aprovado. Exibindo conteúdo local.
+                    </p>
+                  </div>
+                </div>
+              )}
               
               <div className="rounded-lg bg-[#0B141A] p-4 space-y-2">
                 <div className="bg-[#005C4B] text-white rounded-lg rounded-tl-none p-3 max-w-[85%] shadow-sm">
