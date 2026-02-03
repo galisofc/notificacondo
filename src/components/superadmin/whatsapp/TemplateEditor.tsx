@@ -32,10 +32,12 @@ import {
   FileText,
   Send,
   CheckCircle2,
+  CheckCircle,
   XCircle,
   Unlink,
   RefreshCw,
   AlertCircle,
+  Clock,
 } from "lucide-react";
 import { TemplatePreview } from "./TemplatePreview";
 import { TEMPLATE_COLORS, getCategoryForSlug, VARIABLE_EXAMPLES } from "./TemplateCategories";
@@ -740,11 +742,55 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
 
                   {hasButton && (
                     <div className="space-y-4">
-                      {buttons.map((btn, index) => (
-                        <div key={index} className="space-y-3 p-3 rounded-lg border bg-muted/20">
+                      {buttons.map((btn, index) => {
+                        // Check if this button exists in Meta's approved buttons
+                        const metaButton = metaButtons?.buttons?.[index];
+                        const isFromMeta = !!metaButton;
+                        const metaStatus = metaTemplate?.status;
+                        
+                        return (
+                        <div key={index} className={`space-y-3 p-3 rounded-lg border ${
+                          isFromMeta 
+                            ? metaStatus === "APPROVED" 
+                              ? "bg-green-500/5 border-green-500/30" 
+                              : metaStatus === "PENDING" 
+                                ? "bg-yellow-500/5 border-yellow-500/30"
+                                : "bg-muted/20"
+                            : "bg-muted/20"
+                        }`}>
                           <div className="flex items-center justify-between">
-                            <Label className="text-xs font-medium">Botão {index + 1}</Label>
-                            {buttons.length > 1 && (
+                            <div className="flex items-center gap-2">
+                              <Label className="text-xs font-medium">Botão {index + 1}</Label>
+                              {isFromMeta && (
+                                <>
+                                  {metaStatus === "APPROVED" && (
+                                    <Badge className="bg-green-500/10 text-green-600 border-green-500/20 text-[10px] gap-1">
+                                      <CheckCircle className="h-2.5 w-2.5" />
+                                      Aprovado
+                                    </Badge>
+                                  )}
+                                  {metaStatus === "PENDING" && (
+                                    <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20 text-[10px] gap-1">
+                                      <Clock className="h-2.5 w-2.5 animate-pulse" />
+                                      Em Análise
+                                    </Badge>
+                                  )}
+                                  {metaStatus === "IN_APPEAL" && (
+                                    <Badge className="bg-orange-500/10 text-orange-600 border-orange-500/20 text-[10px] gap-1">
+                                      <Clock className="h-2.5 w-2.5 animate-pulse" />
+                                      Em Recurso
+                                    </Badge>
+                                  )}
+                                  {metaStatus === "REJECTED" && (
+                                    <Badge className="bg-red-500/10 text-red-600 border-red-500/20 text-[10px] gap-1">
+                                      <XCircle className="h-2.5 w-2.5" />
+                                      Rejeitado
+                                    </Badge>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                            {buttons.length > 1 && !isFromMeta && (
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -839,7 +885,8 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
                             </>
                           )}
                         </div>
-                      ))}
+                        );
+                      })}
 
                       {buttons.length < 3 && (
                         <Button
