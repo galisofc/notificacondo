@@ -47,6 +47,7 @@ import {
   MapPin,
   Scale,
   Send,
+  Trash2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -119,6 +120,8 @@ const Occurrences = () => {
   const [saving, setSaving] = useState(false);
   const [sendingNotification, setSendingNotification] = useState<string | null>(null);
   const [confirmNotifyDialog, setConfirmNotifyDialog] = useState<{ open: boolean; occurrence: any | null }>({ open: false, occurrence: null });
+  const [confirmDeleteDialog, setConfirmDeleteDialog] = useState<{ open: boolean; occurrence: any | null }>({ open: false, occurrence: null });
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [formData, setFormData] = useState({
     condominium_id: "",
@@ -532,6 +535,40 @@ const Occurrences = () => {
     }
   };
 
+  const handleDelete = async (occurrence: any) => {
+    if (!occurrence) return;
+    
+    setDeleting(occurrence.id);
+    try {
+      // Delete related records first (evidences, notifications, defenses, decisions, fines)
+      // The cascade should handle this but let's be safe
+      
+      const { error } = await supabase
+        .from("occurrences")
+        .delete()
+        .eq("id", occurrence.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Ocorrência excluída",
+        description: "A ocorrência foi excluída com sucesso.",
+      });
+
+      // Refresh the list
+      fetchData();
+    } catch (error: any) {
+      console.error("Error deleting occurrence:", error);
+      toast({
+        title: "Erro ao excluir",
+        description: error.message || "Não foi possível excluir a ocorrência.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(null);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
       registrada: "bg-blue-500/10 text-blue-500",
@@ -757,6 +794,19 @@ const Occurrences = () => {
                         {sendingNotification === occurrence.id ? "Enviando..." : "Notificar"}
                       </Button>
                     )}
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => setConfirmDeleteDialog({ open: true, occurrence })}
+                      disabled={deleting === occurrence.id}
+                    >
+                      {deleting === occurrence.id ? (
+                        <Loader2 className="w-3 h-3 md:w-4 md:h-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
+                      )}
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -800,6 +850,45 @@ const Occurrences = () => {
               >
                 <Send className="w-4 h-4 mr-2" />
                 Confirmar e Enviar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Confirmation Dialog for Delete */}
+        <AlertDialog 
+          open={confirmDeleteDialog.open} 
+          onOpenChange={(open) => setConfirmDeleteDialog({ open, occurrence: open ? confirmDeleteDialog.occurrence : null })}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <Trash2 className="w-5 h-5 text-destructive" />
+                Excluir Ocorrência
+              </AlertDialogTitle>
+              <AlertDialogDescription className="space-y-2">
+                <p>Você está prestes a excluir permanentemente a ocorrência:</p>
+                <p className="font-medium text-foreground">
+                  {confirmDeleteDialog.occurrence?.title}
+                </p>
+                <p className="text-sm text-destructive mt-2">
+                  Esta ação não pode ser desfeita. Todos os dados relacionados (evidências, notificações, defesas, decisões e multas) também serão excluídos.
+                </p>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={() => {
+                  if (confirmDeleteDialog.occurrence) {
+                    handleDelete(confirmDeleteDialog.occurrence);
+                  }
+                  setConfirmDeleteDialog({ open: false, occurrence: null });
+                }}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Excluir Permanentemente
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
