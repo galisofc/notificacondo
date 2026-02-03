@@ -1,5 +1,6 @@
 export { WabaTemplateStatusCard } from "./WabaTemplateStatusCard";
 export { TemplateEditor } from "./TemplateEditor";
+export { TemplateEditorDialog } from "./TemplateEditorDialog";
 export { TemplateCard } from "./TemplateCard";
 export { TemplatePreview } from "./TemplatePreview";
 export { ConnectionStatus } from "./ConnectionStatus";
@@ -8,5 +9,7 @@ export { WabaTemplateSubmitDialog } from "./WabaTemplateSubmitDialog";
 export { TemplateWabaLinkingCard } from "./TemplateWabaLinkingCard";
 export { TemplateGrid } from "./TemplateGrid";
 export { TemplateDetailSheet } from "./TemplateDetailSheet";
+export { CategorySection } from "./CategorySection";
+export { TemplatesPage } from "./TemplatesPage";
 export { TEMPLATE_CATEGORIES, TEMPLATE_COLORS, VARIABLE_EXAMPLES, getCategoryForSlug } from "./TemplateCategories";
 export { DEFAULT_TEMPLATES } from "./DefaultTemplates";
