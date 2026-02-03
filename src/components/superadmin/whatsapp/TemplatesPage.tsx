@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -87,6 +87,26 @@ export function TemplatesPage() {
       return data as unknown as LocalTemplate[];
     },
   });
+
+  // Auto-load Meta templates on mount
+  useEffect(() => {
+    const fetchMetaTemplates = async () => {
+      try {
+        setIsLoadingMeta(true);
+        const { data, error } = await supabase.functions.invoke("list-waba-templates");
+        if (error) throw error;
+        if (data?.success) {
+          setMetaTemplates(data.templates || []);
+        }
+      } catch (err) {
+        console.error("Error loading Meta templates:", err);
+      } finally {
+        setIsLoadingMeta(false);
+      }
+    };
+    
+    fetchMetaTemplates();
+  }, []);
 
   // Load Meta templates
   const loadMetaTemplates = async () => {
