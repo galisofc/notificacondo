@@ -1,6 +1,9 @@
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { TemplateEditor } from "./TemplateEditor";
 
@@ -33,7 +36,13 @@ interface TemplateEditorDialogProps {
 export function TemplateEditorDialog({ template, onClose }: TemplateEditorDialogProps) {
   return (
     <Dialog open={!!template} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl h-[90vh] p-0 overflow-hidden">
+      <DialogContent className="max-w-4xl h-[90vh] p-0 overflow-y-auto">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Editor de template do WhatsApp</DialogTitle>
+          <DialogDescription>
+            Edite o conteúdo e as configurações do template. O preview mostra o conteúdo aprovado quando disponível.
+          </DialogDescription>
+        </DialogHeader>
         {template && (
           <TemplateEditor
             template={template}
