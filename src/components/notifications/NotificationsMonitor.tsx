@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -46,6 +47,10 @@ import {
   Calendar,
   Send,
   XCircle,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 import {
   BarChart,
@@ -64,6 +69,8 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+
+const ITEMS_PER_PAGE = 50;
 
 type ModuleFilter = "all" | "packages" | "occurrences" | "party_hall" | "other";
 
@@ -158,6 +165,7 @@ export function NotificationsMonitor() {
   const isMobile = useIsMobile();
   const [moduleFilter, setModuleFilter] = useState<ModuleFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const { date: formatDate, custom: formatCustom } = useDateFormatter();
 
   const { containerRef, PullIndicator } = usePullToRefresh({
@@ -345,6 +353,18 @@ export function NotificationsMonitor() {
       log.function_name?.toLowerCase().includes(query)
     );
   });
+
+  // Paginação
+  const totalItems = filteredLogs?.length || 0;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedLogs = filteredLogs?.slice(startIndex, endIndex);
+
+  // Reset para página 1 quando filtros mudam
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, moduleFilter]);
 
   const periodLabel = subscriptionPeriod?.current_period_start && subscriptionPeriod?.current_period_end
     ? `${formatCustom(subscriptionPeriod.current_period_start, "dd/MM/yyyy")} - ${formatCustom(subscriptionPeriod.current_period_end, "dd/MM/yyyy")}`
@@ -668,7 +688,7 @@ export function NotificationsMonitor() {
             <>
               {/* Mobile Cards */}
               <div className="grid grid-cols-1 gap-3 md:hidden">
-                {filteredLogs?.slice(0, 50).map((log) => {
+                {paginatedLogs?.map((log) => {
                   const moduleInfo = getModuleInfo(log.function_name);
 
                   return (
@@ -723,7 +743,7 @@ export function NotificationsMonitor() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredLogs?.slice(0, 100).map((log) => {
+                    {paginatedLogs?.map((log) => {
                       const moduleInfo = getModuleInfo(log.function_name);
 
                       return (
@@ -779,9 +799,59 @@ export function NotificationsMonitor() {
                 </Table>
               </div>
 
-              {filteredLogs && filteredLogs.length > 100 && (
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 border-t">
+                  <p className="text-sm text-muted-foreground order-2 sm:order-1">
+                    Exibindo {startIndex + 1} - {Math.min(endIndex, totalItems)} de {totalItems} registros
+                  </p>
+                  <div className="flex items-center gap-1 order-1 sm:order-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setCurrentPage(1)}
+                      disabled={currentPage === 1}
+                      className="h-8 w-8"
+                    >
+                      <ChevronsLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="h-8 w-8"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="px-3 text-sm font-medium">
+                      {currentPage} / {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="h-8 w-8"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setCurrentPage(totalPages)}
+                      disabled={currentPage === totalPages}
+                      className="h-8 w-8"
+                    >
+                      <ChevronsRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {totalPages <= 1 && totalItems > 0 && (
                 <p className="text-center text-sm text-muted-foreground mt-4">
-                  Exibindo 100 de {filteredLogs.length} registros
+                  Exibindo {totalItems} registro{totalItems > 1 ? 's' : ''}
                 </p>
               )}
             </>
