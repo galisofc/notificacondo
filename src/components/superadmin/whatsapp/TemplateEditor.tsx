@@ -42,12 +42,15 @@ import { TEMPLATE_COLORS, getCategoryForSlug, VARIABLE_EXAMPLES } from "./Templa
 import { DEFAULT_TEMPLATES } from "./DefaultTemplates";
 import { WabaTemplateSelector } from "./WabaTemplateSelector";
 
-interface ButtonConfig {
+interface SingleButtonConfig {
   type: "url" | "quick_reply" | "call";
   text: string;
   url_base?: string;
   has_dynamic_suffix?: boolean;
 }
+
+// Support both legacy single button and new array format
+type ButtonConfig = SingleButtonConfig | SingleButtonConfig[];
 
 interface Template {
   id: string;
@@ -62,6 +65,19 @@ interface Template {
   params_order?: string[] | null;
   button_config?: ButtonConfig | null;
 }
+
+// Helper to normalize button config to array format
+const normalizeButtonConfig = (config: ButtonConfig | null | undefined): SingleButtonConfig[] => {
+  if (!config) return [];
+  if (Array.isArray(config)) return config;
+  return [config];
+};
+
+// Helper to create empty button
+const createEmptyButton = (): SingleButtonConfig => ({
+  type: "quick_reply",
+  text: "",
+});
 
 interface MetaTemplateComponent {
   type: string;
@@ -110,14 +126,10 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
   const [isLoadingMeta, setIsLoadingMeta] = useState(false);
   const [metaLoadError, setMetaLoadError] = useState<string | null>(null);
   
-  // Button configuration state - initialize from template
-  const [hasButton, setHasButton] = useState(!!template.button_config);
-  const [buttonType, setButtonType] = useState<"url" | "quick_reply" | "call">(
-    template.button_config?.type || "url"
-  );
-  const [buttonText, setButtonText] = useState(template.button_config?.text || "Ver Detalhes");
-  const [buttonUrlBase, setButtonUrlBase] = useState(template.button_config?.url_base || "");
-  const [hasDynamicSuffix, setHasDynamicSuffix] = useState(template.button_config?.has_dynamic_suffix || false);
+  // Button configuration state - support multiple buttons (up to 3)
+  const initialButtons = normalizeButtonConfig(template.button_config);
+  const [buttons, setButtons] = useState<SingleButtonConfig[]>(initialButtons);
+  const [hasButton, setHasButton] = useState(initialButtons.length > 0);
   
   // Test dialog state
   const [showTestDialog, setShowTestDialog] = useState(false);
@@ -199,29 +211,33 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
   const metaFooter = metaTemplate?.components?.find(c => c.type === "FOOTER");
   const metaButtons = metaTemplate?.components?.find(c => c.type === "BUTTONS");
 
-  // Sync button configuration from Meta when template is loaded
+  // Sync button configuration from Meta when template is loaded (supports up to 3 buttons)
   useEffect(() => {
     if (metaTemplate && metaButtons?.buttons && metaButtons.buttons.length > 0) {
-      const firstButton = metaButtons.buttons[0];
-      setHasButton(true);
-      setButtonText(firstButton.text || "Ver Detalhes");
-      
-      // Determine button type from Meta
-      if (firstButton.type === "URL") {
-        setButtonType("url");
-        if (firstButton.url) {
-          // Check if URL has dynamic suffix (ends with {{1}})
-          const hasSuffix = firstButton.url.includes("{{1}}");
-          setHasDynamicSuffix(hasSuffix);
-          // Extract base URL (remove the {{1}} part if present)
-          const baseUrl = firstButton.url.replace(/\{\{1\}\}$/, "");
-          setButtonUrlBase(baseUrl);
+      const syncedButtons: SingleButtonConfig[] = metaButtons.buttons.slice(0, 3).map((metaBtn: any) => {
+        const btn: SingleButtonConfig = {
+          type: "quick_reply",
+          text: metaBtn.text || "Botão",
+        };
+        
+        if (metaBtn.type === "URL") {
+          btn.type = "url";
+          if (metaBtn.url) {
+            const hasSuffix = metaBtn.url.includes("{{1}}");
+            btn.has_dynamic_suffix = hasSuffix;
+            btn.url_base = metaBtn.url.replace(/\{\{1\}\}$/, "");
+          }
+        } else if (metaBtn.type === "QUICK_REPLY") {
+          btn.type = "quick_reply";
+        } else if (metaBtn.type === "PHONE_NUMBER") {
+          btn.type = "call";
         }
-      } else if (firstButton.type === "QUICK_REPLY") {
-        setButtonType("quick_reply");
-      } else if (firstButton.type === "PHONE_NUMBER") {
-        setButtonType("call");
-      }
+        
+        return btn;
+      });
+      
+      setHasButton(true);
+      setButtons(syncedButtons);
     }
   }, [metaTemplate, metaButtons]);
 
@@ -329,16 +345,9 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
   });
 
   const handleSave = () => {
-    // Build button config if enabled
-    const buttonConfig: ButtonConfig | null = hasButton
-      ? {
-          type: buttonType,
-          text: buttonText,
-          ...(buttonType === "url" && {
-            url_base: buttonUrlBase,
-            has_dynamic_suffix: hasDynamicSuffix,
-          }),
-        }
+    // Build button config if enabled - now supports array of buttons
+    const buttonConfig: ButtonConfig | null = hasButton && buttons.length > 0
+      ? buttons.filter(btn => btn.text.trim() !== "")
       : null;
 
     updateMutation.mutate({
@@ -700,94 +709,147 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
 
                 <Separator />
 
-                {/* Button Configuration */}
+                {/* Button Configuration - Supports up to 3 buttons */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div>
-                        <Label className="text-xs sm:text-sm">Botão de Ação</Label>
+                        <Label className="text-xs sm:text-sm">Botões de Ação</Label>
                         <p className="text-[10px] sm:text-xs text-muted-foreground">
                           {metaButtons?.buttons && metaButtons.buttons.length > 0
-                            ? "Configuração sincronizada da Meta"
-                            : "Adicione um botão interativo ao template"}
+                            ? `${metaButtons.buttons.length} botão(ões) sincronizado(s) da Meta`
+                            : "Adicione até 3 botões interativos"}
                         </p>
                       </div>
                       {metaButtons?.buttons && metaButtons.buttons.length > 0 && (
                         <Badge variant="default" className="bg-green-600 text-[10px]">
-                          Meta
+                          Meta ({metaButtons.buttons.length})
                         </Badge>
                       )}
                     </div>
                     <Switch
                       checked={hasButton}
-                      onCheckedChange={setHasButton}
+                      onCheckedChange={(checked) => {
+                        setHasButton(checked);
+                        if (checked && buttons.length === 0) {
+                          setButtons([createEmptyButton()]);
+                        }
+                      }}
                     />
                   </div>
 
                   {hasButton && (
-                    <div className="space-y-3 p-3 rounded-lg border bg-muted/20">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Tipo do Botão</Label>
-                        <Select value={buttonType} onValueChange={(v) => setButtonType(v as "url" | "quick_reply" | "call")}>
-                          <SelectTrigger className="h-9 text-sm">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="url">🔗 Abrir URL</SelectItem>
-                            <SelectItem value="quick_reply">💬 Resposta Rápida</SelectItem>
-                            <SelectItem value="call">📞 Ligar</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Texto do Botão</Label>
-                        <Input
-                          value={buttonText}
-                          onChange={(e) => setButtonText(e.target.value)}
-                          placeholder="Ex: Ver Detalhes"
-                          className="h-9 text-sm"
-                          maxLength={25}
-                        />
-                        <p className="text-[10px] text-muted-foreground">
-                          Máximo 25 caracteres
-                        </p>
-                      </div>
-
-                      {buttonType === "url" && (
-                        <>
-                          <div className="space-y-1.5">
-                            <Label className="text-xs">URL Base</Label>
-                            <Input
-                              value={buttonUrlBase}
-                              onChange={(e) => setButtonUrlBase(e.target.value)}
-                              placeholder="https://notificacondo.lovable.app/acesso/"
-                              className="h-9 text-sm font-mono"
-                            />
-                          </div>
-
+                    <div className="space-y-4">
+                      {buttons.map((btn, index) => (
+                        <div key={index} className="space-y-3 p-3 rounded-lg border bg-muted/20">
                           <div className="flex items-center justify-between">
-                            <div>
-                              <Label className="text-xs">Sufixo Dinâmico</Label>
-                              <p className="text-[10px] text-muted-foreground">
-                                Adicionar variável ao final da URL (ex: token)
-                              </p>
-                            </div>
-                            <Switch
-                              checked={hasDynamicSuffix}
-                              onCheckedChange={setHasDynamicSuffix}
-                            />
+                            <Label className="text-xs font-medium">Botão {index + 1}</Label>
+                            {buttons.length > 1 && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 text-xs text-destructive hover:text-destructive"
+                                onClick={() => setButtons(buttons.filter((_, i) => i !== index))}
+                              >
+                                Remover
+                              </Button>
+                            )}
+                          </div>
+                          
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Tipo do Botão</Label>
+                            <Select 
+                              value={btn.type} 
+                              onValueChange={(v) => {
+                                const newButtons = [...buttons];
+                                newButtons[index] = { ...btn, type: v as "url" | "quick_reply" | "call" };
+                                setButtons(newButtons);
+                              }}
+                            >
+                              <SelectTrigger className="h-9 text-sm">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="url">🔗 Abrir URL</SelectItem>
+                                <SelectItem value="quick_reply">💬 Resposta Rápida</SelectItem>
+                                <SelectItem value="call">📞 Ligar</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
 
-                          {hasDynamicSuffix && (
-                            <div className="rounded-lg bg-muted p-2 text-xs">
-                              <p className="text-muted-foreground mb-1">URL final:</p>
-                              <code className="font-mono text-[10px]">
-                                {buttonUrlBase || "https://..."}{`{{1}}`}
-                              </code>
-                            </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Texto do Botão</Label>
+                            <Input
+                              value={btn.text}
+                              onChange={(e) => {
+                                const newButtons = [...buttons];
+                                newButtons[index] = { ...btn, text: e.target.value };
+                                setButtons(newButtons);
+                              }}
+                              placeholder="Ex: Ver Detalhes"
+                              className="h-9 text-sm"
+                              maxLength={25}
+                            />
+                            <p className="text-[10px] text-muted-foreground">
+                              Máximo 25 caracteres
+                            </p>
+                          </div>
+
+                          {btn.type === "url" && (
+                            <>
+                              <div className="space-y-1.5">
+                                <Label className="text-xs">URL Base</Label>
+                                <Input
+                                  value={btn.url_base || ""}
+                                  onChange={(e) => {
+                                    const newButtons = [...buttons];
+                                    newButtons[index] = { ...btn, url_base: e.target.value };
+                                    setButtons(newButtons);
+                                  }}
+                                  placeholder="https://notificacondo.lovable.app/acesso/"
+                                  className="h-9 text-sm font-mono"
+                                />
+                              </div>
+
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <Label className="text-xs">Sufixo Dinâmico</Label>
+                                  <p className="text-[10px] text-muted-foreground">
+                                    Adicionar variável ao final da URL
+                                  </p>
+                                </div>
+                                <Switch
+                                  checked={btn.has_dynamic_suffix || false}
+                                  onCheckedChange={(checked) => {
+                                    const newButtons = [...buttons];
+                                    newButtons[index] = { ...btn, has_dynamic_suffix: checked };
+                                    setButtons(newButtons);
+                                  }}
+                                />
+                              </div>
+
+                              {btn.has_dynamic_suffix && (
+                                <div className="rounded-lg bg-muted p-2 text-xs">
+                                  <p className="text-muted-foreground mb-1">URL final:</p>
+                                  <code className="font-mono text-[10px]">
+                                    {btn.url_base || "https://..."}{`{{1}}`}
+                                  </code>
+                                </div>
+                              )}
+                            </>
                           )}
-                        </>
+                        </div>
+                      ))}
+
+                      {buttons.length < 3 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => setButtons([...buttons, createEmptyButton()])}
+                        >
+                          + Adicionar Botão ({buttons.length}/3)
+                        </Button>
                       )}
                     </div>
                   )}
