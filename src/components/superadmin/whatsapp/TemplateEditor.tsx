@@ -32,11 +32,13 @@ import {
   FileText,
   Send,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Unlink,
 } from "lucide-react";
 import { TemplatePreview } from "./TemplatePreview";
 import { TEMPLATE_COLORS, getCategoryForSlug } from "./TemplateCategories";
 import { DEFAULT_TEMPLATES } from "./DefaultTemplates";
+import { WabaTemplateSelector } from "./WabaTemplateSelector";
 
 interface ButtonConfig {
   type: "url" | "quick_reply" | "call";
@@ -454,10 +456,46 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
                   </p>
                 </div>
 
+                {/* Current Template Status */}
+                {wabaTemplateName && (
+                  <div className="flex items-center gap-2 p-3 rounded-lg border bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
+                    <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                        Template Vinculado
+                      </p>
+                      <p className="text-xs font-mono text-green-700 dark:text-green-300 truncate">
+                        {wabaTemplateName} ({wabaLanguage})
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setWabaTemplateName("");
+                        setWabaLanguage("pt_BR");
+                      }}
+                      className="shrink-0 text-red-600 hover:text-red-700 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-950"
+                    >
+                      <Unlink className="h-4 w-4 mr-1" />
+                      Desvincular
+                    </Button>
+                  </div>
+                )}
+
                 <div className="space-y-1.5 sm:space-y-2">
-                  <Label htmlFor="waba-template-name" className="text-xs sm:text-sm">
-                    Nome do Template WABA
-                  </Label>
+                  <div className="flex items-center justify-between gap-2">
+                    <Label htmlFor="waba-template-name" className="text-xs sm:text-sm">
+                      Nome do Template WABA
+                    </Label>
+                    <WabaTemplateSelector
+                      currentTemplateName={wabaTemplateName || null}
+                      onSelect={(name, language) => {
+                        setWabaTemplateName(name);
+                        setWabaLanguage(language);
+                      }}
+                    />
+                  </div>
                   <Input
                     id="waba-template-name"
                     value={wabaTemplateName}
@@ -466,7 +504,7 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
                     className="h-9 sm:h-10 text-sm font-mono"
                   />
                   <p className="text-[10px] sm:text-xs text-muted-foreground">
-                    Nome exato do template como aprovado na Meta (sem espaços, apenas letras, números e underscores)
+                    Nome exato do template como aprovado na Meta. Você pode digitar manualmente ou selecionar da lista de templates aprovados.
                   </p>
                 </div>
 
