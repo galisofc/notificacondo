@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
@@ -74,6 +75,13 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
   const [wabaLanguage, setWabaLanguage] = useState(template.waba_language || "pt_BR");
   const [paramsOrder, setParamsOrder] = useState<string[]>(template.params_order || template.variables);
   const [activeTab, setActiveTab] = useState<"content" | "waba">("content");
+  
+  // Button configuration state
+  const [hasButton, setHasButton] = useState(false);
+  const [buttonType, setButtonType] = useState<"url" | "quick_reply" | "call">("url");
+  const [buttonText, setButtonText] = useState("Ver Detalhes");
+  const [buttonUrlBase, setButtonUrlBase] = useState("");
+  const [hasDynamicSuffix, setHasDynamicSuffix] = useState(false);
   
   // Test dialog state
   const [showTestDialog, setShowTestDialog] = useState(false);
@@ -500,6 +508,94 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
                   </div>
                 </div>
 
+                <Separator />
+
+                {/* Button Configuration */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-xs sm:text-sm">Botão de Ação</Label>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">
+                        Adicione um botão interativo ao template
+                      </p>
+                    </div>
+                    <Switch
+                      checked={hasButton}
+                      onCheckedChange={setHasButton}
+                    />
+                  </div>
+
+                  {hasButton && (
+                    <div className="space-y-3 p-3 rounded-lg border bg-muted/20">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Tipo do Botão</Label>
+                        <Select value={buttonType} onValueChange={(v) => setButtonType(v as "url" | "quick_reply" | "call")}>
+                          <SelectTrigger className="h-9 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="url">🔗 Abrir URL</SelectItem>
+                            <SelectItem value="quick_reply">💬 Resposta Rápida</SelectItem>
+                            <SelectItem value="call">📞 Ligar</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Texto do Botão</Label>
+                        <Input
+                          value={buttonText}
+                          onChange={(e) => setButtonText(e.target.value)}
+                          placeholder="Ex: Ver Detalhes"
+                          className="h-9 text-sm"
+                          maxLength={25}
+                        />
+                        <p className="text-[10px] text-muted-foreground">
+                          Máximo 25 caracteres
+                        </p>
+                      </div>
+
+                      {buttonType === "url" && (
+                        <>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">URL Base</Label>
+                            <Input
+                              value={buttonUrlBase}
+                              onChange={(e) => setButtonUrlBase(e.target.value)}
+                              placeholder="https://notificacondo.lovable.app/acesso/"
+                              className="h-9 text-sm font-mono"
+                            />
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label className="text-xs">Sufixo Dinâmico</Label>
+                              <p className="text-[10px] text-muted-foreground">
+                                Adicionar variável ao final da URL (ex: token)
+                              </p>
+                            </div>
+                            <Switch
+                              checked={hasDynamicSuffix}
+                              onCheckedChange={setHasDynamicSuffix}
+                            />
+                          </div>
+
+                          {hasDynamicSuffix && (
+                            <div className="rounded-lg bg-muted p-2 text-xs">
+                              <p className="text-muted-foreground mb-1">URL final:</p>
+                              <code className="font-mono text-[10px]">
+                                {buttonUrlBase || "https://..."}{`{{1}}`}
+                              </code>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <Separator />
+
                 <div className="rounded-lg border p-3 bg-muted/30">
                   <h4 className="text-xs font-medium mb-2">Preview do Payload WABA</h4>
                   <p className="text-[10px] text-muted-foreground mb-2">
@@ -514,7 +610,12 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
   "header": { "type": "image", "url": "..." },
   "params": [
 ${paramsOrder.map((p, i) => `    "${p}"`).join(",\n")}
-  ]
+  ]${hasButton ? `,
+  "buttons": [{
+    "type": "${buttonType.toUpperCase()}",
+    "text": "${buttonText}"${buttonType === "url" ? `,
+    "url": "${buttonUrlBase}${hasDynamicSuffix ? "{{1}}" : ""}"` : ""}
+  }]` : ""}
 }`}
                   </pre>
                 </div>
