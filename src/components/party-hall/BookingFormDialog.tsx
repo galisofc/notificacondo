@@ -83,20 +83,26 @@ export default function BookingFormDialog({ open, onOpenChange, condominiums }: 
   };
 
   // Fetch blocks for selected condominium
-  const { data: blocks = [] } = useQuery({
+  const { data: blocksRaw = [] } = useQuery({
     queryKey: ["condominium-blocks", selectedCondominium],
     queryFn: async () => {
       if (!selectedCondominium) return [];
       const { data, error } = await supabase
         .from("blocks")
         .select("id, name")
-        .eq("condominium_id", selectedCondominium)
-        .order("name");
+        .eq("condominium_id", selectedCondominium);
       if (error) throw error;
       return data;
     },
     enabled: !!selectedCondominium,
   });
+
+  // Sort blocks alphabetically/numerically (natural sort)
+  const blocks = useMemo(() => {
+    return [...blocksRaw].sort((a, b) => 
+      a.name.localeCompare(b.name, "pt-BR", { numeric: true, sensitivity: "base" })
+    );
+  }, [blocksRaw]);
 
   // Fetch apartments for selected block
   const { data: apartments = [] } = useQuery({
