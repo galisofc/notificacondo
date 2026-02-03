@@ -58,6 +58,15 @@ import { cn } from "@/lib/utils";
 import ResidentCSVImportDialog from "@/components/condominium/ResidentCSVImportDialog";
 import { BulkBlocksApartmentsWizard } from "@/components/condominium/BulkBlocksApartmentsWizard";
 import BulkResidentCSVImportDialog from "@/components/condominium/BulkResidentCSVImportDialog";
+import { QuickBlockApartmentSearch } from "@/components/packages/QuickBlockApartmentSearch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { X } from "lucide-react";
 
 interface Condominium {
   id: string;
@@ -110,8 +119,11 @@ const CondominiumDetails = () => {
   const [residents, setResidents] = useState<Resident[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Search
+  // Search and filters
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedBlockFilter, setSelectedBlockFilter] = useState<string>("all");
+  const [selectedApartmentFilter, setSelectedApartmentFilter] = useState<string>("all");
+  const [highlightedApartmentId, setHighlightedApartmentId] = useState<string | null>(null);
 
   // Expanded blocks
   const [expandedBlocks, setExpandedBlocks] = useState<Set<string>>(new Set());
@@ -178,19 +190,56 @@ const CondominiumDetails = () => {
     return null;
   };
 
-  // Filter blocks and apartments based on search
+  // Get unique blocks for filter dropdown
+  const blocksForFilter = useMemo(() => {
+    return [...blocks]
+      .sort((a, b) => {
+        const numA = parseInt(a.name.replace(/\D/g, "")) || 0;
+        const numB = parseInt(b.name.replace(/\D/g, "")) || 0;
+        return numA - numB;
+      })
+      .map(b => ({ id: b.id, name: b.name }));
+  }, [blocks]);
+
+  // Get apartments for selected block filter
+  const apartmentsForFilter = useMemo(() => {
+    if (selectedBlockFilter === "all") return [];
+    const blockApts = apartments.filter(a => a.block_id === selectedBlockFilter);
+    return blockApts
+      .sort((a, b) => {
+        const numA = parseInt(a.number.replace(/\D/g, "")) || 0;
+        const numB = parseInt(b.number.replace(/\D/g, "")) || 0;
+        return numA - numB;
+      })
+      .map(a => ({ id: a.id, number: a.number }));
+  }, [apartments, selectedBlockFilter]);
+
+  // Filter blocks and apartments based on search and filters
   const filteredBlocks = useMemo(() => {
     // First, sort blocks numerically
-    const sortedBlocks = [...blocks].sort((a, b) => {
+    let sortedBlocks = [...blocks].sort((a, b) => {
       const numA = parseInt(a.name.replace(/\D/g, "")) || 0;
       const numB = parseInt(b.name.replace(/\D/g, "")) || 0;
       return numA - numB;
     });
 
-    if (!searchQuery.trim()) return sortedBlocks;
+    // Apply block filter
+    if (selectedBlockFilter !== "all") {
+      sortedBlocks = sortedBlocks.filter(block => block.id === selectedBlockFilter);
+    }
+
+    // Apply apartment filter (needs to filter apartments within blocks)
+    if (selectedApartmentFilter !== "all") {
+      // When filtering by apartment, we still show the block but only matching apartments
+      // This is handled in getFilteredApartments
+    }
+
+    if (!searchQuery.trim() && selectedBlockFilter === "all") return sortedBlocks;
 
     const query = searchQuery.toLowerCase().trim();
     const quickSearch = parseQuickSearch(searchQuery);
+
+    if (!query) return sortedBlocks;
 
     return sortedBlocks.filter((block) => {
       // Match block name
@@ -216,13 +265,24 @@ const CondominiumDetails = () => {
       const blockApts = apartments.filter((a) => a.block_id === block.id);
       return blockApts.some((apt) => apt.number.toLowerCase().includes(query));
     });
-  }, [blocks, apartments, searchQuery]);
+  }, [blocks, apartments, searchQuery, selectedBlockFilter, selectedApartmentFilter]);
 
-  // Get apartments for a block, filtered by search
+  // Get apartments for a block, filtered by search and filters
   const getFilteredApartments = (blockId: string) => {
-    const blockApts = apartments.filter((a) => a.block_id === blockId);
+    let blockApts = apartments.filter((a) => a.block_id === blockId);
     
-    if (!searchQuery.trim()) return blockApts;
+    // Apply apartment filter
+    if (selectedApartmentFilter !== "all") {
+      blockApts = blockApts.filter(apt => apt.id === selectedApartmentFilter);
+    }
+    
+    if (!searchQuery.trim()) {
+      return blockApts.sort((a, b) => {
+        const numA = parseInt(a.number.replace(/\D/g, "")) || 0;
+        const numB = parseInt(b.number.replace(/\D/g, "")) || 0;
+        return numA - numB;
+      });
+    }
 
     const query = searchQuery.toLowerCase().trim();
     const quickSearch = parseQuickSearch(searchQuery);
@@ -644,20 +704,108 @@ const CondominiumDetails = () => {
           </Badge>
         </div>
 
-        {/* Search */}
-        <div className="space-y-1">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        {/* Search and Filters */}
+        <div className="flex flex-col md:flex-row gap-3 flex-wrap p-4 rounded-lg border bg-card">
+          {/* Quick Search */}
+          {id && (
+            <QuickBlockApartmentSearch
+              condominiumId={id}
+              onBlockFound={(blockId) => {
+                setSelectedBlockFilter(blockId);
+                setSelectedApartmentFilter("all");
+                setExpandedBlocks((prev) => new Set(prev).add(blockId));
+              }}
+              onApartmentFound={(apartmentId) => {
+                setSelectedApartmentFilter(apartmentId);
+                setHighlightedApartmentId(apartmentId);
+                // Find and expand the block containing this apartment
+                const apt = apartments.find(a => a.id === apartmentId);
+                if (apt) {
+                  setSelectedBlockFilter(apt.block_id);
+                  setExpandedBlocks((prev) => new Set(prev).add(apt.block_id));
+                }
+                setTimeout(() => {
+                  const element = document.querySelector(`[data-apartment-id="${apartmentId}"]`);
+                  element?.scrollIntoView({ behavior: "smooth", block: "center" });
+                }, 200);
+                setTimeout(() => {
+                  setHighlightedApartmentId(null);
+                }, 5000);
+              }}
+              className="w-full md:w-[200px]"
+              placeholder="Ex: 0344, ARM101"
+            />
+          )}
+
+          {/* Block Filter */}
+          <Select
+            value={selectedBlockFilter}
+            onValueChange={(v) => {
+              setSelectedBlockFilter(v);
+              setSelectedApartmentFilter("all");
+            }}
+          >
+            <SelectTrigger className="w-full md:w-[160px]">
+              <Building2 className="w-4 h-4 mr-2" />
+              <SelectValue placeholder="Bloco" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os blocos</SelectItem>
+              {blocksForFilter.map((b) => (
+                <SelectItem key={b.id} value={b.id}>
+                  {b.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Apartment Filter */}
+          <Select
+            value={selectedApartmentFilter}
+            onValueChange={setSelectedApartmentFilter}
+            disabled={selectedBlockFilter === "all"}
+          >
+            <SelectTrigger className="w-full md:w-[140px]">
+              <Home className="w-4 h-4 mr-2" />
+              <SelectValue placeholder="Apto" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {apartmentsForFilter.map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  {a.number}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Text Search */}
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Buscar por nome ou código (ex: 0344 = Bloco 03, Apto 44)"
+              placeholder="Buscar por nome, e-mail ou telefone..."
+              className="pl-10"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-background border-border"
             />
           </div>
-          <p className="text-xs text-muted-foreground">
-            Digite 4 números para busca rápida: BBAA (BB=bloco, AA=apto)
-          </p>
+
+          {/* Clear Filters Button */}
+          {(selectedBlockFilter !== "all" || selectedApartmentFilter !== "all" || searchQuery) && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSelectedBlockFilter("all");
+                setSelectedApartmentFilter("all");
+                setSearchQuery("");
+              }}
+              className="gap-2"
+            >
+              <X className="h-4 w-4" />
+              Limpar filtros
+            </Button>
+          )}
         </div>
 
         {/* Blocks List */}
@@ -805,8 +953,18 @@ const CondominiumDetails = () => {
                           <div className="divide-y divide-border">
                             {blockApartments.map((apt) => {
                               const aptResidents = residents.filter((r) => r.apartment_id === apt.id);
+                              const isHighlighted = highlightedApartmentId === apt.id;
                               return (
-                                <div key={apt.id} className="p-4 hover:bg-secondary/30 transition-colors">
+                                <div 
+                                  key={apt.id} 
+                                  data-apartment-id={apt.id}
+                                  className={cn(
+                                    "p-4 transition-all duration-300",
+                                    isHighlighted 
+                                      ? "bg-primary/20 ring-2 ring-primary ring-inset" 
+                                      : "hover:bg-secondary/30"
+                                  )}
+                                >
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                       <div className="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center">
