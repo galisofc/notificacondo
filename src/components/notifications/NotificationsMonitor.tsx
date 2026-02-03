@@ -579,7 +579,7 @@ export function NotificationsMonitor() {
           </CardHeader>
           <CardContent>
             {pieData.length > 0 ? (
-              <div className="h-[300px] w-full">
+              <ChartContainer config={chartConfig} className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -600,7 +600,7 @@ export function NotificationsMonitor() {
                     <ChartTooltip content={<ChartTooltipContent />} />
                   </PieChart>
                 </ResponsiveContainer>
-              </div>
+              </ChartContainer>
             ) : (
               <div className="h-[300px] flex items-center justify-center">
                 <p className="text-muted-foreground">Sem dados</p>
