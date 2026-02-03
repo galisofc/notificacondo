@@ -261,6 +261,12 @@ const Pricing = () => {
                             {plan.fines_limit === -1 ? 'Ilimitadas' : plan.fines_limit === 0 ? '—' : `${plan.fines_limit}/mês`}
                           </span>
                         </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Notif. Encomendas</span>
+                          <span className="font-medium">
+                            {(plan as any).package_notifications_limit === -1 ? 'Ilimitadas' : `${(plan as any).package_notifications_limit || 50}/mês`}
+                          </span>
+                        </div>
                       </div>
 
                       {/* Badges */}

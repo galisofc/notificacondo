@@ -403,6 +403,44 @@ serve(async (req) => {
       })
       .eq("id", package_id);
 
+    // ========== UPDATE SUBSCRIPTION PACKAGE NOTIFICATION COUNTERS ==========
+    if (successCount > 0) {
+      // Fetch subscription for the condominium
+      const { data: subscription, error: subError } = await supabase
+        .from("subscriptions")
+        .select("id, package_notifications_limit, package_notifications_used, package_notifications_extra")
+        .eq("condominium_id", condoId)
+        .eq("active", true)
+        .maybeSingle();
+
+      if (subscription && !subError) {
+        const isUnlimited = subscription.package_notifications_limit === -1;
+        const currentUsed = subscription.package_notifications_used || 0;
+        const currentExtra = subscription.package_notifications_extra || 0;
+        const limit = subscription.package_notifications_limit || 0;
+
+        // Check if over limit for each successful notification
+        let newExtra = currentExtra;
+        for (let i = 0; i < successCount; i++) {
+          const usedAfterThis = currentUsed + i + 1;
+          if (!isUnlimited && usedAfterThis > limit) {
+            newExtra++;
+          }
+        }
+
+        // Update subscription counters
+        await supabase
+          .from("subscriptions")
+          .update({
+            package_notifications_used: currentUsed + successCount,
+            package_notifications_extra: newExtra,
+          })
+          .eq("id", subscription.id);
+
+        console.log(`Updated subscription ${subscription.id}: used=${currentUsed + successCount}, extra=${newExtra}`);
+      }
+    }
+
     console.log(`Notification complete: ${successCount}/${results.length} sent successfully`);
 
     return new Response(
