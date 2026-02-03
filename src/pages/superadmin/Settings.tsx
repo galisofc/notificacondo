@@ -150,6 +150,7 @@ export default function SuperAdminSettings() {
     notifications_limit: 10,
     warnings_limit: 10,
     fines_limit: 0,
+    package_notifications_limit: 50,
     price: 0,
     color: "bg-gray-500",
     display_order: 0,
@@ -557,6 +558,7 @@ export default function SuperAdminSettings() {
       notifications_limit: 10,
       warnings_limit: 10,
       fines_limit: 0,
+      package_notifications_limit: 50,
       price: 0,
       color: "bg-gray-500",
       display_order: 0,
@@ -574,6 +576,7 @@ export default function SuperAdminSettings() {
         notifications_limit: plan.notifications_limit,
         warnings_limit: plan.warnings_limit,
         fines_limit: plan.fines_limit,
+        package_notifications_limit: (plan as any).package_notifications_limit || 50,
         price: plan.price,
         color: plan.color,
         display_order: plan.display_order,
@@ -1241,7 +1244,7 @@ export default function SuperAdminSettings() {
                           placeholder="Descrição do plano"
                         />
                       </div>
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="notifications_limit">Notificações</Label>
                           <Input
@@ -1270,6 +1273,8 @@ export default function SuperAdminSettings() {
                             }
                           />
                         </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="fines_limit">Multas</Label>
                           <Input
@@ -1283,6 +1288,21 @@ export default function SuperAdminSettings() {
                               })
                             }
                           />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="package_notifications_limit">Notif. Encomendas</Label>
+                          <Input
+                            id="package_notifications_limit"
+                            type="number"
+                            value={formData.package_notifications_limit}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                package_notifications_limit: parseInt(e.target.value) || 0,
+                              })
+                            }
+                          />
+                          <p className="text-xs text-muted-foreground">-1 = ilimitado</p>
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
@@ -1385,6 +1405,7 @@ export default function SuperAdminSettings() {
                           <th className="text-center py-3 px-4 font-medium text-muted-foreground">Notificações</th>
                           <th className="text-center py-3 px-4 font-medium text-muted-foreground">Advertências</th>
                           <th className="text-center py-3 px-4 font-medium text-muted-foreground">Multas</th>
+                          <th className="text-center py-3 px-4 font-medium text-muted-foreground">Encomendas</th>
                           <th className="text-center py-3 px-4 font-medium text-muted-foreground">Preço</th>
                           <th className="text-center py-3 px-4 font-medium text-muted-foreground">Status</th>
                           <th className="text-right py-3 px-4 font-medium text-muted-foreground">Ações</th>
@@ -1415,7 +1436,10 @@ export default function SuperAdminSettings() {
                               {plan.warnings_limit >= 999999 ? "∞" : plan.warnings_limit}
                             </td>
                             <td className="text-center py-3 px-4 font-mono">
-                              {plan.fines_limit >= 999999 ? "∞" : plan.fines_limit}
+                              {plan.fines_limit >= 999999 || plan.fines_limit === -1 ? "∞" : plan.fines_limit}
+                            </td>
+                            <td className="text-center py-3 px-4 font-mono">
+                              {(plan as any).package_notifications_limit === -1 ? "∞" : (plan as any).package_notifications_limit || 50}
                             </td>
                             <td className="text-center py-3 px-4 font-mono">
                               {plan.price === 0 ? "Grátis" : `R$ ${plan.price.toFixed(2)}`}

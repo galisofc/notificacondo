@@ -357,7 +357,7 @@ Deno.serve(async (req) => {
     // Fetch all active subscriptions that need invoice generation
     const { data: subscriptions, error: fetchError } = await supabase
       .from("subscriptions")
-      .select("id, condominium_id, plan, active, current_period_start, current_period_end, is_trial, trial_ends_at, is_lifetime")
+      .select("id, condominium_id, plan, active, current_period_start, current_period_end, is_trial, trial_ends_at, is_lifetime, package_notifications_extra, package_notifications_used")
       .eq("active", true)
       .eq("is_lifetime", false);
 
@@ -367,6 +367,17 @@ Deno.serve(async (req) => {
     }
 
     console.log(`Found ${subscriptions?.length || 0} total active subscriptions to evaluate`);
+
+    // Fetch package notification extra cost from app_settings
+    const { data: extraCostSetting } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "package_notification_extra_cost")
+      .maybeSingle();
+
+    const extraCostPerNotification = extraCostSetting?.value 
+      ? Number(String(extraCostSetting.value).replace(/"/g, '')) 
+      : 0.10;
 
     const results = {
       processed: 0,
@@ -413,6 +424,8 @@ Deno.serve(async (req) => {
                 notifications_used: 0,
                 warnings_used: 0,
                 fines_used: 0,
+                package_notifications_used: 0,
+                package_notifications_extra: 0,
               })
               .eq("id", subscription.id);
 
@@ -483,6 +496,8 @@ Deno.serve(async (req) => {
               notifications_used: 0,
               warnings_used: 0,
               fines_used: 0,
+              package_notifications_used: 0,
+              package_notifications_extra: 0,
             })
             .eq("id", subscription.id);
 
@@ -525,6 +540,8 @@ Deno.serve(async (req) => {
               notifications_used: 0,
               warnings_used: 0,
               fines_used: 0,
+              package_notifications_used: 0,
+              package_notifications_extra: 0,
             })
             .eq("id", subscription.id);
 
@@ -555,16 +572,26 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        // Calculate extra charges for package notifications
+        const extraNotifications = subscription.package_notifications_extra || 0;
+        const extraCharge = extraNotifications * extraCostPerNotification;
+        const totalAmount = price + extraCharge;
+
+        // Build invoice description
+        const invoiceDescription = extraNotifications > 0
+          ? `Assinatura ${subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1)} + ${extraNotifications} notificações extras de encomendas - ${periodStart.toLocaleDateString("pt-BR")} a ${periodEnd.toLocaleDateString("pt-BR")}`
+          : `Assinatura ${subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1)} - ${periodStart.toLocaleDateString("pt-BR")} a ${periodEnd.toLocaleDateString("pt-BR")}`;
+
         // Create the renewal invoice
         const { data: renewalInvoice, error: invoiceError } = await supabase.from("invoices").insert({
           subscription_id: subscription.id,
           condominium_id: subscription.condominium_id,
-          amount: price,
+          amount: totalAmount,
           status: "pending",
           due_date: dueDate.toISOString().split("T")[0],
           period_start: periodStart.toISOString().split("T")[0],
           period_end: periodEnd.toISOString().split("T")[0],
-          description: `Assinatura ${subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1)} - ${periodStart.toLocaleDateString("pt-BR")} a ${periodEnd.toLocaleDateString("pt-BR")}`,
+          description: invoiceDescription,
         }).select("invoice_number").single();
 
         if (invoiceError) {
@@ -573,7 +600,7 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        console.log(`Created renewal invoice for subscription ${subscription.id}`);
+        console.log(`Created renewal invoice for subscription ${subscription.id} (base: ${price}, extras: ${extraCharge}, total: ${totalAmount})`);
         results.invoicesCreated++;
 
         // Send WhatsApp notification to síndico
@@ -584,7 +611,7 @@ Deno.serve(async (req) => {
             renewalInvoice?.invoice_number || "",
             periodStart.toISOString().split("T")[0],
             periodEnd.toISOString().split("T")[0],
-            price,
+            totalAmount,
             dueDate.toISOString().split("T")[0],
             appBaseUrl,
             whatsappConfig as WhatsAppConfigRow
@@ -606,6 +633,8 @@ Deno.serve(async (req) => {
             notifications_used: 0,
             warnings_used: 0,
             fines_used: 0,
+            package_notifications_used: 0,
+            package_notifications_extra: 0,
           })
           .eq("id", subscription.id);
 

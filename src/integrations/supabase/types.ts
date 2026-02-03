@@ -1504,6 +1504,7 @@ export type Database = {
           mercadopago_plan_id: string | null
           name: string
           notifications_limit: number
+          package_notifications_limit: number
           price: number
           slug: string
           updated_at: string
@@ -1520,6 +1521,7 @@ export type Database = {
           mercadopago_plan_id?: string | null
           name: string
           notifications_limit?: number
+          package_notifications_limit?: number
           price?: number
           slug: string
           updated_at?: string
@@ -1536,6 +1538,7 @@ export type Database = {
           mercadopago_plan_id?: string | null
           name?: string
           notifications_limit?: number
+          package_notifications_limit?: number
           price?: number
           slug?: string
           updated_at?: string
@@ -1657,6 +1660,9 @@ export type Database = {
           mercadopago_preapproval_id: string | null
           notifications_limit: number
           notifications_used: number
+          package_notifications_extra: number
+          package_notifications_limit: number
+          package_notifications_used: number
           plan: Database["public"]["Enums"]["plan_type"]
           trial_ends_at: string | null
           updated_at: string
@@ -1678,6 +1684,9 @@ export type Database = {
           mercadopago_preapproval_id?: string | null
           notifications_limit?: number
           notifications_used?: number
+          package_notifications_extra?: number
+          package_notifications_limit?: number
+          package_notifications_used?: number
           plan?: Database["public"]["Enums"]["plan_type"]
           trial_ends_at?: string | null
           updated_at?: string
@@ -1699,6 +1708,9 @@ export type Database = {
           mercadopago_preapproval_id?: string | null
           notifications_limit?: number
           notifications_used?: number
+          package_notifications_extra?: number
+          package_notifications_limit?: number
+          package_notifications_used?: number
           plan?: Database["public"]["Enums"]["plan_type"]
           trial_ends_at?: string | null
           updated_at?: string

@@ -550,6 +550,21 @@ export function SubscriptionsMonitor() {
                             className="h-1.5"
                           />
                         </div>
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">Encomendas</span>
+                            <span className="font-medium">
+                              {(sub as any).package_notifications_used || 0}/{(sub as any).package_notifications_limit === -1 ? '∞' : (sub as any).package_notifications_limit || 50}
+                              {(sub as any).package_notifications_extra > 0 && (
+                                <span className="text-orange-500 ml-1">(+{(sub as any).package_notifications_extra} extras)</span>
+                              )}
+                            </span>
+                          </div>
+                          <Progress 
+                            value={(sub as any).package_notifications_limit === -1 ? 0 : getUsagePercentage((sub as any).package_notifications_used || 0, (sub as any).package_notifications_limit || 50)} 
+                            className="h-1.5"
+                          />
+                        </div>
                       </div>
 
                       {/* Action Button */}

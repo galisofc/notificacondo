@@ -122,6 +122,7 @@ Durante o trial você tem acesso a:
 ✅ Até {limite_notificacoes} notificações
 ✅ Até {limite_advertencias} advertências
 ✅ Até {limite_multas} multas
+✅ Até {limite_encomendas} notif. de encomendas
 ✅ Sistema completo de ocorrências
 
 Acesse agora e explore:
