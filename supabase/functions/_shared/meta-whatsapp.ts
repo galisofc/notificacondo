@@ -39,6 +39,13 @@ export interface MetaTemplateParams {
   headerMediaType?: "image" | "video" | "document";
   // Support for named parameters (some templates require explicit parameter names)
   bodyParamNames?: string[];
+  // Support for button parameters (URL button with dynamic suffix)
+  buttonParams?: Array<{
+    type: "button";
+    subType: "url";
+    index: number;
+    parameters: Array<{ type: "text"; text: string }>;
+  }>;
 }
 
 export interface MetaTextMessageParams {
@@ -166,6 +173,18 @@ export async function sendMetaTemplate(
       type: "body",
       parameters: validParams,
     });
+  }
+  
+  // Add button components if present (for URL buttons with dynamic suffix)
+  if (params.buttonParams && params.buttonParams.length > 0) {
+    for (const button of params.buttonParams) {
+      components.push({
+        type: "button",
+        sub_type: button.subType,
+        index: button.index,
+        parameters: button.parameters,
+      });
+    }
   }
   
   // Build the full request payload
