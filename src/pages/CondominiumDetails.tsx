@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MaskedInput, formatPhone, formatCPF } from "@/components/ui/masked-input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -688,125 +689,150 @@ const CondominiumDetails = () => {
           </div>
         </div>
 
-        {/* Stats Badges */}
-        <div className="flex flex-wrap gap-2">
-          <Badge variant="secondary" className="gap-1.5 px-3 py-1.5 text-sm font-normal">
-            <Building2 className="w-3.5 h-3.5" />
-            {blocks.length} bloco(s)
-          </Badge>
-          <Badge variant="secondary" className="gap-1.5 px-3 py-1.5 text-sm font-normal">
-            <Home className="w-3.5 h-3.5" />
-            {apartments.length} apartamento(s)
-          </Badge>
-          <Badge variant="secondary" className="gap-1.5 px-3 py-1.5 text-sm font-normal">
-            <Users className="w-3.5 h-3.5" />
-            {residents.length} morador(es)
-          </Badge>
+        {/* Stats Cards */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">
+                Total de Blocos
+              </CardTitle>
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{blocks.length}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">
+                Total de Apartamentos
+              </CardTitle>
+              <Home className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{apartments.length}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">
+                Total de Moradores
+              </CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{residents.length}</div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Search and Filters */}
-        <div className="flex flex-col md:flex-row gap-3 flex-wrap p-4 rounded-lg border bg-card">
-          {/* Quick Search */}
-          {id && (
-            <QuickBlockApartmentSearch
-              condominiumId={id}
-              onBlockFound={(blockId) => {
-                setSelectedBlockFilter(blockId);
-                setSelectedApartmentFilter("all");
-                setExpandedBlocks((prev) => new Set(prev).add(blockId));
-              }}
-              onApartmentFound={(apartmentId) => {
-                setSelectedApartmentFilter(apartmentId);
-                setHighlightedApartmentId(apartmentId);
-                // Find and expand the block containing this apartment
-                const apt = apartments.find(a => a.id === apartmentId);
-                if (apt) {
-                  setSelectedBlockFilter(apt.block_id);
-                  setExpandedBlocks((prev) => new Set(prev).add(apt.block_id));
-                }
-                setTimeout(() => {
-                  const element = document.querySelector(`[data-apartment-id="${apartmentId}"]`);
-                  element?.scrollIntoView({ behavior: "smooth", block: "center" });
-                }, 200);
-                setTimeout(() => {
-                  setHighlightedApartmentId(null);
-                }, 5000);
-              }}
-              className="w-full md:w-[200px]"
-              placeholder="Ex: 0344, ARM101"
-            />
-          )}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col md:flex-row gap-3 flex-wrap">
+              {/* Quick Search */}
+              {id && (
+                <QuickBlockApartmentSearch
+                  condominiumId={id}
+                  onBlockFound={(blockId) => {
+                    setSelectedBlockFilter(blockId);
+                    setSelectedApartmentFilter("all");
+                    setExpandedBlocks((prev) => new Set(prev).add(blockId));
+                  }}
+                  onApartmentFound={(apartmentId) => {
+                    setSelectedApartmentFilter(apartmentId);
+                    setHighlightedApartmentId(apartmentId);
+                    // Find and expand the block containing this apartment
+                    const apt = apartments.find(a => a.id === apartmentId);
+                    if (apt) {
+                      setSelectedBlockFilter(apt.block_id);
+                      setExpandedBlocks((prev) => new Set(prev).add(apt.block_id));
+                    }
+                    setTimeout(() => {
+                      const element = document.querySelector(`[data-apartment-id="${apartmentId}"]`);
+                      element?.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }, 200);
+                    setTimeout(() => {
+                      setHighlightedApartmentId(null);
+                    }, 5000);
+                  }}
+                  className="w-full md:w-[200px]"
+                  placeholder="Ex: 0344, ARM101"
+                />
+              )}
 
-          {/* Block Filter */}
-          <Select
-            value={selectedBlockFilter}
-            onValueChange={(v) => {
-              setSelectedBlockFilter(v);
-              setSelectedApartmentFilter("all");
-            }}
-          >
-            <SelectTrigger className="w-full md:w-[160px]">
-              <Building2 className="w-4 h-4 mr-2" />
-              <SelectValue placeholder="Bloco" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os blocos</SelectItem>
-              {blocksForFilter.map((b) => (
-                <SelectItem key={b.id} value={b.id}>
-                  {b.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+              {/* Block Filter */}
+              <Select
+                value={selectedBlockFilter}
+                onValueChange={(v) => {
+                  setSelectedBlockFilter(v);
+                  setSelectedApartmentFilter("all");
+                }}
+              >
+                <SelectTrigger className="w-full md:w-[160px]">
+                  <Building2 className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Bloco" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os blocos</SelectItem>
+                  {blocksForFilter.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-          {/* Apartment Filter */}
-          <Select
-            value={selectedApartmentFilter}
-            onValueChange={setSelectedApartmentFilter}
-            disabled={selectedBlockFilter === "all"}
-          >
-            <SelectTrigger className="w-full md:w-[140px]">
-              <Home className="w-4 h-4 mr-2" />
-              <SelectValue placeholder="Apto" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              {apartmentsForFilter.map((a) => (
-                <SelectItem key={a.id} value={a.id}>
-                  {a.number}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+              {/* Apartment Filter */}
+              <Select
+                value={selectedApartmentFilter}
+                onValueChange={setSelectedApartmentFilter}
+                disabled={selectedBlockFilter === "all"}
+              >
+                <SelectTrigger className="w-full md:w-[140px]">
+                  <Home className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Apto" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {apartmentsForFilter.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.number}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-          {/* Text Search */}
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por nome, e-mail ou telefone..."
-              className="pl-10"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+              {/* Text Search */}
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por nome, e-mail ou telefone..."
+                  className="pl-10"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
 
-          {/* Clear Filters Button */}
-          {(selectedBlockFilter !== "all" || selectedApartmentFilter !== "all" || searchQuery) && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setSelectedBlockFilter("all");
-                setSelectedApartmentFilter("all");
-                setSearchQuery("");
-              }}
-              className="gap-2"
-            >
-              <X className="h-4 w-4" />
-              Limpar filtros
-            </Button>
-          )}
-        </div>
+              {/* Clear Filters Button */}
+              {(selectedBlockFilter !== "all" || selectedApartmentFilter !== "all" || searchQuery) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedBlockFilter("all");
+                    setSelectedApartmentFilter("all");
+                    setSearchQuery("");
+                  }}
+                  className="gap-2"
+                >
+                  <X className="h-4 w-4" />
+                  Limpar filtros
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Blocks List */}
         <div className="space-y-3">
