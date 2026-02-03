@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { formatPhone } from "@/components/ui/masked-input";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, subDays, startOfDay, eachDayOfInterval } from "date-fns";
+import { format, eachDayOfInterval, startOfDay } from "date-fns";
 import { useDateFormatter } from "@/hooks/useFormattedDate";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -31,31 +31,33 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import {
   MessageCircle,
   Check,
-  CheckCheck,
-  Eye,
   AlertCircle,
-  Clock,
   Search,
-  Radio,
+  Package,
+  AlertTriangle,
+  FileWarning,
+  DollarSign,
+  PartyPopper,
   TrendingUp,
-  RefreshCw,
+  Calendar,
+  Send,
+  XCircle,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 import {
-  AreaChart,
-  Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
   ResponsiveContainer,
-  BarChart,
-  Bar,
   Legend,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts";
 import {
   ChartContainer,
@@ -63,358 +65,345 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 
-type NotificationStatus = "all" | "sent" | "delivered" | "read" | "failed" | "pending";
+type ModuleFilter = "all" | "packages" | "occurrences" | "party_hall" | "other";
 
-interface NotificationWithDetails {
+interface WabaLog {
   id: string;
-  sent_at: string;
-  delivered_at: string | null;
-  read_at: string | null;
-  zpro_status: string | null;
-  message_content: string;
-  sent_via: string;
-  resident: {
-    full_name: string;
-    phone: string | null;
-  } | null;
-  occurrence: {
-    title: string;
-    id: string;
-  } | null;
+  created_at: string;
+  function_name: string;
+  phone: string | null;
+  template_name: string | null;
+  success: boolean;
+  error_message: string | null;
+  message_id: string | null;
 }
 
-const statusConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  sent: { label: "Enviado", color: "bg-blue-500/10 text-blue-500 border-blue-500/20", icon: <Check className="h-3 w-3" /> },
-  delivered: { label: "Entregue", color: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20", icon: <CheckCheck className="h-3 w-3" /> },
-  read: { label: "Lido", color: "bg-violet-500/10 text-violet-500 border-violet-500/20", icon: <Eye className="h-3 w-3" /> },
-  failed: { label: "Falha", color: "bg-destructive/10 text-destructive border-destructive/20", icon: <AlertCircle className="h-3 w-3" /> },
-  pending: { label: "Pendente", color: "bg-amber-500/10 text-amber-500 border-amber-500/20", icon: <Clock className="h-3 w-3" /> },
+// Mapeamento de function_name para módulo
+const functionToModule: Record<string, { module: string; label: string; icon: React.ReactNode; color: string }> = {
+  "notify-package-arrival": { 
+    module: "packages", 
+    label: "Encomendas", 
+    icon: <Package className="h-4 w-4" />,
+    color: "hsl(262, 83%, 58%)" 
+  },
+  "notify-resident-decision": { 
+    module: "occurrences", 
+    label: "Ocorrências", 
+    icon: <FileWarning className="h-4 w-4" />,
+    color: "hsl(var(--primary))" 
+  },
+  "notify-sindico-defense": { 
+    module: "occurrences", 
+    label: "Ocorrências", 
+    icon: <FileWarning className="h-4 w-4" />,
+    color: "hsl(var(--primary))" 
+  },
+  "send-whatsapp-notification": { 
+    module: "occurrences", 
+    label: "Ocorrências", 
+    icon: <AlertTriangle className="h-4 w-4" />,
+    color: "hsl(var(--primary))" 
+  },
+  "send-party-hall-notification": { 
+    module: "party_hall", 
+    label: "Salão de Festas", 
+    icon: <PartyPopper className="h-4 w-4" />,
+    color: "hsl(142, 76%, 36%)" 
+  },
+  "notify-party-hall-reminders": { 
+    module: "party_hall", 
+    label: "Salão de Festas", 
+    icon: <PartyPopper className="h-4 w-4" />,
+    color: "hsl(142, 76%, 36%)" 
+  },
+  "notify-trial-ending": { 
+    module: "other", 
+    label: "Sistema", 
+    icon: <MessageCircle className="h-4 w-4" />,
+    color: "hsl(var(--muted-foreground))" 
+  },
+  "notify-transfer": { 
+    module: "other", 
+    label: "Sistema", 
+    icon: <MessageCircle className="h-4 w-4" />,
+    color: "hsl(var(--muted-foreground))" 
+  },
+};
+
+const getModuleInfo = (functionName: string) => {
+  return functionToModule[functionName] || { 
+    module: "other", 
+    label: "Outros", 
+    icon: <MessageCircle className="h-4 w-4" />,
+    color: "hsl(var(--muted-foreground))" 
+  };
 };
 
 const chartConfig = {
-  total: { label: "Total", color: "hsl(var(--primary))" },
-  delivered: { label: "Entregues", color: "hsl(142, 76%, 36%)" },
-  read: { label: "Lidos", color: "hsl(262, 83%, 58%)" },
-  failed: { label: "Falhas", color: "hsl(var(--destructive))" },
+  packages: { label: "Encomendas", color: "hsl(262, 83%, 58%)" },
+  occurrences: { label: "Ocorrências", color: "hsl(var(--primary))" },
+  party_hall: { label: "Salão de Festas", color: "hsl(142, 76%, 36%)" },
+  other: { label: "Outros", color: "hsl(var(--muted-foreground))" },
+};
+
+const moduleColors = {
+  packages: "hsl(262, 83%, 58%)",
+  occurrences: "hsl(221, 83%, 53%)",
+  party_hall: "hsl(142, 76%, 36%)",
+  other: "hsl(220, 9%, 46%)",
 };
 
 export function NotificationsMonitor() {
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
-  const [statusFilter, setStatusFilter] = useState<NotificationStatus>("all");
+  const [moduleFilter, setModuleFilter] = useState<ModuleFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [isLive, setIsLive] = useState(true);
-  const [chartPeriod, setChartPeriod] = useState<"7" | "14" | "30">("7");
-  const [isSyncing, setIsSyncing] = useState(false);
-  const { date: formatDate, dateTime: formatDateTime, custom: formatCustom } = useDateFormatter();
+  const { date: formatDate, custom: formatCustom } = useDateFormatter();
 
   const { containerRef, PullIndicator } = usePullToRefresh({
     onRefresh: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["notifications-monitor"] });
-      await queryClient.invalidateQueries({ queryKey: ["notifications-stats"] });
-      await queryClient.invalidateQueries({ queryKey: ["notifications-chart"] });
+      await queryClient.invalidateQueries({ queryKey: ["waba-notifications"] });
+      await queryClient.invalidateQueries({ queryKey: ["waba-stats"] });
+      await queryClient.invalidateQueries({ queryKey: ["subscription-period"] });
     },
     isEnabled: isMobile,
   });
 
-  const handleSyncStatus = async () => {
-    setIsSyncing(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("sync-notification-status");
-      
-      if (error) {
-        toast.error("Erro ao sincronizar status", {
-          description: error.message,
-        });
-        return;
-      }
-
-      if (data.synced > 0) {
-        toast.success("Sincronização concluída", {
-          description: `${data.synced} notificações atualizadas de ${data.checked} verificadas.`,
-        });
-        // Refresh data
-        queryClient.invalidateQueries({ queryKey: ["notifications-monitor"] });
-        queryClient.invalidateQueries({ queryKey: ["notifications-stats"] });
-        queryClient.invalidateQueries({ queryKey: ["notifications-chart"] });
-      } else {
-        toast.info("Nenhuma atualização necessária", {
-          description: `${data.checked} notificações verificadas, todas já sincronizadas.`,
-        });
-      }
-    } catch (err) {
-      toast.error("Erro ao sincronizar", {
-        description: "Não foi possível conectar ao servidor.",
-      });
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
-  // Realtime subscription
-  useEffect(() => {
-    if (!isLive) return;
-
-    const channel = supabase
-      .channel("notifications-realtime")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "notifications_sent",
-        },
-        (payload) => {
-          console.log("Realtime update:", payload);
-          // Invalidate queries to refetch data
-          queryClient.invalidateQueries({ queryKey: ["notifications-monitor"] });
-          queryClient.invalidateQueries({ queryKey: ["notifications-stats"] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [isLive, queryClient]);
-
-  const { data: notifications, isLoading } = useQuery({
-    queryKey: ["notifications-monitor", statusFilter],
+  // Buscar período da assinatura
+  const { data: subscriptionPeriod } = useQuery({
+    queryKey: ["subscription-period"],
     queryFn: async () => {
-      let query = supabase
-        .from("notifications_sent")
-        .select(`
-          id,
-          sent_at,
-          delivered_at,
-          read_at,
-          zpro_status,
-          message_content,
-          sent_via,
-          resident:residents(full_name, phone),
-          occurrence:occurrences(id, title)
-        `)
-        .order("sent_at", { ascending: false })
-        .limit(100);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
 
-      if (statusFilter !== "all") {
-        // Some providers don't reliably set a "read" zpro_status,
-        // so we infer read/delivered from timestamps OR zpro_status.
-        if (statusFilter === "read") {
-          query = query.not("read_at", "is", null);
-        } else if (statusFilter === "delivered") {
-          // Entregue = tem delivered_at OU zpro_status = delivered/read (exclui só os lidos pelo read_at)
-          query = query.or("delivered_at.not.is.null,zpro_status.eq.delivered,zpro_status.eq.read");
-        } else if (statusFilter === "sent") {
-          // Enviado = zpro_status = sent OU tem sent_at mas sem delivered_at
-          query = query.or("zpro_status.eq.sent");
-        } else {
-          query = query.eq("zpro_status", statusFilter);
-        }
-      }
+      // Buscar condomínios do usuário
+      const { data: condos } = await supabase
+        .from("condominiums")
+        .select("id")
+        .eq("owner_id", user.id);
 
-      const { data, error } = await query;
+      if (!condos || condos.length === 0) return null;
 
-      if (error) throw error;
-      return data as unknown as NotificationWithDetails[];
+      // Buscar assinatura ativa
+      const { data: subscription } = await supabase
+        .from("subscriptions")
+        .select("current_period_start, current_period_end, package_notifications_limit, package_notifications_used, package_notifications_extra")
+        .eq("condominium_id", condos[0].id)
+        .eq("active", true)
+        .single();
+
+      return subscription;
     },
   });
 
-  const { data: stats } = useQuery({
-    queryKey: ["notifications-stats"],
+  // Buscar todas as notificações WABA no período
+  const { data: wabaLogs, isLoading } = useQuery({
+    queryKey: ["waba-notifications", subscriptionPeriod?.current_period_start, subscriptionPeriod?.current_period_end, moduleFilter],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("notifications_sent")
-        .select("sent_at, zpro_status, delivered_at, read_at");
+      let query = supabase
+        .from("whatsapp_notification_logs")
+        .select("id, created_at, function_name, phone, template_name, success, error_message, message_id")
+        .order("created_at", { ascending: false })
+        .limit(500);
 
+      // Filtrar pelo período da assinatura se disponível
+      if (subscriptionPeriod?.current_period_start) {
+        query = query.gte("created_at", subscriptionPeriod.current_period_start);
+      }
+      if (subscriptionPeriod?.current_period_end) {
+        query = query.lte("created_at", subscriptionPeriod.current_period_end);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
 
-      const rows = data ?? [];
+      // Filtrar por módulo se necessário
+      if (moduleFilter !== "all") {
+        return (data as WabaLog[]).filter(log => {
+          const info = getModuleInfo(log.function_name);
+          return info.module === moduleFilter;
+        });
+      }
+
+      return data as WabaLog[];
+    },
+    enabled: true,
+  });
+
+  // Estatísticas por módulo
+  const { data: stats } = useQuery({
+    queryKey: ["waba-stats", subscriptionPeriod?.current_period_start, subscriptionPeriod?.current_period_end],
+    queryFn: async () => {
+      let query = supabase
+        .from("whatsapp_notification_logs")
+        .select("function_name, success");
+
+      if (subscriptionPeriod?.current_period_start) {
+        query = query.gte("created_at", subscriptionPeriod.current_period_start);
+      }
+      if (subscriptionPeriod?.current_period_end) {
+        query = query.lte("created_at", subscriptionPeriod.current_period_end);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
 
       const counts = {
-        total: rows.length,
-        sent: 0,
-        delivered: 0,
-        read: 0,
+        total: 0,
+        success: 0,
         failed: 0,
-        pending: 0,
+        packages: { total: 0, success: 0, failed: 0 },
+        occurrences: { total: 0, success: 0, failed: 0 },
+        party_hall: { total: 0, success: 0, failed: 0 },
+        other: { total: 0, success: 0, failed: 0 },
       };
 
-      rows.forEach((n) => {
-        // "Enviados" = tudo que saiu (sent/read/delivered). "Pendente" = sem status e sem timestamps.
-        const isRead = Boolean(n.read_at);
-        const isDelivered = Boolean(n.delivered_at) || isRead;
-        const isFailed = n.zpro_status === "failed";
-        const isExplicitSent = n.zpro_status === "sent";
+      (data || []).forEach((log) => {
+        counts.total++;
+        if (log.success) counts.success++;
+        else counts.failed++;
 
-        if (isRead) {
-          counts.read++;
-          counts.delivered++;
-          counts.sent++;
-          return;
+        const info = getModuleInfo(log.function_name);
+        const moduleKey = info.module as keyof typeof counts;
+        
+        if (moduleKey in counts && typeof counts[moduleKey] === 'object') {
+          const moduleStats = counts[moduleKey] as { total: number; success: number; failed: number };
+          moduleStats.total++;
+          if (log.success) moduleStats.success++;
+          else moduleStats.failed++;
         }
-
-        if (isDelivered) {
-          counts.delivered++;
-          counts.sent++;
-          return;
-        }
-
-        if (isFailed) {
-          counts.failed++;
-          return;
-        }
-
-        if (isExplicitSent) {
-          counts.sent++;
-          return;
-        }
-
-        // If it has a sent_at but no other indicators, treat as pending (provider hasn't confirmed yet)
-        counts.pending++;
       });
 
       return counts;
     },
+    enabled: true,
   });
 
-  // Chart data query
+  // Dados do gráfico por dia
   const { data: chartData } = useQuery({
-    queryKey: ["notifications-chart", chartPeriod],
+    queryKey: ["waba-chart", subscriptionPeriod?.current_period_start, subscriptionPeriod?.current_period_end],
     queryFn: async () => {
-      const days = parseInt(chartPeriod);
-      const startDate = startOfDay(subDays(new Date(), days - 1));
-      
+      if (!subscriptionPeriod?.current_period_start || !subscriptionPeriod?.current_period_end) {
+        return [];
+      }
+
       const { data, error } = await supabase
-        .from("notifications_sent")
-        .select("sent_at, zpro_status, delivered_at, read_at")
-        .gte("sent_at", startDate.toISOString())
-        .order("sent_at", { ascending: true });
+        .from("whatsapp_notification_logs")
+        .select("created_at, function_name, success")
+        .gte("created_at", subscriptionPeriod.current_period_start)
+        .lte("created_at", subscriptionPeriod.current_period_end)
+        .order("created_at", { ascending: true });
 
       if (error) throw error;
 
-      // Generate all days in the range
-      const allDays = eachDayOfInterval({
-        start: startDate,
-        end: new Date(),
-      });
+      const startDate = startOfDay(new Date(subscriptionPeriod.current_period_start));
+      const endDate = startOfDay(new Date(subscriptionPeriod.current_period_end));
+      const allDays = eachDayOfInterval({ start: startDate, end: endDate > new Date() ? new Date() : endDate });
 
-      // Group by day
-      const dayMap = new Map<string, { total: number; delivered: number; read: number; failed: number }>();
+      const dayMap = new Map<string, { packages: number; occurrences: number; party_hall: number; other: number }>();
       
       allDays.forEach((day) => {
         const key = format(day, "yyyy-MM-dd");
-        dayMap.set(key, { total: 0, delivered: 0, read: 0, failed: 0 });
+        dayMap.set(key, { packages: 0, occurrences: 0, party_hall: 0, other: 0 });
       });
 
-      data.forEach((n) => {
-        const key = format(new Date(n.sent_at), "yyyy-MM-dd");
+      (data || []).forEach((log) => {
+        const key = format(new Date(log.created_at), "yyyy-MM-dd");
         const dayData = dayMap.get(key);
-        if (dayData) {
-          dayData.total++;
-          // "Lidos" também conta como "entregue"
-          if (n.read_at) {
-            dayData.read++;
-            dayData.delivered++;
-          } else if (n.delivered_at) {
-            dayData.delivered++;
-          } else if (n.zpro_status === "failed") {
-            dayData.failed++;
+        if (dayData && log.success) {
+          const info = getModuleInfo(log.function_name);
+          const moduleKey = info.module as keyof typeof dayData;
+          if (moduleKey in dayData) {
+            dayData[moduleKey]++;
           }
         }
       });
 
       return Array.from(dayMap.entries()).map(([date, counts]) => ({
         date,
-        displayDate: formatCustom(date, "dd/MM"),
+        displayDate: format(new Date(date), "dd/MM"),
         ...counts,
       }));
     },
+    enabled: !!subscriptionPeriod?.current_period_start,
   });
 
-  const filteredNotifications = notifications?.filter((n) => {
+  // Dados do gráfico de pizza
+  const pieData = stats ? [
+    { name: "Encomendas", value: stats.packages.success, color: moduleColors.packages },
+    { name: "Ocorrências", value: stats.occurrences.success, color: moduleColors.occurrences },
+    { name: "Salão de Festas", value: stats.party_hall.success, color: moduleColors.party_hall },
+    { name: "Outros", value: stats.other.success, color: moduleColors.other },
+  ].filter(item => item.value > 0) : [];
+
+  const filteredLogs = wabaLogs?.filter((log) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
-      n.resident?.full_name?.toLowerCase().includes(query) ||
-      n.resident?.phone?.includes(query) ||
-      n.occurrence?.title?.toLowerCase().includes(query)
+      log.phone?.includes(query) ||
+      log.template_name?.toLowerCase().includes(query) ||
+      log.function_name?.toLowerCase().includes(query)
     );
   });
 
-  const getDisplayStatus = (notification: NotificationWithDetails): string => {
-    if (notification.read_at) return "read";
-    if (notification.delivered_at) return "delivered";
-    if (notification.zpro_status) return notification.zpro_status;
-    return "pending";
-  };
+  const periodLabel = subscriptionPeriod?.current_period_start && subscriptionPeriod?.current_period_end
+    ? `${formatCustom(subscriptionPeriod.current_period_start, "dd/MM/yyyy")} - ${formatCustom(subscriptionPeriod.current_period_end, "dd/MM/yyyy")}`
+    : "Período atual";
 
   return (
     <div ref={containerRef} className="space-y-6 overflow-auto">
       <PullIndicator />
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setStatusFilter("all")}>
+
+      {/* Período da Assinatura */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Calendar className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-foreground">Período da Assinatura</p>
+              <p className="text-xs text-muted-foreground">{periodLabel}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Stats Cards - Resumo Geral */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setModuleFilter("all")}>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary/10">
-                <MessageCircle className="h-5 w-5 text-primary" />
+                <Send className="h-5 w-5 text-primary" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats?.total || 0}</p>
-                <p className="text-xs text-muted-foreground">Total</p>
+                <p className="text-xs text-muted-foreground">Total Enviados</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="cursor-pointer hover:border-blue-500/50 transition-colors" onClick={() => setStatusFilter("sent")}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/10">
-                <Check className="h-5 w-5 text-blue-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats?.sent || 0}</p>
-                <p className="text-xs text-muted-foreground">Enviados</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="cursor-pointer hover:border-emerald-500/50 transition-colors" onClick={() => setStatusFilter("delivered")}>
+        <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-emerald-500/10">
-                <CheckCheck className="h-5 w-5 text-emerald-500" />
+                <Check className="h-5 w-5 text-emerald-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats?.delivered || 0}</p>
-                <p className="text-xs text-muted-foreground">Entregues</p>
+                <p className="text-2xl font-bold">{stats?.success || 0}</p>
+                <p className="text-xs text-muted-foreground">Sucesso</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="cursor-pointer hover:border-violet-500/50 transition-colors" onClick={() => setStatusFilter("read")}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-violet-500/10">
-                <Eye className="h-5 w-5 text-violet-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats?.read || 0}</p>
-                <p className="text-xs text-muted-foreground">Lidos</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="cursor-pointer hover:border-destructive/50 transition-colors" onClick={() => setStatusFilter("failed")}>
+        <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-destructive/10">
-                <AlertCircle className="h-5 w-5 text-destructive" />
+                <XCircle className="h-5 w-5 text-destructive" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats?.failed || 0}</p>
@@ -423,125 +412,220 @@ export function NotificationsMonitor() {
             </div>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-amber-500/10">
+                <DollarSign className="h-5 w-5 text-amber-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{subscriptionPeriod?.package_notifications_extra || 0}</p>
+                <p className="text-xs text-muted-foreground">Extras (R$ 0,10)</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Chart Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Cards por Módulo */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card 
+          className={`cursor-pointer transition-colors ${moduleFilter === "packages" ? "border-violet-500" : "hover:border-violet-500/50"}`}
+          onClick={() => setModuleFilter(moduleFilter === "packages" ? "all" : "packages")}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 rounded-lg bg-violet-500/10">
+                <Package className="h-5 w-5 text-violet-500" />
+              </div>
+              <div>
+                <p className="text-lg font-bold">{stats?.packages.total || 0}</p>
+                <p className="text-xs text-muted-foreground">Encomendas</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-emerald-500">✓ {stats?.packages.success || 0}</span>
+              <span className="text-destructive">✗ {stats?.packages.failed || 0}</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card 
+          className={`cursor-pointer transition-colors ${moduleFilter === "occurrences" ? "border-primary" : "hover:border-primary/50"}`}
+          onClick={() => setModuleFilter(moduleFilter === "occurrences" ? "all" : "occurrences")}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <FileWarning className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-lg font-bold">{stats?.occurrences.total || 0}</p>
+                <p className="text-xs text-muted-foreground">Ocorrências</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-emerald-500">✓ {stats?.occurrences.success || 0}</span>
+              <span className="text-destructive">✗ {stats?.occurrences.failed || 0}</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card 
+          className={`cursor-pointer transition-colors ${moduleFilter === "party_hall" ? "border-emerald-500" : "hover:border-emerald-500/50"}`}
+          onClick={() => setModuleFilter(moduleFilter === "party_hall" ? "all" : "party_hall")}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 rounded-lg bg-emerald-500/10">
+                <PartyPopper className="h-5 w-5 text-emerald-500" />
+              </div>
+              <div>
+                <p className="text-lg font-bold">{stats?.party_hall.total || 0}</p>
+                <p className="text-xs text-muted-foreground">Salão de Festas</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-emerald-500">✓ {stats?.party_hall.success || 0}</span>
+              <span className="text-destructive">✗ {stats?.party_hall.failed || 0}</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card 
+          className={`cursor-pointer transition-colors ${moduleFilter === "other" ? "border-muted-foreground" : "hover:border-muted-foreground/50"}`}
+          onClick={() => setModuleFilter(moduleFilter === "other" ? "all" : "other")}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 rounded-lg bg-muted">
+                <MessageCircle className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-lg font-bold">{stats?.other.total || 0}</p>
+                <p className="text-xs text-muted-foreground">Outros</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-emerald-500">✓ {stats?.other.success || 0}</span>
+              <span className="text-destructive">✗ {stats?.other.failed || 0}</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Gráficos */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Gráfico de Barras - Evolução */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary/10">
                 <TrendingUp className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <CardTitle>Evolução de Notificações</CardTitle>
+                <CardTitle>Evolução por Módulo</CardTitle>
                 <CardDescription>
-                  Acompanhe o volume de notificações ao longo do tempo
+                  Notificações enviadas com sucesso no período
                 </CardDescription>
               </div>
             </div>
-            <Select value={chartPeriod} onValueChange={(v) => setChartPeriod(v as "7" | "14" | "30")}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7">Últimos 7 dias</SelectItem>
-                <SelectItem value="14">Últimos 14 dias</SelectItem>
-                <SelectItem value="30">Últimos 30 dias</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {chartData && chartData.length > 0 ? (
-            <ChartContainer config={chartConfig} className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis 
-                    dataKey="displayDate" 
-                    tick={{ fontSize: 12 }}
-                    tickLine={false}
-                    axisLine={false}
-                    className="fill-muted-foreground"
-                  />
-                  <YAxis 
-                    tick={{ fontSize: 12 }}
-                    tickLine={false}
-                    axisLine={false}
-                    className="fill-muted-foreground"
-                    allowDecimals={false}
-                  />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Legend />
-                  <Bar 
-                    dataKey="total" 
-                    name="Total" 
-                    fill="hsl(var(--primary))" 
-                    radius={[4, 4, 0, 0]}
-                  />
-                  <Bar 
-                    dataKey="delivered" 
-                    name="Entregues" 
-                    fill="hsl(142, 76%, 36%)" 
-                    radius={[4, 4, 0, 0]}
-                  />
-                  <Bar 
-                    dataKey="read" 
-                    name="Lidos" 
-                    fill="hsl(262, 83%, 58%)" 
-                    radius={[4, 4, 0, 0]}
-                  />
-                  <Bar 
-                    dataKey="failed" 
-                    name="Falhas" 
-                    fill="hsl(var(--destructive))" 
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          ) : (
-            <div className="h-[300px] flex items-center justify-center">
-              <p className="text-muted-foreground">Nenhum dado disponível para o período</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent>
+            {chartData && chartData.length > 0 ? (
+              <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis 
+                      dataKey="displayDate" 
+                      tick={{ fontSize: 12 }}
+                      tickLine={false}
+                      axisLine={false}
+                      className="fill-muted-foreground"
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 12 }}
+                      tickLine={false}
+                      axisLine={false}
+                      className="fill-muted-foreground"
+                      allowDecimals={false}
+                    />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Legend />
+                    <Bar dataKey="packages" name="Encomendas" stackId="a" fill={moduleColors.packages} />
+                    <Bar dataKey="occurrences" name="Ocorrências" stackId="a" fill={moduleColors.occurrences} />
+                    <Bar dataKey="party_hall" name="Salão de Festas" stackId="a" fill={moduleColors.party_hall} />
+                    <Bar dataKey="other" name="Outros" stackId="a" fill={moduleColors.other} radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            ) : (
+              <div className="h-[300px] flex items-center justify-center">
+                <p className="text-muted-foreground">Nenhum dado disponível para o período</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-      {/* Filters and Table */}
+        {/* Gráfico de Pizza - Distribuição */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Distribuição por Módulo</CardTitle>
+            <CardDescription>
+              Proporção de envios com sucesso
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {pieData.length > 0 ? (
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={2}
+                      dataKey="value"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      labelLine={false}
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-[300px] flex items-center justify-center">
+                <p className="text-muted-foreground">Sem dados</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tabela de Notificações */}
       <Card>
         <CardHeader>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <CardTitle>Notificações Enviadas</CardTitle>
+              <CardTitle>Histórico de Envios</CardTitle>
               <CardDescription>
-                Monitoramento de status das mensagens WhatsApp
+                Todas as notificações WhatsApp enviadas no período
               </CardDescription>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSyncStatus}
-                disabled={isSyncing}
-                className="gap-2"
-              >
-                <RefreshCw className={`h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} />
-                {isSyncing ? "Sincronizando..." : "Sincronizar Status"}
-              </Button>
-              <button
-                onClick={() => setIsLive(!isLive)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                  isLive
-                    ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
-                    : "bg-muted text-muted-foreground border border-border"
-                }`}
-              >
-                <Radio className={`h-3 w-3 ${isLive ? "animate-pulse" : ""}`} />
-                {isLive ? "Ao vivo" : "Pausado"}
-              </button>
-            </div>
+            {moduleFilter !== "all" && (
+              <Badge variant="outline" className="gap-1">
+                Filtro: {chartConfig[moduleFilter]?.label || moduleFilter}
+                <button onClick={() => setModuleFilter("all")} className="ml-1 hover:text-destructive">×</button>
+              </Badge>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -549,23 +633,22 @@ export function NotificationsMonitor() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por morador, telefone..."
+                placeholder="Buscar por telefone, template..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
               />
             </div>
-            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as NotificationStatus)}>
-              <SelectTrigger className="w-full sm:w-[150px]">
-                <SelectValue placeholder="Status" />
+            <Select value={moduleFilter} onValueChange={(v) => setModuleFilter(v as ModuleFilter)}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Módulo" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="pending">Pendente</SelectItem>
-                <SelectItem value="sent">Enviado</SelectItem>
-                <SelectItem value="delivered">Entregue</SelectItem>
-                <SelectItem value="read">Lido</SelectItem>
-                <SelectItem value="failed">Falha</SelectItem>
+                <SelectItem value="all">Todos os Módulos</SelectItem>
+                <SelectItem value="packages">Encomendas</SelectItem>
+                <SelectItem value="occurrences">Ocorrências</SelectItem>
+                <SelectItem value="party_hall">Salão de Festas</SelectItem>
+                <SelectItem value="other">Outros</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -576,44 +659,50 @@ export function NotificationsMonitor() {
                 <Skeleton key={i} className="h-16 w-full" />
               ))}
             </div>
-          ) : filteredNotifications?.length === 0 ? (
+          ) : filteredLogs?.length === 0 ? (
             <div className="text-center py-12">
               <MessageCircle className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-              <p className="text-muted-foreground">Nenhuma notificação encontrada</p>
+              <p className="text-muted-foreground">Nenhuma notificação encontrada no período</p>
             </div>
           ) : (
             <>
               {/* Mobile Cards */}
               <div className="grid grid-cols-1 gap-3 md:hidden">
-                {filteredNotifications?.map((notification) => {
-                  const status = getDisplayStatus(notification);
-                  const config = statusConfig[status] || statusConfig.pending;
+                {filteredLogs?.slice(0, 50).map((log) => {
+                  const moduleInfo = getModuleInfo(log.function_name);
 
                   return (
-                    <Card key={notification.id} className="bg-card border-border/50">
+                    <Card key={log.id} className="bg-card border-border/50">
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between gap-3 mb-3">
-                          <div className="min-w-0 flex-1">
-                            <h3 className="font-semibold text-foreground truncate">
-                              {notification.resident?.full_name || "—"}
-                            </h3>
-                            <p className="text-xs text-muted-foreground">
-                              {notification.resident?.phone ? formatPhone(notification.resident.phone) : "Sem telefone"}
-                            </p>
+                          <div className="flex items-center gap-2">
+                            <div className="p-1.5 rounded-lg bg-muted">
+                              {moduleInfo.icon}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium">{moduleInfo.label}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {log.phone ? formatPhone(log.phone) : "—"}
+                              </p>
+                            </div>
                           </div>
-                          <Badge variant="outline" className={`${config.color} gap-1 shrink-0`}>
-                            {config.icon}
-                            {config.label}
+                          <Badge 
+                            variant="outline" 
+                            className={log.success 
+                              ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" 
+                              : "bg-destructive/10 text-destructive border-destructive/20"
+                            }
+                          >
+                            {log.success ? "Sucesso" : "Falha"}
                           </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground truncate mb-2">
-                          {notification.occurrence?.title || "—"}
-                        </p>
-                        <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/50">
-                          <span>Enviado: {formatCustom(notification.sent_at, "dd/MM HH:mm")}</span>
-                          {notification.delivered_at && (
-                            <span>Entregue: {formatCustom(notification.delivered_at, "dd/MM HH:mm")}</span>
-                          )}
+                        {log.template_name && (
+                          <p className="text-xs text-muted-foreground truncate mb-2">
+                            Template: {log.template_name}
+                          </p>
+                        )}
+                        <div className="text-xs text-muted-foreground pt-2 border-t border-border/50">
+                          {formatCustom(log.created_at, "dd/MM/yyyy HH:mm")}
                         </div>
                       </CardContent>
                     </Card>
@@ -626,64 +715,61 @@ export function NotificationsMonitor() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Morador</TableHead>
-                      <TableHead>Ocorrência</TableHead>
-                      <TableHead>Enviado em</TableHead>
+                      <TableHead>Módulo</TableHead>
+                      <TableHead>Template</TableHead>
+                      <TableHead>Telefone</TableHead>
+                      <TableHead>Data/Hora</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Entregue</TableHead>
-                      <TableHead>Lido</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredNotifications?.map((notification) => {
-                      const status = getDisplayStatus(notification);
-                      const config = statusConfig[status] || statusConfig.pending;
+                    {filteredLogs?.slice(0, 100).map((log) => {
+                      const moduleInfo = getModuleInfo(log.function_name);
 
                       return (
-                        <TableRow key={notification.id}>
+                        <TableRow key={log.id}>
                           <TableCell>
-                            <div>
-                              <p className="font-medium">{notification.resident?.full_name || "—"}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {notification.resident?.phone ? formatPhone(notification.resident.phone) : "Sem telefone"}
-                              </p>
+                            <div className="flex items-center gap-2">
+                              <div className="p-1.5 rounded-lg bg-muted">
+                                {moduleInfo.icon}
+                              </div>
+                              <span className="text-sm">{moduleInfo.label}</span>
                             </div>
                           </TableCell>
                           <TableCell>
-                            <p className="max-w-[200px] truncate">
-                              {notification.occurrence?.title || "—"}
+                            <p className="text-sm max-w-[200px] truncate">
+                              {log.template_name || "—"}
                             </p>
                           </TableCell>
                           <TableCell>
                             <p className="text-sm">
-                              {formatDate(notification.sent_at)}
+                              {log.phone ? formatPhone(log.phone) : "—"}
                             </p>
+                          </TableCell>
+                          <TableCell>
+                            <p className="text-sm">{formatDate(log.created_at)}</p>
                             <p className="text-xs text-muted-foreground">
-                              {formatCustom(notification.sent_at, "HH:mm")}
+                              {formatCustom(log.created_at, "HH:mm:ss")}
                             </p>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={`${config.color} gap-1`}>
-                              {config.icon}
-                              {config.label}
+                            <Badge 
+                              variant="outline" 
+                              className={log.success 
+                                ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" 
+                                : "bg-destructive/10 text-destructive border-destructive/20"
+                              }
+                            >
+                              {log.success ? (
+                                <><Check className="h-3 w-3 mr-1" /> Sucesso</>
+                              ) : (
+                                <><AlertCircle className="h-3 w-3 mr-1" /> Falha</>
+                              )}
                             </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {notification.delivered_at ? (
-                              <p className="text-sm">
-                                {formatCustom(notification.delivered_at, "dd/MM HH:mm")}
+                            {log.error_message && (
+                              <p className="text-xs text-destructive mt-1 max-w-[200px] truncate">
+                                {log.error_message}
                               </p>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {notification.read_at ? (
-                              <p className="text-sm">
-                                {formatCustom(notification.read_at, "dd/MM HH:mm")}
-                              </p>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
                             )}
                           </TableCell>
                         </TableRow>
@@ -692,6 +778,12 @@ export function NotificationsMonitor() {
                   </TableBody>
                 </Table>
               </div>
+
+              {filteredLogs && filteredLogs.length > 100 && (
+                <p className="text-center text-sm text-muted-foreground mt-4">
+                  Exibindo 100 de {filteredLogs.length} registros
+                </p>
+              )}
             </>
           )}
         </CardContent>
