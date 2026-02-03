@@ -2,9 +2,10 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://esm.sh/zod@3.22.4";
 import { 
-  sendMetaText, 
+  sendMetaTemplate, 
   isMetaConfigured,
   formatPhoneForMeta,
+  buildParamsArray,
   type MetaSendResult 
 } from "../_shared/meta-whatsapp.ts";
 
@@ -20,8 +21,24 @@ const SendNotificationSchema = z.object({
   message_template: z.string().max(2000, "Mensagem não pode exceder 2000 caracteres").optional(),
 });
 
-// Sanitize strings for use in messages
-const sanitize = (str: string) => str.replace(/[<>"'`]/g, "").trim();
+// Sanitize strings for use in messages - remove forbidden characters and normalize whitespace
+const sanitizeForWaba = (str: string): string => {
+  return str
+    .replace(/[<>"'`]/g, "")
+    .replace(/[\n\r\t]/g, " ")
+    .replace(/\s{3,}/g, "  ")
+    .trim();
+};
+
+interface WhatsAppTemplateRow {
+  id: string;
+  slug: string;
+  content: string;
+  is_active: boolean;
+  waba_template_name?: string;
+  waba_language?: string;
+  params_order?: string[];
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -206,66 +223,41 @@ serve(async (req) => {
       multa: "Multa",
     };
 
-    // Fetch template - first check for custom condominium template
-    let templateContent: string | null = null;
-    
-    const { data: customTemplate } = await supabase
-      .from("condominium_whatsapp_templates")
-      .select("content")
-      .eq("condominium_id", condoId)
-      .eq("template_slug", "notification_occurrence")
+    // ========== FETCH WABA TEMPLATE ==========
+    const { data: wabaTemplate } = await supabase
+      .from("whatsapp_templates")
+      .select("id, slug, content, is_active, waba_template_name, waba_language, params_order")
+      .eq("slug", "notification_occurrence")
       .eq("is_active", true)
-      .maybeSingle();
+      .maybeSingle() as { data: WhatsAppTemplateRow | null; error: any };
 
-    if (customTemplate?.content) {
-      templateContent = customTemplate.content;
-      console.log("Using custom condominium template");
-    } else {
-      // Fall back to default template
-      const { data: defaultTemplate } = await supabase
-        .from("whatsapp_templates")
-        .select("content")
-        .eq("slug", "notification_occurrence")
-        .eq("is_active", true)
-        .maybeSingle();
-      
-      if (defaultTemplate?.content) {
-        templateContent = defaultTemplate.content;
-        console.log("Using default system template");
-      }
-    }
+    const wabaTemplateName = wabaTemplate?.waba_template_name || null;
+    const wabaLanguage = wabaTemplate?.waba_language || "pt_BR";
+    const paramsOrder = wabaTemplate?.params_order || [];
 
-    // Build message with sanitization
-    const defaultMessage = `🏢 *${sanitize(condoName)}*
+    console.log(`Template WABA config: name=${wabaTemplateName}, lang=${wabaLanguage}, params=${paramsOrder.join(",")}`);
 
-Olá, *${sanitize(resident.full_name)}*!
+    // Build variables for template
+    const variables: Record<string, string> = {
+      nome: sanitizeForWaba(resident.full_name || "Morador"),
+      tipo: typeLabels[occurrenceData.type] || occurrenceData.type,
+      titulo: sanitizeForWaba(occurrenceData.title),
+      condominio: sanitizeForWaba(condoName),
+      link: secureLink,
+    };
+
+    // Build message content for notification record
+    const messageContent = `🏢 *${sanitizeForWaba(condoName)}*
+
+Olá, *${sanitizeForWaba(resident.full_name)}*!
 
 Você recebeu uma *${typeLabels[occurrenceData.type] || occurrenceData.type}*:
-📋 *${sanitize(occurrenceData.title)}*
+📋 *${sanitizeForWaba(occurrenceData.title)}*
 
 Acesse o link abaixo para ver os detalhes e apresentar sua defesa:
 👉 ${secureLink}
 
 Este link é pessoal e intransferível.`;
-
-    let message: string;
-    if (message_template) {
-      message = sanitize(message_template)
-        .replace("{nome}", sanitize(resident.full_name))
-        .replace("{tipo}", typeLabels[occurrenceData.type] || occurrenceData.type)
-        .replace("{titulo}", sanitize(occurrenceData.title))
-        .replace("{condominio}", sanitize(condoName))
-        .replace("{link}", secureLink);
-    } else if (templateContent) {
-      message = templateContent
-        .replace("{nome}", sanitize(resident.full_name))
-        .replace("{tipo}", typeLabels[occurrenceData.type] || occurrenceData.type)
-        .replace("{titulo}", sanitize(occurrenceData.title))
-        .replace("{condominio}", sanitize(condoName))
-        .replace("{link}", secureLink);
-    } else {
-      message = defaultMessage;
-    }
 
     // Save notification record
     const { data: notification, error: notifError } = await supabase
@@ -273,7 +265,7 @@ Este link é pessoal e intransferível.`;
       .insert({
         occurrence_id,
         resident_id,
-        message_content: message,
+        message_content: messageContent,
         sent_via: "whatsapp_meta",
         secure_link: secureLink,
         secure_link_token: secureToken,
@@ -290,13 +282,50 @@ Este link é pessoal e intransferível.`;
       );
     }
 
-    // Send WhatsApp message via Meta API
-    console.log(`Sending WhatsApp message to: ${resident.phone}`);
-    
-    const result = await sendMetaText({
+    // ========== SEND VIA WABA TEMPLATE ==========
+    let result: MetaSendResult;
+
+    if (wabaTemplateName && paramsOrder.length > 0) {
+      console.log(`Using WABA template: ${wabaTemplateName}`);
+      
+      const { values: bodyParams, names: bodyParamNames } = buildParamsArray(variables, paramsOrder);
+      
+      console.log(`Body params: ${JSON.stringify(bodyParams)}`);
+      console.log(`Body param names: ${JSON.stringify(bodyParamNames)}`);
+      
+      result = await sendMetaTemplate({
+        phone: resident.phone,
+        templateName: wabaTemplateName,
+        language: wabaLanguage,
+        bodyParams,
+        bodyParamNames,
+      });
+    } else {
+      // Fallback to text message (will only work within 24h window)
+      console.warn("No WABA template configured, falling back to text message (may fail outside 24h window)");
+      
+      const { sendMetaText } = await import("../_shared/meta-whatsapp.ts");
+      result = await sendMetaText({
+        phone: resident.phone,
+        message: messageContent,
+        previewUrl: true,
+      });
+    }
+
+    // Log to whatsapp_notification_logs for monitoring
+    await supabase.from("whatsapp_notification_logs").insert({
+      function_name: "send-whatsapp-notification",
       phone: resident.phone,
-      message,
-      previewUrl: true,
+      resident_id: resident.id,
+      condominium_id: condoId,
+      template_name: wabaTemplateName || "notification_occurrence_fallback",
+      template_language: wabaLanguage,
+      success: result.success,
+      message_id: result.messageId,
+      error_message: result.error,
+      request_payload: result.debug?.payload || { variables, params_order: paramsOrder },
+      response_body: result.debug?.response,
+      response_status: result.debug?.status,
     });
 
     // Update notification with result
@@ -329,6 +358,7 @@ Este link é pessoal e intransferível.`;
         notification_id: notification.id,
         message_id: result.messageId,
         secure_link: secureLink,
+        template_used: wabaTemplateName || "fallback_text",
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
