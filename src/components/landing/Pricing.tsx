@@ -147,7 +147,7 @@ const Pricing = () => {
 
         {/* Modules Included Badge */}
         <div className="flex flex-col items-center gap-4 mb-12">
-          <p className="text-sm font-medium text-muted-foreground">Todos os planos incluem os 3 módulos:</p>
+          <p className="text-sm font-medium text-muted-foreground">Todos os planos incluem os 4 módulos:</p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/30">
               <Scale className="w-4 h-4 text-amber-500" />
@@ -273,7 +273,7 @@ const Pricing = () => {
                       <div className="space-y-2 mb-6">
                         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20">
                           <Check className="w-4 h-4 text-primary" />
-                          <span className="text-xs text-primary font-medium">3 módulos inclusos</span>
+                          <span className="text-xs text-primary font-medium">4 módulos inclusos</span>
                         </div>
                         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20">
                           <MessageCircle className="w-4 h-4 text-green-500" />
