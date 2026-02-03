@@ -114,7 +114,7 @@ Esperamos você de volta! 💙`,
 
 Olá, *{nome}*!
 
-Seu período de teste de *7 dias* começou!
+Seu período de teste de *{dias_trial} dias* começou!
 
 📅 *Expira em:* {data_expiracao}
 
