@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
   Loader2,
   Send,
@@ -27,6 +28,7 @@ import {
   AlertCircle,
   RefreshCw,
   Zap,
+  ExternalLink,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -75,6 +77,13 @@ export function WabaTemplateSubmitDialog({
   const [bodyText, setBodyText] = useState("");
   const [footerText, setFooterText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Button state
+  const [hasButton, setHasButton] = useState(false);
+  const [buttonType, setButtonType] = useState<"url" | "quick_reply">("url");
+  const [buttonText, setButtonText] = useState("");
+  const [buttonUrlBase, setButtonUrlBase] = useState("");
+  const [hasDynamicSuffix, setHasDynamicSuffix] = useState(false);
   
   // Link existing template state
   const [metaTemplates, setMetaTemplates] = useState<MetaTemplate[]>([]);
@@ -149,6 +158,18 @@ export function WabaTemplateSubmitDialog({
       return;
     }
 
+    // Validate button if enabled
+    if (hasButton && buttonType === "url") {
+      if (!buttonText.trim() || !buttonUrlBase.trim()) {
+        toast({
+          title: "Botão incompleto",
+          description: "Preencha o texto e a URL base do botão",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
       const components: any[] = [];
@@ -184,6 +205,25 @@ export function WabaTemplateSubmitDialog({
           type: "FOOTER",
           text: footerText,
         });
+      }
+
+      // Add button if enabled
+      if (hasButton && buttonType === "url" && buttonText.trim() && buttonUrlBase.trim()) {
+        const buttonComponent: any = {
+          type: "BUTTONS",
+          buttons: [{
+            type: "URL",
+            text: buttonText,
+            url: hasDynamicSuffix ? `${buttonUrlBase}{{1}}` : buttonUrlBase,
+          }],
+        };
+        
+        // Add example for dynamic URL
+        if (hasDynamicSuffix) {
+          buttonComponent.buttons[0].example = ["exemplo_token_123"];
+        }
+        
+        components.push(buttonComponent);
       }
 
       const { data, error } = await supabase.functions.invoke("create-waba-template", {
@@ -350,6 +390,11 @@ export function WabaTemplateSubmitDialog({
     setHeaderText("");
     setBodyText("");
     setFooterText("");
+    setHasButton(false);
+    setButtonType("url");
+    setButtonText("");
+    setButtonUrlBase("");
+    setHasDynamicSuffix(false);
     setSelectedTemplate(null);
     setSearchQuery("");
   };
@@ -605,6 +650,73 @@ export function WabaTemplateSubmitDialog({
                     onChange={(e) => setFooterText(e.target.value)}
                     placeholder="Não responda a esta mensagem"
                   />
+                </div>
+
+                {/* Button Section */}
+                <div className="space-y-3 rounded-lg border p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-base font-medium flex items-center gap-2">
+                        <ExternalLink className="h-4 w-4" />
+                        Botão de Ação
+                      </Label>
+                      <p className="text-xs text-muted-foreground">Adicionar botão com link</p>
+                    </div>
+                    <Switch
+                      checked={hasButton}
+                      onCheckedChange={setHasButton}
+                    />
+                  </div>
+
+                  {hasButton && (
+                    <div className="space-y-3 pt-2 border-t">
+                      <div className="space-y-2">
+                        <Label>Texto do Botão *</Label>
+                        <Input
+                          value={buttonText}
+                          onChange={(e) => setButtonText(e.target.value)}
+                          placeholder="Ver Detalhes"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>URL Base *</Label>
+                        <Input
+                          value={buttonUrlBase}
+                          onChange={(e) => setButtonUrlBase(e.target.value)}
+                          placeholder="https://notificacondo.lovable.app/acesso/"
+                          className="font-mono text-sm"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between rounded-lg border p-3">
+                        <div className="space-y-0.5">
+                          <Label className="text-sm font-medium">Sufixo Dinâmico</Label>
+                          <p className="text-xs text-muted-foreground">
+                            Adiciona {"{{1}}"} ao final da URL
+                          </p>
+                        </div>
+                        <Switch
+                          checked={hasDynamicSuffix}
+                          onCheckedChange={setHasDynamicSuffix}
+                        />
+                      </div>
+
+                      {hasDynamicSuffix && (
+                        <div className="rounded-lg bg-primary/5 border border-primary/20 p-3">
+                          <p className="text-xs font-medium text-primary">
+                            Preview da URL:
+                          </p>
+                          <code className="text-xs bg-background px-2 py-1 rounded mt-1 block truncate">
+                            {buttonUrlBase || "https://..."}{"{{1}}"}
+                          </code>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            O {"{{1}}"} será substituído pelo token único de cada morador.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </ScrollArea>
