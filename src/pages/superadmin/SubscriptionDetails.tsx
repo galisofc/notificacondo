@@ -1335,24 +1335,11 @@ export default function SubscriptionDetails() {
                       <Calendar className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
                       <span className="truncate">
                         Período: {" "}
-                        {(() => {
-                          // If in trial, use trial dates
-                          if (subscription.is_trial && subscription.trial_ends_at) {
-                            const trialStart = subscription.current_period_start 
-                              ? new Date(subscription.current_period_start)
-                              : new Date(new Date(subscription.trial_ends_at).getTime() - 14 * 24 * 60 * 60 * 1000);
-                            const trialEnd = new Date(subscription.trial_ends_at);
-                            return `${formatDate(trialStart.toISOString())} - ${formatDate(trialEnd.toISOString())}`;
-                          }
-                          // Otherwise use regular period
-                          const periodStart = subscription.current_period_start 
-                            ? formatDate(subscription.current_period_start)
-                            : "—";
-                          const periodEnd = subscription.current_period_end
-                            ? formatDate(subscription.current_period_end)
-                            : "—";
-                          return `${periodStart} - ${periodEnd}`;
-                        })()}
+                        {subscription.current_period_start 
+                          ? formatDate(subscription.current_period_start)
+                          : "—"} - {subscription.current_period_end
+                          ? formatDate(subscription.current_period_end)
+                          : "—"}
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto">
