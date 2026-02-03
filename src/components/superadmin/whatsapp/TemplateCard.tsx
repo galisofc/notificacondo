@@ -98,15 +98,27 @@ export function TemplateCard({
       );
     }
     
+    // Status: PENDING - aguardando aprovação inicial
     if (metaTemplate.status === "PENDING") {
       return (
         <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20 text-xs gap-1">
-          <Clock className="h-3 w-3" />
-          Pendente
+          <Clock className="h-3 w-3 animate-pulse" />
+          Em Análise
         </Badge>
       );
     }
     
+    // Status: IN_APPEAL - em recurso após rejeição
+    if (metaTemplate.status === "IN_APPEAL") {
+      return (
+        <Badge className="bg-orange-500/10 text-orange-600 border-orange-500/20 text-xs gap-1">
+          <Clock className="h-3 w-3 animate-pulse" />
+          Em Recurso
+        </Badge>
+      );
+    }
+    
+    // Status: REJECTED
     if (metaTemplate.status === "REJECTED") {
       return (
         <Badge className="bg-red-500/10 text-red-600 border-red-500/20 text-xs gap-1">
@@ -116,6 +128,17 @@ export function TemplateCard({
       );
     }
     
+    // Status: DISABLED
+    if (metaTemplate.status === "DISABLED") {
+      return (
+        <Badge className="bg-gray-500/10 text-gray-600 border-gray-500/20 text-xs gap-1">
+          <XCircle className="h-3 w-3" />
+          Desativado
+        </Badge>
+      );
+    }
+    
+    // Status: APPROVED (default para status válidos)
     return (
       <Badge className="bg-green-500/10 text-green-600 border-green-500/20 text-xs gap-1">
         <CheckCircle className="h-3 w-3" />
