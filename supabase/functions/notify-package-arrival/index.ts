@@ -357,12 +357,13 @@ serve(async (req) => {
         }
       }
 
-      // Log to whatsapp_notification_logs
+      // Log to whatsapp_notification_logs (with condominium_id for RLS)
       await supabase.from("whatsapp_notification_logs").insert({
         function_name: "notify-package-arrival",
         phone: resident.phone,
         resident_id: resident.id,
         package_id: package_id,
+        condominium_id: condoId,
         template_name: wabaTemplateName || "package_arrival_fallback",
         template_language: wabaLanguage,
         success: result.success,
@@ -372,7 +373,6 @@ serve(async (req) => {
         response_body: result.debug?.response,
         response_status: result.debug?.status,
         debug_info: { 
-          condominium_id: condoId, 
           original_photo_url: photo_url || null,
           signed_photo_url: signedPhotoUrl || null,
         },
