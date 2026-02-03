@@ -40,11 +40,17 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Building2,
   ChevronDown,
   ChevronRight,
   Search,
-  UserPlus,
+  Plus,
   Pencil,
   Trash2,
   Users,
@@ -53,10 +59,13 @@ import {
   Loader2,
   Home,
   X,
+  User,
+  MoreVertical,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { MaskedInput, formatCPF } from "@/components/ui/masked-input";
+import { MaskedInput, formatCPF, formatPhone } from "@/components/ui/masked-input";
 import { QuickBlockApartmentSearch } from "@/components/packages/QuickBlockApartmentSearch";
+import { cn } from "@/lib/utils";
 
 interface Resident {
   id: string;
@@ -690,121 +699,133 @@ export default function PorteiroCondominio() {
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <CardContent className="pt-0">
-                      <div className="space-y-3">
-                        {block.apartments.map((apartment) => (
-                          <Collapsible
-                            key={apartment.id}
-                            open={expandedApartments.has(apartment.id)}
-                            onOpenChange={() => toggleApartment(apartment.id)}
-                          >
+                      <div className="divide-y divide-border">
+                        {block.apartments.map((apartment) => {
+                          const isHighlighted = highlightedApartmentId === apartment.id;
+                          return (
                             <div 
-                              className={`rounded-lg border bg-card transition-all duration-500 ${
-                                highlightedApartmentId === apartment.id 
-                                  ? "ring-2 ring-primary ring-offset-2 ring-offset-background bg-primary/10" 
-                                  : ""
-                              }`} 
+                              key={apartment.id}
                               data-apartment-id={apartment.id}
+                              className={cn(
+                                "p-4 transition-all duration-300",
+                                isHighlighted 
+                                  ? "bg-primary/20 ring-2 ring-primary ring-inset" 
+                                  : "hover:bg-secondary/30"
+                              )}
                             >
-                              <CollapsibleTrigger asChild>
-                                <div className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50 transition-colors">
-                                  <div className="flex items-center gap-2">
-                                    {expandedApartments.has(apartment.id) ? (
-                                      <ChevronDown className="h-4 w-4" />
-                                    ) : (
-                                      <ChevronRight className="h-4 w-4" />
-                                    )}
-                                    <span className="font-medium">
-                                      Apto {apartment.number}
-                                    </span>
-                                    <Badge
-                                      variant={
-                                        apartment.residents.length === 0
-                                          ? "destructive"
-                                          : "outline"
-                                      }
-                                    >
-                                      {apartment.residents.length} morador(es)
-                                    </Badge>
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center">
+                                    <Home className="w-4 h-4 text-accent" />
                                   </div>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      openAddDialog(apartment.id);
-                                    }}
-                                  >
-                                    <UserPlus className="h-4 w-4 mr-1" />
-                                    Adicionar
-                                  </Button>
-                                </div>
-                              </CollapsibleTrigger>
-                              <CollapsibleContent>
-                                <div className="border-t p-3 space-y-2">
-                                  {apartment.residents.length === 0 ? (
-                                    <p className="text-sm text-muted-foreground text-center py-2">
-                                      Nenhum morador cadastrado
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium text-foreground">
+                                        Apto {apartment.number}
+                                      </span>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground">
+                                      {apartment.residents.length} morador(es)
                                     </p>
-                                  ) : (
-                                    apartment.residents.map((resident) => (
-                                      <div
-                                        key={resident.id}
-                                        className="flex items-center justify-between p-2 rounded-md bg-muted/50"
-                                      >
-                                        <div className="space-y-1">
-                                          <div className="flex items-center gap-2">
-                                            <span className="font-medium">
-                                              {resident.full_name}
-                                            </span>
-                                            {resident.is_owner && (
-                                              <Badge variant="secondary" className="text-xs">
-                                                Proprietário
-                                              </Badge>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => openAddDialog(apartment.id)}
+                                  >
+                                    <Plus className="w-3 h-3 mr-1" />
+                                    Morador
+                                  </Button>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                                        <MoreVertical className="w-4 h-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem disabled>
+                                        <Pencil className="w-4 h-4 mr-2" />
+                                        Editar Apartamento
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              </div>
+
+                              {/* Residents under apartment */}
+                              {apartment.residents.length > 0 && (
+                                <div className="mt-3 ml-12 space-y-2">
+                                  {apartment.residents.map((resident) => (
+                                    <div
+                                      key={resident.id}
+                                      className="flex items-center justify-between p-3 rounded-lg bg-secondary/50"
+                                    >
+                                      <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                          <User className="w-4 h-4 text-primary" />
+                                        </div>
+                                        <div>
+                                          <p className="font-medium text-sm text-foreground">
+                                            {resident.full_name}
+                                          </p>
+                                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                            {resident.email && (
+                                              <span className="flex items-center gap-1">
+                                                <Mail className="w-3 h-3" />
+                                                {resident.email}
+                                              </span>
                                             )}
-                                            {resident.is_responsible && (
-                                              <Badge variant="outline" className="text-xs">
-                                                Responsável
-                                              </Badge>
-                                            )}
-                                          </div>
-                                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                            <span className="flex items-center gap-1">
-                                              <Mail className="h-3 w-3" />
-                                              {resident.email}
-                                            </span>
                                             {resident.phone && (
                                               <span className="flex items-center gap-1">
-                                                <Phone className="h-3 w-3" />
-                                                {resident.phone}
+                                                <Phone className="w-3 h-3" />
+                                                {formatPhone(resident.phone)}
+                                              </span>
+                                            )}
+                                          </div>
+                                          <div className="flex gap-1 mt-1">
+                                            {resident.is_owner && (
+                                              <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px]">
+                                                Proprietário
+                                              </span>
+                                            )}
+                                            {resident.is_responsible && (
+                                              <span className="px-1.5 py-0.5 rounded bg-accent/10 text-accent text-[10px]">
+                                                Responsável
                                               </span>
                                             )}
                                           </div>
                                         </div>
-                                        <div className="flex items-center gap-1">
-                                          <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            onClick={() => openEditDialog(resident)}
-                                          >
-                                            <Pencil className="h-4 w-4" />
-                                          </Button>
-                                          <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                            onClick={() => openDeleteDialog(resident)}
-                                          >
-                                            <Trash2 className="h-4 w-4" />
-                                          </Button>
-                                        </div>
                                       </div>
-                                    ))
-                                  )}
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                          <Button variant="ghost" size="icon" className="h-7 w-7">
+                                            <MoreVertical className="w-3 h-3" />
+                                          </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                          <DropdownMenuItem onClick={() => openEditDialog(resident)}>
+                                            <Pencil className="w-4 h-4 mr-2" />
+                                            Editar Morador
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem
+                                            onClick={() => openDeleteDialog(resident)}
+                                            className="text-destructive focus:text-destructive"
+                                          >
+                                            <Trash2 className="w-4 h-4 mr-2" />
+                                            Excluir Morador
+                                          </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
+                                    </div>
+                                  ))}
                                 </div>
-                              </CollapsibleContent>
+                              )}
                             </div>
-                          </Collapsible>
-                        ))}
+                          );
+                        })}
                       </div>
                     </CardContent>
                   </CollapsibleContent>
