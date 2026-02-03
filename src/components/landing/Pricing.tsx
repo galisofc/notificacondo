@@ -267,6 +267,9 @@ const Pricing = () => {
                             {(plan as any).package_notifications_limit === -1 ? 'Ilimitadas' : `${(plan as any).package_notifications_limit || 50}/mês`}
                           </span>
                         </div>
+                        <p className="text-xs text-muted-foreground/70 pt-2 border-t border-border/50">
+                          Envios extras: R$ 0,10 cada
+                        </p>
                       </div>
 
                       {/* Badges */}

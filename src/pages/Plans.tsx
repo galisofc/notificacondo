@@ -375,6 +375,9 @@ const Plans = () => {
                                 {(plan as any).package_notifications_limit === -1 ? 'Ilimitadas' : `${(plan as any).package_notifications_limit || 50}/mês`}
                               </span>
                             </div>
+                            <p className="text-xs text-muted-foreground/70 pt-2 border-t border-border/50">
+                              Envios extras: R$ 0,10 cada
+                            </p>
                           </div>
 
                           {/* Badges */}
@@ -487,7 +490,7 @@ const Plans = () => {
                 <Card className="p-6">
                   <h3 className="font-semibold mb-2">O que acontece se eu ultrapassar os limites?</h3>
                   <p className="text-muted-foreground text-sm">
-                    Quando você atinge o limite do seu plano, você recebe um aviso e pode fazer upgrade para continuar utilizando. Não há cobranças extras automáticas.
+                    Você continua usando normalmente. Os envios que ultrapassarem o limite do plano serão cobrados a R$ 0,10 cada (notificações, advertências, multas e encomendas). O valor é adicionado à fatura do próximo mês.
                   </p>
                 </Card>
                 
