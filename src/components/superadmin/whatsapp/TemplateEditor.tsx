@@ -596,32 +596,6 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
 
                 <Separator />
 
-                <div className="rounded-lg border p-3 bg-muted/30">
-                  <h4 className="text-xs font-medium mb-2">Preview do Payload WABA</h4>
-                  <p className="text-[10px] text-muted-foreground mb-2">
-                    💡 Se o template tiver header de imagem dinâmica (ex: foto da encomenda), 
-                    a URL será incluída automaticamente no campo "image".
-                  </p>
-                <pre className="text-[10px] sm:text-xs font-mono bg-background p-2 rounded overflow-x-auto">
-{`{
-  "templateName": "${wabaTemplateName || "nome_do_template"}",
-  "language": "${wabaLanguage}",
-  "image": "https://storage.../foto.jpg",
-  "header": { "type": "image", "url": "..." },
-  "params": [
-${paramsOrder.map((p, i) => `    "${p}"`).join(",\n")}
-  ]${hasButton ? `,
-  "buttons": [{
-    "type": "${buttonType.toUpperCase()}",
-    "text": "${buttonText}"${buttonType === "url" ? `,
-    "url": "${buttonUrlBase}${hasDynamicSuffix ? "{{1}}" : ""}"` : ""}
-  }]` : ""}
-}`}
-                  </pre>
-                </div>
-
-                <Separator />
-
                 {/* Test Button */}
                 <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 sm:p-4">
                   <div className="flex items-start justify-between gap-3">
