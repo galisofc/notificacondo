@@ -169,8 +169,8 @@ const Features = () => {
             <span className="text-gradient">condomínio</span>
           </h2>
           <p className="text-muted-foreground text-lg">
-            Três módulos integrados para resolver os principais desafios da administração condominial: 
-            ocorrências, encomendas e salão de festas.
+            Quatro módulos integrados para resolver os principais desafios da administração condominial: 
+            ocorrências, encomendas, salão de festas e portaria.
           </p>
         </div>
 

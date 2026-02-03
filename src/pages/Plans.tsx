@@ -381,7 +381,7 @@ const Plans = () => {
                           <div className="space-y-2 mb-6">
                             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20">
                               <Check className="w-4 h-4 text-primary" />
-                              <span className="text-xs text-primary font-medium">3 módulos inclusos</span>
+                              <span className="text-xs text-primary font-medium">4 módulos inclusos</span>
                             </div>
                             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20">
                               <MessageCircle className="w-4 h-4 text-green-500" />
