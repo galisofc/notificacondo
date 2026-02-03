@@ -62,6 +62,7 @@ import {
   Search,
   Info,
   Sparkles,
+  Package,
 } from "lucide-react";
 import {
   Tooltip,
@@ -1538,7 +1539,7 @@ export default function SubscriptionDetails() {
           </CardHeader>
           <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
             <TooltipProvider>
-              <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-3">
+              <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                 {/* Notifications */}
                 <div className="space-y-2 sm:space-y-3">
                   <div className="flex items-center justify-between">
@@ -1633,6 +1634,65 @@ export default function SubscriptionDetails() {
                   <p className="text-[10px] sm:text-xs text-muted-foreground">
                     {Math.max(0, subscription.fines_limit - realUsage.fines)} restantes
                   </p>
+                </div>
+
+                {/* Package Notifications */}
+                <div className="space-y-2 sm:space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <Package className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-500" />
+                      <span className="font-medium text-sm sm:text-base">Encomendas</span>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground/50 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-[250px]">
+                          <p>Notificações de encomendas enviadas via WhatsApp. Acima do limite: R$ 0,10 por envio extra.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <span
+                      className={`text-xs sm:text-sm font-medium ${
+                        subscription.package_notifications_limit === -1 
+                          ? "text-emerald-500" 
+                          : getUsageColor(
+                              getUsagePercentage(
+                                subscription.package_notifications_used || 0, 
+                                subscription.package_notifications_limit || 50
+                              )
+                            )
+                      }`}
+                    >
+                      {subscription.package_notifications_limit === -1 
+                        ? `${subscription.package_notifications_used || 0} / ∞`
+                        : `${subscription.package_notifications_used || 0} / ${subscription.package_notifications_limit || 50}`
+                      }
+                    </span>
+                  </div>
+                  <Progress
+                    value={
+                      subscription.package_notifications_limit === -1 
+                        ? 0 
+                        : getUsagePercentage(
+                            subscription.package_notifications_used || 0, 
+                            subscription.package_notifications_limit || 50
+                          )
+                    }
+                    className="h-1.5 sm:h-2"
+                  />
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">
+                      {subscription.package_notifications_limit === -1 
+                        ? "Ilimitado"
+                        : `${Math.max(0, (subscription.package_notifications_limit || 50) - (subscription.package_notifications_used || 0))} restantes`
+                      }
+                    </p>
+                    {(subscription.package_notifications_extra || 0) > 0 && (
+                      <Badge variant="outline" className="text-[9px] sm:text-[10px] bg-orange-500/10 text-orange-600 border-orange-500/20">
+                        +{subscription.package_notifications_extra} extras
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </div>
             </TooltipProvider>
