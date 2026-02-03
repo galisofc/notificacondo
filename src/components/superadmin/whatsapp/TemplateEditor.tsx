@@ -34,9 +34,11 @@ import {
   CheckCircle2,
   XCircle,
   Unlink,
+  RefreshCw,
+  AlertCircle,
 } from "lucide-react";
 import { TemplatePreview } from "./TemplatePreview";
-import { TEMPLATE_COLORS, getCategoryForSlug } from "./TemplateCategories";
+import { TEMPLATE_COLORS, getCategoryForSlug, VARIABLE_EXAMPLES } from "./TemplateCategories";
 import { DEFAULT_TEMPLATES } from "./DefaultTemplates";
 import { WabaTemplateSelector } from "./WabaTemplateSelector";
 
@@ -59,6 +61,23 @@ interface Template {
   waba_language?: string | null;
   params_order?: string[] | null;
   button_config?: ButtonConfig | null;
+}
+
+interface MetaTemplateComponent {
+  type: string;
+  format?: string;
+  text?: string;
+  buttons?: Array<{ type: string; text?: string; url?: string }>;
+}
+
+interface MetaTemplate {
+  id: string;
+  name: string;
+  status: string;
+  category: string;
+  language: string;
+  quality_score?: string;
+  components?: MetaTemplateComponent[];
 }
 
 interface TemplateEditorProps {
@@ -85,6 +104,11 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
   const [wabaLanguage, setWabaLanguage] = useState(template.waba_language || "pt_BR");
   const [paramsOrder, setParamsOrder] = useState<string[]>(template.params_order || template.variables);
   const [activeTab, setActiveTab] = useState<"content" | "waba">("content");
+  
+  // Meta template content state
+  const [metaTemplate, setMetaTemplate] = useState<MetaTemplate | null>(null);
+  const [isLoadingMeta, setIsLoadingMeta] = useState(false);
+  const [metaLoadError, setMetaLoadError] = useState<string | null>(null);
   
   // Button configuration state - initialize from template
   const [hasButton, setHasButton] = useState(!!template.button_config);
@@ -125,6 +149,81 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
       setParamsOrder(template.variables);
     }
   }, [template.variables, template.params_order]);
+
+  // Fetch Meta template content when linked
+  const fetchMetaTemplate = async () => {
+    if (!wabaTemplateName) {
+      setMetaTemplate(null);
+      return;
+    }
+
+    setIsLoadingMeta(true);
+    setMetaLoadError(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("list-waba-templates");
+      if (error) throw error;
+
+      if (data?.success && data.templates) {
+        const found = data.templates.find(
+          (t: MetaTemplate) => t.name === wabaTemplateName && t.status === "APPROVED"
+        );
+        if (found) {
+          setMetaTemplate(found);
+        } else {
+          setMetaLoadError("Template não encontrado ou não aprovado na Meta");
+          setMetaTemplate(null);
+        }
+      }
+    } catch (err: any) {
+      console.error("Error fetching Meta template:", err);
+      setMetaLoadError(err.message || "Erro ao carregar template da Meta");
+    } finally {
+      setIsLoadingMeta(false);
+    }
+  };
+
+  // Load Meta template when wabaTemplateName changes
+  useEffect(() => {
+    if (wabaTemplateName) {
+      fetchMetaTemplate();
+    } else {
+      setMetaTemplate(null);
+      setMetaLoadError(null);
+    }
+  }, [wabaTemplateName]);
+
+  // Extract Meta body content
+  const metaBody = metaTemplate?.components?.find(c => c.type === "BODY");
+  const metaHeader = metaTemplate?.components?.find(c => c.type === "HEADER");
+  const metaFooter = metaTemplate?.components?.find(c => c.type === "FOOTER");
+  const metaButtons = metaTemplate?.components?.find(c => c.type === "BUTTONS");
+
+  // Determine which content to show in preview
+  const isLinked = !!wabaTemplateName;
+  const hasMetaContent = isLinked && metaBody?.text;
+
+  // Replace Meta-style variables {{1}}, {{2}} with examples
+  const replaceMetaVariables = (text: string) => {
+    return text.replace(/\{\{(\d+)\}\}/g, (match, num) => {
+      const paramName = paramsOrder[parseInt(num) - 1];
+      if (paramName && VARIABLE_EXAMPLES[paramName]) {
+        return VARIABLE_EXAMPLES[paramName];
+      }
+      const examples = ["Residencial Primavera", "Maria Santos", "Advertência", "Barulho após horário permitido", "https://app.exemplo.com/xyz123"];
+      return examples[parseInt(num) - 1] || match;
+    });
+  };
+
+  // Get the content to display in preview
+  const getPreviewContent = () => {
+    if (hasMetaContent && metaBody?.text) {
+      return replaceMetaVariables(metaBody.text);
+    }
+    return editContent.replace(/\{(\w+)\}/g, (match, variable) => {
+      return VARIABLE_EXAMPLES[variable] || match;
+    });
+  };
 
   const updateMutation = useMutation({
     mutationFn: async ({
@@ -693,11 +792,128 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
           {showPreview && activeTab === "content" && (
             <div className="border-l bg-muted/30 hidden lg:block overflow-y-auto">
               <div className="p-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Eye className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Preview da Mensagem</span>
+                <div className="flex items-center justify-between gap-2 mb-4">
+                  <div className="flex items-center gap-2">
+                    <Eye className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Preview da Mensagem</span>
+                  </div>
+                  {isLinked && (
+                    <Badge 
+                      variant={hasMetaContent ? "default" : "secondary"} 
+                      className={`text-[10px] ${hasMetaContent ? "bg-green-600" : ""}`}
+                    >
+                      {hasMetaContent ? "Conteúdo Meta" : "Exemplo Local"}
+                    </Badge>
+                  )}
                 </div>
-                <TemplatePreview content={editContent} />
+                
+                {/* Show loading state */}
+                {isLinked && isLoadingMeta && (
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm p-4">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Carregando conteúdo da Meta...
+                  </div>
+                )}
+
+                {/* Show error state */}
+                {isLinked && !isLoadingMeta && metaLoadError && (
+                  <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 mb-4 flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                        Conteúdo da Meta não disponível
+                      </p>
+                      <p className="text-xs text-amber-600 dark:text-amber-500 mt-0.5">
+                        {metaLoadError}. Exibindo conteúdo local como exemplo.
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={fetchMetaTemplate}
+                        className="mt-2 h-7 text-xs gap-1"
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                        Tentar novamente
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Meta preview with full components */}
+                {hasMetaContent ? (
+                  <div className="relative">
+                    <div className="bg-[#0b141a] rounded-xl p-4 overflow-hidden">
+                      {/* Header */}
+                      <div className="flex items-center gap-3 pb-3 border-b border-white/10">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center shrink-0">
+                          <span className="text-white font-bold text-sm">C</span>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-white font-medium text-sm truncate">Condomínio Legal</p>
+                          <p className="text-white/60 text-xs">online</p>
+                        </div>
+                      </div>
+
+                      {/* Chat area */}
+                      <div className="pt-4 space-y-2">
+                        <div className="flex justify-start">
+                          <div className="max-w-[85%] bg-[#005C4B] rounded-lg rounded-tl-none p-3 shadow-sm relative">
+                            <div className="absolute -left-2 top-0 w-0 h-0 border-t-[8px] border-t-[#005C4B] border-l-[8px] border-l-transparent" />
+                            
+                            {/* Meta Header */}
+                            {metaHeader?.text && (
+                              <p className="text-white font-bold text-sm mb-2">
+                                {replaceMetaVariables(metaHeader.text)}
+                              </p>
+                            )}
+                            
+                            {/* Body */}
+                            <div className="text-white/90 text-sm whitespace-pre-wrap leading-relaxed">
+                              {getPreviewContent()}
+                            </div>
+                            
+                            {/* Footer */}
+                            {metaFooter?.text && (
+                              <p className="text-white/60 text-[11px] mt-2 pt-2 border-t border-white/10">
+                                {metaFooter.text}
+                              </p>
+                            )}
+                            
+                            {/* Buttons */}
+                            {metaButtons?.buttons && metaButtons.buttons.length > 0 && (
+                              <div className="mt-3 pt-2 border-t border-white/10 space-y-1">
+                                {metaButtons.buttons.map((btn, idx) => (
+                                  <div 
+                                    key={idx} 
+                                    className="text-center py-1.5 text-[13px] text-[#00A884] font-medium"
+                                  >
+                                    {btn.text}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            
+                            <div className="flex justify-end mt-1">
+                              <span className="text-white/40 text-[10px]">14:32</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-3 text-center italic">
+                      * Conteúdo aprovado pela Meta. Os valores são exemplos.
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <TemplatePreview content={editContent} />
+                    {isLinked && !isLoadingMeta && (
+                      <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-2 text-center italic">
+                        * Exibindo conteúdo local como exemplo (Meta não carregado).
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -707,11 +923,35 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
       {/* Mobile Preview - Collapsible (only for content tab) */}
       {showPreview && activeTab === "content" && (
         <div className="lg:hidden border-t bg-muted/30 p-3 sm:p-4 max-h-[40vh] overflow-y-auto">
-          <div className="flex items-center gap-2 mb-2 sm:mb-3">
-            <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
-            <span className="text-xs sm:text-sm font-medium">Preview</span>
+          <div className="flex items-center justify-between gap-2 mb-2 sm:mb-3">
+            <div className="flex items-center gap-2">
+              <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
+              <span className="text-xs sm:text-sm font-medium">Preview</span>
+            </div>
+            {isLinked && (
+              <Badge 
+                variant={hasMetaContent ? "default" : "secondary"} 
+                className={`text-[10px] ${hasMetaContent ? "bg-green-600" : ""}`}
+              >
+                {hasMetaContent ? "Meta" : "Local"}
+              </Badge>
+            )}
           </div>
-          <TemplatePreview content={editContent} />
+          {hasMetaContent ? (
+            <div className="bg-[#0b141a] rounded-xl p-3 overflow-hidden">
+              <div className="bg-[#005C4B] rounded-lg p-2 text-white/90 text-xs whitespace-pre-wrap">
+                {metaHeader?.text && (
+                  <p className="font-bold mb-1">{replaceMetaVariables(metaHeader.text)}</p>
+                )}
+                {getPreviewContent()}
+                {metaFooter?.text && (
+                  <p className="text-white/60 text-[10px] mt-2 pt-1 border-t border-white/10">{metaFooter.text}</p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <TemplatePreview content={editContent} />
+          )}
         </div>
       )}
 
