@@ -819,7 +819,7 @@ export type Database = {
           ip_address: string | null
           location_info: Json | null
           message_content: string
-          occurrence_id: string
+          occurrence_id: string | null
           read_at: string | null
           resident_id: string
           secure_link: string
@@ -839,7 +839,7 @@ export type Database = {
           ip_address?: string | null
           location_info?: Json | null
           message_content: string
-          occurrence_id: string
+          occurrence_id?: string | null
           read_at?: string | null
           resident_id: string
           secure_link: string
@@ -859,7 +859,7 @@ export type Database = {
           ip_address?: string | null
           location_info?: Json | null
           message_content?: string
-          occurrence_id?: string
+          occurrence_id?: string | null
           read_at?: string | null
           resident_id?: string
           secure_link?: string
