@@ -411,10 +411,10 @@ export default function PorteiroCondominio() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.full_name.trim() || !formData.email.trim()) {
+    if (!formData.full_name.trim()) {
       toast({
-        title: "Campos obrigatórios",
-        description: "Nome e email são obrigatórios",
+        title: "Campo obrigatório",
+        description: "Nome é obrigatório",
         variant: "destructive",
       });
       return;
