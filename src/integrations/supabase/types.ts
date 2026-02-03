@@ -1821,6 +1821,7 @@ export type Database = {
       }
       whatsapp_notification_logs: {
         Row: {
+          condominium_id: string | null
           created_at: string
           debug_info: Json | null
           error_message: string | null
@@ -1838,6 +1839,7 @@ export type Database = {
           template_name: string | null
         }
         Insert: {
+          condominium_id?: string | null
           created_at?: string
           debug_info?: Json | null
           error_message?: string | null
@@ -1855,6 +1857,7 @@ export type Database = {
           template_name?: string | null
         }
         Update: {
+          condominium_id?: string | null
           created_at?: string
           debug_info?: Json | null
           error_message?: string | null
@@ -1871,7 +1874,15 @@ export type Database = {
           template_language?: string | null
           template_name?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_notification_logs_condominium_id_fkey"
+            columns: ["condominium_id"]
+            isOneToOne: false
+            referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       whatsapp_templates: {
         Row: {
