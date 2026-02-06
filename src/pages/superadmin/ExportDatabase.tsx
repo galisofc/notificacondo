@@ -30,8 +30,10 @@ export default function ExportDatabase() {
       if (fnError) throw fnError;
 
       if (data?.scripts) {
-        setScripts(data.scripts);
-        toast({ title: "Exportação concluída!", description: `${data.scripts.length} scripts gerados.` });
+        const entries = Object.entries(data.scripts as Record<string, string>)
+          .map(([key, sql]) => ({ key, sql }));
+        setScripts(entries);
+        toast({ title: "Exportação concluída!", description: `${entries.length} scripts gerados.` });
       } else {
         throw new Error(data?.error || "Resposta inesperada da função");
       }
