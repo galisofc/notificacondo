@@ -478,14 +478,14 @@ function SidebarNavigation() {
       icon: ClipboardList,
       items: [
         { title: "Condomínios", url: "/condominiums", icon: Building2 },
-        { title: "Ocorrências", url: "/occurrences", icon: FileText },
-        { title: "Análise de Defesas", url: "/defenses", icon: Scale, badge: pendingDefenses },
       ],
     },
     {
       title: "Serviços",
       icon: Package,
       items: [
+        { title: "Ocorrências", url: "/occurrences", icon: FileText },
+        { title: "Análise de Defesas", url: "/defenses", icon: Scale, badge: pendingDefenses },
         { title: "Encomendas", url: "/sindico/encomendas", icon: Package },
         { title: "Salão de Festas", url: "/party-hall", icon: PartyPopper },
         { title: "Porteiros", url: "/sindico/porteiros", icon: DoorOpen },
