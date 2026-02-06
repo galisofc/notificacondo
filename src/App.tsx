@@ -59,7 +59,6 @@ import SuperAdminSettings from "./pages/superadmin/Settings";
 import PorteiroSettings from "./pages/porteiro/Settings";
 import ContactMessages from "./pages/superadmin/ContactMessages";
 import PackageTypes from "./pages/superadmin/PackageTypes";
-import ExportDatabase from "./pages/superadmin/ExportDatabase";
 
 // Porteiro pages
 import PorteiroDashboard from "./pages/porteiro/Dashboard";
@@ -493,14 +492,6 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole="super_admin">
                     <PackageTypes />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/superadmin/export-database"
-                element={
-                  <ProtectedRoute requiredRole="super_admin">
-                    <ExportDatabase />
                   </ProtectedRoute>
                 }
               />

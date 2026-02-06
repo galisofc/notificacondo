@@ -52,7 +52,6 @@ import {
   Wallet,
   ClipboardList,
   Cog,
-  Database,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
@@ -118,7 +117,6 @@ const getBaseSuperAdminNavItems = (): NavStructure => [
       { title: "Tipos de Encomenda", url: "/superadmin/package-types", icon: Package },
       { title: "Logs", url: "/superadmin/logs", icon: FileText },
       { title: "Cron Jobs", url: "/superadmin/cron-jobs", icon: Clock },
-      { title: "Exportar BD", url: "/superadmin/export-database", icon: Database },
     ],
   },
 ];
