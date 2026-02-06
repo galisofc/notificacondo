@@ -496,6 +496,14 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/superadmin/export-database"
+                element={
+                  <ProtectedRoute requiredRole="super_admin">
+                    <ExportDatabase />
+                  </ProtectedRoute>
+                }
+              />
 
               <Route path="*" element={<NotFound />} />
             </Routes>
