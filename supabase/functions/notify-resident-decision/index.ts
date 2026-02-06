@@ -1,145 +1,11 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendMetaTemplate, buildParamsArray } from "../_shared/meta-whatsapp.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-type WhatsAppProvider = "zpro" | "zapi" | "evolution" | "wppconnect";
-
-interface ProviderSettings {
-  apiUrl: string;
-  apiKey: string;
-  instanceId: string;
-}
-
-interface WhatsAppConfigRow {
-  id: string;
-  provider: string;
-  api_url: string;
-  api_key: string;
-  instance_id: string;
-  is_active: boolean;
-  app_url?: string;
-}
-
-// Z-PRO Provider
-async function sendZproMessage(phone: string, message: string, config: ProviderSettings) {
-  const baseUrl = config.apiUrl.replace(/\/$/, "");
-  const phoneClean = phone.replace(/\D/g, "");
-  
-  // If instanceId is empty or placeholder, fallback to apiKey
-  let externalKey = config.instanceId || "";
-  if (!externalKey || externalKey === "zpro-embedded") {
-    externalKey = config.apiKey;
-  }
-  
-  const params = new URLSearchParams({
-    body: message,
-    number: phoneClean,
-    externalKey,
-    bearertoken: config.apiKey,
-    isClosed: "false"
-  });
-  
-  const sendUrl = `${baseUrl}/params/?${params.toString()}`;
-  console.log("Z-PRO sending to:", sendUrl.substring(0, 150) + "...");
-  
-  try {
-    const response = await fetch(sendUrl, {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-    });
-    
-    const responseText = await response.text();
-    console.log("Z-PRO response status:", response.status);
-    
-    if (response.ok) {
-      return { success: true };
-    }
-    
-    return { success: false, error: `Erro ${response.status}` };
-  } catch (error: any) {
-    return { success: false, error: `Erro de conexão: ${error.message}` };
-  }
-}
-
-// Z-API Provider
-async function sendZapiMessage(phone: string, message: string, config: ProviderSettings) {
-  const response = await fetch(`${config.apiUrl}/instances/${config.instanceId}/token/${config.apiKey}/send-text`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      phone: phone.replace(/\D/g, ""),
-      message: message,
-    }),
-  });
-  
-  const data = await response.json();
-  if (response.ok && data.zapiMessageId) {
-    return { success: true };
-  }
-  return { success: false, error: data.message || "Erro ao enviar mensagem" };
-}
-
-// Evolution API Provider
-async function sendEvolutionMessage(phone: string, message: string, config: ProviderSettings) {
-  const response = await fetch(`${config.apiUrl}/message/sendText/${config.instanceId}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "apikey": config.apiKey,
-    },
-    body: JSON.stringify({
-      number: phone.replace(/\D/g, ""),
-      text: message,
-    }),
-  });
-  
-  const data = await response.json();
-  if (response.ok && data.key?.id) {
-    return { success: true };
-  }
-  return { success: false, error: data.message || "Erro ao enviar mensagem" };
-}
-
-// WPPConnect Provider
-async function sendWppconnectMessage(phone: string, message: string, config: ProviderSettings) {
-  const response = await fetch(`${config.apiUrl}/api/${config.instanceId}/send-message`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${config.apiKey}`,
-    },
-    body: JSON.stringify({
-      phone: phone.replace(/\D/g, ""),
-      message: message,
-      isGroup: false,
-    }),
-  });
-  
-  const data = await response.json();
-  if (response.ok && data.status === "success") {
-    return { success: true };
-  }
-  return { success: false, error: data.message || "Erro ao enviar mensagem" };
-}
-
-async function sendWhatsAppMessage(phone: string, message: string, provider: WhatsAppProvider, config: ProviderSettings) {
-  switch (provider) {
-    case "zpro":
-      return sendZproMessage(phone, message, config);
-    case "zapi":
-      return sendZapiMessage(phone, message, config);
-    case "evolution":
-      return sendEvolutionMessage(phone, message, config);
-    case "wppconnect":
-      return sendWppconnectMessage(phone, message, config);
-    default:
-      return { success: false, error: "Provider não suportado" };
-  }
-}
 
 interface NotifyResidentRequest {
   occurrence_id: string;
@@ -152,11 +18,13 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+  let notificationId: string | null = null;
+
+  try {
     const { occurrence_id, decision, justification }: NotifyResidentRequest = await req.json();
     console.log("Notify resident decision:", { occurrence_id, decision });
 
@@ -171,23 +39,14 @@ serve(async (req) => {
     const { data: occurrence, error: occError } = await supabase
       .from("occurrences")
       .select(`
-        id,
-        title,
-        type,
-        condominium_id,
+        id, title, type, condominium_id,
         residents!inner (
-          id,
-          full_name,
-          phone,
-          email,
+          id, full_name, phone, email,
           apartments!inner (
             number,
             blocks!inner (
               name,
-              condominiums!inner (
-                id,
-                name
-              )
+              condominiums!inner ( id, name )
             )
           )
         )
@@ -204,162 +63,148 @@ serve(async (req) => {
     }
 
     const resident = occurrence.residents as any;
-    
+
     if (!resident?.phone) {
-      console.log("Resident has no phone registered, skipping WhatsApp notification");
+      console.log("Resident has no phone, skipping");
       return new Response(
-        JSON.stringify({ success: true, skipped: true, reason: "Morador sem telefone cadastrado" }),
+        JSON.stringify({ success: true, skipped: true, reason: "Morador sem telefone" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    // Fetch WhatsApp config
-    const { data: whatsappConfig, error: configError } = await supabase
-      .from("whatsapp_config")
-      .select("*")
-      .eq("is_active", true)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (configError || !whatsappConfig) {
-      console.log("WhatsApp not configured, skipping notification");
-      return new Response(
-        JSON.stringify({ success: true, skipped: true, reason: "WhatsApp não configurado" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const typedConfig = whatsappConfig as WhatsAppConfigRow;
-    const whatsappProvider = (typedConfig.provider || "zpro") as WhatsAppProvider;
-    const appBaseUrl = typedConfig.app_url || "https://notificacondo.com.br";
-
-    console.log(`Using WhatsApp provider: ${whatsappProvider}`);
 
     const condoName = resident.apartments.blocks.condominiums.name;
-
-    // Decision labels and emojis
-    const decisionInfo: Record<string, { label: string; emoji: string; description: string }> = {
-      arquivada: {
-        label: "ARQUIVADA",
-        emoji: "✅",
-        description: "Sua defesa foi aceita e a ocorrência foi arquivada. Nenhuma penalidade será aplicada.",
-      },
-      advertido: {
-        label: "ADVERTÊNCIA APLICADA",
-        emoji: "⚠️",
-        description: "Após análise da sua defesa, foi decidido aplicar uma advertência formal.",
-      },
-      multado: {
-        label: "MULTA APLICADA",
-        emoji: "🚨",
-        description: "Após análise da sua defesa, foi decidido aplicar uma multa. Verifique os detalhes no sistema.",
-      },
-    };
-
-    const info = decisionInfo[decision];
     const condoId = occurrence.condominium_id;
-    
-    // Determine template slug based on decision
+
+    // Map decision to template slug
     const templateSlugMap: Record<string, string> = {
       arquivada: "decision_archived",
       advertido: "decision_warning",
       multado: "decision_fine",
     };
     const templateSlug = templateSlugMap[decision];
-    
-    // Get template - first check for custom condominium template
-    let templateContent: string | null = null;
-    
-    if (templateSlug) {
-      const { data: customTemplate } = await supabase
-        .from("condominium_whatsapp_templates")
-        .select("content")
-        .eq("condominium_id", condoId)
-        .eq("template_slug", templateSlug)
-        .eq("is_active", true)
-        .maybeSingle();
 
-      if (customTemplate?.content) {
-        templateContent = customTemplate.content;
-        console.log("Using custom condominium template for", templateSlug);
-      } else {
-        const { data: defaultTemplate } = await supabase
-          .from("whatsapp_templates")
-          .select("content")
-          .eq("slug", templateSlug)
-          .eq("is_active", true)
-          .maybeSingle();
-        
-        if (defaultTemplate?.content) {
-          templateContent = defaultTemplate.content;
-          console.log("Using default system template for", templateSlug);
-        }
+    // Fetch WABA template config
+    const { data: template } = await supabase
+      .from("whatsapp_templates")
+      .select("waba_template_name, waba_language, params_order, variables, button_config")
+      .eq("slug", templateSlug)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    const wabaTemplateName = template?.waba_template_name;
+    const wabaLanguage = template?.waba_language || "pt_BR";
+    const paramsOrder = template?.params_order || template?.variables || [];
+
+    if (!wabaTemplateName) {
+      console.error(`No WABA template linked for slug: ${templateSlug}`);
+      return new Response(
+        JSON.stringify({ error: `Template WABA não vinculado para ${templateSlug}` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Build link
+    const appBaseUrl = "https://notificacondo.lovable.app";
+    const link = `${appBaseUrl}/resident/occurrences/${occurrence_id}`;
+
+    // Build variables
+    const variables: Record<string, string> = {
+      nome: resident.full_name || "Morador",
+      titulo: occurrence.title,
+      condominio: condoName,
+      justificativa: justification || "Sem justificativa adicional.",
+      link,
+    };
+
+    const { values: bodyParams, names: bodyParamNames } = buildParamsArray(variables, paramsOrder);
+
+    // Build button params if template has URL buttons with dynamic suffix
+    let buttonParams: any[] | undefined;
+    if (template?.button_config) {
+      const btnConfigs = Array.isArray(template.button_config) ? template.button_config : [template.button_config];
+      const urlButtons = btnConfigs
+        .map((btn: any, idx: number) => ({ btn, idx }))
+        .filter(({ btn }: any) => btn.type === "url" && btn.has_dynamic_suffix);
+
+      if (urlButtons.length > 0) {
+        buttonParams = urlButtons.map(({ idx }: any) => ({
+          type: "button",
+          subType: "url",
+          index: idx,
+          parameters: [{ type: "text", text: link }],
+        }));
       }
     }
 
-    // Build message
-    const link = `${appBaseUrl}/resident/occurrences/${occurrence_id}`;
-    
-    let message: string;
-    if (templateContent) {
-      message = templateContent
-        .replace("{condominio}", condoName)
-        .replace("{nome}", resident.full_name)
-        .replace("{titulo}", occurrence.title)
-        .replace("{justificativa}", justification || "Sem justificativa adicional.")
-        .replace("{link}", link);
-    } else {
-      message = `${info.emoji} *DECISÃO: ${info.label}*
+    // Create notification log entry
+    const { data: logEntry } = await supabase
+      .from("whatsapp_notification_logs")
+      .insert({
+        function_name: "notify-resident-decision",
+        phone: resident.phone,
+        template_name: wabaTemplateName,
+        template_language: wabaLanguage,
+        condominium_id: condoId,
+        resident_id: resident.id,
+        success: false,
+      })
+      .select("id")
+      .single();
 
-🏢 *${condoName}*
+    notificationId = logEntry?.id || null;
 
-Olá, *${resident.full_name}*!
+    console.log(`Sending Meta template "${wabaTemplateName}" to ${resident.phone}`);
 
-Sua defesa referente à ocorrência "${occurrence.title}" foi analisada.
-
-📋 *Decisão:* ${info.label}
-
-${info.description}
-
-${justification ? `💬 *Justificativa:*\n${justification}` : ""}
-
-Acesse o sistema para mais detalhes:
-👉 ${link}`;
-    }
-
-    console.log(`Sending WhatsApp to resident: ${resident.phone}`);
-
-    // Send WhatsApp message
-    const result = await sendWhatsAppMessage(resident.phone, message, whatsappProvider, {
-      apiUrl: typedConfig.api_url,
-      apiKey: typedConfig.api_key,
-      instanceId: typedConfig.instance_id,
+    const result = await sendMetaTemplate({
+      phone: resident.phone,
+      templateName: wabaTemplateName,
+      language: wabaLanguage,
+      bodyParams,
+      bodyParamNames,
+      buttonParams,
     });
 
+    // Update log
+    if (notificationId) {
+      await supabase
+        .from("whatsapp_notification_logs")
+        .update({
+          success: result.success,
+          message_id: result.messageId || null,
+          response_status: result.debug?.status || null,
+          response_body: typeof result.debug?.response === "string" ? result.debug.response.substring(0, 2000) : null,
+          request_payload: result.debug?.payload || null,
+          error_message: result.error || null,
+        })
+        .eq("id", notificationId);
+    }
+
     if (!result.success) {
-      console.error("WhatsApp send failed:", result.error);
+      console.error("Meta send failed:", result.error);
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "Falha ao enviar WhatsApp para morador", 
-          details: result.error 
-        }),
+        JSON.stringify({ success: false, error: result.error, notification_id: notificationId }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log("WhatsApp sent to resident successfully");
+    console.log("WhatsApp decision notification sent successfully via Meta");
 
     return new Response(
-      JSON.stringify({ success: true }),
+      JSON.stringify({ success: true, messageId: result.messageId, notification_id: notificationId }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-
-  } catch (error) {
+  } catch (error: any) {
     console.error("Unexpected error:", error);
+
+    if (notificationId) {
+      await supabase
+        .from("whatsapp_notification_logs")
+        .update({ error_message: error.message || "Erro interno" })
+        .eq("id", notificationId);
+    }
+
     return new Response(
-      JSON.stringify({ error: "Erro interno do servidor" }),
+      JSON.stringify({ error: "Erro interno do servidor", details: error.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
