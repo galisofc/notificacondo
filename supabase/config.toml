@@ -124,3 +124,7 @@ verify_jwt = false
 # Limpeza automática de encomendas antigas já retiradas
 [functions.cleanup-old-packages]
 verify_jwt = false
+
+# Exportação completa do banco de dados
+[functions.export-database]
+verify_jwt = false
