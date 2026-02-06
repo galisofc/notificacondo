@@ -52,8 +52,7 @@ export default function ExportDatabase() {
     setTimeout(() => setCopiedIndex(null), 2000);
   };
 
-  const copyAll = async () => {
-    const allSql = scripts.map((s) => `-- ${s.table} (${s.type})\n${s.sql}`).join("\n\n");
+    const allSql = scripts.map((s) => `-- ${s.key}\n${s.sql}`).join("\n\n");
     await navigator.clipboard.writeText(allSql);
     toast({ title: "Todos os scripts copiados!" });
   };
