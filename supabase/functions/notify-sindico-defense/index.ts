@@ -1,162 +1,27 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendMetaTemplate, isMetaConfigured, buildParamsArray } from "../_shared/meta-whatsapp.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-type WhatsAppProvider = "zpro" | "zapi" | "evolution" | "wppconnect";
-
-interface ProviderConfig {
-  sendMessage: (phone: string, message: string, config: ProviderSettings) => Promise<{ success: boolean; messageId?: string; error?: string }>;
-}
-
-interface ProviderSettings {
-  apiUrl: string;
-  apiKey: string;
-  instanceId: string;
-}
-
-interface WhatsAppConfigRow {
-  id: string;
-  provider: string;
-  api_url: string;
-  api_key: string;
-  instance_id: string;
-  is_active: boolean;
-  app_url?: string;
-}
-
-// Z-PRO Provider
-const zproProvider: ProviderConfig = {
-  async sendMessage(phone: string, message: string, config: ProviderSettings) {
-    const baseUrl = config.apiUrl.replace(/\/$/, "");
-    const phoneClean = phone.replace(/\D/g, "");
-    
-    // If instanceId is empty or placeholder, fallback to apiKey
-    let externalKey = config.instanceId || "";
-    if (!externalKey || externalKey === "zpro-embedded") {
-      externalKey = config.apiKey;
-    }
-    
-    const params = new URLSearchParams({
-      body: message,
-      number: phoneClean,
-      externalKey,
-      bearertoken: config.apiKey,
-      isClosed: "false"
-    });
-    
-    const sendUrl = `${baseUrl}/params/?${params.toString()}`;
-    console.log("Z-PRO sending to:", sendUrl.substring(0, 150) + "...");
-    
-    try {
-      const response = await fetch(sendUrl, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      });
-      
-      const responseText = await response.text();
-      console.log("Z-PRO response status:", response.status);
-      console.log("Z-PRO response:", responseText.substring(0, 200));
-      
-      let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch {
-        return { success: false, error: `Resposta inválida: ${responseText.substring(0, 100)}` };
-      }
-      
-      if (response.ok) {
-        return { success: true, messageId: data.id || data.messageId || data.key?.id || "sent" };
-      }
-      
-      return { success: false, error: data.message || data.error || `Erro ${response.status}` };
-    } catch (error: any) {
-      return { success: false, error: `Erro de conexão: ${error.message}` };
-    }
-  },
-};
-
-// Z-API Provider
-const zapiProvider: ProviderConfig = {
-  async sendMessage(phone: string, message: string, config: ProviderSettings) {
-    const response = await fetch(`${config.apiUrl}/instances/${config.instanceId}/token/${config.apiKey}/send-text`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        phone: phone.replace(/\D/g, ""),
-        message: message,
-      }),
-    });
-    
-    const data = await response.json();
-    if (response.ok && data.zapiMessageId) {
-      return { success: true, messageId: data.zapiMessageId };
-    }
-    return { success: false, error: data.message || "Erro ao enviar mensagem" };
-  },
-};
-
-// Evolution API Provider
-const evolutionProvider: ProviderConfig = {
-  async sendMessage(phone: string, message: string, config: ProviderSettings) {
-    const response = await fetch(`${config.apiUrl}/message/sendText/${config.instanceId}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": config.apiKey,
-      },
-      body: JSON.stringify({
-        number: phone.replace(/\D/g, ""),
-        text: message,
-      }),
-    });
-    
-    const data = await response.json();
-    if (response.ok && data.key?.id) {
-      return { success: true, messageId: data.key.id };
-    }
-    return { success: false, error: data.message || "Erro ao enviar mensagem" };
-  },
-};
-
-// WPPConnect Provider
-const wppconnectProvider: ProviderConfig = {
-  async sendMessage(phone: string, message: string, config: ProviderSettings) {
-    const response = await fetch(`${config.apiUrl}/api/${config.instanceId}/send-message`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${config.apiKey}`,
-      },
-      body: JSON.stringify({
-        phone: phone.replace(/\D/g, ""),
-        message: message,
-        isGroup: false,
-      }),
-    });
-    
-    const data = await response.json();
-    if (response.ok && data.status === "success") {
-      return { success: true, messageId: data.id };
-    }
-    return { success: false, error: data.message || "Erro ao enviar mensagem" };
-  },
-};
-
-const providers: Record<WhatsAppProvider, ProviderConfig> = {
-  zpro: zproProvider,
-  zapi: zapiProvider,
-  evolution: evolutionProvider,
-  wppconnect: wppconnectProvider,
-};
-
 interface NotifySindicoRequest {
   occurrence_id: string;
   resident_name: string;
   occurrence_title: string;
+}
+
+interface WhatsAppTemplateRow {
+  id: string;
+  slug: string;
+  content: string;
+  is_active: boolean;
+  waba_template_name?: string;
+  waba_language?: string;
+  params_order?: string[];
+  button_config?: any;
 }
 
 serve(async (req) => {
@@ -230,28 +95,37 @@ serve(async (req) => {
       );
     }
 
-    // Fetch WhatsApp config
-    const { data: whatsappConfig, error: configError } = await supabase
+    // Check if Meta is configured
+    if (!isMetaConfigured()) {
+      console.log("Meta WhatsApp not configured, skipping notification");
+      return new Response(
+        JSON.stringify({ success: true, skipped: true, reason: "Meta WhatsApp não configurado" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Fetch WhatsApp config for app_url
+    const { data: whatsappConfig } = await supabase
       .from("whatsapp_config")
-      .select("*")
+      .select("app_url")
       .eq("is_active", true)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    if (configError || !whatsappConfig) {
-      console.log("WhatsApp not configured, skipping notification");
-      return new Response(
-        JSON.stringify({ success: true, skipped: true, reason: "WhatsApp não configurado" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const appBaseUrl = (whatsappConfig as any)?.app_url || "https://notificacondo.com.br";
 
-    const typedConfig = whatsappConfig as WhatsAppConfigRow;
-    const whatsappProvider = (typedConfig.provider || "zpro") as WhatsAppProvider;
-    const appBaseUrl = typedConfig.app_url || "https://notificacondo.com.br";
+    // Fetch WABA template config
+    const { data: wabaTemplate } = await supabase
+      .from("whatsapp_templates")
+      .select("id, slug, content, is_active, waba_template_name, waba_language, params_order, button_config")
+      .eq("slug", "notify_sindico_defense")
+      .eq("is_active", true)
+      .maybeSingle() as { data: WhatsAppTemplateRow | null; error: any };
 
-    console.log(`Using WhatsApp provider: ${whatsappProvider}`);
+    const wabaTemplateName = wabaTemplate?.waba_template_name || "nova_defesa";
+    const wabaLanguage = wabaTemplate?.waba_language || "pt_BR";
+    const paramsOrder = wabaTemplate?.params_order || ["nome_morador", "tipo", "titulo", "condominio", "link"];
 
     // Type label mapping
     const typeLabels: Record<string, string> = {
@@ -260,27 +134,44 @@ serve(async (req) => {
       multa: "Multa",
     };
 
-    // Build message for síndico
-    const message = `📋 *Nova Defesa Recebida*
+    // Build variables
+    const variables: Record<string, string> = {
+      nome_morador: resident_name || "Morador",
+      tipo: typeLabels[occurrence.type] || occurrence.type,
+      titulo: occurrence_title || occurrence.title,
+      condominio: condo.name,
+      link: `${appBaseUrl}/defenses`,
+    };
 
-🏢 *${condo.name}*
+    console.log("Template variables:", variables);
+    console.log(`Using WABA template: ${wabaTemplateName} (${wabaLanguage})`);
 
-O morador *${resident_name || "Morador"}* enviou uma defesa para a ocorrência:
+    // Build params in correct order
+    const { values: bodyParams, names: bodyParamNames } = buildParamsArray(variables, paramsOrder);
+    console.log(`Body params: ${JSON.stringify(bodyParams)}`);
 
-📝 *${occurrence_title || occurrence.title}*
-Tipo: ${typeLabels[occurrence.type] || occurrence.type}
+    // Send via Meta WABA template
+    const result = await sendMetaTemplate({
+      phone: sindicoProfile.phone,
+      templateName: wabaTemplateName,
+      language: wabaLanguage,
+      bodyParams,
+      bodyParamNames,
+    });
 
-Acesse o sistema para analisar:
-👉 ${appBaseUrl}/occurrences/${occurrence_id}`;
-
-    console.log(`Sending WhatsApp to síndico: ${sindicoProfile.phone}`);
-
-    // Send WhatsApp message
-    const provider = providers[whatsappProvider];
-    const result = await provider.sendMessage(sindicoProfile.phone, message, {
-      apiUrl: typedConfig.api_url,
-      apiKey: typedConfig.api_key,
-      instanceId: typedConfig.instance_id,
+    // Log the notification
+    await supabase.from("whatsapp_notification_logs").insert({
+      function_name: "notify-sindico-defense",
+      phone: sindicoProfile.phone,
+      template_name: wabaTemplateName,
+      template_language: wabaLanguage,
+      success: result.success,
+      message_id: result.messageId || null,
+      error_message: result.error || null,
+      request_payload: { variables, bodyParams, bodyParamNames },
+      response_status: result.debug?.status || null,
+      response_body: typeof result.debug?.response === "string" ? result.debug.response.substring(0, 1000) : null,
+      condominium_id: occurrence.condominium_id,
     });
 
     if (!result.success) {
