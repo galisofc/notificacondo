@@ -8,10 +8,8 @@ import { Database, Loader2, Copy, CheckCircle, Download } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ScriptBlock {
-  table: string;
-  type: string;
+  key: string;
   sql: string;
-  execution_order: number;
 }
 
 export default function ExportDatabase() {
@@ -28,12 +26,13 @@ export default function ExportDatabase() {
 
     try {
       const { data, error: fnError } = await supabase.functions.invoke("export-database");
-
       if (fnError) throw fnError;
 
       if (data?.scripts) {
-        setScripts(data.scripts);
-        toast({ title: "Exportação concluída!", description: `${data.scripts.length} scripts gerados.` });
+        const entries = Object.entries(data.scripts as Record<string, string>)
+          .map(([key, sql]) => ({ key, sql }));
+        setScripts(entries);
+        toast({ title: "Exportação concluída!", description: `${entries.length} scripts gerados.` });
       } else {
         throw new Error(data?.error || "Resposta inesperada da função");
       }
@@ -53,13 +52,13 @@ export default function ExportDatabase() {
   };
 
   const copyAll = async () => {
-    const allSql = scripts.map((s) => `-- ${s.table} (${s.type})\n${s.sql}`).join("\n\n");
+    const allSql = scripts.map((s) => `-- ${s.key}\n${s.sql}`).join("\n\n");
     await navigator.clipboard.writeText(allSql);
     toast({ title: "Todos os scripts copiados!" });
   };
 
   const downloadAll = () => {
-    const allSql = scripts.map((s) => `-- ${s.table} (${s.type})\n${s.sql}`).join("\n\n");
+    const allSql = scripts.map((s) => `-- ${s.key}\n${s.sql}`).join("\n\n");
     const blob = new Blob([allSql], { type: "text/sql" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -139,10 +138,9 @@ export default function ExportDatabase() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded">
-                        #{script.execution_order}
+                        #{index + 1}
                       </span>
-                      <CardTitle className="text-sm">{script.table}</CardTitle>
-                      <span className="text-xs text-muted-foreground">({script.type})</span>
+                      <CardTitle className="text-sm">{script.key}</CardTitle>
                     </div>
                     <Button
                       variant="ghost"
@@ -150,7 +148,7 @@ export default function ExportDatabase() {
                       onClick={() => copyToClipboard(script.sql, index)}
                     >
                       {copiedIndex === index ? (
-                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <CheckCircle className="h-4 w-4 text-green-600" />
                       ) : (
                         <Copy className="h-4 w-4" />
                       )}
