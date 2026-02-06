@@ -26,7 +26,6 @@ export default function ExportDatabase() {
 
     try {
       const { data, error: fnError } = await supabase.functions.invoke("export-database");
-
       if (fnError) throw fnError;
 
       if (data?.scripts) {
@@ -52,13 +51,14 @@ export default function ExportDatabase() {
     setTimeout(() => setCopiedIndex(null), 2000);
   };
 
+  const copyAll = async () => {
     const allSql = scripts.map((s) => `-- ${s.key}\n${s.sql}`).join("\n\n");
     await navigator.clipboard.writeText(allSql);
     toast({ title: "Todos os scripts copiados!" });
   };
 
   const downloadAll = () => {
-    const allSql = scripts.map((s) => `-- ${s.table} (${s.type})\n${s.sql}`).join("\n\n");
+    const allSql = scripts.map((s) => `-- ${s.key}\n${s.sql}`).join("\n\n");
     const blob = new Blob([allSql], { type: "text/sql" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -138,10 +138,9 @@ export default function ExportDatabase() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded">
-                        #{script.execution_order}
+                        #{index + 1}
                       </span>
-                      <CardTitle className="text-sm">{script.table}</CardTitle>
-                      <span className="text-xs text-muted-foreground">({script.type})</span>
+                      <CardTitle className="text-sm">{script.key}</CardTitle>
                     </div>
                     <Button
                       variant="ghost"
@@ -149,7 +148,7 @@ export default function ExportDatabase() {
                       onClick={() => copyToClipboard(script.sql, index)}
                     >
                       {copiedIndex === index ? (
-                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <CheckCircle className="h-4 w-4 text-green-600" />
                       ) : (
                         <Copy className="h-4 w-4" />
                       )}
