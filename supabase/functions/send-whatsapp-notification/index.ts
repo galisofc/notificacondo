@@ -30,6 +30,13 @@ const sanitizeForWaba = (str: string): string => {
     .trim();
 };
 
+interface ButtonConfigItem {
+  type: "url" | "quick_reply" | "call";
+  text: string;
+  url_base?: string;
+  has_dynamic_suffix?: boolean;
+}
+
 interface WhatsAppTemplateRow {
   id: string;
   slug: string;
@@ -38,6 +45,7 @@ interface WhatsAppTemplateRow {
   waba_template_name?: string;
   waba_language?: string;
   params_order?: string[];
+  button_config?: ButtonConfigItem | ButtonConfigItem[];
 }
 
 serve(async (req) => {
@@ -226,7 +234,7 @@ serve(async (req) => {
     // ========== FETCH WABA TEMPLATE ==========
     const { data: wabaTemplate } = await supabase
       .from("whatsapp_templates")
-      .select("id, slug, content, is_active, waba_template_name, waba_language, params_order")
+      .select("id, slug, content, is_active, waba_template_name, waba_language, params_order, button_config")
       .eq("slug", "notification_occurrence")
       .eq("is_active", true)
       .maybeSingle() as { data: WhatsAppTemplateRow | null; error: any };
@@ -293,14 +301,33 @@ Este link é pessoal e intransferível.`;
       console.log(`Body params: ${JSON.stringify(bodyParams)}`);
       console.log(`Body param names: ${JSON.stringify(bodyParamNames)}`);
       
-      // NOTE: The button URL is STATIC in this template (no dynamic suffix)
-      // If you need a dynamic URL, you must update the template in Meta Business Manager
+      // Build button params for URL buttons with dynamic suffix (e.g., magic link token)
+      const buttonConfigs = wabaTemplate?.button_config 
+        ? (Array.isArray(wabaTemplate.button_config) ? wabaTemplate.button_config : [wabaTemplate.button_config])
+        : [];
+      
+      const urlButtonsWithSuffix = buttonConfigs
+        .map((btn, idx) => ({ btn, idx }))
+        .filter(({ btn }) => btn.type === "url" && btn.has_dynamic_suffix);
+
+      const buttonParams = urlButtonsWithSuffix.map(({ idx }) => ({
+        type: "button" as const,
+        subType: "url" as const,
+        index: idx,
+        parameters: [{ type: "text" as const, text: secureToken }],
+      }));
+
+      if (buttonParams.length > 0) {
+        console.log(`Button params: ${JSON.stringify(buttonParams)}`);
+      }
+
       result = await sendMetaTemplate({
         phone: resident.phone,
         templateName: wabaTemplateName,
         language: wabaLanguage,
         bodyParams,
         bodyParamNames,
+        buttonParams: buttonParams.length > 0 ? buttonParams : undefined,
       });
     } else {
       // Fallback to text message (will only work within 24h window)
