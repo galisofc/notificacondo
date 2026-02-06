@@ -8,10 +8,8 @@ import { Database, Loader2, Copy, CheckCircle, Download } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ScriptBlock {
-  table: string;
-  type: string;
+  key: string;
   sql: string;
-  execution_order: number;
 }
 
 export default function ExportDatabase() {
