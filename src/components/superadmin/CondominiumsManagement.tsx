@@ -333,6 +333,9 @@ export function CondominiumsManagement() {
       // 9. Delete condominium whatsapp templates
       await supabase.from("condominium_whatsapp_templates").delete().eq("condominium_id", condominiumId);
       
+      // 9.5. Delete whatsapp notification logs
+      await supabase.from("whatsapp_notification_logs").delete().eq("condominium_id", condominiumId);
+      
       // 10. Finally delete the condominium
       const { error } = await supabase
         .from("condominiums")

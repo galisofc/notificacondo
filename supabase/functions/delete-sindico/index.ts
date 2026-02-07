@@ -197,10 +197,46 @@ Deno.serve(async (req) => {
       await supabaseAdmin.from("blocks").delete().in("condominium_id", condoIds);
       console.log("Deleted blocks");
 
-      // 6. Delete condominium transfers
+      // 6. Delete whatsapp notification logs
+      await supabaseAdmin.from("whatsapp_notification_logs").delete().in("condominium_id", condoIds);
+      console.log("Deleted whatsapp_notification_logs");
+
+      // 7. Delete party hall data
+      await supabaseAdmin.from("party_hall_notifications").delete().in("condominium_id", condoIds);
+
+      const { data: bookings } = await supabaseAdmin
+        .from("party_hall_bookings")
+        .select("id")
+        .in("condominium_id", condoIds);
+
+      if (bookings && bookings.length > 0) {
+        const bookingIds = bookings.map((b: { id: string }) => b.id);
+
+        const { data: checklists } = await supabaseAdmin
+          .from("party_hall_checklists")
+          .select("id")
+          .in("booking_id", bookingIds);
+
+        if (checklists && checklists.length > 0) {
+          const checklistIds = checklists.map((c: { id: string }) => c.id);
+          await supabaseAdmin.from("party_hall_checklist_items").delete().in("checklist_id", checklistIds);
+          await supabaseAdmin.from("party_hall_checklists").delete().in("booking_id", bookingIds);
+        }
+
+        await supabaseAdmin.from("party_hall_bookings").delete().in("condominium_id", condoIds);
+      }
+
+      await supabaseAdmin.from("party_hall_settings").delete().in("condominium_id", condoIds);
+      await supabaseAdmin.from("party_hall_checklist_templates").delete().in("condominium_id", condoIds);
+      console.log("Deleted party hall data");
+
+      // 8. Delete condominium whatsapp templates
+      await supabaseAdmin.from("condominium_whatsapp_templates").delete().in("condominium_id", condoIds);
+
+      // 9. Delete condominium transfers
       await supabaseAdmin.from("condominium_transfers").delete().in("condominium_id", condoIds);
 
-      // 7. Delete condominiums
+      // 10. Delete condominiums
       await supabaseAdmin.from("condominiums").delete().in("id", condoIds);
       console.log("Deleted condominiums");
     }
