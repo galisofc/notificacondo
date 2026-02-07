@@ -128,3 +128,39 @@ verify_jwt = false
 # Exportação completa do banco de dados
 [functions.export-database]
 verify_jwt = false
+
+# Verificação de status de template WhatsApp
+[functions.check-whatsapp-template-status]
+verify_jwt = false
+
+# Criação de template WABA
+[functions.create-waba-template]
+verify_jwt = false
+
+# URL assinada para fotos de encomendas
+[functions.get-package-photo-signed-url]
+verify_jwt = false
+
+# Listagem de templates WABA
+[functions.list-waba-templates]
+verify_jwt = false
+
+# Recuperação de senha
+[functions.send-password-recovery]
+verify_jwt = false
+
+# Teste de envio de imagem WhatsApp
+[functions.send-whatsapp-image-test]
+verify_jwt = false
+
+# Teste de envio de template WhatsApp
+[functions.send-whatsapp-template-test]
+verify_jwt = false
+
+# Atualização de senha de porteiro
+[functions.update-porteiro-password]
+verify_jwt = false
+
+# Atualização de dados de porteiro
+[functions.update-porteiro]
+verify_jwt = false
