@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SuperAdminBreadcrumbs from "@/components/superadmin/SuperAdminBreadcrumbs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Database, Download, Copy, Loader2, CheckCircle2 } from "lucide-react";
+import { Database, Download, Copy, Loader2, CheckCircle2, Table2 } from "lucide-react";
 
 type ScriptSection = "enums" | "tables" | "functions" | "policies" | "data";
 
@@ -18,10 +19,30 @@ const SECTION_LABELS: Record<ScriptSection, string> = {
   data: "Dados (INSERT)",
 };
 
+/** Parse the data SQL into per-table chunks */
+function parseDataByTable(dataSql: string): { name: string; sql: string; rowCount: number }[] {
+  const tables: { name: string; sql: string; rowCount: number }[] = [];
+  const regex = /-- Table: (\S+) \((\d+) rows?\)\n([\s\S]*?)(?=\n-- Table: |\n*$)/g;
+  let match;
+  while ((match = regex.exec(dataSql)) !== null) {
+    tables.push({
+      name: match[1],
+      sql: match[0].trim(),
+      rowCount: parseInt(match[2], 10),
+    });
+  }
+  return tables;
+}
+
 const ExportDatabase = () => {
   const [scripts, setScripts] = useState<Record<string, string> | null>(null);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
+
+  const dataTables = useMemo(() => {
+    if (!scripts?.data) return [];
+    return parseDataByTable(scripts.data);
+  }, [scripts]);
 
   const handleExport = async () => {
     setLoading(true);
@@ -55,38 +76,32 @@ const ExportDatabase = () => {
     }
   };
 
-  const handleCopy = async (section: string) => {
-    if (!scripts?.[section]) return;
-    await navigator.clipboard.writeText(scripts[section]);
-    toast.success(`Script "${SECTION_LABELS[section as ScriptSection]}" copiado!`);
+  const handleCopy = async (content: string, label: string) => {
+    await navigator.clipboard.writeText(content);
+    toast.success(`"${label}" copiado!`);
   };
 
-  const handleDownload = (section: string) => {
-    if (!scripts?.[section]) return;
-    const blob = new Blob([scripts[section]], { type: "text/sql" });
+  const handleDownload = (content: string, filename: string) => {
+    const blob = new Blob([content], { type: "text/sql" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `export-${section}-${new Date().toISOString().slice(0, 10)}.sql`;
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  const today = new Date().toISOString().slice(0, 10);
 
   const handleDownloadAll = () => {
     if (!scripts) return;
     const allSql = Object.entries(scripts)
       .map(([, sql]) => sql)
       .join("\n\n");
-    const blob = new Blob([allSql], { type: "text/sql" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `export-completo-${new Date().toISOString().slice(0, 10)}.sql`;
-    a.click();
-    URL.revokeObjectURL(url);
+    handleDownload(allSql, `export-completo-${today}.sql`);
   };
 
-  const sectionOrder: ScriptSection[] = ["enums", "tables", "functions", "policies", "data"];
+  const schemaSections: ScriptSection[] = ["enums", "tables", "functions", "policies"];
 
   return (
     <DashboardLayout>
@@ -141,49 +156,119 @@ const ExportDatabase = () => {
           </CardContent>
         </Card>
 
-        {scripts &&
-          sectionOrder.map((section) => {
-            const sql = scripts[section];
-            if (!sql) return null;
-            const lineCount = sql.split("\n").length;
+        {scripts && (
+          <Tabs defaultValue="schema" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="schema">Estrutura</TabsTrigger>
+              <TabsTrigger value="data">
+                Dados ({dataTables.length} tabelas)
+              </TabsTrigger>
+            </TabsList>
 
-            return (
-              <Card key={section}>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center justify-between text-base">
-                    <span className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-primary" />
-                      {SECTION_LABELS[section]}
-                    </span>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleCopy(section)}
-                      >
-                        <Copy className="h-3 w-3" />
-                        Copiar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDownload(section)}
-                      >
-                        <Download className="h-3 w-3" />
-                        Baixar
-                      </Button>
-                    </div>
-                  </CardTitle>
-                  <CardDescription>{lineCount} linhas</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <pre className="max-h-80 overflow-auto rounded-md bg-muted p-4 text-xs font-mono whitespace-pre-wrap break-all">
-                    {sql}
-                  </pre>
-                </CardContent>
-              </Card>
-            );
-          })}
+            {/* Schema sections */}
+            <TabsContent value="schema" className="space-y-4">
+              {schemaSections.map((section) => {
+                const sql = scripts[section];
+                if (!sql) return null;
+                const lineCount = sql.split("\n").length;
+
+                return (
+                  <Card key={section}>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center justify-between text-base">
+                        <span className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-primary" />
+                          {SECTION_LABELS[section]}
+                        </span>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleCopy(sql, SECTION_LABELS[section])}
+                          >
+                            <Copy className="h-3 w-3" />
+                            Copiar
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDownload(sql, `export-${section}-${today}.sql`)}
+                          >
+                            <Download className="h-3 w-3" />
+                            Baixar
+                          </Button>
+                        </div>
+                      </CardTitle>
+                      <CardDescription>{lineCount} linhas</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <pre className="max-h-80 overflow-auto rounded-md bg-muted p-4 text-xs font-mono whitespace-pre-wrap break-all">
+                        {sql}
+                      </pre>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </TabsContent>
+
+            {/* Data per table */}
+            <TabsContent value="data" className="space-y-4">
+              <div className="flex gap-2 mb-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (scripts.data) handleDownload(scripts.data, `export-data-completo-${today}.sql`);
+                  }}
+                >
+                  <Download className="h-3 w-3" />
+                  Baixar Todos os Dados
+                </Button>
+              </div>
+
+              {dataTables.map((table) => (
+                <Card key={table.name}>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center justify-between text-base">
+                      <span className="flex items-center gap-2">
+                        <Table2 className="h-4 w-4 text-primary" />
+                        {table.name}
+                      </span>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCopy(table.sql, table.name)}
+                        >
+                          <Copy className="h-3 w-3" />
+                          Copiar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDownload(table.sql, `export-${table.name}-${today}.sql`)}
+                        >
+                          <Download className="h-3 w-3" />
+                          Baixar
+                        </Button>
+                      </div>
+                    </CardTitle>
+                    <CardDescription>{table.rowCount} registros</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <pre className="max-h-60 overflow-auto rounded-md bg-muted p-4 text-xs font-mono whitespace-pre-wrap break-all">
+                      {table.sql}
+                    </pre>
+                  </CardContent>
+                </Card>
+              ))}
+
+              {dataTables.length === 0 && (
+                <p className="text-sm text-muted-foreground">Nenhuma tabela com dados encontrada.</p>
+              )}
+            </TabsContent>
+          </Tabs>
+        )}
       </div>
     </DashboardLayout>
   );
