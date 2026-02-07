@@ -1,36 +1,45 @@
 
 
-# Corrigir exclusao de condominios - Politicas RLS faltando
+# Correcao: mover delete de party_hall_notifications para fora do bloco condicional
 
 ## Problema
-O erro persiste porque as tabelas `whatsapp_notification_logs` e `party_hall_notifications` **nao possuem politica RLS para DELETE**. O comando `.delete()` executado pelo frontend (com o token do super admin) simplesmente nao deleta nada -- retorna sucesso mas 0 linhas afetadas. Como os registros permanecem, a exclusao do condominio falha por violacao de foreign key.
-
-## Causa Raiz
-
-| Tabela | Politicas RLS existentes | DELETE permitido? |
-|--------|--------------------------|-------------------|
-| `whatsapp_notification_logs` | INSERT (service role), SELECT (super_admin, sindico) | **NAO** |
-| `party_hall_notifications` | SELECT (super_admin, sindico) | **NAO** |
+A exclusao de `party_hall_notifications` esta dentro do bloco `if (bookings && bookings.length > 0)` (linha 252). Se houver notificacoes mas nenhuma reserva ativa, elas nao serao removidas e a exclusao do condominio falhara.
 
 ## Correcao
+Mover a linha `await supabase.from("party_hall_notifications").delete().eq("condominium_id", condominiumId);` para **fora** do bloco condicional, junto com os outros deletes independentes (como `party_hall_settings` e `party_hall_checklist_templates`).
 
-Criar duas migrations SQL para adicionar politicas RLS de DELETE para super admins nessas tabelas:
+## Detalhes Tecnicos
 
-### Migration 1: whatsapp_notification_logs
-```sql
-CREATE POLICY "Super admins can delete WABA logs"
-  ON public.whatsapp_notification_logs
-  FOR DELETE
-  USING (has_role(auth.uid(), 'super_admin'::app_role));
+Arquivo: `src/components/superadmin/CondominiumsManagement.tsx`
+
+Antes (linhas 246-278):
+```typescript
+// 2. Delete party hall related data
+const { data: bookings } = await supabase...
+if (bookings && bookings.length > 0) {
+  // ... checklists ...
+  // Delete party hall notifications  <-- DENTRO do if
+  await supabase.from("party_hall_notifications").delete()...
+  // Delete bookings
+  await supabase.from("party_hall_bookings").delete()...
+}
+// Delete party hall settings
+// Delete party hall checklist templates
 ```
 
-### Migration 2: party_hall_notifications
-```sql
-CREATE POLICY "Super admins can delete party hall notifications"
-  ON public.party_hall_notifications
-  FOR DELETE
-  USING (has_role(auth.uid(), 'super_admin'::app_role));
+Depois:
+```typescript
+// 2. Delete party hall related data
+const { data: bookings } = await supabase...
+if (bookings && bookings.length > 0) {
+  // ... checklists ...
+  // Delete bookings
+  await supabase.from("party_hall_bookings").delete()...
+}
+// Delete party hall notifications  <-- FORA do if
+await supabase.from("party_hall_notifications").delete()...
+// Delete party hall settings
+// Delete party hall checklist templates
 ```
 
-Nenhuma alteracao de codigo e necessaria -- as chamadas `.delete()` ja estao no lugar certo (adicionadas na mensagem anterior). Apenas faltam as permissoes no banco de dados.
-
+Nenhuma outra alteracao e necessaria. A ordem das demais exclusoes esta correta.
