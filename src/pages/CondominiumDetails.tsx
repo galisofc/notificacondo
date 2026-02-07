@@ -53,6 +53,7 @@ import {
   FileSpreadsheet,
   Wand2,
   UsersRound,
+  Download,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -628,6 +629,45 @@ const CondominiumDetails = () => {
     );
   }
 
+  const handleExportResidents = () => {
+    if (residents.length === 0) {
+      toast({ title: "Aviso", description: "Nenhum morador para exportar.", variant: "destructive" });
+      return;
+    }
+
+    const headers = ["Bloco", "Apartamento", "Nome Completo", "Email", "Telefone", "CPF", "Proprietário", "Responsável"];
+    const rows = residents.map((resident) => {
+      const apt = apartments.find((a) => a.id === resident.apartment_id);
+      const block = apt ? blocks.find((b) => b.id === apt.block_id) : null;
+      return [
+        block?.name || "",
+        apt?.number || "",
+        resident.full_name,
+        resident.email,
+        resident.phone || "",
+        resident.cpf || "",
+        resident.is_owner ? "Sim" : "Não",
+        resident.is_responsible ? "Sim" : "Não",
+      ];
+    });
+
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    const BOM = "\uFEFF";
+    const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    const safeName = condominium?.name?.replace(/[^a-zA-Z0-9]/g, "_") || "condominio";
+    link.download = `moradores_${safeName}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+
+    toast({ title: "Sucesso", description: `${residents.length} morador(es) exportado(s) com sucesso!` });
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -658,7 +698,17 @@ const CondominiumDetails = () => {
               )}
             </div>
           </div>
-          <div className="flex gap-2 shrink-0">
+          <div className="flex gap-2 shrink-0 flex-wrap">
+            <Button
+              variant="outline"
+              onClick={handleExportResidents}
+              className="gap-2"
+              disabled={residents.length === 0}
+              title={residents.length === 0 ? "Nenhum morador cadastrado" : "Exportar moradores para CSV"}
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Exportar Moradores</span>
+            </Button>
             <Button
               variant="outline"
               onClick={() => setBulkResidentImportDialog(true)}
