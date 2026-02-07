@@ -264,12 +264,12 @@ export function CondominiumsManagement() {
           await supabase.from("party_hall_checklists").delete().in("booking_id", bookingIds);
         }
         
-        // Delete party hall notifications
-        await supabase.from("party_hall_notifications").delete().eq("condominium_id", condominiumId);
-        
         // Delete bookings
         await supabase.from("party_hall_bookings").delete().eq("condominium_id", condominiumId);
       }
+      
+      // Delete party hall notifications (outside conditional - may exist without bookings)
+      await supabase.from("party_hall_notifications").delete().eq("condominium_id", condominiumId);
       
       // Delete party hall settings
       await supabase.from("party_hall_settings").delete().eq("condominium_id", condominiumId);
