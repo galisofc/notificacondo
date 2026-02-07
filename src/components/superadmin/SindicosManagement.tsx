@@ -525,6 +525,14 @@ export function SindicosManagement() {
       });
       return;
     }
+    if (formData.password.length < 8) {
+      toast({
+        title: "Senha muito curta",
+        description: "A senha deve ter pelo menos 8 caracteres.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (!isValidCPF(formData.cpf)) {
       toast({
         title: "CPF inválido",
@@ -600,7 +608,7 @@ export function SindicosManagement() {
                     <ValidatedInput
                       id="password"
                       type="password"
-                      placeholder="Mínimo 6 caracteres"
+                      placeholder="Mínimo 8 caracteres"
                       value={formData.password}
                       onChange={(value) => setFormData({ ...formData, password: value })}
                       showPasswordToggle
