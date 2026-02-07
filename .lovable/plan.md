@@ -1,49 +1,73 @@
 
-# Recriar Pagina de Exportacao do Banco de Dados
 
-A pagina `/superadmin/export-database` e a Edge Function correspondente foram removidas do projeto. O plano abaixo recria toda a funcionalidade.
+# Corrigir erro "Invalid JWT" (401) nas Edge Functions
 
-## O que sera criado
+## Problema
 
-1. **Edge Function `export-database`** -- Gera scripts SQL completos (schemas, dados, funcoes, triggers, RLS) para todas as 39 tabelas do banco, respeitando a ordem de dependencias de chaves estrangeiras.
+Existem **9 Edge Functions** que nao estao configuradas no arquivo `supabase/config.toml` com `verify_jwt = false`. No Supabase externo com sistema de signing-keys, o padrao `verify_jwt = true` nao funciona corretamente, causando o erro `{code: 401, message: "Invalid JWT"}`.
 
-2. **Pagina `ExportDatabase.tsx`** -- Interface no painel Super Admin para visualizar, copiar e baixar os scripts SQL em lotes.
+As funcoes afetadas sao:
+- `check-whatsapp-template-status`
+- `create-waba-template`
+- `get-package-photo-signed-url`
+- `list-waba-templates`
+- `send-password-recovery`
+- `send-whatsapp-image-test`
+- `send-whatsapp-template-test`
+- `update-porteiro-password`
+- `update-porteiro`
 
-3. **Rota e menu** -- Registro da rota `/superadmin/export-database` no `App.tsx` e link no menu lateral do Super Admin.
+O erro que voce esta vendo na pagina `/superadmin/whatsapp` provavelmente vem da funcao `list-waba-templates` ou `send-whatsapp-template-test`.
 
----
+## Solucao
 
-## Detalhes tecnicos
+Adicionar todas as 9 funcoes faltantes no `supabase/config.toml` com `verify_jwt = false`.
 
-### 1. Edge Function (`supabase/functions/export-database/index.ts`)
+Essas funcoes ja fazem validacao de autenticacao internamente no codigo (usando `getClaims()` ou `getUser()`), entao a seguranca nao sera afetada.
 
-- Acesso restrito: valida que o usuario autenticado tem role `super_admin`.
-- Consulta `information_schema` para extrair:
-  - Tipos ENUM
-  - Definicoes de tabelas (colunas, tipos, defaults, constraints)
-  - Funcoes e triggers
-  - Politicas RLS
-- Gera `INSERT INTO` para todos os registros de cada tabela publica, ordenando pela dependencia de foreign keys.
-- Exclui dados de `auth.users` e `storage.objects` por seguranca.
-- Retorna JSON com os scripts SQL divididos em lotes (schema, data, policies).
+## Detalhes Tecnicos
 
-### 2. Pagina (`src/pages/superadmin/ExportDatabase.tsx`)
+### Arquivo alterado: `supabase/config.toml`
 
-- Botao para acionar a geracao dos scripts via chamada a Edge Function.
-- Exibicao dos scripts em blocos com syntax highlight basico.
-- Botoes por bloco: **Copiar** (clipboard) e **Baixar** (arquivo `.sql`).
-- Indicador de progresso/loading durante a geracao.
-- Breadcrumbs consistentes com o padrao Super Admin.
+Adicionar as seguintes entradas ao final do arquivo:
 
-### 3. Rota (`src/App.tsx`)
+```text
+# Verificacao de status de template WhatsApp
+[functions.check-whatsapp-template-status]
+verify_jwt = false
 
-- Adicionar rota protegida `/superadmin/export-database` com `requiredRole="super_admin"`.
-- Importar o componente `ExportDatabase`.
+# Criacao de template WABA
+[functions.create-waba-template]
+verify_jwt = false
 
-### 4. Menu lateral (`src/components/layouts/DashboardLayout.tsx`)
+# URL assinada para fotos de encomendas
+[functions.get-package-photo-signed-url]
+verify_jwt = false
 
-- Adicionar link "Exportar Banco" na secao de ferramentas/configuracoes do menu Super Admin, usando icone `Database` ou `Download` do Lucide.
+# Listagem de templates WABA
+[functions.list-waba-templates]
+verify_jwt = false
 
-### Tabelas incluidas na exportacao
+# Recuperacao de senha
+[functions.send-password-recovery]
+verify_jwt = false
 
-Todas as 39 tabelas publicas: `apartments`, `app_settings`, `audit_logs`, `blocks`, `condominium_transfers`, `condominium_whatsapp_templates`, `condominiums`, `contact_messages`, `cron_job_controls`, `decisions`, `defense_attachments`, `defenses`, `edge_function_logs`, `fines`, `invoices`, `magic_link_access_logs`, `mercadopago_config`, `mercadopago_webhook_logs`, `notifications_sent`, `occurrence_evidences`, `occurrences`, `package_types`, `packages`, `party_hall_bookings`, `party_hall_checklist_items`, `party_hall_checklist_templates`, `party_hall_checklists`, `party_hall_notifications`, `party_hall_settings`, `password_recovery_attempts`, `plans`, `profiles`, `residents`, `subscriptions`, `user_condominiums`, `user_roles`, `whatsapp_config`, `whatsapp_notification_logs`, `whatsapp_templates`.
+# Teste de envio de imagem WhatsApp
+[functions.send-whatsapp-image-test]
+verify_jwt = false
+
+# Teste de envio de template WhatsApp
+[functions.send-whatsapp-template-test]
+verify_jwt = false
+
+# Atualizacao de senha de porteiro
+[functions.update-porteiro-password]
+verify_jwt = false
+
+# Atualizacao de dados de porteiro
+[functions.update-porteiro]
+verify_jwt = false
+```
+
+Apos essa alteracao, sera necessario fazer o **redeploy** das Edge Functions no Supabase externo para que a configuracao entre em vigor.
+
