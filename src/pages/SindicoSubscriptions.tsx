@@ -868,7 +868,7 @@ const SindicoSubscriptions = () => {
                                   <Info className="h-3 w-3 text-muted-foreground/50 cursor-help" />
                                 </TooltipTrigger>
                                 <TooltipContent side="top" className="max-w-[200px] text-xs">
-                                  <p>Notificações de encomendas enviadas. Acima do limite: R$ 0,10 por envio extra (aplica-se a todos os módulos).</p>
+                                  <p>Uso no período atual da assinatura ({sub.current_period_start ? formatDateLocal(sub.current_period_start) : 'N/A'} - {sub.current_period_end ? formatDateLocal(sub.current_period_end) : 'N/A'})</p>
                                 </TooltipContent>
                               </Tooltip>
                             </div>
