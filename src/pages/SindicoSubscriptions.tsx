@@ -793,8 +793,10 @@ const SindicoSubscriptions = () => {
                                 </TooltipContent>
                               </Tooltip>
                             </div>
-                            <span className={notificationsPercent >= 80 ? "text-destructive" : "text-muted-foreground"}>
-                              {sub.realUsage.notifications}/{sub.notifications_limit}
+                            <span className={sub.notifications_limit === -1 ? "text-muted-foreground" : notificationsPercent >= 80 ? "text-destructive" : "text-muted-foreground"}>
+                              {sub.notifications_limit === -1 
+                                ? `${sub.realUsage.notifications} / ∞`
+                                : `${sub.realUsage.notifications}/${sub.notifications_limit}`}
                             </span>
                           </div>
                           <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
