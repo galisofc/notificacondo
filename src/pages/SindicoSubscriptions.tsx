@@ -801,8 +801,8 @@ const SindicoSubscriptions = () => {
                           </div>
                           <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
                             <div 
-                              className={`h-full rounded-full ${notificationsPercent >= 80 ? "bg-destructive" : "bg-primary"}`}
-                              style={{ width: `${Math.min(notificationsPercent, 100)}%` }}
+                              className={`h-full rounded-full ${sub.notifications_limit === -1 ? "bg-primary" : notificationsPercent >= 80 ? "bg-destructive" : "bg-primary"}`}
+                              style={{ width: sub.notifications_limit === -1 ? "0%" : `${Math.min(notificationsPercent, 100)}%` }}
                             />
                           </div>
 
@@ -827,8 +827,8 @@ const SindicoSubscriptions = () => {
                           </div>
                           <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
                             <div 
-                              className={`h-full rounded-full ${warningsPercent >= 80 ? "bg-destructive" : "bg-amber-500"}`}
-                              style={{ width: `${Math.min(warningsPercent, 100)}%` }}
+                              className={`h-full rounded-full ${sub.warnings_limit === -1 ? "bg-amber-500" : warningsPercent >= 80 ? "bg-destructive" : "bg-amber-500"}`}
+                              style={{ width: sub.warnings_limit === -1 ? "0%" : `${Math.min(warningsPercent, 100)}%` }}
                             />
                           </div>
 
