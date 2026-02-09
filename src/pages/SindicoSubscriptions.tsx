@@ -793,8 +793,10 @@ const SindicoSubscriptions = () => {
                                 </TooltipContent>
                               </Tooltip>
                             </div>
-                            <span className={notificationsPercent >= 80 ? "text-destructive" : "text-muted-foreground"}>
-                              {sub.realUsage.notifications}/{sub.notifications_limit}
+                            <span className={sub.notifications_limit === -1 ? "text-muted-foreground" : notificationsPercent >= 80 ? "text-destructive" : "text-muted-foreground"}>
+                              {sub.notifications_limit === -1 
+                                ? `${sub.realUsage.notifications} / ∞`
+                                : `${sub.realUsage.notifications}/${sub.notifications_limit}`}
                             </span>
                           </div>
                           <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
@@ -817,8 +819,10 @@ const SindicoSubscriptions = () => {
                                 </TooltipContent>
                               </Tooltip>
                             </div>
-                            <span className={warningsPercent >= 80 ? "text-destructive" : "text-muted-foreground"}>
-                              {sub.realUsage.warnings}/{sub.warnings_limit}
+                            <span className={sub.warnings_limit === -1 ? "text-muted-foreground" : warningsPercent >= 80 ? "text-destructive" : "text-muted-foreground"}>
+                              {sub.warnings_limit === -1
+                                ? `${sub.realUsage.warnings} / ∞`
+                                : `${sub.realUsage.warnings}/${sub.warnings_limit}`}
                             </span>
                           </div>
                           <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
@@ -828,33 +832,31 @@ const SindicoSubscriptions = () => {
                             />
                           </div>
 
-                          {sub.fines_limit > 0 && (
-                            <>
-                              <div className="flex items-center justify-between text-xs mt-2">
-                                <div className="flex items-center gap-1">
-                                  <Gavel className="h-3 w-3 text-muted-foreground" />
-                                  <span>Multas</span>
-                                  <Tooltip>
-                                    <TooltipTrigger>
-                                      <Info className="h-3 w-3 text-muted-foreground/50 cursor-help" />
-                                    </TooltipTrigger>
-                                    <TooltipContent side="top" className="max-w-[200px] text-xs">
-                                      <p>Uso no período atual da assinatura ({sub.current_period_start ? formatDateLocal(sub.current_period_start) : 'N/A'} - {sub.current_period_end ? formatDateLocal(sub.current_period_end) : 'N/A'})</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </div>
-                                <span className={finesPercent >= 80 ? "text-destructive" : "text-muted-foreground"}>
-                                  {sub.realUsage.fines}/{sub.fines_limit}
-                                </span>
-                              </div>
-                              <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                                <div 
-                                  className={`h-full rounded-full ${finesPercent >= 80 ? "bg-destructive" : "bg-emerald-500"}`}
-                                  style={{ width: `${Math.min(finesPercent, 100)}%` }}
-                                />
-                              </div>
-                            </>
-                          )}
+                          <div className="flex items-center justify-between text-xs mt-2">
+                            <div className="flex items-center gap-1">
+                              <Gavel className="h-3 w-3 text-muted-foreground" />
+                              <span>Multas</span>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <Info className="h-3 w-3 text-muted-foreground/50 cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-[200px] text-xs">
+                                  <p>Uso no período atual da assinatura ({sub.current_period_start ? formatDateLocal(sub.current_period_start) : 'N/A'} - {sub.current_period_end ? formatDateLocal(sub.current_period_end) : 'N/A'})</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                            <span className={sub.fines_limit === -1 ? "text-muted-foreground" : finesPercent >= 80 ? "text-destructive" : "text-muted-foreground"}>
+                              {sub.fines_limit === -1
+                                ? `${sub.realUsage.fines} / ∞`
+                                : `${sub.realUsage.fines}/${sub.fines_limit}`}
+                            </span>
+                          </div>
+                          <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full ${sub.fines_limit === -1 ? "bg-emerald-500" : finesPercent >= 80 ? "bg-destructive" : "bg-emerald-500"}`}
+                              style={{ width: sub.fines_limit === -1 ? "0%" : `${Math.min(finesPercent, 100)}%` }}
+                            />
+                          </div>
 
                           {/* Package Notifications */}
                           <div className="flex items-center justify-between text-xs mt-2">
