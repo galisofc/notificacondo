@@ -98,6 +98,7 @@ export function SindicosManagement() {
     blocks: number;
     apartments: number;
     residents: number;
+    porters: number;
     occurrences: number;
     isLoading: boolean;
   } | null>(null);
