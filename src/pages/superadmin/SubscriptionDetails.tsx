@@ -1673,19 +1673,25 @@ export default function SubscriptionDetails() {
                       </Tooltip>
                     </div>
                     <span
-                      className={`text-xs sm:text-sm font-medium ${getUsageColor(
-                        getUsagePercentage(realUsage.fines, subscription.fines_limit)
-                      )}`}
+                      className={`text-xs sm:text-sm font-medium ${
+                        subscription.fines_limit === -1
+                          ? "text-emerald-500"
+                          : getUsageColor(getUsagePercentage(realUsage.fines, subscription.fines_limit))
+                      }`}
                     >
-                      {realUsage.fines} / {subscription.fines_limit}
+                      {subscription.fines_limit === -1
+                        ? `${realUsage.fines} / ∞`
+                        : `${realUsage.fines} / ${subscription.fines_limit}`}
                     </span>
                   </div>
                   <Progress
-                    value={getUsagePercentage(realUsage.fines, subscription.fines_limit)}
+                    value={subscription.fines_limit === -1 ? 0 : getUsagePercentage(realUsage.fines, subscription.fines_limit)}
                     className="h-1.5 sm:h-2"
                   />
                   <p className="text-[10px] sm:text-xs text-muted-foreground">
-                    {Math.max(0, subscription.fines_limit - realUsage.fines)} restantes
+                    {subscription.fines_limit === -1
+                      ? "Ilimitado"
+                      : `${Math.max(0, subscription.fines_limit - realUsage.fines)} restantes`}
                   </p>
                 </div>
 
