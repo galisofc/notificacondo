@@ -38,6 +38,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -1129,57 +1130,105 @@ export default function SubscriptionDetails() {
                       <Label>Limite de Notificações</Label>
                       <Input
                         type="number"
-                        value={editedData.notifications_limit}
+                        value={editedData.notifications_limit === -1 ? "" : editedData.notifications_limit}
+                        placeholder={editedData.notifications_limit === -1 ? "Ilimitado" : ""}
                         onChange={(e) =>
                           setEditedData({
                             ...editedData,
                             notifications_limit: parseInt(e.target.value) || 0,
                           })
                         }
-                        disabled={editedData.is_lifetime}
+                        disabled={editedData.is_lifetime || editedData.notifications_limit === -1}
                       />
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="unlimited_notifications"
+                          checked={editedData.notifications_limit === -1}
+                          onCheckedChange={(checked) =>
+                            setEditedData({ ...editedData, notifications_limit: checked ? -1 : 0 })
+                          }
+                          disabled={editedData.is_lifetime}
+                        />
+                        <Label htmlFor="unlimited_notifications" className="text-xs font-normal cursor-pointer">Ilimitado</Label>
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label>Limite de Advertências</Label>
                       <Input
                         type="number"
-                        value={editedData.warnings_limit}
+                        value={editedData.warnings_limit === -1 ? "" : editedData.warnings_limit}
+                        placeholder={editedData.warnings_limit === -1 ? "Ilimitado" : ""}
                         onChange={(e) =>
                           setEditedData({
                             ...editedData,
                             warnings_limit: parseInt(e.target.value) || 0,
                           })
                         }
-                        disabled={editedData.is_lifetime}
+                        disabled={editedData.is_lifetime || editedData.warnings_limit === -1}
                       />
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="unlimited_warnings"
+                          checked={editedData.warnings_limit === -1}
+                          onCheckedChange={(checked) =>
+                            setEditedData({ ...editedData, warnings_limit: checked ? -1 : 0 })
+                          }
+                          disabled={editedData.is_lifetime}
+                        />
+                        <Label htmlFor="unlimited_warnings" className="text-xs font-normal cursor-pointer">Ilimitado</Label>
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label>Limite de Multas</Label>
                       <Input
                         type="number"
-                        value={editedData.fines_limit}
+                        value={editedData.fines_limit === -1 ? "" : editedData.fines_limit}
+                        placeholder={editedData.fines_limit === -1 ? "Ilimitado" : ""}
                         onChange={(e) =>
                           setEditedData({
                             ...editedData,
                             fines_limit: parseInt(e.target.value) || 0,
                           })
                         }
-                        disabled={editedData.is_lifetime}
+                        disabled={editedData.is_lifetime || editedData.fines_limit === -1}
                       />
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="unlimited_fines"
+                          checked={editedData.fines_limit === -1}
+                          onCheckedChange={(checked) =>
+                            setEditedData({ ...editedData, fines_limit: checked ? -1 : 0 })
+                          }
+                          disabled={editedData.is_lifetime}
+                        />
+                        <Label htmlFor="unlimited_fines" className="text-xs font-normal cursor-pointer">Ilimitado</Label>
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label>Limite de Encomendas</Label>
                       <Input
                         type="number"
-                        value={editedData.package_notifications_limit}
+                        value={editedData.package_notifications_limit === -1 ? "" : editedData.package_notifications_limit}
+                        placeholder={editedData.package_notifications_limit === -1 ? "Ilimitado" : ""}
                         onChange={(e) =>
                           setEditedData({
                             ...editedData,
                             package_notifications_limit: parseInt(e.target.value) || 0,
                           })
                         }
-                        disabled={editedData.is_lifetime}
+                        disabled={editedData.is_lifetime || editedData.package_notifications_limit === -1}
                       />
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="unlimited_packages"
+                          checked={editedData.package_notifications_limit === -1}
+                          onCheckedChange={(checked) =>
+                            setEditedData({ ...editedData, package_notifications_limit: checked ? -1 : 0 })
+                          }
+                          disabled={editedData.is_lifetime}
+                        />
+                        <Label htmlFor="unlimited_packages" className="text-xs font-normal cursor-pointer">Ilimitado</Label>
+                      </div>
                     </div>
                   </div>
                 </div>
