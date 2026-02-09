@@ -426,76 +426,26 @@ export function SindicosManagement() {
 
   const handleDeleteClick = async (sindico: SindicoWithProfile) => {
     setSindicoToDelete(sindico);
-    setDeletePreviewData({ condominiums: 0, blocks: 0, apartments: 0, residents: 0, occurrences: 0, isLoading: true });
+    setDeletePreviewData({ condominiums: 0, blocks: 0, apartments: 0, residents: 0, porters: 0, occurrences: 0, isLoading: true });
     setIsDeleteDialogOpen(true);
 
     try {
-      // Fetch condominiums owned by this sindico
-      const { data: condominiums } = await supabase
-        .from("condominiums")
-        .select("id")
-        .eq("owner_id", sindico.user_id);
+      // Use edge function to get accurate counts (avoids RLS issues)
+      const { data: result, error } = await supabase.functions.invoke("delete-sindico", {
+        body: { user_id: sindico.user_id, preview_only: true },
+      });
 
-      const condoIds = condominiums?.map(c => c.id) || [];
-      let blocksCount = 0;
-      let apartmentsCount = 0;
-      let residentsCount = 0;
-      let occurrencesCount = 0;
-
-      if (condoIds.length > 0) {
-        // Count blocks
-        const { count: blocks } = await supabase
-          .from("blocks")
-          .select("*", { count: "exact", head: true })
-          .in("condominium_id", condoIds);
-        blocksCount = blocks || 0;
-
-        // Get block IDs
-        const { data: blocksData } = await supabase
-          .from("blocks")
-          .select("id")
-          .in("condominium_id", condoIds);
-        const blockIds = blocksData?.map(b => b.id) || [];
-
-        if (blockIds.length > 0) {
-          // Count apartments
-          const { count: apartments } = await supabase
-            .from("apartments")
-            .select("*", { count: "exact", head: true })
-            .in("block_id", blockIds);
-          apartmentsCount = apartments || 0;
-
-          // Get apartment IDs
-          const { data: apartmentsData } = await supabase
-            .from("apartments")
-            .select("id")
-            .in("block_id", blockIds);
-          const apartmentIds = apartmentsData?.map(a => a.id) || [];
-
-          if (apartmentIds.length > 0) {
-            // Count residents
-            const { count: residents } = await supabase
-              .from("residents")
-              .select("*", { count: "exact", head: true })
-              .in("apartment_id", apartmentIds);
-            residentsCount = residents || 0;
-          }
-        }
-
-        // Count occurrences
-        const { count: occurrences } = await supabase
-          .from("occurrences")
-          .select("*", { count: "exact", head: true })
-          .in("condominium_id", condoIds);
-        occurrencesCount = occurrences || 0;
+      if (error || !result?.success) {
+        throw new Error(result?.error || error?.message || "Erro ao buscar preview");
       }
 
       setDeletePreviewData({
-        condominiums: condoIds.length,
-        blocks: blocksCount,
-        apartments: apartmentsCount,
-        residents: residentsCount,
-        occurrences: occurrencesCount,
+        condominiums: result.preview.condominiums || 0,
+        blocks: result.preview.blocks || 0,
+        apartments: result.preview.apartments || 0,
+        residents: result.preview.residents || 0,
+        porters: result.preview.porters || 0,
+        occurrences: result.preview.occurrences || 0,
         isLoading: false,
       });
     } catch (error) {
@@ -505,6 +455,7 @@ export function SindicosManagement() {
         blocks: 0,
         apartments: 0,
         residents: 0,
+        porters: 0,
         occurrences: 0,
         isLoading: false,
       });
