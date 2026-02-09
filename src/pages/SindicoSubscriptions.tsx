@@ -827,7 +827,9 @@ const SindicoSubscriptions = () => {
                           </div>
                           <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
                             <div 
-                              className={`h-full rounded-full ${warningsPercent >= 80 ? "bg-destructive" : "bg-amber-500"}`}
+                              className={`h-full rounded-full ${sub.warnings_limit === -1 ? "bg-amber-500" : warningsPercent >= 80 ? "bg-destructive" : "bg-amber-500"}`}
+                              style={{ width: sub.warnings_limit === -1 ? "0%" : `${Math.min(warningsPercent, 100)}%` }}
+                            />
                               style={{ width: `${Math.min(warningsPercent, 100)}%` }}
                             />
                           </div>
