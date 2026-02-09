@@ -1074,9 +1074,10 @@ export default function SubscriptionDetails() {
                               is_lifetime: true,
                               plan: "enterprise",
                               active: true,
-                              notifications_limit: 999999,
-                              warnings_limit: 999999,
-                              fines_limit: 999999,
+                              notifications_limit: -1,
+                              warnings_limit: -1,
+                              fines_limit: -1,
+                              package_notifications_limit: -1,
                             });
                           } else {
                             setEditedData({ ...editedData, is_lifetime: false });
