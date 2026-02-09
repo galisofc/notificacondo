@@ -1597,19 +1597,25 @@ export default function SubscriptionDetails() {
                       </Tooltip>
                     </div>
                     <span
-                      className={`text-xs sm:text-sm font-medium ${getUsageColor(
-                        getUsagePercentage(realUsage.notifications, subscription.notifications_limit)
-                      )}`}
+                      className={`text-xs sm:text-sm font-medium ${
+                        subscription.notifications_limit === -1
+                          ? "text-emerald-500"
+                          : getUsageColor(getUsagePercentage(realUsage.notifications, subscription.notifications_limit))
+                      }`}
                     >
-                      {realUsage.notifications} / {subscription.notifications_limit}
+                      {subscription.notifications_limit === -1
+                        ? `${realUsage.notifications} / ∞`
+                        : `${realUsage.notifications} / ${subscription.notifications_limit}`}
                     </span>
                   </div>
                   <Progress
-                    value={getUsagePercentage(realUsage.notifications, subscription.notifications_limit)}
+                    value={subscription.notifications_limit === -1 ? 0 : getUsagePercentage(realUsage.notifications, subscription.notifications_limit)}
                     className="h-1.5 sm:h-2"
                   />
                   <p className="text-[10px] sm:text-xs text-muted-foreground">
-                    {Math.max(0, subscription.notifications_limit - realUsage.notifications)} restantes
+                    {subscription.notifications_limit === -1
+                      ? "Ilimitado"
+                      : `${Math.max(0, subscription.notifications_limit - realUsage.notifications)} restantes`}
                   </p>
                 </div>
 
@@ -1629,19 +1635,25 @@ export default function SubscriptionDetails() {
                       </Tooltip>
                     </div>
                     <span
-                      className={`text-xs sm:text-sm font-medium ${getUsageColor(
-                        getUsagePercentage(realUsage.warnings, subscription.warnings_limit)
-                      )}`}
+                      className={`text-xs sm:text-sm font-medium ${
+                        subscription.warnings_limit === -1
+                          ? "text-emerald-500"
+                          : getUsageColor(getUsagePercentage(realUsage.warnings, subscription.warnings_limit))
+                      }`}
                     >
-                      {realUsage.warnings} / {subscription.warnings_limit}
+                      {subscription.warnings_limit === -1
+                        ? `${realUsage.warnings} / ∞`
+                        : `${realUsage.warnings} / ${subscription.warnings_limit}`}
                     </span>
                   </div>
                   <Progress
-                    value={getUsagePercentage(realUsage.warnings, subscription.warnings_limit)}
+                    value={subscription.warnings_limit === -1 ? 0 : getUsagePercentage(realUsage.warnings, subscription.warnings_limit)}
                     className="h-1.5 sm:h-2"
                   />
                   <p className="text-[10px] sm:text-xs text-muted-foreground">
-                    {Math.max(0, subscription.warnings_limit - realUsage.warnings)} restantes
+                    {subscription.warnings_limit === -1
+                      ? "Ilimitado"
+                      : `${Math.max(0, subscription.warnings_limit - realUsage.warnings)} restantes`}
                   </p>
                 </div>
 
@@ -1661,19 +1673,25 @@ export default function SubscriptionDetails() {
                       </Tooltip>
                     </div>
                     <span
-                      className={`text-xs sm:text-sm font-medium ${getUsageColor(
-                        getUsagePercentage(realUsage.fines, subscription.fines_limit)
-                      )}`}
+                      className={`text-xs sm:text-sm font-medium ${
+                        subscription.fines_limit === -1
+                          ? "text-emerald-500"
+                          : getUsageColor(getUsagePercentage(realUsage.fines, subscription.fines_limit))
+                      }`}
                     >
-                      {realUsage.fines} / {subscription.fines_limit}
+                      {subscription.fines_limit === -1
+                        ? `${realUsage.fines} / ∞`
+                        : `${realUsage.fines} / ${subscription.fines_limit}`}
                     </span>
                   </div>
                   <Progress
-                    value={getUsagePercentage(realUsage.fines, subscription.fines_limit)}
+                    value={subscription.fines_limit === -1 ? 0 : getUsagePercentage(realUsage.fines, subscription.fines_limit)}
                     className="h-1.5 sm:h-2"
                   />
                   <p className="text-[10px] sm:text-xs text-muted-foreground">
-                    {Math.max(0, subscription.fines_limit - realUsage.fines)} restantes
+                    {subscription.fines_limit === -1
+                      ? "Ilimitado"
+                      : `${Math.max(0, subscription.fines_limit - realUsage.fines)} restantes`}
                   </p>
                 </div>
 
