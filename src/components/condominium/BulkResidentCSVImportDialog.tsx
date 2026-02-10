@@ -216,16 +216,16 @@ BLOCO 2,201,Carlos Souza,11977777777,sim,não`;
         block_name: blockName || "",
         apartment_number: apartmentNumber || "",
         full_name: name || "",
-        email: email || "",
+        email: "",
         phone: phone?.replace(/\D/g, "") || "",
-        cpf: cleanCPF,
+        cpf: "",
         is_owner: parseBoolean(isOwner),
         is_responsible: parseBoolean(isResponsible),
         errors,
         isValid: errors.length === 0,
         apartment_id,
       };
-    }).filter(r => r.full_name || r.email || r.block_name || r.apartment_number); // Filter out completely empty rows
+    }).filter(r => r.full_name || r.block_name || r.apartment_number); // Filter out completely empty rows
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
