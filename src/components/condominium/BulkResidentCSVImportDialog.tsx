@@ -709,10 +709,9 @@ BLOCO 2,201,Carlos Souza,11977777777,sim,não`;
                     <Table>
                       <TableHeader className="sticky top-0 bg-background z-10">
                         <TableRow>
-                          <TableHead>Bloco</TableHead>
+                         <TableHead>Bloco</TableHead>
                           <TableHead>Apto</TableHead>
                           <TableHead>Nome</TableHead>
-                          <TableHead>E-mail</TableHead>
                           <TableHead>Motivo</TableHead>
                         </TableRow>
                       </TableHeader>
