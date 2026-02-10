@@ -320,9 +320,7 @@ Maria Santos,11988888888,não,não`;
                         )}
                       </TableCell>
                       <TableCell className="font-medium">{resident.full_name}</TableCell>
-                      <TableCell>{resident.email}</TableCell>
                       <TableCell>{resident.phone || "-"}</TableCell>
-                      <TableCell>{resident.cpf || "-"}</TableCell>
                       <TableCell>
                         <Checkbox checked={resident.is_owner} disabled />
                       </TableCell>

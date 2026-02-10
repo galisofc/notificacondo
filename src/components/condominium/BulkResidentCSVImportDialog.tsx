@@ -719,9 +719,8 @@ BLOCO 2,201,Carlos Souza,11977777777,sim,não`;
                         {failedImports.map((failure, index) => (
                           <TableRow key={index} className="bg-destructive/5">
                             <TableCell className="font-medium">{failure.resident.block_name}</TableCell>
-                            <TableCell>{failure.resident.apartment_number}</TableCell>
-                            <TableCell>{failure.resident.full_name}</TableCell>
-                            <TableCell className="text-xs">{failure.resident.email}</TableCell>
+                             <TableCell>{failure.resident.apartment_number}</TableCell>
+                             <TableCell>{failure.resident.full_name}</TableCell>
                             <TableCell className="text-xs text-destructive font-medium">
                               {failure.error}
                             </TableCell>
