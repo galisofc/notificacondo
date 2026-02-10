@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX residents_apartment_name_unique ON residents (apartment_id, UPPER(full_name));
