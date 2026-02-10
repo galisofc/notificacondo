@@ -108,17 +108,17 @@ const BulkResidentCSVImportDialog = ({
     const apartmentIds = apartments.map(a => a.id);
     const { data } = await supabase
       .from("residents")
-      .select("apartment_id, email")
+      .select("id, apartment_id, full_name")
       .in("apartment_id", apartmentIds);
     
     setExistingResidents(data || []);
   };
 
-  // Check if a resident already exists
-  const isResidentDuplicate = (apartmentId: string, email: string): boolean => {
-    const normalizedEmail = email.toLowerCase().trim();
-    return existingResidents.some(
-      r => r.apartment_id === apartmentId && r.email.toLowerCase().trim() === normalizedEmail
+  // Find existing resident by name + apartment
+  const findExistingResident = (apartmentId: string, fullName: string) => {
+    const normalizedName = fullName.toUpperCase().trim();
+    return existingResidents.find(
+      r => r.apartment_id === apartmentId && r.full_name.toUpperCase().trim() === normalizedName
     );
   };
 
