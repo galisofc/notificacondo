@@ -58,13 +58,15 @@ const ResidentCSVImportDialog = ({
   
   const [step, setStep] = useState<"upload" | "preview" | "importing" | "done">("upload");
   const [parsedResidents, setParsedResidents] = useState<ParsedResident[]>([]);
-  const [importResults, setImportResults] = useState<{ success: number; failed: number }>({ success: 0, failed: 0 });
+  const [existingResidents, setExistingResidents] = useState<{ id: string; full_name: string }[]>([]);
+  const [importResults, setImportResults] = useState<{ created: number; updated: number; failed: number }>({ created: 0, updated: 0, failed: 0 });
   const [importing, setImporting] = useState(false);
 
   const resetState = () => {
     setStep("upload");
     setParsedResidents([]);
-    setImportResults({ success: 0, failed: 0 });
+    setExistingResidents([]);
+    setImportResults({ created: 0, updated: 0, failed: 0 });
     setImporting(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -145,7 +147,22 @@ Maria Santos,11988888888,não,não`;
     }).filter(r => r.full_name); // Filter out completely empty rows
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const fetchExistingResidents = async () => {
+    const { data } = await supabase
+      .from("residents")
+      .select("id, full_name")
+      .eq("apartment_id", apartmentId);
+    setExistingResidents(data || []);
+  };
+
+  const findExistingResident = (fullName: string) => {
+    const normalizedName = fullName.toUpperCase().trim();
+    return existingResidents.find(
+      r => r.full_name.toUpperCase().trim() === normalizedName
+    );
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -157,6 +174,8 @@ Maria Santos,11988888888,não,não`;
       });
       return;
     }
+
+    await fetchExistingResidents();
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -192,38 +211,57 @@ Maria Santos,11988888888,não,não`;
     setImporting(true);
     setStep("importing");
 
-    let success = 0;
+    let created = 0;
+    let updated = 0;
     let failed = 0;
 
     for (const resident of validResidents) {
       try {
-        const { error } = await supabase.from("residents").insert({
-          apartment_id: apartmentId,
-          full_name: resident.full_name.toUpperCase(),
-          email: resident.email,
-          phone: resident.phone || null,
-          cpf: resident.cpf || null,
-          is_owner: resident.is_owner,
-          is_responsible: resident.is_responsible,
-        });
+        const existing = findExistingResident(resident.full_name);
+        
+        if (existing) {
+          const { error } = await supabase.from("residents").update({
+            phone: resident.phone || null,
+            cpf: resident.cpf || null,
+            is_owner: resident.is_owner,
+            is_responsible: resident.is_responsible,
+          }).eq("id", existing.id);
 
-        if (error) {
-          failed++;
-          console.error("Error inserting resident:", error);
+          if (error) {
+            failed++;
+            console.error("Error updating resident:", error);
+          } else {
+            updated++;
+          }
         } else {
-          success++;
+          const { error } = await supabase.from("residents").insert({
+            apartment_id: apartmentId,
+            full_name: resident.full_name.toUpperCase(),
+            email: resident.email,
+            phone: resident.phone || null,
+            cpf: resident.cpf || null,
+            is_owner: resident.is_owner,
+            is_responsible: resident.is_responsible,
+          });
+
+          if (error) {
+            failed++;
+            console.error("Error inserting resident:", error);
+          } else {
+            created++;
+          }
         }
       } catch (error) {
         failed++;
-        console.error("Error inserting resident:", error);
+        console.error("Error processing resident:", error);
       }
     }
 
-    setImportResults({ success, failed });
+    setImportResults({ created, updated, failed });
     setStep("done");
     setImporting(false);
 
-    if (success > 0) {
+    if (created > 0 || updated > 0) {
       onSuccess();
     }
   };
@@ -356,11 +394,19 @@ Maria Santos,11988888888,não,não`;
         {step === "done" && (
           <div className="py-8 text-center space-y-6">
             <div className="space-y-2">
-              {importResults.success > 0 && (
+              {importResults.created > 0 && (
                 <div className="flex items-center justify-center gap-2 text-green-600">
                   <CheckCircle2 className="w-6 h-6" />
                   <span className="text-lg font-medium">
-                    {importResults.success} morador{importResults.success !== 1 ? "es" : ""} importado{importResults.success !== 1 ? "s" : ""} com sucesso!
+                    {importResults.created} morador{importResults.created !== 1 ? "es" : ""} criado{importResults.created !== 1 ? "s" : ""}
+                  </span>
+                </div>
+              )}
+              {importResults.updated > 0 && (
+                <div className="flex items-center justify-center gap-2 text-blue-600">
+                  <CheckCircle2 className="w-6 h-6" />
+                  <span className="text-lg font-medium">
+                    {importResults.updated} morador{importResults.updated !== 1 ? "es" : ""} atualizado{importResults.updated !== 1 ? "s" : ""}
                   </span>
                 </div>
               )}

@@ -82,8 +82,8 @@ const BulkResidentCSVImportDialog = ({
   
   const [step, setStep] = useState<"upload" | "preview" | "importing" | "done">("upload");
   const [parsedResidents, setParsedResidents] = useState<ParsedResident[]>([]);
-  const [existingResidents, setExistingResidents] = useState<{ apartment_id: string; email: string }[]>([]);
-  const [importResults, setImportResults] = useState<{ success: number; failed: number; skipped: number }>({ success: 0, failed: 0, skipped: 0 });
+  const [existingResidents, setExistingResidents] = useState<{ id: string; apartment_id: string; full_name: string }[]>([]);
+  const [importResults, setImportResults] = useState<{ created: number; updated: number; failed: number }>({ created: 0, updated: 0, failed: 0 });
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
   const [failedImports, setFailedImports] = useState<{ resident: ParsedResident; error: string }[]>([]);
@@ -92,7 +92,7 @@ const BulkResidentCSVImportDialog = ({
     setStep("upload");
     setParsedResidents([]);
     setExistingResidents([]);
-    setImportResults({ success: 0, failed: 0, skipped: 0 });
+    setImportResults({ created: 0, updated: 0, failed: 0 });
     setImporting(false);
     setImportProgress({ current: 0, total: 0 });
     setFailedImports([]);
@@ -108,17 +108,17 @@ const BulkResidentCSVImportDialog = ({
     const apartmentIds = apartments.map(a => a.id);
     const { data } = await supabase
       .from("residents")
-      .select("apartment_id, email")
+      .select("id, apartment_id, full_name")
       .in("apartment_id", apartmentIds);
     
     setExistingResidents(data || []);
   };
 
-  // Check if a resident already exists
-  const isResidentDuplicate = (apartmentId: string, email: string): boolean => {
-    const normalizedEmail = email.toLowerCase().trim();
-    return existingResidents.some(
-      r => r.apartment_id === apartmentId && r.email.toLowerCase().trim() === normalizedEmail
+  // Find existing resident by name + apartment
+  const findExistingResident = (apartmentId: string, fullName: string) => {
+    const normalizedName = fullName.toUpperCase().trim();
+    return existingResidents.find(
+      r => r.apartment_id === apartmentId && r.full_name.toUpperCase().trim() === normalizedName
     );
   };
 
@@ -258,22 +258,7 @@ BLOCO 2,201,Carlos Souza,11977777777,sim,não`;
         return;
       }
 
-      // Mark duplicates as invalid
-      const parsedWithDuplicateCheck = parsed.map(resident => {
-        if (resident.apartment_id && resident.email) {
-          const isDuplicate = isResidentDuplicate(resident.apartment_id, resident.email);
-          if (isDuplicate) {
-            return {
-              ...resident,
-              errors: [...resident.errors, "Morador já cadastrado neste apartamento"],
-              isValid: false,
-            };
-          }
-        }
-        return resident;
-      });
-
-      setParsedResidents(parsedWithDuplicateCheck);
+      setParsedResidents(parsed);
       setStep("preview");
     };
     reader.readAsText(file);
@@ -303,14 +288,6 @@ BLOCO 2,201,Carlos Souza,11977777777,sim,não`;
       errors.push("Nome inválido");
     }
     
-    // Check for duplicate
-    if (apartment_id && resident.email) {
-      const isDuplicate = isResidentDuplicate(apartment_id, resident.email);
-      if (isDuplicate) {
-        errors.push("Morador já cadastrado neste apartamento");
-      }
-    }
-
     return {
       ...resident,
       cpf: resident.cpf || "",
@@ -351,7 +328,8 @@ BLOCO 2,201,Carlos Souza,11977777777,sim,não`;
     setImportProgress({ current: 0, total: validResidents.length });
     setFailedImports([]);
 
-    let success = 0;
+    let created = 0;
+    let updated = 0;
     let failed = 0;
     const failures: { resident: ParsedResident; error: string }[] = [];
 
@@ -360,42 +338,58 @@ BLOCO 2,201,Carlos Souza,11977777777,sim,não`;
       setImportProgress({ current: i + 1, total: validResidents.length });
       
       try {
-        const { error } = await supabase.from("residents").insert({
-          apartment_id: resident.apartment_id!,
-          full_name: resident.full_name.toUpperCase(),
-          email: resident.email,
-          phone: resident.phone || null,
-          cpf: resident.cpf || null,
-          is_owner: resident.is_owner,
-          is_responsible: resident.is_responsible,
-        });
+        const existing = findExistingResident(resident.apartment_id!, resident.full_name);
+        
+        if (existing) {
+          // Update existing resident
+          const { error } = await supabase.from("residents").update({
+            phone: resident.phone || null,
+            cpf: resident.cpf || null,
+            is_owner: resident.is_owner,
+            is_responsible: resident.is_responsible,
+          }).eq("id", existing.id);
 
-        if (error) {
-          failed++;
-          const errorMessage = error.message.includes("duplicate") 
-            ? "E-mail já cadastrado" 
-            : error.message.includes("violates") 
-              ? "Violação de regra do banco de dados" 
-              : error.message;
-          failures.push({ resident, error: errorMessage });
-          console.error("Error inserting resident:", error);
+          if (error) {
+            failed++;
+            failures.push({ resident, error: error.message });
+            console.error("Error updating resident:", error);
+          } else {
+            updated++;
+          }
         } else {
-          success++;
+          // Insert new resident
+          const { error } = await supabase.from("residents").insert({
+            apartment_id: resident.apartment_id!,
+            full_name: resident.full_name.toUpperCase(),
+            email: resident.email,
+            phone: resident.phone || null,
+            cpf: resident.cpf || null,
+            is_owner: resident.is_owner,
+            is_responsible: resident.is_responsible,
+          });
+
+          if (error) {
+            failed++;
+            failures.push({ resident, error: error.message });
+            console.error("Error inserting resident:", error);
+          } else {
+            created++;
+          }
         }
       } catch (error) {
         failed++;
         const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
         failures.push({ resident, error: errorMessage });
-        console.error("Error inserting resident:", error);
+        console.error("Error processing resident:", error);
       }
     }
 
     setFailedImports(failures);
-    setImportResults({ success, failed, skipped: 0 });
+    setImportResults({ created, updated, failed });
     setStep("done");
     setImporting(false);
 
-    if (success > 0) {
+    if (created > 0 || updated > 0) {
       onSuccess();
     }
   };
@@ -636,11 +630,19 @@ BLOCO 2,201,Carlos Souza,11977777777,sim,não`;
         {step === "done" && (
           <div className="py-6 space-y-6">
             <div className="text-center space-y-2">
-              {importResults.success > 0 && (
+              {importResults.created > 0 && (
                 <div className="flex items-center justify-center gap-2 text-green-600">
                   <CheckCircle2 className="w-6 h-6" />
                   <span className="text-lg font-medium">
-                    {importResults.success} morador{importResults.success !== 1 ? "es" : ""} importado{importResults.success !== 1 ? "s" : ""} com sucesso!
+                    {importResults.created} morador{importResults.created !== 1 ? "es" : ""} criado{importResults.created !== 1 ? "s" : ""}
+                  </span>
+                </div>
+              )}
+              {importResults.updated > 0 && (
+                <div className="flex items-center justify-center gap-2 text-blue-600">
+                  <CheckCircle2 className="w-6 h-6" />
+                  <span className="text-lg font-medium">
+                    {importResults.updated} morador{importResults.updated !== 1 ? "es" : ""} atualizado{importResults.updated !== 1 ? "s" : ""}
                   </span>
                 </div>
               )}
