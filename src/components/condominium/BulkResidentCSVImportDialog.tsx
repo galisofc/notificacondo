@@ -128,10 +128,10 @@ const BulkResidentCSVImportDialog = ({
   };
 
   const downloadTemplate = () => {
-    const csvContent = `bloco,apartamento,nome,email,telefone,cpf,proprietario,responsavel
-BLOCO 1,101,João da Silva,joao@email.com,11999999999,12345678901,sim,sim
-BLOCO 1,102,Maria Santos,maria@email.com,11988888888,,não,não
-BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
+    const csvContent = `bloco,apartamento,nome,telefone,proprietario,responsavel
+BLOCO 1,101,João da Silva,11999999999,sim,sim
+BLOCO 1,102,Maria Santos,11988888888,não,não
+BLOCO 2,201,Carlos Souza,11977777777,sim,não`;
     
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
