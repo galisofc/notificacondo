@@ -128,10 +128,10 @@ const BulkResidentCSVImportDialog = ({
   };
 
   const downloadTemplate = () => {
-    const csvContent = `bloco,apartamento,nome,email,telefone,cpf,proprietario,responsavel
-BLOCO 1,101,João da Silva,joao@email.com,11999999999,12345678901,sim,sim
-BLOCO 1,102,Maria Santos,maria@email.com,11988888888,,não,não
-BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
+    const csvContent = `bloco,apartamento,nome,telefone,proprietario,responsavel
+BLOCO 1,101,João da Silva,11999999999,sim,sim
+BLOCO 1,102,Maria Santos,11988888888,não,não
+BLOCO 2,201,Carlos Souza,11977777777,sim,não`;
     
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
@@ -179,7 +179,7 @@ BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
       }
       values.push(current.trim());
 
-      const [blockName, apartmentNumber, name, email, phone, cpf, isOwner, isResponsible] = values;
+      const [blockName, apartmentNumber, name, phone, isOwner, isResponsible] = values;
       
       const errors: string[] = [];
       
@@ -203,17 +203,7 @@ BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
         errors.push("Nome inválido");
       }
       
-      // Validate email
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!email || !emailRegex.test(email)) {
-        errors.push("E-mail inválido");
-      }
       
-      // Validate CPF if provided
-      const cleanCPF = cpf?.replace(/\D/g, "") || "";
-      if (cleanCPF && cleanCPF.length > 0 && !isValidCPF(cleanCPF)) {
-        errors.push("CPF inválido");
-      }
 
       // Parse boolean fields
       const parseBoolean = (value: string | undefined): boolean => {
@@ -226,16 +216,16 @@ BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
         block_name: blockName || "",
         apartment_number: apartmentNumber || "",
         full_name: name || "",
-        email: email || "",
+        email: "",
         phone: phone?.replace(/\D/g, "") || "",
-        cpf: cleanCPF,
+        cpf: "",
         is_owner: parseBoolean(isOwner),
         is_responsible: parseBoolean(isResponsible),
         errors,
         isValid: errors.length === 0,
         apartment_id,
       };
-    }).filter(r => r.full_name || r.email || r.block_name || r.apartment_number); // Filter out completely empty rows
+    }).filter(r => r.full_name || r.block_name || r.apartment_number); // Filter out completely empty rows
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -313,18 +303,6 @@ BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
       errors.push("Nome inválido");
     }
     
-    // Validate email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!resident.email || !emailRegex.test(resident.email)) {
-      errors.push("E-mail inválido");
-    }
-    
-    // Validate CPF if provided
-    const cleanCPF = resident.cpf?.replace(/\D/g, "") || "";
-    if (cleanCPF && cleanCPF.length > 0 && !isValidCPF(cleanCPF)) {
-      errors.push("CPF inválido");
-    }
-
     // Check for duplicate
     if (apartment_id && resident.email) {
       const isDuplicate = isResidentDuplicate(apartment_id, resident.email);
@@ -335,7 +313,7 @@ BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
 
     return {
       ...resident,
-      cpf: cleanCPF,
+      cpf: resident.cpf || "",
       apartment_id,
       errors,
       isValid: errors.length === 0,
@@ -457,12 +435,12 @@ BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
             <div className="bg-muted/50 rounded-lg p-4 space-y-3">
               <h4 className="font-medium text-sm">Formato esperado do CSV:</h4>
               <code className="block text-xs bg-background p-3 rounded border overflow-x-auto">
-                bloco,apartamento,nome,email,telefone,cpf,proprietario,responsavel
+                bloco,apartamento,nome,telefone,proprietario,responsavel
               </code>
               <ul className="text-xs text-muted-foreground space-y-1">
                 <li>• <strong>bloco</strong> e <strong>apartamento</strong>: devem corresponder aos já cadastrados</li>
-                <li>• <strong>nome</strong> e <strong>email</strong>: obrigatórios</li>
-                <li>• <strong>telefone</strong> e <strong>cpf</strong>: opcionais</li>
+                <li>• <strong>nome</strong>: obrigatório</li>
+                <li>• <strong>telefone</strong>: opcional</li>
                 <li>• <strong>proprietario</strong> e <strong>responsavel</strong>: sim/não ou s/n</li>
               </ul>
               <Button variant="outline" size="sm" onClick={downloadTemplate}>
@@ -503,8 +481,6 @@ BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
                       <TableHead>Bloco</TableHead>
                       <TableHead>Apto</TableHead>
                       <TableHead>Nome</TableHead>
-                     <TableHead>E-mail</TableHead>
-                      <TableHead>CPF</TableHead>
                       <TableHead>Telefone</TableHead>
                       <TableHead className="w-16">Prop.</TableHead>
                       <TableHead className="w-16">Resp.</TableHead>
@@ -580,50 +556,6 @@ BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
                             className="h-8 text-xs w-[120px]"
                             placeholder="Nome"
                           />
-                        </TableCell>
-                        <TableCell className="p-1">
-                          <div className="flex items-center gap-1">
-                            <Input
-                              value={resident.email}
-                              onChange={(e) => updateResident(index, "email", e.target.value)}
-                              className={`h-8 text-xs w-[150px] ${
-                                resident.errors.some(e => e.toLowerCase().includes("e-mail") || e.toLowerCase().includes("email"))
-                                  ? "border-destructive focus-visible:ring-destructive"
-                                  : resident.email ? "border-green-500 focus-visible:ring-green-500" : ""
-                              }`}
-                              placeholder="E-mail"
-                              type="email"
-                            />
-                            {resident.email && (
-                              resident.errors.some(e => e.toLowerCase().includes("e-mail") || e.toLowerCase().includes("email")) ? (
-                                <Mail className="w-3.5 h-3.5 text-destructive flex-shrink-0" />
-                              ) : (
-                                <Mail className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-                              )
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="p-1">
-                          <div className="flex items-center gap-1">
-                            <Input
-                              value={resident.cpf}
-                              onChange={(e) => updateResident(index, "cpf", e.target.value.replace(/\D/g, ""))}
-                              className={`h-8 text-xs w-[110px] ${
-                                resident.errors.some(e => e.toLowerCase().includes("cpf"))
-                                  ? "border-destructive focus-visible:ring-destructive"
-                                  : resident.cpf ? "border-green-500 focus-visible:ring-green-500" : ""
-                              }`}
-                              placeholder="CPF"
-                              maxLength={11}
-                            />
-                            {resident.cpf && (
-                              resident.errors.some(e => e.toLowerCase().includes("cpf")) ? (
-                                <CreditCard className="w-3.5 h-3.5 text-destructive flex-shrink-0" />
-                              ) : (
-                                <CreditCard className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-                              )
-                            )}
-                          </div>
                         </TableCell>
                         <TableCell className="p-1">
                           <Input
@@ -733,10 +665,9 @@ BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
                     <Table>
                       <TableHeader className="sticky top-0 bg-background z-10">
                         <TableRow>
-                          <TableHead>Bloco</TableHead>
+                         <TableHead>Bloco</TableHead>
                           <TableHead>Apto</TableHead>
                           <TableHead>Nome</TableHead>
-                          <TableHead>E-mail</TableHead>
                           <TableHead>Motivo</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -744,9 +675,8 @@ BLOCO 2,201,Carlos Souza,carlos@email.com,11977777777,98765432100,sim,não`;
                         {failedImports.map((failure, index) => (
                           <TableRow key={index} className="bg-destructive/5">
                             <TableCell className="font-medium">{failure.resident.block_name}</TableCell>
-                            <TableCell>{failure.resident.apartment_number}</TableCell>
-                            <TableCell>{failure.resident.full_name}</TableCell>
-                            <TableCell className="text-xs">{failure.resident.email}</TableCell>
+                             <TableCell>{failure.resident.apartment_number}</TableCell>
+                             <TableCell>{failure.resident.full_name}</TableCell>
                             <TableCell className="text-xs text-destructive font-medium">
                               {failure.error}
                             </TableCell>

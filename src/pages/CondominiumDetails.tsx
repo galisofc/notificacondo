@@ -635,7 +635,7 @@ const CondominiumDetails = () => {
       return;
     }
 
-    const headers = ["Bloco", "Apartamento", "Nome Completo", "Email", "Telefone", "CPF", "Proprietário", "Responsável"];
+    const headers = ["Bloco", "Apartamento", "Nome Completo", "Telefone", "Proprietário", "Responsável"];
     const rows = residents.map((resident) => {
       const apt = apartments.find((a) => a.id === resident.apartment_id);
       const block = apt ? blocks.find((b) => b.id === apt.block_id) : null;
@@ -643,9 +643,7 @@ const CondominiumDetails = () => {
         block?.name || "",
         apt?.number || "",
         resident.full_name,
-        resident.email,
         resident.phone || "",
-        resident.cpf || "",
         resident.is_owner ? "Sim" : "Não",
         resident.is_responsible ? "Sim" : "Não",
       ];
