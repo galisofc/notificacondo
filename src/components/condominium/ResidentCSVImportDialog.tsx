@@ -263,11 +263,11 @@ Maria Santos,11988888888,não,não`;
             <div className="bg-muted/50 rounded-lg p-4 space-y-3">
               <h4 className="font-medium text-sm">Formato esperado do CSV:</h4>
               <code className="block text-xs bg-background p-3 rounded border overflow-x-auto">
-                nome,email,telefone,cpf,proprietario,responsavel
+                nome,telefone,proprietario,responsavel
               </code>
               <ul className="text-xs text-muted-foreground space-y-1">
-                <li>• <strong>nome</strong> e <strong>email</strong>: obrigatórios</li>
-                <li>• <strong>telefone</strong> e <strong>cpf</strong>: opcionais</li>
+                <li>• <strong>nome</strong>: obrigatório</li>
+                <li>• <strong>telefone</strong>: opcional</li>
                 <li>• <strong>proprietario</strong> e <strong>responsavel</strong>: sim/não ou s/n</li>
               </ul>
               <Button variant="outline" size="sm" onClick={downloadTemplate}>
