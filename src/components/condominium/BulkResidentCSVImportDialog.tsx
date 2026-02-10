@@ -389,7 +389,7 @@ BLOCO 2,201,Carlos Souza,11977777777,sim,não`;
     setStep("done");
     setImporting(false);
 
-    if (success > 0) {
+    if (created > 0 || updated > 0) {
       onSuccess();
     }
   };
