@@ -328,7 +328,8 @@ BLOCO 2,201,Carlos Souza,11977777777,sim,não`;
     setImportProgress({ current: 0, total: validResidents.length });
     setFailedImports([]);
 
-    let success = 0;
+    let created = 0;
+    let updated = 0;
     let failed = 0;
     const failures: { resident: ParsedResident; error: string }[] = [];
 
@@ -337,38 +338,54 @@ BLOCO 2,201,Carlos Souza,11977777777,sim,não`;
       setImportProgress({ current: i + 1, total: validResidents.length });
       
       try {
-        const { error } = await supabase.from("residents").insert({
-          apartment_id: resident.apartment_id!,
-          full_name: resident.full_name.toUpperCase(),
-          email: resident.email,
-          phone: resident.phone || null,
-          cpf: resident.cpf || null,
-          is_owner: resident.is_owner,
-          is_responsible: resident.is_responsible,
-        });
+        const existing = findExistingResident(resident.apartment_id!, resident.full_name);
+        
+        if (existing) {
+          // Update existing resident
+          const { error } = await supabase.from("residents").update({
+            phone: resident.phone || null,
+            cpf: resident.cpf || null,
+            is_owner: resident.is_owner,
+            is_responsible: resident.is_responsible,
+          }).eq("id", existing.id);
 
-        if (error) {
-          failed++;
-          const errorMessage = error.message.includes("duplicate") 
-            ? "E-mail já cadastrado" 
-            : error.message.includes("violates") 
-              ? "Violação de regra do banco de dados" 
-              : error.message;
-          failures.push({ resident, error: errorMessage });
-          console.error("Error inserting resident:", error);
+          if (error) {
+            failed++;
+            failures.push({ resident, error: error.message });
+            console.error("Error updating resident:", error);
+          } else {
+            updated++;
+          }
         } else {
-          success++;
+          // Insert new resident
+          const { error } = await supabase.from("residents").insert({
+            apartment_id: resident.apartment_id!,
+            full_name: resident.full_name.toUpperCase(),
+            email: resident.email,
+            phone: resident.phone || null,
+            cpf: resident.cpf || null,
+            is_owner: resident.is_owner,
+            is_responsible: resident.is_responsible,
+          });
+
+          if (error) {
+            failed++;
+            failures.push({ resident, error: error.message });
+            console.error("Error inserting resident:", error);
+          } else {
+            created++;
+          }
         }
       } catch (error) {
         failed++;
         const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
         failures.push({ resident, error: errorMessage });
-        console.error("Error inserting resident:", error);
+        console.error("Error processing resident:", error);
       }
     }
 
     setFailedImports(failures);
-    setImportResults({ success, failed, skipped: 0 });
+    setImportResults({ created, updated, failed });
     setStep("done");
     setImporting(false);
 
