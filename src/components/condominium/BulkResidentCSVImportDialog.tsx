@@ -258,22 +258,7 @@ BLOCO 2,201,Carlos Souza,11977777777,sim,não`;
         return;
       }
 
-      // Mark duplicates as invalid
-      const parsedWithDuplicateCheck = parsed.map(resident => {
-        if (resident.apartment_id && resident.email) {
-          const isDuplicate = isResidentDuplicate(resident.apartment_id, resident.email);
-          if (isDuplicate) {
-            return {
-              ...resident,
-              errors: [...resident.errors, "Morador já cadastrado neste apartamento"],
-              isValid: false,
-            };
-          }
-        }
-        return resident;
-      });
-
-      setParsedResidents(parsedWithDuplicateCheck);
+      setParsedResidents(parsed);
       setStep("preview");
     };
     reader.readAsText(file);
