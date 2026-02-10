@@ -77,9 +77,9 @@ const ResidentCSVImportDialog = ({
   };
 
   const downloadTemplate = () => {
-    const csvContent = `nome,email,telefone,cpf,proprietario,responsavel
-João da Silva,joao@email.com,11999999999,12345678901,sim,sim
-Maria Santos,maria@email.com,11988888888,,não,não`;
+    const csvContent = `nome,telefone,proprietario,responsavel
+João da Silva,11999999999,sim,sim
+Maria Santos,11988888888,não,não`;
     
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
