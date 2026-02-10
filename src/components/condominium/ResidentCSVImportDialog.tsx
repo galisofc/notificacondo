@@ -134,15 +134,15 @@ Maria Santos,11988888888,não,não`;
 
       return {
         full_name: name || "",
-        email: email || "",
+        email: "",
         phone: phone?.replace(/\D/g, "") || "",
-        cpf: cleanCPF,
+        cpf: "",
         is_owner: parseBoolean(isOwner),
         is_responsible: parseBoolean(isResponsible),
         errors,
         isValid: errors.length === 0,
       };
-    }).filter(r => r.full_name || r.email); // Filter out completely empty rows
+    }).filter(r => r.full_name); // Filter out completely empty rows
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
