@@ -82,8 +82,8 @@ const BulkResidentCSVImportDialog = ({
   
   const [step, setStep] = useState<"upload" | "preview" | "importing" | "done">("upload");
   const [parsedResidents, setParsedResidents] = useState<ParsedResident[]>([]);
-  const [existingResidents, setExistingResidents] = useState<{ apartment_id: string; email: string }[]>([]);
-  const [importResults, setImportResults] = useState<{ success: number; failed: number; skipped: number }>({ success: 0, failed: 0, skipped: 0 });
+  const [existingResidents, setExistingResidents] = useState<{ id: string; apartment_id: string; full_name: string }[]>([]);
+  const [importResults, setImportResults] = useState<{ created: number; updated: number; failed: number }>({ created: 0, updated: 0, failed: 0 });
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
   const [failedImports, setFailedImports] = useState<{ resident: ParsedResident; error: string }[]>([]);
