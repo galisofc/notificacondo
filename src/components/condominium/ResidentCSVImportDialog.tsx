@@ -114,7 +114,7 @@ Maria Santos,11988888888,não,não`;
       }
       values.push(current.trim());
 
-      const [name, email, phone, cpf, isOwner, isResponsible] = values;
+      const [name, phone, isOwner, isResponsible] = values;
       
       const errors: string[] = [];
       
