@@ -211,38 +211,57 @@ Maria Santos,11988888888,não,não`;
     setImporting(true);
     setStep("importing");
 
-    let success = 0;
+    let created = 0;
+    let updated = 0;
     let failed = 0;
 
     for (const resident of validResidents) {
       try {
-        const { error } = await supabase.from("residents").insert({
-          apartment_id: apartmentId,
-          full_name: resident.full_name.toUpperCase(),
-          email: resident.email,
-          phone: resident.phone || null,
-          cpf: resident.cpf || null,
-          is_owner: resident.is_owner,
-          is_responsible: resident.is_responsible,
-        });
+        const existing = findExistingResident(resident.full_name);
+        
+        if (existing) {
+          const { error } = await supabase.from("residents").update({
+            phone: resident.phone || null,
+            cpf: resident.cpf || null,
+            is_owner: resident.is_owner,
+            is_responsible: resident.is_responsible,
+          }).eq("id", existing.id);
 
-        if (error) {
-          failed++;
-          console.error("Error inserting resident:", error);
+          if (error) {
+            failed++;
+            console.error("Error updating resident:", error);
+          } else {
+            updated++;
+          }
         } else {
-          success++;
+          const { error } = await supabase.from("residents").insert({
+            apartment_id: apartmentId,
+            full_name: resident.full_name.toUpperCase(),
+            email: resident.email,
+            phone: resident.phone || null,
+            cpf: resident.cpf || null,
+            is_owner: resident.is_owner,
+            is_responsible: resident.is_responsible,
+          });
+
+          if (error) {
+            failed++;
+            console.error("Error inserting resident:", error);
+          } else {
+            created++;
+          }
         }
       } catch (error) {
         failed++;
-        console.error("Error inserting resident:", error);
+        console.error("Error processing resident:", error);
       }
     }
 
-    setImportResults({ success, failed });
+    setImportResults({ created, updated, failed });
     setStep("done");
     setImporting(false);
 
-    if (success > 0) {
+    if (created > 0 || updated > 0) {
       onSuccess();
     }
   };
