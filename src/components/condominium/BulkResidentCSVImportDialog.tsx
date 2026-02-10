@@ -558,50 +558,6 @@ BLOCO 2,201,Carlos Souza,11977777777,sim,não`;
                           />
                         </TableCell>
                         <TableCell className="p-1">
-                          <div className="flex items-center gap-1">
-                            <Input
-                              value={resident.email}
-                              onChange={(e) => updateResident(index, "email", e.target.value)}
-                              className={`h-8 text-xs w-[150px] ${
-                                resident.errors.some(e => e.toLowerCase().includes("e-mail") || e.toLowerCase().includes("email"))
-                                  ? "border-destructive focus-visible:ring-destructive"
-                                  : resident.email ? "border-green-500 focus-visible:ring-green-500" : ""
-                              }`}
-                              placeholder="E-mail"
-                              type="email"
-                            />
-                            {resident.email && (
-                              resident.errors.some(e => e.toLowerCase().includes("e-mail") || e.toLowerCase().includes("email")) ? (
-                                <Mail className="w-3.5 h-3.5 text-destructive flex-shrink-0" />
-                              ) : (
-                                <Mail className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-                              )
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="p-1">
-                          <div className="flex items-center gap-1">
-                            <Input
-                              value={resident.cpf}
-                              onChange={(e) => updateResident(index, "cpf", e.target.value.replace(/\D/g, ""))}
-                              className={`h-8 text-xs w-[110px] ${
-                                resident.errors.some(e => e.toLowerCase().includes("cpf"))
-                                  ? "border-destructive focus-visible:ring-destructive"
-                                  : resident.cpf ? "border-green-500 focus-visible:ring-green-500" : ""
-                              }`}
-                              placeholder="CPF"
-                              maxLength={11}
-                            />
-                            {resident.cpf && (
-                              resident.errors.some(e => e.toLowerCase().includes("cpf")) ? (
-                                <CreditCard className="w-3.5 h-3.5 text-destructive flex-shrink-0" />
-                              ) : (
-                                <CreditCard className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-                              )
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="p-1">
                           <Input
                             value={resident.phone}
                             onChange={(e) => updateResident(index, "phone", e.target.value.replace(/\D/g, ""))}
