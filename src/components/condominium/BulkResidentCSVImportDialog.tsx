@@ -313,7 +313,7 @@ BLOCO 2,201,Carlos Souza,11977777777,sim,não`;
 
     return {
       ...resident,
-      cpf: cleanCPF,
+      cpf: resident.cpf || "",
       apartment_id,
       errors,
       isValid: errors.length === 0,
