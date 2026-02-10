@@ -92,7 +92,7 @@ const BulkResidentCSVImportDialog = ({
     setStep("upload");
     setParsedResidents([]);
     setExistingResidents([]);
-    setImportResults({ success: 0, failed: 0, skipped: 0 });
+    setImportResults({ created: 0, updated: 0, failed: 0 });
     setImporting(false);
     setImportProgress({ current: 0, total: 0 });
     setFailedImports([]);
