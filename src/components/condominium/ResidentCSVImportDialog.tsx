@@ -147,7 +147,22 @@ Maria Santos,11988888888,não,não`;
     }).filter(r => r.full_name); // Filter out completely empty rows
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const fetchExistingResidents = async () => {
+    const { data } = await supabase
+      .from("residents")
+      .select("id, full_name")
+      .eq("apartment_id", apartmentId);
+    setExistingResidents(data || []);
+  };
+
+  const findExistingResident = (fullName: string) => {
+    const normalizedName = fullName.toUpperCase().trim();
+    return existingResidents.find(
+      r => r.full_name.toUpperCase().trim() === normalizedName
+    );
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -159,6 +174,8 @@ Maria Santos,11988888888,não,não`;
       });
       return;
     }
+
+    await fetchExistingResidents();
 
     const reader = new FileReader();
     reader.onload = (event) => {
