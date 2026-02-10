@@ -630,11 +630,19 @@ BLOCO 2,201,Carlos Souza,11977777777,sim,não`;
         {step === "done" && (
           <div className="py-6 space-y-6">
             <div className="text-center space-y-2">
-              {importResults.success > 0 && (
+              {importResults.created > 0 && (
                 <div className="flex items-center justify-center gap-2 text-green-600">
                   <CheckCircle2 className="w-6 h-6" />
                   <span className="text-lg font-medium">
-                    {importResults.success} morador{importResults.success !== 1 ? "es" : ""} importado{importResults.success !== 1 ? "s" : ""} com sucesso!
+                    {importResults.created} morador{importResults.created !== 1 ? "es" : ""} criado{importResults.created !== 1 ? "s" : ""}
+                  </span>
+                </div>
+              )}
+              {importResults.updated > 0 && (
+                <div className="flex items-center justify-center gap-2 text-blue-600">
+                  <CheckCircle2 className="w-6 h-6" />
+                  <span className="text-lg font-medium">
+                    {importResults.updated} morador{importResults.updated !== 1 ? "es" : ""} atualizado{importResults.updated !== 1 ? "s" : ""}
                   </span>
                 </div>
               )}
