@@ -481,8 +481,6 @@ BLOCO 2,201,Carlos Souza,11977777777,sim,não`;
                       <TableHead>Bloco</TableHead>
                       <TableHead>Apto</TableHead>
                       <TableHead>Nome</TableHead>
-                     <TableHead>E-mail</TableHead>
-                      <TableHead>CPF</TableHead>
                       <TableHead>Telefone</TableHead>
                       <TableHead className="w-16">Prop.</TableHead>
                       <TableHead className="w-16">Resp.</TableHead>
