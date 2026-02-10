@@ -299,9 +299,7 @@ Maria Santos,11988888888,não,não`;
                   <TableRow>
                     <TableHead className="w-10 sticky top-0 bg-background z-10">Status</TableHead>
                     <TableHead className="sticky top-0 bg-background z-10">Nome</TableHead>
-                    <TableHead className="sticky top-0 bg-background z-10">E-mail</TableHead>
                     <TableHead className="sticky top-0 bg-background z-10">Telefone</TableHead>
-                    <TableHead className="sticky top-0 bg-background z-10">CPF</TableHead>
                     <TableHead className="w-20 sticky top-0 bg-background z-10">Prop.</TableHead>
                     <TableHead className="w-20 sticky top-0 bg-background z-10">Resp.</TableHead>
                   </TableRow>
