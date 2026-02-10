@@ -203,17 +203,7 @@ BLOCO 2,201,Carlos Souza,11977777777,sim,não`;
         errors.push("Nome inválido");
       }
       
-      // Validate email
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!email || !emailRegex.test(email)) {
-        errors.push("E-mail inválido");
-      }
       
-      // Validate CPF if provided
-      const cleanCPF = cpf?.replace(/\D/g, "") || "";
-      if (cleanCPF && cleanCPF.length > 0 && !isValidCPF(cleanCPF)) {
-        errors.push("CPF inválido");
-      }
 
       // Parse boolean fields
       const parseBoolean = (value: string | undefined): boolean => {
