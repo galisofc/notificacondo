@@ -58,13 +58,15 @@ const ResidentCSVImportDialog = ({
   
   const [step, setStep] = useState<"upload" | "preview" | "importing" | "done">("upload");
   const [parsedResidents, setParsedResidents] = useState<ParsedResident[]>([]);
-  const [importResults, setImportResults] = useState<{ success: number; failed: number }>({ success: 0, failed: 0 });
+  const [existingResidents, setExistingResidents] = useState<{ id: string; full_name: string }[]>([]);
+  const [importResults, setImportResults] = useState<{ created: number; updated: number; failed: number }>({ created: 0, updated: 0, failed: 0 });
   const [importing, setImporting] = useState(false);
 
   const resetState = () => {
     setStep("upload");
     setParsedResidents([]);
-    setImportResults({ success: 0, failed: 0 });
+    setExistingResidents([]);
+    setImportResults({ created: 0, updated: 0, failed: 0 });
     setImporting(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
