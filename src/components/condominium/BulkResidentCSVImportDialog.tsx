@@ -179,7 +179,7 @@ BLOCO 2,201,Carlos Souza,11977777777,sim,não`;
       }
       values.push(current.trim());
 
-      const [blockName, apartmentNumber, name, email, phone, cpf, isOwner, isResponsible] = values;
+      const [blockName, apartmentNumber, name, phone, isOwner, isResponsible] = values;
       
       const errors: string[] = [];
       
