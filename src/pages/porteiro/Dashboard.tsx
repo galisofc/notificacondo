@@ -41,7 +41,7 @@ export default function PorteiroDashboard() {
   const [loading, setLoading] = useState(true);
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [loadingChart, setLoadingChart] = useState(true);
-  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("7days");
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("today");
   const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
     from: undefined,
     to: undefined,
