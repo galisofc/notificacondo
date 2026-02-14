@@ -16,6 +16,7 @@ import {
   Shield,
   Calendar,
   Package,
+  PackageCheck,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -42,6 +43,7 @@ interface DashboardStats {
   pendingDefenses: number;
   packagesRegistered: number;
   packagesPending: number;
+  packagesPickedUp: number;
 }
 
 interface ProfileData {
@@ -68,6 +70,7 @@ const Dashboard = () => {
     pendingDefenses: 0,
     packagesRegistered: 0,
     packagesPending: 0,
+    packagesPickedUp: 0,
   });
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -163,6 +166,7 @@ const Dashboard = () => {
         let defensesCount = 0;
         let packagesRegisteredCount = 0;
         let packagesPendingCount = 0;
+        let packagesPickedUpCount = 0;
 
         if (condoIds.length > 0) {
           const { data: blocks } = await supabase
@@ -245,6 +249,16 @@ const Dashboard = () => {
             .eq("status", "pendente");
 
           packagesPendingCount = pkgPendingCount || 0;
+
+          // Count picked up packages within the period
+          const { count: pkgPickedUpCount } = await supabase
+            .from("packages")
+            .select("*", { count: "exact", head: true })
+            .in("condominium_id", condoIds)
+            .eq("status", "retirada")
+            .gte("picked_up_at", dateFilter.toISOString());
+
+          packagesPickedUpCount = pkgPickedUpCount || 0;
         }
 
         setStats({
@@ -255,6 +269,7 @@ const Dashboard = () => {
           pendingDefenses: defensesCount,
           packagesRegistered: packagesRegisteredCount,
           packagesPending: packagesPendingCount,
+          packagesPickedUp: packagesPickedUpCount,
         });
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
@@ -314,6 +329,13 @@ const Dashboard = () => {
       value: stats.packagesPending,
       icon: Package,
       gradient: "from-orange-500 to-amber-500",
+      action: () => navigate("/sindico/packages"),
+    },
+    {
+      title: "Encomendas Retiradas",
+      value: stats.packagesPickedUp,
+      icon: PackageCheck,
+      gradient: "from-emerald-500 to-green-600",
       action: () => navigate("/sindico/packages"),
     },
   ];
