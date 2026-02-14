@@ -57,7 +57,7 @@ interface Condominium {
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("1m");
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("today");
   const [selectedCondominium, setSelectedCondominium] = useState<string>("all");
   const [condominiums, setCondominiums] = useState<Condominium[]>([]);
   const [stats, setStats] = useState<DashboardStats>({
