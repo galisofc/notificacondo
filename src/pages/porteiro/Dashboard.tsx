@@ -19,6 +19,7 @@ interface Stats {
   registeredToday: number;
   totalPending: number;
   pickedUpToday: number;
+  pickedUpPeriod: number;
 }
 
 interface ChartDataPoint {
@@ -37,6 +38,7 @@ export default function PorteiroDashboard() {
     registeredToday: 0,
     totalPending: 0,
     pickedUpToday: 0,
+    pickedUpPeriod: 0,
   });
   const [loading, setLoading] = useState(true);
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
@@ -134,10 +136,20 @@ export default function PorteiroDashboard() {
           .gte("picked_up_at", todayStart)
           .lte("picked_up_at", todayEnd);
 
+        // Picked up in period
+        const { count: pickedUpPeriodCount } = await supabase
+          .from("packages")
+          .select("*", { count: "exact", head: true })
+          .in("condominium_id", condominiumIds)
+          .eq("status", "retirada")
+          .gte("picked_up_at", startDate.toISOString())
+          .lte("picked_up_at", endDate.toISOString());
+
         setStats({
           registeredToday: registeredCount || 0,
           totalPending: pendingCount || 0,
           pickedUpToday: pickedUpTodayCount || 0,
+          pickedUpPeriod: pickedUpPeriodCount || 0,
         });
       } catch (error) {
         console.error("Error fetching stats:", error);
@@ -326,7 +338,7 @@ export default function PorteiroDashboard() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Cadastradas</CardTitle>
@@ -349,6 +361,18 @@ export default function PorteiroDashboard() {
                 {loading ? "..." : stats.totalPending}
               </div>
               <p className="text-xs text-muted-foreground">Total no sistema</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Retiradas</CardTitle>
+              <PackageCheck className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                {loading ? "..." : stats.pickedUpPeriod}
+              </div>
+              <p className="text-xs text-muted-foreground">{getPeriodLabel()}</p>
             </CardContent>
           </Card>
           <Card>
