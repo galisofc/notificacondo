@@ -4,7 +4,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useDateFormatter } from "@/hooks/useFormattedDate";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -32,23 +31,11 @@ import {
   Building2,
   Calendar,
 } from "lucide-react";
-import BlockApartmentDisplay from "@/components/common/BlockApartmentDisplay";
+import { QuickBlockApartmentSearch } from "@/components/packages/QuickBlockApartmentSearch";
 
 interface Condominium {
   id: string;
   name: string;
-}
-
-interface Block {
-  id: string;
-  condominium_id: string;
-  name: string;
-}
-
-interface Apartment {
-  id: string;
-  block_id: string;
-  number: string;
 }
 
 interface OccurrenceRecord {
@@ -99,8 +86,6 @@ export default function UnitHistoryTab() {
   const { date: formatDate } = useDateFormatter();
 
   const [condominiums, setCondominiums] = useState<Condominium[]>([]);
-  const [blocks, setBlocks] = useState<Block[]>([]);
-  const [apartments, setApartments] = useState<Apartment[]>([]);
   const [selectedCondo, setSelectedCondo] = useState<string>("");
   const [selectedBlock, setSelectedBlock] = useState<string>("");
   const [selectedApartment, setSelectedApartment] = useState<string>("");
@@ -108,7 +93,7 @@ export default function UnitHistoryTab() {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
 
-  // Fetch condos, blocks, apartments
+  // Fetch condominiums
   useEffect(() => {
     if (!user) return;
     (async () => {
@@ -118,36 +103,13 @@ export default function UnitHistoryTab() {
         .eq("owner_id", user.id);
       setCondominiums(condos || []);
 
-      if (condos && condos.length > 0) {
-        const condoIds = condos.map((c) => c.id);
-        const { data: blocksData } = await supabase
-          .from("blocks")
-          .select("id, condominium_id, name")
-          .in("condominium_id", condoIds);
-        setBlocks(blocksData || []);
-
-        if (blocksData && blocksData.length > 0) {
-          const blockIds = blocksData.map((b) => b.id);
-          const { data: aptsData } = await supabase
-            .from("apartments")
-            .select("id, block_id, number")
-            .in("block_id", blockIds);
-          setApartments(aptsData || []);
-        }
+      // Auto-select if only one
+      if (condos?.length === 1) {
+        setSelectedCondo(condos[0].id);
       }
       setInitialLoading(false);
     })();
   }, [user]);
-
-  const filteredBlocks = useMemo(
-    () => blocks.filter((b) => b.condominium_id === selectedCondo),
-    [blocks, selectedCondo]
-  );
-
-  const filteredApartments = useMemo(
-    () => apartments.filter((a) => a.block_id === selectedBlock),
-    [apartments, selectedBlock]
-  );
 
   // Fetch occurrences when apartment is selected
   useEffect(() => {
@@ -189,12 +151,6 @@ export default function UnitHistoryTab() {
     setOccurrences([]);
   };
 
-  const handleBlockChange = (val: string) => {
-    setSelectedBlock(val);
-    setSelectedApartment("");
-    setOccurrences([]);
-  };
-
   if (initialLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -205,59 +161,36 @@ export default function UnitHistoryTab() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      {/* Filters */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Search className="w-4 h-4" />
-            Consultar Unidade
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Select value={selectedCondo} onValueChange={handleCondoChange}>
-              <SelectTrigger className="bg-background">
-                <SelectValue placeholder="Selecione o condomínio" />
-              </SelectTrigger>
-              <SelectContent>
-                {condominiums.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      {/* Horizontal filter bar - same pattern as package management */}
+      <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
+        <Select value={selectedCondo} onValueChange={handleCondoChange}>
+          <SelectTrigger className="bg-card border-border text-sm sm:w-[220px]">
+            <div className="flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-muted-foreground" />
+              <SelectValue placeholder="CONDOMÍNIO" />
+            </div>
+          </SelectTrigger>
+          <SelectContent>
+            {condominiums.map((c) => (
+              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-            <Select
-              value={selectedBlock}
-              onValueChange={handleBlockChange}
-              disabled={!selectedCondo}
-            >
-              <SelectTrigger className="bg-background">
-                <SelectValue placeholder="Selecione o bloco" />
-              </SelectTrigger>
-              <SelectContent>
-                {filteredBlocks.map((b) => (
-                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={selectedApartment}
-              onValueChange={setSelectedApartment}
-              disabled={!selectedBlock}
-            >
-              <SelectTrigger className="bg-background">
-                <SelectValue placeholder="Selecione a unidade" />
-              </SelectTrigger>
-              <SelectContent>
-                {filteredApartments.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>Unidade {a.number}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+        {selectedCondo && (
+          <QuickBlockApartmentSearch
+            condominiumId={selectedCondo}
+            onBlockFound={(blockId) => {
+              setSelectedBlock(blockId);
+            }}
+            onApartmentFound={(apartmentId) => {
+              setSelectedApartment(apartmentId);
+            }}
+            className="flex-1 sm:max-w-xs"
+            placeholder="Ex: 0344, A44, ARM44"
+          />
+        )}
+      </div>
 
       {/* Summary Cards */}
       {selectedApartment && !loading && (
@@ -323,15 +256,15 @@ export default function UnitHistoryTab() {
             <Search className="w-7 h-7 md:w-8 md:h-8 text-primary" />
           </div>
           <h3 className="font-display text-lg md:text-xl font-semibold text-foreground mb-2">
-            Selecione uma unidade
+            Pesquise uma unidade
           </h3>
           <p className="text-sm md:text-base text-muted-foreground">
-            Escolha o condomínio, bloco e unidade para consultar o histórico de ocorrências.
+            Selecione o condomínio e use a busca rápida para consultar o histórico de ocorrências.
           </p>
         </div>
       )}
 
-      {/* Results Table */}
+      {/* No occurrences */}
       {selectedApartment && !loading && occurrences.length === 0 && (
         <div className="text-center py-8 md:py-12 px-4 rounded-2xl bg-card border border-border shadow-card">
           <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-4">
@@ -346,6 +279,7 @@ export default function UnitHistoryTab() {
         </div>
       )}
 
+      {/* Results */}
       {selectedApartment && !loading && occurrences.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
