@@ -162,7 +162,7 @@ export default function UnitHistoryTab() {
   return (
     <div className="space-y-4 md:space-y-6">
       {/* Horizontal filter bar - same pattern as package management */}
-      <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-start gap-2 md:gap-3">
         <Select value={selectedCondo} onValueChange={handleCondoChange}>
           <SelectTrigger className="bg-card border-border text-sm sm:w-[220px]">
             <div className="flex items-center gap-2">
