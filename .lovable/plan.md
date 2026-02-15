@@ -1,33 +1,43 @@
 
 
-## Importacao CSV com Upsert (Atualizar ou Criar)
-
-### Comportamento Desejado
-Ao importar um CSV de moradores, o sistema deve:
-- **Atualizar** moradores que ja existem (mesmo nome no mesmo apartamento)
-- **Criar** moradores que nao existem ainda
+## Historico de Advertencias por Unidade no Modulo de Ocorrencias
 
 ### O que sera feito
 
-**1. Criar constraint unica no banco de dados**
-- Adicionar uma constraint unica em `(apartment_id, UPPER(full_name))` na tabela `residents` para permitir o uso de upsert nativo
-- Isso garante que nao existam dois moradores com o mesmo nome no mesmo apartamento
+Adicionar um indicador visual que mostra quantas advertencias (e outros tipos de ocorrencias) um apartamento ja possui, visivel em dois locais:
 
-**2. Alterar logica de importacao em `BulkResidentCSVImportDialog.tsx`**
-- Buscar moradores existentes por `full_name` + `apartment_id` (em vez de email)
-- No `handleImport`, usar upsert: se o morador ja existe (mesmo nome + apartamento), atualizar os campos (telefone, proprietario, responsavel); se nao existe, criar
-- Remover a logica de marcacao de duplicatas como "erro" -- duplicatas agora sao atualizacoes validas
-- Atualizar o resumo final para mostrar quantos foram criados vs atualizados
+### 1. Na lista de ocorrencias (`src/pages/Occurrences.tsx`)
 
-**3. Alterar logica de importacao em `ResidentCSVImportDialog.tsx`**
-- Mesma logica de upsert: buscar moradores existentes do apartamento, comparar por nome, atualizar ou criar
-- Atualizar resumo final
+- Ao lado de cada ocorrencia na listagem, exibir um badge/chip mostrando o total de advertencias daquela unidade (ex: "3a Advertencia")
+- Isso permite ao sindico ter visao rapida do historico da unidade
+
+### 2. Nos detalhes da ocorrencia (`src/pages/OccurrenceDetails.tsx`)
+
+- Adicionar um card "Historico da Unidade" na pagina de detalhes
+- Exibir contadores por tipo: Advertencias, Notificacoes, Multas
+- Listar as ocorrencias anteriores da mesma unidade com data e status
+
+### 3. No formulario de nova ocorrencia (`src/pages/Occurrences.tsx`)
+
+- Ao selecionar um apartamento no formulario de criacao, exibir um alerta informativo caso a unidade ja tenha advertencias anteriores (ex: "Esta unidade ja possui 2 advertencias registradas")
 
 ### Detalhes Tecnicos
 
-- Criar um indice unico funcional: `CREATE UNIQUE INDEX residents_apartment_name_unique ON residents (apartment_id, UPPER(full_name))`
-- No codigo, usar `supabase.from("residents").upsert({...}, { onConflict: "apartment_id,full_name" })` ou fazer manualmente: buscar existente, se encontrou fazer UPDATE pelo id, senao INSERT
-- Como a constraint usa `UPPER()`, a abordagem manual (fetch + compare + insert/update) sera mais confiavel
-- Remover estados e UI relacionados a deteccao de duplicatas (campo `existingResidents` usado para marcar erros)
-- Adicionar contagem separada de "atualizados" e "criados" no resultado final
+**Busca de dados:**
+- Query na tabela `occurrences` filtrando por `apartment_id` para contar registros por tipo
+- Reutilizar dados ja carregados quando possivel
+
+**Na listagem (Occurrences.tsx):**
+- Apos carregar as ocorrencias, agrupar por `apartment_id` e contar advertencias
+- Criar um mapa `apartmentWarningsCount: Record<string, number>` 
+- Exibir badge ao lado do nome do apartamento: "Xa Adv." (ex: "3a Adv.")
+
+**Nos detalhes (OccurrenceDetails.tsx):**
+- Buscar todas as ocorrencias do mesmo `apartment_id` (excluindo a atual)
+- Exibir card com contadores e lista resumida das ocorrencias anteriores
+- Usar cores distintas para cada tipo (amarelo para advertencias, azul para notificacoes, vermelho para multas)
+
+**No formulario de criacao:**
+- Ao mudar o `apartment_id`, fazer query para contar ocorrencias existentes
+- Exibir alerta amarelo se houver historico
 
