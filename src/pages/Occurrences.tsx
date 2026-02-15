@@ -52,6 +52,9 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import UnitHistoryTab from "@/components/occurrences/UnitHistoryTab";
+import { History } from "lucide-react";
 
 interface Condominium {
   id: string;
@@ -633,10 +636,24 @@ const Occurrences = () => {
           <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground">
             Ocorrências
           </h1>
-          <p className="text-sm md:text-base text-muted-foreground mt-1">
+           <p className="text-sm md:text-base text-muted-foreground mt-1">
             Registre e gerencie ocorrências do condomínio
           </p>
         </div>
+
+        <Tabs defaultValue="occurrences" className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="occurrences">
+              <AlertTriangle className="w-4 h-4 mr-2" />
+              Ocorrências
+            </TabsTrigger>
+            <TabsTrigger value="unit-history">
+              <History className="w-4 h-4 mr-2" />
+              Histórico por Unidade
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="occurrences">
 
         {/* Filters and Add Button */}
         <div className="flex flex-col gap-3 md:gap-4 mb-4 md:mb-6">
@@ -1258,6 +1275,13 @@ const Occurrences = () => {
             </form>
           </DialogContent>
         </Dialog>
+
+          </TabsContent>
+
+          <TabsContent value="unit-history">
+            <UnitHistoryTab />
+          </TabsContent>
+        </Tabs>
       </div>
     </DashboardLayout>
   );
