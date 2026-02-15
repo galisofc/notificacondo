@@ -144,6 +144,17 @@ const Occurrences = () => {
   const filteredApartments = apartments.filter((a) => a.block_id === formData.block_id);
   const filteredResidents = residents.filter((r) => r.apartment_id === formData.apartment_id);
 
+  // Build apartment warnings count map from all occurrences
+  const apartmentWarningsCount: Record<string, number> = {};
+  occurrences.forEach((occ) => {
+    if (occ.apartment_id && occ.type === "advertencia") {
+      apartmentWarningsCount[occ.apartment_id] = (apartmentWarningsCount[occ.apartment_id] || 0) + 1;
+    }
+  });
+
+  // Apartment occurrence count for the form alert
+  const [formApartmentHistory, setFormApartmentHistory] = useState<{ advertencia: number; notificacao: number; multa: number } | null>(null);
+
   // Filter occurrences based on status, type and condominium filters
   const filteredOccurrences = occurrences.filter((occ) => {
     const matchesStatus = statusFilter === "all" || occ.status === statusFilter;
@@ -753,6 +764,11 @@ const Occurrences = () => {
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
                       {getTypeBadge(occurrence.type)}
                       {getStatusBadge(occurrence.status)}
+                      {occurrence.apartment_id && apartmentWarningsCount[occurrence.apartment_id] > 0 && (
+                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-500/10 text-orange-600 dark:text-orange-400">
+                          {apartmentWarningsCount[occurrence.apartment_id]}ª Adv.
+                        </span>
+                      )}
                     </div>
                     <h3 className="font-semibold text-sm md:text-base text-foreground mb-1 truncate">
                       {occurrence.title}
@@ -957,9 +973,24 @@ const Occurrences = () => {
                     <Label>Apartamento</Label>
                     <Select
                       value={formData.apartment_id}
-                      onValueChange={(v) =>
-                        setFormData({ ...formData, apartment_id: v, resident_id: "" })
-                      }
+                      onValueChange={(v) => {
+                        setFormData({ ...formData, apartment_id: v, resident_id: "" });
+                        // Fetch history for selected apartment
+                        if (v) {
+                          const counts = { advertencia: 0, notificacao: 0, multa: 0 };
+                          occurrences.forEach((occ) => {
+                            if (occ.apartment_id === v) {
+                              if (occ.type === "advertencia") counts.advertencia++;
+                              else if (occ.type === "notificacao") counts.notificacao++;
+                              else if (occ.type === "multa") counts.multa++;
+                            }
+                          });
+                          const total = counts.advertencia + counts.notificacao + counts.multa;
+                          setFormApartmentHistory(total > 0 ? counts : null);
+                        } else {
+                          setFormApartmentHistory(null);
+                        }
+                      }}
                       disabled={!formData.block_id}
                     >
                       <SelectTrigger className="bg-secondary/50">
@@ -994,6 +1025,21 @@ const Occurrences = () => {
                     </Select>
                   </div>
                 </div>
+
+                {/* Apartment History Alert */}
+                {formApartmentHistory && (
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                    <div className="text-sm">
+                      <p className="font-medium text-amber-600 dark:text-amber-400">Histórico desta unidade</p>
+                      <p className="text-muted-foreground mt-1">
+                        {formApartmentHistory.advertencia > 0 && `${formApartmentHistory.advertencia} advertência(s) `}
+                        {formApartmentHistory.notificacao > 0 && `${formApartmentHistory.notificacao} notificação(ões) `}
+                        {formApartmentHistory.multa > 0 && `${formApartmentHistory.multa} multa(s)`}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Occurrence Details */}

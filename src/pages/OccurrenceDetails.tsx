@@ -76,6 +76,9 @@ interface Occurrence {
   internal_rules_article: string | null;
   civil_code_article: string | null;
   legal_basis: string | null;
+  apartment_id: string | null;
+  resident_id: string | null;
+  condominium_id: string;
   condominiums: { name: string; defense_deadline_days: number } | null;
   blocks: { name: string } | null;
   apartments: { number: string } | null;
@@ -143,6 +146,7 @@ const OccurrenceDetails = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeline, setTimeline] = useState<TimelineItem[]>([]);
+  const [unitHistory, setUnitHistory] = useState<{ advertencia: number; notificacao: number; multa: number; items: any[] }>({ advertencia: 0, notificacao: 0, multa: 0, items: [] });
 
   // Decision dialog
   const [isDecisionDialogOpen, setIsDecisionDialogOpen] = useState(false);
@@ -246,6 +250,26 @@ const OccurrenceDetails = () => {
         .eq("occurrence_id", id)
         .order("sent_at", { ascending: true });
       setNotifications(notificationsData || []);
+
+      // Fetch unit history if apartment_id exists
+      if (occurrenceData.apartment_id) {
+        const { data: historyData } = await supabase
+          .from("occurrences")
+          .select("id, title, type, status, created_at")
+          .eq("apartment_id", occurrenceData.apartment_id)
+          .neq("id", occurrenceData.id)
+          .order("created_at", { ascending: false });
+
+        if (historyData) {
+          const counts = { advertencia: 0, notificacao: 0, multa: 0 };
+          historyData.forEach((h) => {
+            if (h.type === "advertencia") counts.advertencia++;
+            else if (h.type === "notificacao") counts.notificacao++;
+            else if (h.type === "multa") counts.multa++;
+          });
+          setUnitHistory({ ...counts, items: historyData.slice(0, 10) });
+        }
+      }
 
       // Build timeline
       buildTimeline(
@@ -1275,6 +1299,64 @@ const OccurrenceDetails = () => {
                 )}
               </CardContent>
             </Card>
+
+            {/* Unit History */}
+            {occurrence.apartment_id && (unitHistory.advertencia > 0 || unitHistory.notificacao > 0 || unitHistory.multa > 0) && (
+              <Card className="bg-gradient-card border-border/50">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-amber-500" />
+                    Histórico da Unidade
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-3 gap-2">
+                    {unitHistory.advertencia > 0 && (
+                      <div className="text-center p-2 rounded-lg bg-amber-500/10">
+                        <p className="text-lg font-bold text-amber-600 dark:text-amber-400">{unitHistory.advertencia}</p>
+                        <p className="text-xs text-muted-foreground">Advertência{unitHistory.advertencia !== 1 ? 's' : ''}</p>
+                      </div>
+                    )}
+                    {unitHistory.notificacao > 0 && (
+                      <div className="text-center p-2 rounded-lg bg-blue-500/10">
+                        <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{unitHistory.notificacao}</p>
+                        <p className="text-xs text-muted-foreground">Notificação{unitHistory.notificacao !== 1 ? 'ões' : ''}</p>
+                      </div>
+                    )}
+                    {unitHistory.multa > 0 && (
+                      <div className="text-center p-2 rounded-lg bg-red-500/10">
+                        <p className="text-lg font-bold text-red-600 dark:text-red-400">{unitHistory.multa}</p>
+                        <p className="text-xs text-muted-foreground">Multa{unitHistory.multa !== 1 ? 's' : ''}</p>
+                      </div>
+                    )}
+                  </div>
+                  {unitHistory.items.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground">Ocorrências anteriores:</p>
+                      {unitHistory.items.map((item) => {
+                        const typeColors: Record<string, string> = {
+                          advertencia: "text-amber-500",
+                          notificacao: "text-blue-500",
+                          multa: "text-red-500",
+                        };
+                        const typeLabels: Record<string, string> = {
+                          advertencia: "Adv.",
+                          notificacao: "Not.",
+                          multa: "Multa",
+                        };
+                        return (
+                          <div key={item.id} className="flex items-center gap-2 text-xs p-2 rounded-lg bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => navigate(`/occurrences/${item.id}`)}>
+                            <span className={`font-medium ${typeColors[item.type] || ""}`}>{typeLabels[item.type] || item.type}</span>
+                            <span className="flex-1 truncate text-foreground">{item.title}</span>
+                            <span className="text-muted-foreground shrink-0">{formatDateTime(item.created_at)}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Timeline */}
             <Collapsible defaultOpen>
