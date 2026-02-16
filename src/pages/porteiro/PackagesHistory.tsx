@@ -410,49 +410,68 @@ const PorteiroPackagesHistory = () => {
       });
   }, [pendingPackages]);
 
-  // Fetch stats for ALL filtered packages (not just current page)
+  // Fetch stats using separate count queries to avoid 1000-row limit
   const { data: statsData, isLoading: isLoadingStats } = useQuery({
     queryKey: ["porteiro-packages-stats", selectedCondominium, selectedBlock, selectedApartment, statusFilter, dateFrom, dateTo],
     queryFn: async () => {
-      let query = supabase
+      const buildQuery = (extraStatus?: string) => {
+        let query = supabase
+          .from("packages")
+          .select("id", { count: "exact", head: true })
+          .eq("condominium_id", selectedCondominium);
+
+        if (selectedBlock !== "all") query = query.eq("block_id", selectedBlock);
+        if (selectedApartment !== "all") query = query.eq("apartment_id", selectedApartment);
+        if (statusFilter !== "all") query = query.eq("status", statusFilter as any);
+        if (dateFrom) query = query.gte("received_at", dateFrom);
+        if (dateTo) query = query.lte("received_at", `${dateTo}T23:59:59`);
+        if (extraStatus) query = query.eq("status", extraStatus as any);
+        return query;
+      };
+
+      const [totalRes, pendenteRes, retiradaRes] = await Promise.all([
+        buildQuery(),
+        buildQuery("pendente"),
+        buildQuery("retirada"),
+      ]);
+
+      // Fetch picked up packages for avg time (limited to 200 for performance)
+      let avgQuery = supabase
         .from("packages")
-        .select(`
-          id,
-          status,
-          received_at,
-          picked_up_at,
-          block:blocks(id, name)
-        `)
-        .eq("condominium_id", selectedCondominium);
+        .select("received_at, picked_up_at")
+        .eq("condominium_id", selectedCondominium)
+        .eq("status", "retirada")
+        .not("picked_up_at", "is", null)
+        .order("picked_up_at", { ascending: false })
+        .limit(200);
 
-      if (selectedBlock !== "all") {
-        query = query.eq("block_id", selectedBlock);
+      if (selectedBlock !== "all") avgQuery = avgQuery.eq("block_id", selectedBlock);
+      if (selectedApartment !== "all") avgQuery = avgQuery.eq("apartment_id", selectedApartment);
+      if (dateFrom) avgQuery = avgQuery.gte("received_at", dateFrom);
+      if (dateTo) avgQuery = avgQuery.lte("received_at", `${dateTo}T23:59:59`);
+
+      const { data: pickedUpData } = await avgQuery;
+
+      let avgPickupTime = 0;
+      if (pickedUpData && pickedUpData.length > 0) {
+        let totalMinutes = 0;
+        pickedUpData.forEach((pkg) => {
+          totalMinutes += differenceInMinutes(parseISO(pkg.picked_up_at!), parseISO(pkg.received_at));
+        });
+        avgPickupTime = Math.round(totalMinutes / pickedUpData.length);
       }
 
-      if (selectedApartment !== "all") {
-        query = query.eq("apartment_id", selectedApartment);
-      }
-
-      if (statusFilter !== "all") {
-        query = query.eq("status", statusFilter as "pendente" | "retirada");
-      }
-
-      if (dateFrom) {
-        query = query.gte("received_at", dateFrom);
-      }
-
-      if (dateTo) {
-        query = query.lte("received_at", `${dateTo}T23:59:59`);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data || [];
+      return {
+        total: totalRes.count || 0,
+        pendente: pendenteRes.count || 0,
+        retirada: retiradaRes.count || 0,
+        avgPickupTime,
+      };
     },
     enabled: !!selectedCondominium,
   });
 
-  // Fetch block stats for cards (ignores selectedBlock/selectedApartment/statusFilter so cards don't disappear)
+  // Fetch block stats for cards - only pending packages (ignores selectedBlock/selectedApartment/statusFilter so cards don't disappear)
   const { data: blockStatsData } = useQuery({
     queryKey: ["porteiro-packages-block-stats", selectedCondominium, dateFrom, dateTo],
     queryFn: async () => {
@@ -466,7 +485,8 @@ const PorteiroPackagesHistory = () => {
           block:blocks(id, name)
         `
         )
-        .eq("condominium_id", selectedCondominium);
+        .eq("condominium_id", selectedCondominium)
+        .eq("status", "pendente");
 
       if (dateFrom) {
         query = query.gte("received_at", dateFrom);
@@ -483,48 +503,10 @@ const PorteiroPackagesHistory = () => {
     enabled: !!selectedCondominium,
   });
 
-  // Statistics calculated from ALL filtered data
+  // Statistics from count queries
   const stats = useMemo(() => {
-    const allPackages = statsData || [];
-    const s = {
-      total: allPackages.length,
-      pendente: 0,
-      retirada: 0,
-      avgPickupTime: 0,
-      blockStats: {} as Record<string, { blockId: string; blockName: string; total: number; pendente: number; retirada: number }>,
-    };
-
-    let totalPickupTimeMinutes = 0;
-    let pickedUpCount = 0;
-
-    allPackages.forEach((pkg) => {
-      const status = pkg.status as "pendente" | "retirada";
-      s[status]++;
-
-      // Track per-block stats
-      const blockId = pkg.block?.id || "no-block";
-      const blockName = pkg.block?.name || "Sem Bloco";
-      if (!s.blockStats[blockId]) {
-        s.blockStats[blockId] = { blockId, blockName, total: 0, pendente: 0, retirada: 0 };
-      }
-      s.blockStats[blockId].total++;
-      s.blockStats[blockId][status]++;
-
-      if (status === "retirada" && pkg.picked_up_at) {
-        const minutes = differenceInMinutes(
-          parseISO(pkg.picked_up_at),
-          parseISO(pkg.received_at)
-        );
-        totalPickupTimeMinutes += minutes;
-        pickedUpCount++;
-      }
-    });
-
-    if (pickedUpCount > 0) {
-      s.avgPickupTime = Math.round(totalPickupTimeMinutes / pickedUpCount);
-    }
-
-    return s;
+    if (!statsData) return { total: 0, pendente: 0, retirada: 0, avgPickupTime: 0 };
+    return statsData;
   }, [statsData]);
 
   const blockCardsStats = useMemo(() => {
@@ -755,7 +737,7 @@ const PorteiroPackagesHistory = () => {
     });
 
     // Block Stats Table (if showing all blocks)
-    if (selectedBlock === "all" && Object.keys(stats.blockStats).length > 1) {
+    if (selectedBlock === "all" && Object.keys(blockCardsStats.blockStats).length > 1) {
       const blockTableStartY = (doc as any).lastAutoTable.finalY + 10;
 
       doc.setFont("helvetica", "bold");
@@ -763,14 +745,12 @@ const PorteiroPackagesHistory = () => {
 
       autoTable(doc, {
         startY: blockTableStartY + 4,
-        head: [["Bloco", "Total", "Retiradas", "Pendentes"]],
-        body: Object.values(stats.blockStats)
+        head: [["Bloco", "Pendentes"]],
+        body: Object.values(blockCardsStats.blockStats)
           .sort((a, b) => a.blockName.localeCompare(b.blockName, "pt-BR", { numeric: true }))
-          .map((blockStats) => [
-            blockStats.blockName,
-            blockStats.total.toString(),
-            blockStats.retirada.toString(),
-            blockStats.pendente.toString(),
+          .map((bs) => [
+            bs.blockName,
+            bs.pendente.toString(),
           ]),
         theme: "striped",
         headStyles: { fillColor: [59, 130, 246], fontSize: 9 },
