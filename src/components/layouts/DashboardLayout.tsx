@@ -51,7 +51,9 @@ import {
   Wrench,
   Wallet,
   ClipboardList,
+  ClipboardCheck,
   Cog,
+  AlertTriangle,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
@@ -132,9 +134,23 @@ const residentNavItems: NavStructure = [
 const getPorteiroNavItems = (pendingPackages: number): NavStructure => [
   { title: "Início", url: "/porteiro", icon: Home },
   { title: "Condomínio", url: "/porteiro/condominio", icon: Building2 },
-  { title: "Registrar Encomenda", url: "/porteiro/registrar", icon: PackagePlus },
-  { title: "Retirar Encomenda", url: "/porteiro/encomendas", icon: PackageCheck, badge: pendingPackages },
-  { title: "Histórico", url: "/porteiro/historico", icon: FileText },
+  {
+    title: "Encomendas",
+    icon: Package,
+    items: [
+      { title: "Registrar Encomenda", url: "/porteiro/registrar", icon: PackagePlus },
+      { title: "Retirar Encomenda", url: "/porteiro/encomendas", icon: PackageCheck, badge: pendingPackages },
+      { title: "Histórico", url: "/porteiro/historico", icon: FileText },
+    ],
+  },
+  {
+    title: "Portaria",
+    icon: ClipboardList,
+    items: [
+      { title: "Ocorrências", url: "/porteiro/portaria/ocorrencias", icon: AlertTriangle },
+      { title: "Passagem de Plantão", url: "/porteiro/portaria/plantao", icon: ClipboardCheck },
+    ],
+  },
   { title: "Configurações", url: "/porteiro/configuracoes", icon: Settings },
 ];
 
@@ -490,6 +506,7 @@ function SidebarNavigation() {
         { title: "Encomendas", url: "/sindico/encomendas", icon: Package },
         { title: "Salão de Festas", url: "/party-hall", icon: PartyPopper },
         { title: "Porteiros", url: "/sindico/porteiros", icon: DoorOpen },
+        { title: "Checklist Portaria", url: "/sindico/portaria/checklist", icon: ClipboardCheck },
       ],
     },
     { title: "Notificações", url: "/notifications", icon: Bell },

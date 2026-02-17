@@ -67,7 +67,12 @@ import RegisterPackage from "./pages/porteiro/RegisterPackage";
 import PorteiroPackages from "./pages/porteiro/Packages";
 import PorteiroCondominio from "./pages/porteiro/Condominio";
 import PorteiroPackagesHistory from "./pages/porteiro/PackagesHistory";
+import PortariaOccurrences from "./pages/porteiro/PortariaOccurrences";
+import ShiftHandover from "./pages/porteiro/ShiftHandover";
 import NotFound from "./pages/NotFound";
+
+// Sindico Portaria
+import ShiftChecklistSettings from "./pages/sindico/ShiftChecklistSettings";
 
 const queryClient = new QueryClient();
 
@@ -213,6 +218,14 @@ const App = () => (
                 }
               />
               <Route
+                path="/sindico/portaria/checklist"
+                element={
+                  <ProtectedRoute requiredRole="sindico">
+                    <ShiftChecklistSettings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/sindico/encomendas"
                 element={
                   <ProtectedRoute requiredRole={["sindico", "super_admin"]}>
@@ -347,6 +360,22 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole="porteiro">
                     <PorteiroPackagesHistory />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/porteiro/portaria/ocorrencias"
+                element={
+                  <ProtectedRoute requiredRole="porteiro">
+                    <PortariaOccurrences />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/porteiro/portaria/plantao"
+                element={
+                  <ProtectedRoute requiredRole="porteiro">
+                    <ShiftHandover />
                   </ProtectedRoute>
                 }
               />
