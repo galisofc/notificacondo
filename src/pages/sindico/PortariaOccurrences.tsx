@@ -163,12 +163,16 @@ export default function SindicoPortariaOccurrences() {
     <DashboardLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Ocorrências da Portaria</h1>
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-3">
+            Ocorrências da Portaria
+            {openCount > 0 && (
+              <Badge variant="destructive" className="text-xs">
+                {openCount} em aberto
+              </Badge>
+            )}
+          </h1>
           <p className="text-muted-foreground">
             Visualize e gerencie as ocorrências registradas pelos porteiros
-            {openCount > 0 && (
-              <span className="ml-2 text-yellow-600 font-medium">• {openCount} aberta(s)</span>
-            )}
           </p>
         </div>
 

@@ -176,12 +176,16 @@ export default function PortariaOccurrences() {
       <div className="space-y-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Ocorrências da Portaria</h1>
+            <h1 className="text-2xl font-bold text-foreground flex items-center gap-3">
+              Ocorrências da Portaria
+              {openCount > 0 && (
+                <Badge variant="destructive" className="text-xs">
+                  {openCount} em aberto
+                </Badge>
+              )}
+            </h1>
             <p className="text-muted-foreground">
               Registre e acompanhe ocorrências do condomínio
-              {openCount > 0 && (
-                <span className="ml-2 text-yellow-600 font-medium">• {openCount} aberta(s)</span>
-              )}
             </p>
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
