@@ -73,6 +73,8 @@ import NotFound from "./pages/NotFound";
 
 // Sindico Portaria
 import ShiftChecklistSettings from "./pages/sindico/ShiftChecklistSettings";
+import SindicoPortariaOccurrences from "./pages/sindico/PortariaOccurrences";
+import SindicoPortariaShiftHandovers from "./pages/sindico/PortariaShiftHandovers";
 
 const queryClient = new QueryClient();
 
@@ -222,6 +224,22 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole="sindico">
                     <ShiftChecklistSettings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/sindico/portaria/ocorrencias"
+                element={
+                  <ProtectedRoute requiredRole="sindico">
+                    <SindicoPortariaOccurrences />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/sindico/portaria/plantoes"
+                element={
+                  <ProtectedRoute requiredRole="sindico">
+                    <SindicoPortariaShiftHandovers />
                   </ProtectedRoute>
                 }
               />
