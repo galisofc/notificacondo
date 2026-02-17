@@ -164,6 +164,7 @@ function SidebarNavigation() {
   const { role, residentInfo, profileInfo, loading } = useUserRole();
   const { toast } = useToast();
   const [pendingDefenses, setPendingDefenses] = useState(0);
+  const [openOccurrences, setOpenOccurrences] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [pendingPackages, setPendingPackages] = useState(0);
   const [condoIds, setCondoIds] = useState<string[]>([]);
@@ -262,6 +263,15 @@ function SidebarNavigation() {
             .eq("status", "em_defesa");
 
           setPendingDefenses(count || 0);
+
+          // Fetch open occurrences (registrada or notificado)
+          const { count: openCount } = await supabase
+            .from("occurrences")
+            .select("*", { count: "exact", head: true })
+            .in("condominium_id", ids)
+            .in("status", ["registrada", "notificado"]);
+
+          setOpenOccurrences(openCount || 0);
         }
       } catch (error) {
         console.error("Error fetching pending defenses:", error);
@@ -501,7 +511,7 @@ function SidebarNavigation() {
       title: "Serviços",
       icon: Package,
       items: [
-        { title: "Ocorrências", url: "/occurrences", icon: FileText },
+        { title: "Ocorrências", url: "/occurrences", icon: FileText, badge: openOccurrences },
         { title: "Análise de Defesas", url: "/defenses", icon: Scale, badge: pendingDefenses },
         { title: "Encomendas", url: "/sindico/encomendas", icon: Package },
         { title: "Salão de Festas", url: "/party-hall", icon: PartyPopper },
