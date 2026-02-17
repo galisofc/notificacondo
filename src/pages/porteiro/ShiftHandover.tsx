@@ -11,9 +11,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ClipboardCheck, History, User, CheckCircle2, XCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { ClipboardCheck, History, User, CheckCircle2, XCircle, ChevronDown, ChevronUp, Copy, Check } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -45,6 +46,23 @@ export default function ShiftHandover() {
   const [generalObservations, setGeneralObservations] = useState("");
   const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
   const [expandedHistory, setExpandedHistory] = useState<string | null>(null);
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [summaryText, setSummaryText] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [porterName, setPorterName] = useState("");
+  // Fetch porter's name from profile
+  useEffect(() => {
+    const fetchPorterName = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("user_id", user.id)
+        .single();
+      if (data) setPorterName(data.full_name);
+    };
+    fetchPorterName();
+  }, [user]);
 
   // Fetch condominiums
   useEffect(() => {
@@ -172,11 +190,36 @@ export default function ShiftHandover() {
       }
     },
     onSuccess: () => {
+      // Build summary text
+      const itemsNotOk = checklistItems.filter((i) => !i.is_ok);
+      const hasIssues = itemsNotOk.length > 0;
+      
+      let text = `EU QRA ${porterName || "Porteiro"} PASSANDO O QTH PARA QRA ${incomingPorterName}`;
+      text += hasIssues ? " COM AS SEGUINTES OBSERVAÇÕES:" : " SEM NOVIDADES.";
+      text += "\n\n📋 CHECKLIST:";
+      
+      Object.entries(groupedItems).forEach(([category, { items }]) => {
+        text += `\n\n🔹 ${category}:`;
+        items.forEach((item) => {
+          const status = item.is_ok ? "✅" : "❌";
+          text += `\n${status} ${item.item_name}`;
+          if (!item.is_ok && item.observation) {
+            text += ` — ${item.observation}`;
+          }
+        });
+      });
+
+      if (generalObservations) {
+        text += `\n\n📝 Observações Gerais:\n${generalObservations}`;
+      }
+
+      setSummaryText(text);
+      setShowSummaryModal(true);
+
       queryClient.invalidateQueries({ queryKey: ["shift-handovers"] });
       toast({ title: "Passagem de plantão registrada com sucesso!" });
       setIncomingPorterName("");
       setGeneralObservations("");
-      // Reset checklist
       setChecklistItems(
         templates.map((t) => ({
           id: t.id,
@@ -196,6 +239,17 @@ export default function ShiftHandover() {
       updated[index] = { ...updated[index], [field]: value };
       return updated;
     });
+  };
+
+  const handleCopySummary = async () => {
+    try {
+      await navigator.clipboard.writeText(summaryText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      toast({ title: "Texto copiado!" });
+    } catch {
+      toast({ title: "Erro ao copiar", variant: "destructive" });
+    }
   };
 
   // Group items by category
@@ -374,6 +428,32 @@ export default function ShiftHandover() {
           </Tabs>
         )}
       </div>
+
+      {/* Modal de Resumo da Passagem */}
+      <Dialog open={showSummaryModal} onOpenChange={setShowSummaryModal}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ClipboardCheck className="w-5 h-5 text-primary" />
+              Resumo da Passagem de Plantão
+            </DialogTitle>
+          </DialogHeader>
+          <div className="bg-muted rounded-lg p-4 max-h-[50vh] overflow-y-auto">
+            <pre className="whitespace-pre-wrap text-sm text-foreground font-sans leading-relaxed">
+              {summaryText}
+            </pre>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSummaryModal(false)}>
+              Fechar
+            </Button>
+            <Button onClick={handleCopySummary} className="gap-2">
+              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              {copied ? "Copiado!" : "Copiar Texto"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
