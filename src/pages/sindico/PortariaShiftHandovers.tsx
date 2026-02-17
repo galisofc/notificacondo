@@ -5,10 +5,13 @@ import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ClipboardCheck, CheckCircle2, XCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { ClipboardCheck, CheckCircle2, XCircle, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
 
 interface HandoverRecord {
   id: string;
@@ -104,6 +107,24 @@ export default function SindicoPortariaShiftHandovers() {
     }
   };
 
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
+  const confirmDelete = async (id: string) => {
+    try {
+      // Delete items first
+      await supabase.from("shift_handover_items").delete().eq("handover_id", id);
+      // Delete handover
+      const { error } = await supabase.from("shift_handovers").delete().eq("id", id);
+      if (error) throw error;
+      toast.success("Passagem de plantão excluída com sucesso");
+      queryClient.invalidateQueries({ queryKey: ["sindico-shift-handovers", selectedCondominium] });
+    } catch (err) {
+      toast.error("Erro ao excluir passagem de plantão");
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -133,7 +154,7 @@ export default function SindicoPortariaShiftHandovers() {
               <Card key={h.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => toggleHistory(h.id)}>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <p className="font-medium text-foreground">
                         <span className="text-muted-foreground">De:</span>{" "}
                         <span className="text-primary">{h.outgoing_porter_name}</span>
@@ -147,7 +168,35 @@ export default function SindicoPortariaShiftHandovers() {
                         <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{h.general_observations}</p>
                       )}
                     </div>
-                    {expandedHistory === h.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Excluir passagem de plantão</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Tem certeza que deseja excluir esta passagem de plantão? Esta ação não pode ser desfeita.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => confirmDelete(h.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                              Excluir
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                      {expandedHistory === h.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </div>
                   </div>
                   {expandedHistory === h.id && h.items && (
                     <div className="mt-4 pt-4 border-t space-y-2">
