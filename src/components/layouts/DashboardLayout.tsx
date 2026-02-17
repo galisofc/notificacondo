@@ -506,7 +506,15 @@ function SidebarNavigation() {
         { title: "Encomendas", url: "/sindico/encomendas", icon: Package },
         { title: "Salão de Festas", url: "/party-hall", icon: PartyPopper },
         { title: "Porteiros", url: "/sindico/porteiros", icon: DoorOpen },
-        { title: "Checklist Portaria", url: "/sindico/portaria/checklist", icon: ClipboardCheck },
+      ],
+    },
+    {
+      title: "Portaria",
+      icon: ClipboardList,
+      items: [
+        { title: "Ocorrências Portaria", url: "/sindico/portaria/ocorrencias", icon: AlertTriangle },
+        { title: "Passagens de Plantão", url: "/sindico/portaria/plantoes", icon: ClipboardCheck },
+        { title: "Checklist Portaria", url: "/sindico/portaria/checklist", icon: Cog },
       ],
     },
     { title: "Notificações", url: "/notifications", icon: Bell },
