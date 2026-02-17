@@ -1546,6 +1546,65 @@ export type Database = {
         }
         Relationships: []
       }
+      porter_occurrences: {
+        Row: {
+          category: string
+          condominium_id: string
+          created_at: string
+          description: string
+          id: string
+          occurred_at: string
+          priority: string
+          registered_by: string
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          condominium_id: string
+          created_at?: string
+          description: string
+          id?: string
+          occurred_at?: string
+          priority?: string
+          registered_by: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          condominium_id?: string
+          created_at?: string
+          description?: string
+          id?: string
+          occurred_at?: string
+          priority?: string
+          registered_by?: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "porter_occurrences_condominium_id_fkey"
+            columns: ["condominium_id"]
+            isOneToOne: false
+            referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1640,6 +1699,123 @@ export type Database = {
             columns: ["apartment_id"]
             isOneToOne: false
             referencedRelation: "apartments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_checklist_templates: {
+        Row: {
+          category: string
+          condominium_id: string
+          created_at: string
+          display_order: number
+          id: string
+          is_active: boolean
+          item_name: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          condominium_id: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          item_name: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          condominium_id?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          item_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_checklist_templates_condominium_id_fkey"
+            columns: ["condominium_id"]
+            isOneToOne: false
+            referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_handover_items: {
+        Row: {
+          category: string | null
+          created_at: string
+          handover_id: string
+          id: string
+          is_ok: boolean
+          item_name: string
+          observation: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          handover_id: string
+          id?: string
+          is_ok?: boolean
+          item_name: string
+          observation?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          handover_id?: string
+          id?: string
+          is_ok?: boolean
+          item_name?: string
+          observation?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_handover_items_handover_id_fkey"
+            columns: ["handover_id"]
+            isOneToOne: false
+            referencedRelation: "shift_handovers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_handovers: {
+        Row: {
+          condominium_id: string
+          created_at: string
+          general_observations: string | null
+          id: string
+          incoming_porter_name: string
+          outgoing_porter_id: string
+          shift_ended_at: string
+        }
+        Insert: {
+          condominium_id: string
+          created_at?: string
+          general_observations?: string | null
+          id?: string
+          incoming_porter_name: string
+          outgoing_porter_id: string
+          shift_ended_at?: string
+        }
+        Update: {
+          condominium_id?: string
+          created_at?: string
+          general_observations?: string | null
+          id?: string
+          incoming_porter_name?: string
+          outgoing_porter_id?: string
+          shift_ended_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_handovers_condominium_id_fkey"
+            columns: ["condominium_id"]
+            isOneToOne: false
+            referencedRelation: "condominiums"
             referencedColumns: ["id"]
           },
         ]
