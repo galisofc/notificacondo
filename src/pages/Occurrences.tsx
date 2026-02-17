@@ -6,6 +6,7 @@ import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import BlockApartmentDisplay from "@/components/common/BlockApartmentDisplay";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -633,8 +634,16 @@ const Occurrences = () => {
       <div className="space-y-4 md:space-y-6 animate-fade-up">
         <SindicoBreadcrumbs items={[{ label: "Ocorrências" }]} />
         <div>
-          <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground">
+          <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground flex items-center gap-3">
             Ocorrências
+            {(() => {
+              const openCount = occurrences.filter(o => o.status === "registrada" || o.status === "notificado").length;
+              return openCount > 0 ? (
+                <Badge variant="destructive" className="text-xs">
+                  {openCount} em aberto
+                </Badge>
+              ) : null;
+            })()}
           </h1>
            <p className="text-sm md:text-base text-muted-foreground mt-1">
             Registre e gerencie ocorrências do condomínio
