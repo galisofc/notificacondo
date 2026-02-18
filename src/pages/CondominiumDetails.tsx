@@ -1154,12 +1154,6 @@ const CondominiumDetails = () => {
                                                 {resident.full_name}
                                               </p>
                                               <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                                {resident.email && (
-                                                  <span className="flex items-center gap-1">
-                                                    <Mail className="w-3 h-3" />
-                                                    {resident.email}
-                                                  </span>
-                                                )}
                                                 {resident.phone && (
                                                   <span className="flex items-center gap-1">
                                                     <Phone className="w-3 h-3" />
