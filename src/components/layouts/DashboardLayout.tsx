@@ -131,7 +131,7 @@ const residentNavItems: NavStructure = [
   { title: "Meu Perfil", url: "/resident/profile", icon: User },
 ];
 
-const getPorteiroNavItems = (pendingPackages: number): NavStructure => [
+const getPorteiroNavItems = (pendingPackages: number, openPorterOccs: number): NavStructure => [
   { title: "Início", url: "/porteiro", icon: Home },
   { title: "Condomínio", url: "/porteiro/condominio", icon: Building2 },
   {
@@ -147,7 +147,7 @@ const getPorteiroNavItems = (pendingPackages: number): NavStructure => [
     title: "Portaria",
     icon: ClipboardList,
     items: [
-      { title: "Ocorrências", url: "/porteiro/portaria/ocorrencias", icon: AlertTriangle },
+      { title: "Ocorrências", url: "/porteiro/portaria/ocorrencias", icon: AlertTriangle, badge: openPorterOccs },
       { title: "Passagem de Plantão", url: "/porteiro/portaria/plantao", icon: ClipboardCheck },
     ],
   },
@@ -167,6 +167,7 @@ function SidebarNavigation() {
   const [openOccurrences, setOpenOccurrences] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [pendingPackages, setPendingPackages] = useState(0);
+  const [openPorterOccurrencesPorteiro, setOpenPorterOccurrencesPorteiro] = useState(0);
   const [openPorterOccurrences, setOpenPorterOccurrences] = useState(0);
   const [condoIds, setCondoIds] = useState<string[]>([]);
   const [porteiroCondoIds, setPorteiroCondoIds] = useState<string[]>([]);
@@ -497,9 +498,31 @@ function SidebarNavigation() {
     };
   }, [user, role, porteiroCondoIds]);
 
+  // Fetch open porter occurrences for porteiro badge
+  useEffect(() => {
+    if (!user || role !== "porteiro" || porteiroCondoIds.length === 0) return;
+
+    const fetchOpenPorterOccs = async () => {
+      const { count } = await supabase
+        .from("porter_occurrences")
+        .select("*", { count: "exact", head: true })
+        .in("condominium_id", porteiroCondoIds)
+        .eq("status", "aberta");
+      setOpenPorterOccurrencesPorteiro(count || 0);
+    };
+
+    fetchOpenPorterOccs();
+
+    const channel = supabase
+      .channel("porter-occs-porteiro-badge")
+      .on("postgres_changes", { event: "*", schema: "public", table: "porter_occurrences" }, fetchOpenPorterOccs)
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user, role, porteiroCondoIds]);
+
   const handleSignOut = async () => {
     await signOut();
-    toast({ title: "Até logo!", description: "Você saiu da sua conta." });
     navigate("/");
   };
 
@@ -570,7 +593,7 @@ function SidebarNavigation() {
       : role === "sindico"
       ? getSindicoNavItems()
       : role === "porteiro"
-      ? getPorteiroNavItems(pendingPackages)
+      ? getPorteiroNavItems(pendingPackages, openPorterOccurrencesPorteiro)
       : residentNavItems;
 
   const getRoleConfig = () => {
