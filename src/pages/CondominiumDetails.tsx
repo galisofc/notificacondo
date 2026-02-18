@@ -265,11 +265,20 @@ const CondominiumDetails = () => {
         }
       }
 
-      // Check if any apartment in this block matches the search
+      // Check if any apartment in this block matches the search (number or resident name/email/phone)
       const blockApts = apartments.filter((a) => a.block_id === block.id);
-      return blockApts.some((apt) => apt.number.toLowerCase().includes(query));
+      return blockApts.some((apt) => {
+        if (apt.number.toLowerCase().includes(query)) return true;
+        const aptResidents = residents.filter((r) => r.apartment_id === apt.id);
+        return aptResidents.some(
+          (r) =>
+            r.full_name.toLowerCase().includes(query) ||
+            r.email.toLowerCase().includes(query) ||
+            (r.phone && r.phone.toLowerCase().includes(query))
+        );
+      });
     });
-  }, [blocks, apartments, searchQuery, selectedBlockFilter, selectedApartmentFilter]);
+  }, [blocks, apartments, residents, searchQuery, selectedBlockFilter, selectedApartmentFilter]);
 
   // Get apartments for a block, filtered by search and filters
   const getFilteredApartments = (blockId: string) => {
@@ -298,7 +307,18 @@ const CondominiumDetails = () => {
       });
     }
 
-    return blockApts.filter((apt) => apt.number.toLowerCase().includes(query));
+    return blockApts.filter((apt) => {
+      // Search by apartment number
+      if (apt.number.toLowerCase().includes(query)) return true;
+      // Search by resident name, email or phone
+      const aptResidents = residents.filter((r) => r.apartment_id === apt.id);
+      return aptResidents.some(
+        (r) =>
+          r.full_name.toLowerCase().includes(query) ||
+          r.email.toLowerCase().includes(query) ||
+          (r.phone && r.phone.toLowerCase().includes(query))
+      );
+    });
   };
 
   const fetchData = async () => {
