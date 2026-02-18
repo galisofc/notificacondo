@@ -13,17 +13,11 @@ import { Label } from "@/components/ui/label";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Clock, Search, Trash2 } from "lucide-react";
+import { CheckCircle2, Clock, Search, Trash2, Settings, Plus, GripVertical, X } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-const CATEGORIES = [
-  { value: "visitante", label: "Visitante" },
-  { value: "entrega", label: "Entrega" },
-  { value: "manutencao", label: "Manutenção" },
-  { value: "seguranca", label: "Segurança" },
-  { value: "outros", label: "Outros" },
-];
+const DEFAULT_CATEGORIES = ["Visitante", "Entrega", "Manutenção", "Segurança", "Outros"];
 
 const PRIORITIES = [
   { value: "baixa", label: "Baixa", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
@@ -47,6 +41,13 @@ interface Occurrence {
   created_at: string;
 }
 
+interface Category {
+  id: string;
+  name: string;
+  display_order: number;
+  is_active: boolean;
+}
+
 export default function SindicoPortariaOccurrences() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -67,6 +68,10 @@ export default function SindicoPortariaOccurrences() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteOccurrenceId, setDeleteOccurrenceId] = useState<string | null>(null);
 
+  // Categories management dialog
+  const [categoriesDialogOpen, setCategoriesDialogOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+
   // Fetch condominiums owned by síndico
   useEffect(() => {
     const fetchCondominiums = async () => {
@@ -84,6 +89,63 @@ export default function SindicoPortariaOccurrences() {
     };
     fetchCondominiums();
   }, [user]);
+
+  // Fetch categories
+  const { data: categories = [], refetch: refetchCategories } = useQuery({
+    queryKey: ["porter-occurrence-categories", selectedCondominium],
+    queryFn: async () => {
+      if (!selectedCondominium) return [];
+      const { data, error } = await supabase
+        .from("porter_occurrence_categories")
+        .select("*")
+        .eq("condominium_id", selectedCondominium)
+        .eq("is_active", true)
+        .order("display_order");
+      if (error) throw error;
+      return data as Category[];
+    },
+    enabled: !!selectedCondominium,
+  });
+
+  // Fetch ALL categories (including inactive) for management dialog
+  const { data: allCategories = [], refetch: refetchAllCategories } = useQuery({
+    queryKey: ["porter-occurrence-categories-all", selectedCondominium],
+    queryFn: async () => {
+      if (!selectedCondominium) return [];
+      const { data, error } = await supabase
+        .from("porter_occurrence_categories")
+        .select("*")
+        .eq("condominium_id", selectedCondominium)
+        .order("display_order");
+      if (error) throw error;
+      return data as Category[];
+    },
+    enabled: !!selectedCondominium && categoriesDialogOpen,
+  });
+
+  // Seed default categories when a condominium is first selected and has no categories
+  useEffect(() => {
+    if (!selectedCondominium || !user) return;
+    const seedIfNeeded = async () => {
+      const { data, error } = await supabase
+        .from("porter_occurrence_categories")
+        .select("id")
+        .eq("condominium_id", selectedCondominium)
+        .limit(1);
+      if (error || (data && data.length > 0)) return;
+
+      // Insert default categories
+      await supabase.from("porter_occurrence_categories").insert(
+        DEFAULT_CATEGORIES.map((name, idx) => ({
+          condominium_id: selectedCondominium,
+          name,
+          display_order: idx,
+        }))
+      );
+      queryClient.invalidateQueries({ queryKey: ["porter-occurrence-categories"] });
+    };
+    seedIfNeeded();
+  }, [selectedCondominium, user, queryClient]);
 
   // Fetch occurrences
   const { data: occurrences = [], isLoading } = useQuery({
@@ -152,6 +214,59 @@ export default function SindicoPortariaOccurrences() {
     onError: () => toast({ title: "Erro ao excluir ocorrência", variant: "destructive" }),
   });
 
+  // Add category
+  const addCategoryMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const maxOrder = allCategories.length > 0 ? Math.max(...allCategories.map((c) => c.display_order)) + 1 : 0;
+      const { error } = await supabase.from("porter_occurrence_categories").insert({
+        condominium_id: selectedCondominium,
+        name: name.trim(),
+        display_order: maxOrder,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["porter-occurrence-categories"] });
+      refetchAllCategories();
+      setNewCategoryName("");
+      toast({ title: "Categoria adicionada!" });
+    },
+    onError: () => toast({ title: "Erro ao adicionar categoria", variant: "destructive" }),
+  });
+
+  // Toggle category active/inactive
+  const toggleCategoryMutation = useMutation({
+    mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
+      const { error } = await supabase
+        .from("porter_occurrence_categories")
+        .update({ is_active })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["porter-occurrence-categories"] });
+      refetchAllCategories();
+    },
+    onError: () => toast({ title: "Erro ao atualizar categoria", variant: "destructive" }),
+  });
+
+  // Delete category
+  const deleteCategoryMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("porter_occurrence_categories")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["porter-occurrence-categories"] });
+      refetchAllCategories();
+      toast({ title: "Categoria removida!" });
+    },
+    onError: () => toast({ title: "Erro ao remover categoria", variant: "destructive" }),
+  });
+
   const getPriorityBadge = (priority: string) => {
     const p = PRIORITIES.find((pr) => pr.value === priority);
     return <Badge className={p?.color || ""}>{p?.label || priority}</Badge>;
@@ -162,18 +277,25 @@ export default function SindicoPortariaOccurrences() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-3">
-            Ocorrências da Portaria
-            {openCount > 0 && (
-              <Badge variant="destructive" className="text-xs">
-                {openCount} em aberto
-              </Badge>
-            )}
-          </h1>
-          <p className="text-muted-foreground">
-            Visualize e gerencie as ocorrências registradas pelos porteiros
-          </p>
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground flex items-center gap-3">
+              Ocorrências da Portaria
+              {openCount > 0 && (
+                <Badge variant="destructive" className="text-xs">
+                  {openCount} em aberto
+                </Badge>
+              )}
+            </h1>
+            <p className="text-muted-foreground">
+              Visualize e gerencie as ocorrências registradas pelos porteiros
+            </p>
+          </div>
+          {selectedCondominium && (
+            <Button variant="outline" className="gap-2" onClick={() => setCategoriesDialogOpen(true)}>
+              <Settings className="w-4 h-4" /> Categorias
+            </Button>
+          )}
         </div>
 
         {/* Filters */}
@@ -195,10 +317,10 @@ export default function SindicoPortariaOccurrences() {
             </SelectContent>
           </Select>
           <Select value={filterCategory} onValueChange={setFilterCategory}>
-            <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas categorias</SelectItem>
-              {CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+              {categories.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
             </SelectContent>
           </Select>
           <div className="relative flex-1 min-w-[200px]">
@@ -230,7 +352,7 @@ export default function SindicoPortariaOccurrences() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-semibold text-foreground">{occ.title}</h3>
                           {getPriorityBadge(occ.priority)}
-                          <Badge variant="outline">{CATEGORIES.find((c) => c.value === occ.category)?.label || occ.category}</Badge>
+                          <Badge variant="outline">{occ.category}</Badge>
                         </div>
                         <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{occ.description}</p>
                         <p className="text-xs text-muted-foreground mt-1">
@@ -310,6 +432,78 @@ export default function SindicoPortariaOccurrences() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Categories Management Dialog */}
+        <Dialog open={categoriesDialogOpen} onOpenChange={setCategoriesDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Gerenciar Categorias</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {/* Add new category */}
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Nome da nova categoria..."
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newCategoryName.trim()) {
+                      addCategoryMutation.mutate(newCategoryName);
+                    }
+                  }}
+                />
+                <Button
+                  onClick={() => addCategoryMutation.mutate(newCategoryName)}
+                  disabled={!newCategoryName.trim() || addCategoryMutation.isPending}
+                  size="sm"
+                  className="shrink-0"
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {/* Category list */}
+              <div className="space-y-2 max-h-72 overflow-y-auto">
+                {allCategories.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">Nenhuma categoria cadastrada.</p>
+                ) : (
+                  allCategories.map((cat) => (
+                    <div key={cat.id} className="flex items-center gap-2 p-2 rounded-md border bg-card">
+                      <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" />
+                      <span className={`flex-1 text-sm ${!cat.is_active ? "line-through text-muted-foreground" : ""}`}>
+                        {cat.name}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => toggleCategoryMutation.mutate({ id: cat.id, is_active: !cat.is_active })}
+                        disabled={toggleCategoryMutation.isPending}
+                      >
+                        {cat.is_active ? "Desativar" : "Ativar"}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                        onClick={() => deleteCategoryMutation.mutate(cat.id)}
+                        disabled={deleteCategoryMutation.isPending}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Categorias desativadas não aparecem para os porteiros, mas registros existentes são preservados.
+              </p>
+            </div>
+            <DialogFooter>
+              <Button onClick={() => setCategoriesDialogOpen(false)}>Fechar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

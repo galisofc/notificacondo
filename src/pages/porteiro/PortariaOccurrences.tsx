@@ -12,17 +12,11 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, AlertTriangle, CheckCircle2, Clock, Search, Filter } from "lucide-react";
+import { Plus, CheckCircle2, Clock, Search } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-const CATEGORIES = [
-  { value: "visitante", label: "Visitante" },
-  { value: "entrega", label: "Entrega" },
-  { value: "manutencao", label: "Manutenção" },
-  { value: "seguranca", label: "Segurança" },
-  { value: "outros", label: "Outros" },
-];
+const DEFAULT_CATEGORIES = ["Visitante", "Entrega", "Manutenção", "Segurança", "Outros"];
 
 const PRIORITIES = [
   { value: "baixa", label: "Baixa", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
@@ -46,6 +40,13 @@ interface Occurrence {
   created_at: string;
 }
 
+interface Category {
+  id: string;
+  name: string;
+  display_order: number;
+  is_active: boolean;
+}
+
 export default function PortariaOccurrences() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -61,7 +62,7 @@ export default function PortariaOccurrences() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newDescription, setNewDescription] = useState("");
-  const [newCategory, setNewCategory] = useState("outros");
+  const [newCategory, setNewCategory] = useState("");
   const [newPriority, setNewPriority] = useState("media");
 
   // Resolve dialog
@@ -89,6 +90,53 @@ export default function PortariaOccurrences() {
     };
     fetchCondominiums();
   }, [user]);
+
+  // Fetch categories
+  const { data: categories = [] } = useQuery({
+    queryKey: ["porter-occurrence-categories", selectedCondominium],
+    queryFn: async () => {
+      if (!selectedCondominium) return [];
+      const { data, error } = await supabase
+        .from("porter_occurrence_categories")
+        .select("*")
+        .eq("condominium_id", selectedCondominium)
+        .eq("is_active", true)
+        .order("display_order");
+      if (error) throw error;
+      return data as Category[];
+    },
+    enabled: !!selectedCondominium,
+  });
+
+  // Set default category when categories load
+  useEffect(() => {
+    if (categories.length > 0 && !newCategory) {
+      setNewCategory(categories[0].name);
+    }
+  }, [categories, newCategory]);
+
+  // Seed default categories when a condominium is first selected and has no categories
+  useEffect(() => {
+    if (!selectedCondominium || !user) return;
+    const seedIfNeeded = async () => {
+      const { data, error } = await supabase
+        .from("porter_occurrence_categories")
+        .select("id")
+        .eq("condominium_id", selectedCondominium)
+        .limit(1);
+      if (error || (data && data.length > 0)) return;
+
+      await supabase.from("porter_occurrence_categories").insert(
+        DEFAULT_CATEGORIES.map((name, idx) => ({
+          condominium_id: selectedCondominium,
+          name,
+          display_order: idx,
+        }))
+      );
+      queryClient.invalidateQueries({ queryKey: ["porter-occurrence-categories"] });
+    };
+    seedIfNeeded();
+  }, [selectedCondominium, user, queryClient]);
 
   // Fetch occurrences
   const { data: occurrences = [], isLoading } = useQuery({
@@ -134,7 +182,7 @@ export default function PortariaOccurrences() {
       setDialogOpen(false);
       setNewTitle("");
       setNewDescription("");
-      setNewCategory("outros");
+      setNewCategory(categories[0]?.name || "");
       setNewPriority("media");
     },
     onError: () => toast({ title: "Erro ao registrar ocorrência", variant: "destructive" }),
@@ -211,9 +259,9 @@ export default function PortariaOccurrences() {
                   <div>
                     <Label>Categoria</Label>
                     <Select value={newCategory} onValueChange={setNewCategory}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
                       <SelectContent>
-                        {CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                        {categories.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -230,7 +278,7 @@ export default function PortariaOccurrences() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-                <Button onClick={() => createMutation.mutate()} disabled={!newTitle || !newDescription || createMutation.isPending}>
+                <Button onClick={() => createMutation.mutate()} disabled={!newTitle || !newDescription || !newCategory || createMutation.isPending}>
                   {createMutation.isPending ? "Registrando..." : "Registrar"}
                 </Button>
               </DialogFooter>
@@ -257,10 +305,10 @@ export default function PortariaOccurrences() {
             </SelectContent>
           </Select>
           <Select value={filterCategory} onValueChange={setFilterCategory}>
-            <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas categorias</SelectItem>
-              {CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+              {categories.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
             </SelectContent>
           </Select>
           <div className="relative flex-1 min-w-[200px]">
@@ -292,7 +340,7 @@ export default function PortariaOccurrences() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-semibold text-foreground">{occ.title}</h3>
                           {getPriorityBadge(occ.priority)}
-                          <Badge variant="outline">{CATEGORIES.find((c) => c.value === occ.category)?.label || occ.category}</Badge>
+                          <Badge variant="outline">{occ.category}</Badge>
                         </div>
                         <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{occ.description}</p>
                         <p className="text-xs text-muted-foreground mt-1">
