@@ -430,6 +430,16 @@ export default function PortariaOccurrences() {
                 <CardContent className="p-4 md:p-5">
                   <div className="flex flex-col gap-3">
                     <div className="flex items-start justify-between gap-3">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                        occ.status === "aberta"
+                          ? "bg-gradient-to-br from-amber-500 to-orange-500"
+                          : "bg-gradient-to-br from-accent to-emerald-600"
+                      }`}>
+                        {occ.status === "aberta"
+                          ? <Clock className="w-5 h-5 text-white" />
+                          : <CheckCircle2 className="w-5 h-5 text-white" />
+                        }
+                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1.5">
                           <h3 className="font-semibold text-foreground">{occ.title}</h3>
