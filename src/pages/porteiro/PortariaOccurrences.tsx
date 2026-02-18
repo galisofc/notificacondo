@@ -101,7 +101,7 @@ export default function PortariaOccurrences() {
         .select("*")
         .eq("condominium_id", selectedCondominium)
         .eq("is_active", true)
-        .order("display_order");
+        .order("name");
       if (error) throw error;
       return data as Category[];
     },
