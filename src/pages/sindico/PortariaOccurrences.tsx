@@ -100,7 +100,7 @@ export default function SindicoPortariaOccurrences() {
         .select("*")
         .eq("condominium_id", selectedCondominium)
         .eq("is_active", true)
-        .order("display_order");
+        .order("name");
       if (error) throw error;
       return data as Category[];
     },
@@ -116,7 +116,7 @@ export default function SindicoPortariaOccurrences() {
         .from("porter_occurrence_categories")
         .select("*")
         .eq("condominium_id", selectedCondominium)
-        .order("display_order");
+        .order("name");
       if (error) throw error;
       return data as Category[];
     },
