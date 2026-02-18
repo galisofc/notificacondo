@@ -289,7 +289,7 @@ const PackagesDashboard = () => {
         <meta name="description" content="Dashboard de estatísticas de encomendas" />
       </Helmet>
 
-      <SubscriptionGate>
+      <SubscriptionGate condominiumId={selectedCondominium !== "all" ? selectedCondominium : undefined}>
       <div className="space-y-6 animate-fade-up">
         <SindicoBreadcrumbs items={[{ label: "Encomendas" }]} />
 

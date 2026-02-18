@@ -415,7 +415,7 @@ export default function PartyHall() {
 
   return (
     <DashboardLayout>
-      <SubscriptionGate>
+      <SubscriptionGate condominiumId={selectedCondominium !== "all" ? selectedCondominium : undefined}>
       <div className="flex-1 space-y-4 p-4 md:p-6 lg:p-8 pt-6">
         <SindicoBreadcrumbs items={[{ label: "Salão de Festas" }]} />
         <TrialBanner />

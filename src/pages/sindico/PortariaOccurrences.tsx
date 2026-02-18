@@ -326,7 +326,7 @@ export default function SindicoPortariaOccurrences() {
 
   return (
     <DashboardLayout>
-      <SubscriptionGate>
+      <SubscriptionGate condominiumId={selectedCondominium || undefined}>
       <div className="space-y-8 animate-fade-up">
 
         {/* Header */}
