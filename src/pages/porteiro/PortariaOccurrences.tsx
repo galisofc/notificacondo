@@ -36,6 +36,7 @@ interface Occurrence {
   occurred_at: string;
   resolved_at: string | null;
   resolved_by: string | null;
+  resolved_by_name?: string | null;
   resolution_notes: string | null;
   created_at: string;
 }
@@ -154,7 +155,22 @@ export default function PortariaOccurrences() {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as Occurrence[];
+
+      // Fetch names of who resolved each occurrence
+      const resolvedByIds = [...new Set((data || []).map((o) => o.resolved_by).filter(Boolean))];
+      let profileMap: Record<string, string> = {};
+      if (resolvedByIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("user_id, full_name")
+          .in("user_id", resolvedByIds);
+        profileMap = Object.fromEntries((profiles || []).map((p) => [p.user_id, p.full_name]));
+      }
+
+      return (data || []).map((o) => ({
+        ...o,
+        resolved_by_name: o.resolved_by ? (profileMap[o.resolved_by] ?? null) : null,
+      })) as Occurrence[];
     },
     enabled: !!selectedCondominium,
   });
@@ -346,10 +362,22 @@ export default function PortariaOccurrences() {
                         <p className="text-xs text-muted-foreground mt-1">
                           {format(new Date(occ.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                         </p>
-                        {occ.resolution_notes && (
-                          <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                            Resolução: {occ.resolution_notes}
-                          </p>
+                        {occ.status === "resolvida" && (
+                          <div className="mt-1 space-y-0.5">
+                            {occ.resolved_by_name && (
+                              <p className="text-xs text-muted-foreground">
+                                Finalizado por: <span className="font-medium text-foreground">{occ.resolved_by_name}</span>
+                                {occ.resolved_at && (
+                                  <> · {format(new Date(occ.resolved_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</>
+                                )}
+                              </p>
+                            )}
+                            {occ.resolution_notes && (
+                              <p className="text-xs text-muted-foreground">
+                                Resolução: {occ.resolution_notes}
+                              </p>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
