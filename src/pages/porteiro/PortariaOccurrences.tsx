@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, CheckCircle2, Clock, Search, AlertTriangle, ClipboardList, ArrowUpRight, CalendarIcon, X } from "lucide-react";
+import SubscriptionGate from "@/components/sindico/SubscriptionGate";
 import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -272,6 +273,7 @@ export default function PortariaOccurrences() {
 
   return (
     <DashboardLayout>
+      <SubscriptionGate>
       <div className="space-y-8 animate-fade-up">
 
         {/* Header */}
@@ -550,6 +552,7 @@ export default function PortariaOccurrences() {
           </DialogContent>
         </Dialog>
       </div>
+      </SubscriptionGate>
     </DashboardLayout>
   );
 }

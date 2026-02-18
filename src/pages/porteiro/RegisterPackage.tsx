@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Package, CheckCircle2, Loader2, MessageCircle, AlertCircle, MapPin, User, Phone, UserPlus, Check, ChevronsUpDown, Search, icons, QrCode } from "lucide-react";
+import SubscriptionGate from "@/components/sindico/SubscriptionGate";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -456,6 +457,7 @@ export default function RegisterPackage() {
 
   return (
     <DashboardLayout>
+      <SubscriptionGate>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
@@ -756,6 +758,7 @@ export default function RegisterPackage() {
           </Card>
         </div>
       </div>
+      </SubscriptionGate>
     </DashboardLayout>
   );
 }

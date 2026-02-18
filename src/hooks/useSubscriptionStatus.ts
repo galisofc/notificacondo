@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface SubscriptionStatus {
@@ -14,9 +15,10 @@ export interface SubscriptionStatus {
 
 export function useSubscriptionStatus(condominiumId?: string | null): SubscriptionStatus {
   const { user } = useAuth();
+  const { isPorteiro } = useUserRole();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["subscription-status", user?.id, condominiumId],
+    queryKey: ["subscription-status", user?.id, condominiumId, isPorteiro],
     queryFn: async () => {
       if (!user) return null;
 
@@ -35,8 +37,18 @@ export function useSubscriptionStatus(condominiumId?: string | null): Subscripti
 
       if (condominiumId) {
         query = query.eq("condominium_id", condominiumId);
+      } else if (isPorteiro) {
+        // Porteiro: busca via user_condominiums
+        const { data: userCondos } = await supabase
+          .from("user_condominiums")
+          .select("condominium_id")
+          .eq("user_id", user.id);
+
+        const ids = userCondos?.map((uc) => uc.condominium_id) || [];
+        if (ids.length === 0) return null;
+        query = query.in("condominium_id", ids);
       } else {
-        // Busca o condomínio do síndico atual
+        // Síndico: busca pelo owner_id
         const { data: condos } = await supabase
           .from("condominiums")
           .select("id")
