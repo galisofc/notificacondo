@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Package, PackagePlus, Search, PackageCheck, X, Building2, Loader2 } from "lucide-react";
+import SubscriptionGate from "@/components/sindico/SubscriptionGate";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -281,6 +282,7 @@ export default function PorteiroPackages() {
 
   return (
     <DashboardLayout>
+      <SubscriptionGate>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -471,6 +473,7 @@ export default function PorteiroPackages() {
           </Card>
         )}
       </div>
+      </SubscriptionGate>
 
       {/* Pickup Confirmation Dialog */}
       <PackagePickupDialog
