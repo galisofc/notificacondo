@@ -632,7 +632,7 @@ const Occurrences = () => {
       <Helmet>
         <title>Ocorrências | CondoManager</title>
       </Helmet>
-      <SubscriptionGate>
+      <SubscriptionGate condominiumId={condominiumFilter !== "all" ? condominiumFilter : undefined}>
       <div className="space-y-4 md:space-y-6 animate-fade-up">
         <SindicoBreadcrumbs items={[{ label: "Ocorrências" }]} />
         <div>

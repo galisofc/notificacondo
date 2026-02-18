@@ -445,7 +445,7 @@ const Reports = () => {
       <Helmet>
         <title>Relatórios | CondoManager</title>
       </Helmet>
-      <SubscriptionGate>
+      <SubscriptionGate condominiumId={selectedCondominium !== "all" ? selectedCondominium : undefined}>
       <div className="space-y-4 md:space-y-6 animate-fade-up">
         <SindicoBreadcrumbs items={[{ label: "Relatórios" }]} />
         {/* Header */}
