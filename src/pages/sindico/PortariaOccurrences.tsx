@@ -10,10 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Clock, Search, Trash2, Settings, Plus, GripVertical, X } from "lucide-react";
+import { CheckCircle2, Clock, Search, Trash2, Settings, Plus, GripVertical, X, AlertTriangle, ClipboardList, ArrowUpRight } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -135,7 +136,6 @@ export default function SindicoPortariaOccurrences() {
         .limit(1);
       if (error || (data && data.length > 0)) return;
 
-      // Insert default categories
       await supabase.from("porter_occurrence_categories").insert(
         DEFAULT_CATEGORIES.map((name, idx) => ({
           condominium_id: selectedCondominium,
@@ -165,7 +165,6 @@ export default function SindicoPortariaOccurrences() {
       const { data, error } = await query;
       if (error) throw error;
 
-      // Fetch resolved_by names from profiles
       const resolvedByIds = [...new Set((data || []).map((o) => o.resolved_by).filter(Boolean))] as string[];
       let profileMap: Record<string, string> = {};
       if (resolvedByIds.length > 0) {
@@ -289,13 +288,37 @@ export default function SindicoPortariaOccurrences() {
   };
 
   const openCount = occurrences.filter((o) => o.status === "aberta").length;
+  const resolvedCount = occurrences.filter((o) => o.status === "resolvida").length;
+
+  const statCards = [
+    {
+      title: "Em Aberto",
+      value: openCount,
+      icon: Clock,
+      gradient: "from-amber-500 to-orange-500",
+    },
+    {
+      title: "Resolvidas",
+      value: resolvedCount,
+      icon: CheckCircle2,
+      gradient: "from-accent to-emerald-600",
+    },
+    {
+      title: "Total",
+      value: occurrences.length,
+      icon: ClipboardList,
+      gradient: "from-primary to-blue-600",
+    },
+  ];
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="space-y-8 animate-fade-up">
+
+        {/* Header */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground flex items-center gap-3">
+            <h1 className="font-display text-3xl font-bold text-foreground flex items-center gap-3">
               Ocorrências da Portaria
               {openCount > 0 && (
                 <Badge variant="destructive" className="text-xs">
@@ -303,90 +326,157 @@ export default function SindicoPortariaOccurrences() {
                 </Badge>
               )}
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground mt-1">
               Visualize e gerencie as ocorrências registradas pelos porteiros
             </p>
           </div>
           {selectedCondominium && (
-            <Button variant="outline" className="gap-2" onClick={() => setCategoriesDialogOpen(true)}>
+            <Button variant="outline" className="gap-2 shrink-0" onClick={() => setCategoriesDialogOpen(true)}>
               <Settings className="w-4 h-4" /> Categorias
             </Button>
           )}
         </div>
 
+        {/* Stat Cards */}
+        {selectedCondominium && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 md:gap-4">
+            {statCards.map((stat, index) => (
+              <Card key={index} className="bg-card border-border shadow-card hover:shadow-elevated transition-all duration-300 relative group">
+                <CardContent className="p-3 sm:p-4 md:p-5">
+                  <div className="flex items-center gap-3 sm:flex-col sm:items-start">
+                    <div className={`w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-lg shrink-0`}>
+                      <stat.icon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0 sm:mt-3 sm:w-full">
+                      {isLoading ? (
+                        <Skeleton className="h-6 sm:h-8 w-10 sm:w-16 mb-1" />
+                      ) : (
+                        <p className="font-display text-lg sm:text-2xl md:text-3xl font-bold text-foreground">{stat.value}</p>
+                      )}
+                      <p className="text-[11px] sm:text-xs md:text-sm text-muted-foreground leading-tight">{stat.title}</p>
+                    </div>
+                  </div>
+                  <ArrowUpRight className="hidden sm:block w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors absolute top-3 right-3 md:top-4 md:right-4" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
         {/* Filters */}
-        <div className="flex flex-wrap gap-3 items-center">
-          {condominiums.length > 1 && (
-            <Select value={selectedCondominium} onValueChange={setSelectedCondominium}>
-              <SelectTrigger className="w-[220px]"><SelectValue placeholder="Selecionar condomínio" /></SelectTrigger>
-              <SelectContent>
-                {condominiums.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          )}
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos status</SelectItem>
-              <SelectItem value="aberta">Abertas</SelectItem>
-              <SelectItem value="resolvida">Resolvidas</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={filterCategory} onValueChange={setFilterCategory}>
-            <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas categorias</SelectItem>
-              {categories.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <div className="relative flex-1 min-w-[200px]">
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <h2 className="font-display text-lg font-semibold text-foreground flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-primary" />
+              Ocorrências
+            </h2>
+            <div className="flex flex-wrap items-center gap-2">
+              {condominiums.length > 1 && (
+                <Select value={selectedCondominium} onValueChange={setSelectedCondominium}>
+                  <SelectTrigger className="w-[200px]"><SelectValue placeholder="Selecionar condomínio" /></SelectTrigger>
+                  <SelectContent>
+                    {condominiums.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
+              <Select value={filterCategory} onValueChange={setFilterCategory}>
+                <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas categorias</SelectItem>
+                  {categories.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <div className="flex items-center gap-1 p-1 bg-muted rounded-lg">
+                {[
+                  { value: "all", label: "Todas" },
+                  { value: "aberta", label: "Abertas" },
+                  { value: "resolvida", label: "Resolvidas" },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setFilterStatus(opt.value)}
+                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                      filterStatus === opt.value
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input className="pl-9" placeholder="Buscar ocorrência..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            <Input className="pl-9" placeholder="Buscar por título ou descrição..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
         </div>
 
         {/* List */}
         {!selectedCondominium ? (
-          <Card><CardContent className="py-12 text-center text-muted-foreground">Selecione um condomínio para visualizar as ocorrências.</CardContent></Card>
+          <Card>
+            <CardContent className="py-16 text-center">
+              <ClipboardList className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground">Selecione um condomínio para visualizar as ocorrências.</p>
+            </CardContent>
+          </Card>
         ) : isLoading ? (
-          <Card><CardContent className="py-12 text-center text-muted-foreground">Carregando...</CardContent></Card>
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}
+          </div>
         ) : filteredOccurrences.length === 0 ? (
-          <Card><CardContent className="py-12 text-center text-muted-foreground">Nenhuma ocorrência encontrada.</CardContent></Card>
+          <Card>
+            <CardContent className="py-16 text-center">
+              <CheckCircle2 className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground">Nenhuma ocorrência encontrada.</p>
+            </CardContent>
+          </Card>
         ) : (
           <div className="space-y-3">
             {filteredOccurrences.map((occ) => (
-              <Card key={occ.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
-                  <div className="flex flex-col md:flex-row md:items-center gap-3">
-                    <div className="flex items-start gap-3 flex-1">
-                      {occ.status === "aberta" ? (
-                        <Clock className="w-5 h-5 text-yellow-500 mt-0.5 shrink-0" />
-                      ) : (
-                        <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
-                      )}
+              <Card key={occ.id} className="bg-card border-border shadow-card hover:shadow-elevated transition-all duration-300">
+                <CardContent className="p-4 md:p-5">
+                  <div className="flex flex-col md:flex-row md:items-center gap-4">
+                    <div className="flex items-start gap-4 flex-1">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                        occ.status === "aberta"
+                          ? "bg-gradient-to-br from-amber-500 to-orange-500"
+                          : "bg-gradient-to-br from-accent to-emerald-600"
+                      }`}>
+                        {occ.status === "aberta"
+                          ? <Clock className="w-5 h-5 text-white" />
+                          : <CheckCircle2 className="w-5 h-5 text-white" />
+                        }
+                      </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
                           <h3 className="font-semibold text-foreground">{occ.title}</h3>
                           {getPriorityBadge(occ.priority)}
                           <Badge variant="outline">{occ.category}</Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{occ.description}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-sm text-muted-foreground line-clamp-2">{occ.description}</p>
+                        <p className="text-xs text-muted-foreground mt-1.5">
                           {format(new Date(occ.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                         </p>
-                        {occ.resolution_notes && (
-                          <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                            Resolução: {occ.resolution_notes}
-                          </p>
-                        )}
-                        {occ.status === "resolvida" && occ.resolved_by_name && (
-                          <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3 text-green-500" />
-                            Finalizado por: <span className="font-medium text-foreground">{occ.resolved_by_name}</span>
-                            {occ.resolved_at && (
-                              <span>· {format(new Date(occ.resolved_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
+                        {occ.status === "resolvida" && (
+                          <div className="mt-2 space-y-0.5">
+                            {occ.resolved_by_name && (
+                              <p className="text-xs text-muted-foreground">
+                                Finalizado por:{" "}
+                                <span className="font-medium text-foreground">{occ.resolved_by_name}</span>
+                                {occ.resolved_at && (
+                                  <> · {format(new Date(occ.resolved_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</>
+                                )}
+                              </p>
                             )}
-                          </p>
+                            {occ.resolution_notes && (
+                              <p className="text-xs text-muted-foreground">
+                                Resolução: {occ.resolution_notes}
+                              </p>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -465,7 +555,6 @@ export default function SindicoPortariaOccurrences() {
               <DialogTitle>Gerenciar Categorias</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              {/* Add new category */}
               <div className="flex gap-2">
                 <Input
                   placeholder="Nome da nova categoria..."
@@ -487,7 +576,6 @@ export default function SindicoPortariaOccurrences() {
                 </Button>
               </div>
 
-              {/* Category list */}
               <div className="space-y-2 max-h-72 overflow-y-auto">
                 {allCategories.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">Nenhuma categoria cadastrada.</p>
