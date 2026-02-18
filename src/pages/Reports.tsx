@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
+import SubscriptionGate from "@/components/sindico/SubscriptionGate";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -444,6 +445,7 @@ const Reports = () => {
       <Helmet>
         <title>Relatórios | CondoManager</title>
       </Helmet>
+      <SubscriptionGate>
       <div className="space-y-4 md:space-y-6 animate-fade-up">
         <SindicoBreadcrumbs items={[{ label: "Relatórios" }]} />
         {/* Header */}
@@ -740,6 +742,7 @@ const Reports = () => {
         </Card>
 
       </div>
+      </SubscriptionGate>
     </DashboardLayout>
   );
 };

@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
+import SubscriptionGate from "@/components/sindico/SubscriptionGate";
 import TrialBanner from "@/components/sindico/TrialBanner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -414,6 +415,7 @@ export default function PartyHall() {
 
   return (
     <DashboardLayout>
+      <SubscriptionGate>
       <div className="flex-1 space-y-4 p-4 md:p-6 lg:p-8 pt-6">
         <SindicoBreadcrumbs items={[{ label: "Salão de Festas" }]} />
         <TrialBanner />
@@ -621,6 +623,7 @@ export default function PartyHall() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
+      </SubscriptionGate>
     </DashboardLayout>
   );
 }
