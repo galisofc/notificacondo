@@ -438,71 +438,60 @@ export default function SindicoPortariaOccurrences() {
             {filteredOccurrences.map((occ) => (
               <Card key={occ.id} className="bg-card border-border shadow-card hover:shadow-elevated transition-all duration-300">
                 <CardContent className="p-4 md:p-5">
-                  <div className="flex flex-col md:flex-row md:items-center gap-4">
-                    <div className="flex items-start gap-4 flex-1">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                        occ.status === "aberta"
-                          ? "bg-gradient-to-br from-amber-500 to-orange-500"
-                          : "bg-gradient-to-br from-accent to-emerald-600"
-                      }`}>
-                        {occ.status === "aberta"
-                          ? <Clock className="w-5 h-5 text-white" />
-                          : <CheckCircle2 className="w-5 h-5 text-white" />
-                        }
-                      </div>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <div className="flex items-center gap-2 flex-wrap mb-1.5">
                           <h3 className="font-semibold text-foreground">{occ.title}</h3>
                           {getPriorityBadge(occ.priority)}
                           <Badge variant="outline">{occ.category}</Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground line-clamp-2">{occ.description}</p>
-                        <p className="text-xs text-muted-foreground mt-1.5">
+                        <p className="text-sm text-muted-foreground">{occ.description}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
                           {format(new Date(occ.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                         </p>
-                        {occ.status === "resolvida" && (
-                          <div className="mt-2 space-y-0.5">
-                            {occ.resolved_by_name && (
-                              <p className="text-xs text-muted-foreground">
-                                Finalizado por:{" "}
-                                <span className="font-medium text-foreground">{occ.resolved_by_name}</span>
-                                {occ.resolved_at && (
-                                  <> · {format(new Date(occ.resolved_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</>
-                                )}
-                              </p>
-                            )}
-                            {occ.resolution_notes && (
-                              <p className="text-xs text-muted-foreground">
-                                Resolução: {occ.resolution_notes}
-                              </p>
-                            )}
+                        {occ.status === "resolvida" && occ.resolution_notes && (
+                          <p className="text-sm text-muted-foreground mt-1.5">
+                            Resolução: <span className="font-medium text-foreground">{occ.resolution_notes}</span>
+                          </p>
+                        )}
+                        {occ.status === "resolvida" && occ.resolved_by_name && (
+                          <div className="flex items-center gap-1.5 mt-2">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-accent shrink-0" />
+                            <p className="text-xs text-muted-foreground">
+                              Finalizado por:{" "}
+                              <span className="font-semibold text-foreground">{occ.resolved_by_name}</span>
+                              {occ.resolved_at && (
+                                <> · {format(new Date(occ.resolved_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</>
+                              )}
+                            </p>
                           </div>
                         )}
                       </div>
-                    </div>
-                    <div className="flex gap-2 shrink-0">
-                      {occ.status === "aberta" && (
+                      <div className="flex gap-2 shrink-0">
+                        {occ.status === "aberta" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setResolveOccurrenceId(occ.id);
+                              setResolveDialogOpen(true);
+                            }}
+                          >
+                            <CheckCircle2 className="w-4 h-4 mr-1" /> Finalizar
+                          </Button>
+                        )}
                         <Button
-                          variant="outline"
+                          variant="destructive"
                           size="sm"
                           onClick={() => {
-                            setResolveOccurrenceId(occ.id);
-                            setResolveDialogOpen(true);
+                            setDeleteOccurrenceId(occ.id);
+                            setDeleteDialogOpen(true);
                           }}
                         >
-                          <CheckCircle2 className="w-4 h-4 mr-1" /> Finalizar
+                          <Trash2 className="w-4 h-4 mr-1" /> Excluir
                         </Button>
-                      )}
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => {
-                          setDeleteOccurrenceId(occ.id);
-                          setDeleteDialogOpen(true);
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4 mr-1" /> Excluir
-                      </Button>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
