@@ -17,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Clock, Search, Trash2, Settings, Plus, GripVertical, X, AlertTriangle, ClipboardList, ArrowUpRight, CalendarIcon } from "lucide-react";
+import SubscriptionGate from "@/components/sindico/SubscriptionGate";
 import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -325,6 +326,7 @@ export default function SindicoPortariaOccurrences() {
 
   return (
     <DashboardLayout>
+      <SubscriptionGate>
       <div className="space-y-8 animate-fade-up">
 
         {/* Header */}
@@ -659,6 +661,7 @@ export default function SindicoPortariaOccurrences() {
           </DialogContent>
         </Dialog>
       </div>
+      </SubscriptionGate>
     </DashboardLayout>
   );
 }

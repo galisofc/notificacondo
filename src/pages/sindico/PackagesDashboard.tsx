@@ -26,6 +26,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
+import SubscriptionGate from "@/components/sindico/SubscriptionGate";
 import {
   BarChart,
   Bar,
@@ -288,6 +289,7 @@ const PackagesDashboard = () => {
         <meta name="description" content="Dashboard de estatísticas de encomendas" />
       </Helmet>
 
+      <SubscriptionGate>
       <div className="space-y-6 animate-fade-up">
         <SindicoBreadcrumbs items={[{ label: "Encomendas" }]} />
 
@@ -541,6 +543,7 @@ const PackagesDashboard = () => {
           </Card>
         )}
       </div>
+      </SubscriptionGate>
     </DashboardLayout>
   );
 };

@@ -6,6 +6,7 @@ import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import BlockApartmentDisplay from "@/components/common/BlockApartmentDisplay";
+import SubscriptionGate from "@/components/sindico/SubscriptionGate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -631,6 +632,7 @@ const Occurrences = () => {
       <Helmet>
         <title>Ocorrências | CondoManager</title>
       </Helmet>
+      <SubscriptionGate>
       <div className="space-y-4 md:space-y-6 animate-fade-up">
         <SindicoBreadcrumbs items={[{ label: "Ocorrências" }]} />
         <div>
@@ -1292,6 +1294,7 @@ const Occurrences = () => {
           </TabsContent>
         </Tabs>
       </div>
+      </SubscriptionGate>
     </DashboardLayout>
   );
 };
