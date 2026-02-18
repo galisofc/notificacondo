@@ -167,6 +167,7 @@ function SidebarNavigation() {
   const [openOccurrences, setOpenOccurrences] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [pendingPackages, setPendingPackages] = useState(0);
+  const [openPorterOccurrences, setOpenPorterOccurrences] = useState(0);
   const [condoIds, setCondoIds] = useState<string[]>([]);
   const [porteiroCondoIds, setPorteiroCondoIds] = useState<string[]>([]);
   const prevPendingDefensesRef = useRef<number>(0);
@@ -443,6 +444,29 @@ function SidebarNavigation() {
     fetchPendingPackages();
   }, [user, role]);
 
+  // Fetch open porter occurrences for sindico
+  useEffect(() => {
+    if (!user || role !== "sindico" || condoIds.length === 0) return;
+
+    const fetchPorterOccurrences = async () => {
+      const { count } = await supabase
+        .from("porter_occurrences")
+        .select("*", { count: "exact", head: true })
+        .in("condominium_id", condoIds)
+        .eq("status", "aberta");
+      setOpenPorterOccurrences(count || 0);
+    };
+
+    fetchPorterOccurrences();
+
+    const channel = supabase
+      .channel("porter-occurrences-badge")
+      .on("postgres_changes", { event: "*", schema: "public", table: "porter_occurrences" }, fetchPorterOccurrences)
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user, role, condoIds]);
+
   // Realtime subscription for packages (porteiro)
   useEffect(() => {
     if (!user || role !== "porteiro" || porteiroCondoIds.length === 0) return;
@@ -522,7 +546,7 @@ function SidebarNavigation() {
       title: "Portaria",
       icon: ClipboardList,
       items: [
-        { title: "Ocorrências Portaria", url: "/sindico/portaria/ocorrencias", icon: AlertTriangle },
+        { title: "Ocorrências Portaria", url: "/sindico/portaria/ocorrencias", icon: AlertTriangle, badge: openPorterOccurrences },
         { title: "Passagens de Plantão", url: "/sindico/portaria/plantoes", icon: ClipboardCheck },
         { title: "Checklist Portaria", url: "/sindico/portaria/checklist", icon: Cog },
       ],
