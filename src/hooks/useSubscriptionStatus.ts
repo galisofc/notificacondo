@@ -1,11 +1,10 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface SubscriptionStatus {
-  isActive: boolean;       // trial válido OU plano pago ativo OU vitalício
+  isActive: boolean;
   isLifetime: boolean;
   isTrial: boolean;
   isTrialExpired: boolean;
@@ -17,23 +16,13 @@ export interface SubscriptionStatus {
 export function useSubscriptionStatus(condominiumId?: string | null): SubscriptionStatus {
   const { user } = useAuth();
   const { isPorteiro, isSuperAdmin, loading: roleLoading } = useUserRole();
-  const queryClient = useQueryClient();
-  const queryKey = ["subscription-status", user?.id, condominiumId, isPorteiro, isSuperAdmin];
-
-  // Invalida o cache quando condominiumId ou role mudarem
-  useEffect(() => {
-    if (!roleLoading) {
-      queryClient.invalidateQueries({ queryKey });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [condominiumId, user?.id, isSuperAdmin, isPorteiro, roleLoading]);
 
   const { data, isLoading } = useQuery({
-    queryKey,
+    queryKey: ["subscription-status", user?.id, condominiumId, isPorteiro, isSuperAdmin],
     queryFn: async () => {
       if (!user) return null;
 
-      // Super admin tem acesso total — retorna subscription "fake" ativa vitalícia
+      // Super admin: acesso total sempre
       if (isSuperAdmin) {
         return {
           is_lifetime: true,
@@ -45,22 +34,12 @@ export function useSubscriptionStatus(condominiumId?: string | null): Subscripti
         };
       }
 
-      let query = supabase
-        .from("subscriptions")
-        .select(`
-          id,
-          is_trial,
-          is_lifetime,
-          active,
-          trial_ends_at,
-          plan,
-          condominium_id
-        `);
+      // Busca direto nas subscriptions — o RLS já filtra pelo papel do usuário
+      // (síndico: via condominiums.owner_id; porteiro: via user_condominiums)
+      // Para porteiro, busca pelo condomínio ao qual está vinculado
+      let rows: any[] | null = null;
 
-      if (condominiumId) {
-        query = query.eq("condominium_id", condominiumId);
-      } else if (isPorteiro) {
-        // Porteiro: busca via user_condominiums
+      if (isPorteiro) {
         const { data: userCondos } = await supabase
           .from("user_condominiums")
           .select("condominium_id")
@@ -68,24 +47,30 @@ export function useSubscriptionStatus(condominiumId?: string | null): Subscripti
 
         const ids = userCondos?.map((uc) => uc.condominium_id) || [];
         if (ids.length === 0) return null;
-        query = query.in("condominium_id", ids);
-      } else {
-        // Síndico: busca pelo owner_id
-        const { data: condos } = await supabase
-          .from("condominiums")
-          .select("id")
-          .eq("owner_id", user.id);
 
-        const ids = condos?.map((c) => c.id) || [];
-        if (ids.length === 0) return null;
-        query = query.in("condominium_id", ids);
+        const { data: subs } = await supabase
+          .from("subscriptions")
+          .select("id, is_trial, is_lifetime, active, trial_ends_at, plan, condominium_id")
+          .in("condominium_id", ids);
+        rows = subs;
+      } else if (condominiumId) {
+        // Síndico com condomínio específico selecionado
+        const { data: subs } = await supabase
+          .from("subscriptions")
+          .select("id, is_trial, is_lifetime, active, trial_ends_at, plan, condominium_id")
+          .eq("condominium_id", condominiumId);
+        rows = subs;
+      } else {
+        // Síndico sem filtro — o RLS retorna apenas as subscriptions dos seus condomínios
+        const { data: subs } = await supabase
+          .from("subscriptions")
+          .select("id, is_trial, is_lifetime, active, trial_ends_at, plan, condominium_id");
+        rows = subs;
       }
 
-      // Busca todas as subscriptions do condomínio
-      const { data: rows, error } = await query;
-      if (error || !rows || rows.length === 0) return null;
+      if (!rows || rows.length === 0) return null;
 
-      // Prioridade: vitalício > pago ativo > trial ativo > fallback
+      // Prioridade: vitalício > pago ativo > trial válido > fallback
       const lifetime = rows.find((r) => r.is_lifetime === true);
       if (lifetime) return lifetime;
 
@@ -103,15 +88,14 @@ export function useSubscriptionStatus(condominiumId?: string | null): Subscripti
       });
       if (validTrial) return validTrial;
 
-      const anyActive = rows.find((r) => r.active === true);
-      return anyActive ?? rows[0];
+      return rows.find((r) => r.active === true) ?? rows[0];
     },
-    // Aguarda o role carregar antes de executar para evitar resultado incorreto em cache
+    // Aguarda o role estar carregado para evitar cache com resultado incorreto
     enabled: !!user && !roleLoading,
-    staleTime: 1000 * 60, // 1 minuto
+    staleTime: 30 * 1000, // 30 segundos
   });
 
-  // Enquanto o role não carregou, trata como loading para não bloquear antes da hora
+  // Enquanto o role ou a query carregam, mostra skeleton (não bloqueia)
   if (isLoading || roleLoading) {
     return {
       isActive: false,
