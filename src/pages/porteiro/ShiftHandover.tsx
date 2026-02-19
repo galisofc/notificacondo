@@ -43,7 +43,9 @@ export default function ShiftHandover() {
   const [condominiums, setCondominiums] = useState<{ id: string; name: string }[]>([]);
   const [selectedCondominium, setSelectedCondominium] = useState<string>("");
   const [incomingPorterName, setIncomingPorterName] = useState("");
+  const [incomingPorterSelectValue, setIncomingPorterSelectValue] = useState("");
   const [generalObservations, setGeneralObservations] = useState("");
+  const [condominiumPorters, setCondominiumPorters] = useState<{ id: string; full_name: string }[]>([]);
   const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
   const [expandedHistory, setExpandedHistory] = useState<string | null>(null);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
@@ -84,6 +86,31 @@ export default function ShiftHandover() {
     };
     fetchCondominiums();
   }, [user]);
+
+  // Fetch porters of selected condominium
+  useEffect(() => {
+    const fetchPorters = async () => {
+      if (!selectedCondominium || !user) return;
+      const { data } = await supabase
+        .from("user_condominiums")
+        .select("user_id, profiles:user_id(full_name)")
+        .eq("condominium_id", selectedCondominium);
+
+      if (data) {
+        const porters = data
+          .map((d: any) => ({
+            id: d.user_id,
+            full_name: d.profiles?.full_name || "",
+          }))
+          .filter((p) => p.id !== user.id && p.full_name);
+        setCondominiumPorters(porters);
+      }
+    };
+    fetchPorters();
+    // Reset incoming porter when condominium changes
+    setIncomingPorterName("");
+    setIncomingPorterSelectValue("");
+  }, [selectedCondominium, user]);
 
   // Fetch checklist templates
   const { data: templates = [] } = useQuery({
@@ -295,9 +322,49 @@ export default function ShiftHandover() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div>
-                    <Label>Nome do porteiro que está assumindo</Label>
-                    <Input value={incomingPorterName} onChange={(e) => setIncomingPorterName(e.target.value)} placeholder="Nome completo do próximo porteiro" />
+                  <div className="space-y-2">
+                    <Label>Porteiro que está assumindo</Label>
+                    {condominiumPorters.length > 0 ? (
+                      <>
+                        <Select
+                          value={incomingPorterSelectValue}
+                          onValueChange={(val) => {
+                            setIncomingPorterSelectValue(val);
+                            if (val !== "__outro__") {
+                              setIncomingPorterName(val);
+                            } else {
+                              setIncomingPorterName("");
+                            }
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o porteiro..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {condominiumPorters.map((p) => (
+                              <SelectItem key={p.id} value={p.full_name}>
+                                {p.full_name}
+                              </SelectItem>
+                            ))}
+                            <SelectItem value="__outro__">Outro...</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {incomingPorterSelectValue === "__outro__" && (
+                          <Input
+                            value={incomingPorterName}
+                            onChange={(e) => setIncomingPorterName(e.target.value)}
+                            placeholder="Digite o nome do próximo porteiro"
+                            autoFocus
+                          />
+                        )}
+                      </>
+                    ) : (
+                      <Input
+                        value={incomingPorterName}
+                        onChange={(e) => setIncomingPorterName(e.target.value)}
+                        placeholder="Nome completo do próximo porteiro"
+                      />
+                    )}
                   </div>
                 </CardContent>
               </Card>
