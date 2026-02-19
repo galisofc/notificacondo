@@ -393,13 +393,22 @@ serve(async (req) => {
 
     // Update package notification status
     const successCount = results.filter(r => r.success).length;
+
+    // Fetch current notification_count to accumulate (not overwrite)
+    const { data: currentPkg } = await supabase
+      .from("packages")
+      .select("notification_count")
+      .eq("id", package_id)
+      .single();
+
+    const previousCount = currentPkg?.notification_count || 0;
     
     await supabase
       .from("packages")
       .update({
         notification_sent: successCount > 0,
         notification_sent_at: new Date().toISOString(),
-        notification_count: successCount,
+        notification_count: previousCount + successCount,
       })
       .eq("id", package_id);
 
