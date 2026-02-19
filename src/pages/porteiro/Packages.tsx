@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Package, PackagePlus, Search, PackageCheck, X, Building2, Loader2 } from "lucide-react";
+import { Package, PackagePlus, Search, PackageCheck, X, Building2, Loader2, CheckCircle2 } from "lucide-react";
 import SubscriptionGate from "@/components/sindico/SubscriptionGate";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { PackageStatus } from "@/lib/packageConstants";
 import { getSignedPackagePhotoUrl } from "@/lib/packageStorage";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 // Extended type for packages with signed URLs
 interface PackageWithSignedUrl extends PackageType {
@@ -52,6 +53,8 @@ export default function PorteiroPackages() {
   const [isPickupDialogOpen, setIsPickupDialogOpen] = useState(false);
   const [detailsPackage, setDetailsPackage] = useState<PackageWithSignedUrl | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [isNotificationSuccessOpen, setIsNotificationSuccessOpen] = useState(false);
+  const [notificationSuccessCount, setNotificationSuccessCount] = useState(0);
 
   // Fetch porter's condominiums
   useEffect(() => {
@@ -274,7 +277,7 @@ export default function PorteiroPackages() {
 
   const handleResendNotification = async (pkg: PackageWithSignedUrl) => {
     try {
-      const { error } = await supabase.functions.invoke("notify-package-arrival", {
+      const { data, error } = await supabase.functions.invoke("notify-package-arrival", {
         body: {
           package_id: pkg.id,
           apartment_id: pkg.apartment_id,
@@ -285,10 +288,9 @@ export default function PorteiroPackages() {
 
       if (error) throw error;
 
-      toast({
-        title: "Notificação reenviada!",
-        description: "O morador foi notificado via WhatsApp.",
-      });
+      const count = data?.notifications_sent ?? 1;
+      setNotificationSuccessCount(count);
+      setIsNotificationSuccessOpen(true);
 
       if (selectedApartment) {
         await fetchPackages(selectedApartment.id);
@@ -523,6 +525,31 @@ export default function PorteiroPackages() {
         package_={detailsPackage}
         showPickupCode={false}
       />
+
+      {/* Notification Success Modal */}
+      <Dialog open={isNotificationSuccessOpen} onOpenChange={setIsNotificationSuccessOpen}>
+        <DialogContent className="sm:max-w-sm text-center">
+          <DialogHeader>
+            <div className="flex justify-center mb-2">
+              <div className="rounded-full bg-primary/10 p-4">
+                <CheckCircle2 className="w-10 h-10 text-primary" />
+              </div>
+            </div>
+            <DialogTitle className="text-center text-lg">Notificação enviada!</DialogTitle>
+            <DialogDescription className="text-center">
+              {notificationSuccessCount > 0
+                ? `${notificationSuccessCount} morador(es) foram notificados via WhatsApp com sucesso.`
+                : "O morador foi notificado via WhatsApp com sucesso."}
+            </DialogDescription>
+          </DialogHeader>
+          <Button
+            className="w-full mt-2"
+            onClick={() => setIsNotificationSuccessOpen(false)}
+          >
+            OK
+          </Button>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
