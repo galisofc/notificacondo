@@ -394,7 +394,7 @@ serve(async (req) => {
     // Update package notification status
     const successCount = results.filter(r => r.success).length;
 
-    // Fetch current notification_count to accumulate (not overwrite)
+    // Fetch current notification_count to accumulate send attempts (not overwrite)
     const { data: currentPkg } = await supabase
       .from("packages")
       .select("notification_count")
@@ -402,13 +402,15 @@ serve(async (req) => {
       .single();
 
     const previousCount = currentPkg?.notification_count || 0;
+    // Increment by 1 per send attempt (not per resident)
+    const newCount = successCount > 0 ? previousCount + 1 : previousCount;
     
     await supabase
       .from("packages")
       .update({
         notification_sent: successCount > 0,
         notification_sent_at: new Date().toISOString(),
-        notification_count: previousCount + successCount,
+        notification_count: newCount,
       })
       .eq("id", package_id);
 

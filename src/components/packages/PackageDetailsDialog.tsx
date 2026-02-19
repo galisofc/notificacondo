@@ -248,8 +248,8 @@ export function PackageDetailsDialog({
                 )}
                 {package_.notification_count !== null && package_.notification_count > 0 && (
                   <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
-                    <User className="w-3 h-3" />
-                    {package_.notification_count} morador(es) notificado(s)
+                    <RefreshCw className="w-3 h-3" />
+                    Enviada {package_.notification_count} {package_.notification_count === 1 ? "vez" : "vezes"}
                   </p>
                 )}
               </div>
