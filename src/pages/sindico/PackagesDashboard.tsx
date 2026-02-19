@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+
 import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,6 +31,7 @@ import SubscriptionGate from "@/components/sindico/SubscriptionGate";
 import {
   BarChart,
   Bar,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -37,7 +39,6 @@ import {
   ResponsiveContainer,
   PieChart,
   Pie,
-  Cell,
   Legend,
   LineChart,
   Line,
@@ -545,8 +546,22 @@ const PackagesDashboard = () => {
                     }}
                   />
                   <Legend />
-                  <Bar dataKey="pendente" name="Pendentes" fill={COLORS.pendente} stackId="a" />
-                  <Bar dataKey="retirada" name="Retiradas" fill={COLORS.retirada} stackId="a" />
+                  <Bar dataKey="pendente" name="Pendentes" stackId="a">
+                    {blockStats.map((_, index) => (
+                      <Cell
+                        key={`pendente-${index}`}
+                        fill={index % 2 === 0 ? "hsl(38, 92%, 50%)" : "hsl(38, 92%, 62%)"}
+                      />
+                    ))}
+                  </Bar>
+                  <Bar dataKey="retirada" name="Retiradas" stackId="a">
+                    {blockStats.map((_, index) => (
+                      <Cell
+                        key={`retirada-${index}`}
+                        fill={index % 2 === 0 ? "hsl(142, 71%, 35%)" : "hsl(142, 71%, 48%)"}
+                      />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             )}
