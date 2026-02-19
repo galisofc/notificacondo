@@ -80,57 +80,183 @@ const COLORS = {
   retirada: "hsl(var(--chart-2))",
 };
 
+interface ServerStats {
+  total: number;
+  pendente: number;
+  retirada: number;
+}
+
+interface MonthlyServerStats {
+  month: string;
+  monthLabel: string;
+  received: number;
+  pickedUp: number;
+}
+
 const PackagesDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   
-  const [packages, setPackages] = useState<PackageWithRelations[]>([]);
   const [condominiums, setCondominiums] = useState<Condominium[]>([]);
   const [selectedCondominium, setSelectedCondominium] = useState<string>("all");
   const [loading, setLoading] = useState(true);
+  const [statusStats, setStatusStats] = useState<ServerStats>({ total: 0, pendente: 0, retirada: 0 });
+  const [blockStats, setBlockStats] = useState<BlockStats[]>([]);
+  const [monthlyStats, setMonthlyStats] = useState<MonthlyServerStats[]>([]);
+  const [avgPickupTime, setAvgPickupTime] = useState<number | null>(null);
 
+  // Fetch condominiums once
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchCondominiums = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from("condominiums")
+        .select("id, name")
+        .eq("owner_id", user.id)
+        .order("name");
+      setCondominiums(data || []);
+    };
+    fetchCondominiums();
+  }, [user]);
+
+  // Fetch stats whenever condominium filter changes
+  useEffect(() => {
+    const fetchStats = async () => {
       if (!user) return;
 
+      setLoading(true);
       try {
-        // Fetch condominiums owned by user
-        const { data: condosData } = await supabase
-          .from("condominiums")
-          .select("id, name")
-          .eq("owner_id", user.id)
-          .order("name");
+        const twelveMonthsAgo = subMonths(new Date(), 12).toISOString();
 
-        setCondominiums(condosData || []);
-
-        const condoIds = condosData?.map((c) => c.id) || [];
+        // Determine which condominium IDs to use
+        let condoIds: string[] = [];
+        if (selectedCondominium === "all") {
+          const { data: condosData } = await supabase
+            .from("condominiums")
+            .select("id")
+            .eq("owner_id", user.id);
+          condoIds = condosData?.map((c) => c.id) || [];
+        } else {
+          condoIds = [selectedCondominium];
+        }
 
         if (condoIds.length === 0) {
-          setPackages([]);
+          setStatusStats({ total: 0, pendente: 0, retirada: 0 });
+          setBlockStats([]);
+          setMonthlyStats([]);
+          setAvgPickupTime(null);
           setLoading(false);
           return;
         }
 
-        // Fetch all packages for these condominiums (last 12 months)
-        const twelveMonthsAgo = subMonths(new Date(), 12).toISOString();
-        
-        const { data: packagesData } = await supabase
-          .from("packages")
-          .select(`
-            id,
-            status,
-            received_at,
-            picked_up_at,
-            block_id,
-            condominium_id,
-            block:blocks(name),
-            condominium:condominiums(name)
-          `)
-          .in("condominium_id", condoIds)
-          .gte("received_at", twelveMonthsAgo)
-          .order("received_at", { ascending: false });
+        // Server-side counts to bypass 1000-row limit
+        const [totalRes, pendenteRes, retiradaRes] = await Promise.all([
+          supabase
+            .from("packages")
+            .select("*", { count: "exact", head: true })
+            .in("condominium_id", condoIds)
+            .gte("received_at", twelveMonthsAgo),
+          supabase
+            .from("packages")
+            .select("*", { count: "exact", head: true })
+            .in("condominium_id", condoIds)
+            .eq("status", "pendente")
+            .gte("received_at", twelveMonthsAgo),
+          supabase
+            .from("packages")
+            .select("*", { count: "exact", head: true })
+            .in("condominium_id", condoIds)
+            .eq("status", "retirada")
+            .gte("received_at", twelveMonthsAgo),
+        ]);
 
-        setPackages((packagesData as PackageWithRelations[]) || []);
+        setStatusStats({
+          total: totalRes.count || 0,
+          pendente: pendenteRes.count || 0,
+          retirada: retiradaRes.count || 0,
+        });
+
+        // Block stats: fetch with pagination to bypass 1000-row limit
+        let allPackages: PackageWithRelations[] = [];
+        let offset = 0;
+        const batchSize = 1000;
+        let hasMore = true;
+
+        while (hasMore) {
+          const { data: batch } = await supabase
+            .from("packages")
+            .select("id, status, received_at, picked_up_at, block_id, condominium_id, block:blocks(name), condominium:condominiums(name)")
+            .in("condominium_id", condoIds)
+            .gte("received_at", twelveMonthsAgo)
+            .order("received_at", { ascending: false })
+            .range(offset, offset + batchSize - 1);
+
+          if (batch && batch.length > 0) {
+            allPackages = [...allPackages, ...(batch as PackageWithRelations[])];
+            offset += batchSize;
+            hasMore = batch.length === batchSize;
+          } else {
+            hasMore = false;
+          }
+        }
+
+        // Calculate block stats
+        const blockMap = new Map<string, BlockStats>();
+        allPackages.forEach((pkg) => {
+          const blockName = pkg.block?.name || "Sem bloco";
+          if (!blockMap.has(blockName)) {
+            blockMap.set(blockName, { name: blockName, pendente: 0, retirada: 0, total: 0 });
+          }
+          const s = blockMap.get(blockName)!;
+          s[pkg.status]++;
+          s.total++;
+        });
+        setBlockStats(Array.from(blockMap.values()).sort((a, b) => b.total - a.total));
+
+        // Calculate monthly stats (last 6 months)
+        const now = new Date();
+        const sixMonthsAgo = subMonths(now, 5);
+        const months = eachMonthOfInterval({
+          start: startOfMonth(sixMonthsAgo),
+          end: endOfMonth(now),
+        });
+
+        const monthly = months.map((monthDate) => {
+          const monthStart = startOfMonth(monthDate);
+          const monthEnd = endOfMonth(monthDate);
+
+          const received = allPackages.filter((pkg) => {
+            const d = parseISO(pkg.received_at);
+            return d >= monthStart && d <= monthEnd;
+          }).length;
+
+          const pickedUp = allPackages.filter((pkg) => {
+            if (!pkg.picked_up_at) return false;
+            const d = parseISO(pkg.picked_up_at);
+            return d >= monthStart && d <= monthEnd;
+          }).length;
+
+          return {
+            month: format(monthDate, "yyyy-MM"),
+            monthLabel: format(monthDate, "MMM", { locale: ptBR }),
+            received,
+            pickedUp,
+          };
+        });
+        setMonthlyStats(monthly);
+
+        // Average pickup time
+        const pickedUpPackages = allPackages.filter((pkg) => pkg.status === "retirada" && pkg.picked_up_at);
+        if (pickedUpPackages.length > 0) {
+          const totalHours = pickedUpPackages.reduce((acc, pkg) => {
+            const received = parseISO(pkg.received_at);
+            const pickedUp = parseISO(pkg.picked_up_at!);
+            return acc + (pickedUp.getTime() - received.getTime()) / (1000 * 60 * 60);
+          }, 0);
+          setAvgPickupTime(Math.round(totalHours / pickedUpPackages.length));
+        } else {
+          setAvgPickupTime(null);
+        }
       } catch (error) {
         console.error("Error fetching packages data:", error);
       } finally {
@@ -138,88 +264,8 @@ const PackagesDashboard = () => {
       }
     };
 
-    fetchData();
-  }, [user]);
-
-  // Filter packages by selected condominium
-  const filteredPackages = useMemo(() => {
-    if (selectedCondominium === "all") return packages;
-    return packages.filter((p) => p.condominium_id === selectedCondominium);
-  }, [packages, selectedCondominium]);
-
-  // Calculate stats by status
-  const statusStats = useMemo(() => {
-    const stats = {
-      pendente: 0,
-      retirada: 0,
-      total: 0,
-    };
-
-    filteredPackages.forEach((pkg) => {
-      stats[pkg.status]++;
-      stats.total++;
-    });
-
-    return stats;
-  }, [filteredPackages]);
-
-  // Calculate stats by block
-  const blockStats = useMemo(() => {
-    const blockMap = new Map<string, BlockStats>();
-
-    filteredPackages.forEach((pkg) => {
-      const blockName = pkg.block?.name || "Sem bloco";
-      
-      if (!blockMap.has(blockName)) {
-        blockMap.set(blockName, {
-          name: blockName,
-          pendente: 0,
-          retirada: 0,
-          total: 0,
-        });
-      }
-
-      const stats = blockMap.get(blockName)!;
-      stats[pkg.status]++;
-      stats.total++;
-    });
-
-    return Array.from(blockMap.values()).sort((a, b) => b.total - a.total);
-  }, [filteredPackages]);
-
-  // Calculate monthly history
-  const monthlyStats = useMemo(() => {
-    const now = new Date();
-    const sixMonthsAgo = subMonths(now, 5);
-    
-    const months = eachMonthOfInterval({
-      start: startOfMonth(sixMonthsAgo),
-      end: endOfMonth(now),
-    });
-
-    return months.map((monthDate) => {
-      const monthStart = startOfMonth(monthDate);
-      const monthEnd = endOfMonth(monthDate);
-
-      const monthPackages = filteredPackages.filter((pkg) => {
-        const receivedDate = parseISO(pkg.received_at);
-        return receivedDate >= monthStart && receivedDate <= monthEnd;
-      });
-
-      const pickedUpInMonth = filteredPackages.filter((pkg) => {
-        if (!pkg.picked_up_at) return false;
-        const pickedDate = parseISO(pkg.picked_up_at);
-        return pickedDate >= monthStart && pickedDate <= monthEnd;
-      });
-
-      return {
-        month: format(monthDate, "yyyy-MM"),
-        monthLabel: format(monthDate, "MMM", { locale: ptBR }),
-        received: monthPackages.length,
-        pickedUp: pickedUpInMonth.length,
-      };
-    });
-  }, [filteredPackages]);
+    fetchStats();
+  }, [user, selectedCondominium]);
 
   // Pie chart data
   const pieData = useMemo(() => {
@@ -228,24 +274,6 @@ const PackagesDashboard = () => {
       { name: "Retiradas", value: statusStats.retirada, color: COLORS.retirada },
     ].filter((item) => item.value > 0);
   }, [statusStats]);
-
-  // Average pickup time (in hours)
-  const avgPickupTime = useMemo(() => {
-    const pickedUpPackages = filteredPackages.filter(
-      (pkg) => pkg.status === "retirada" && pkg.picked_up_at
-    );
-
-    if (pickedUpPackages.length === 0) return null;
-
-    const totalHours = pickedUpPackages.reduce((acc, pkg) => {
-      const received = parseISO(pkg.received_at);
-      const pickedUp = parseISO(pkg.picked_up_at!);
-      const hours = (pickedUp.getTime() - received.getTime()) / (1000 * 60 * 60);
-      return acc + hours;
-    }, 0);
-
-    return Math.round(totalHours / pickedUpPackages.length);
-  }, [filteredPackages]);
 
   const StatCard = ({
     title,
@@ -526,7 +554,7 @@ const PackagesDashboard = () => {
         </Card>
 
         {/* Empty State */}
-        {!loading && packages.length === 0 && (
+        {!loading && statusStats.total === 0 && (
           <Card className="bg-card border-border">
             <CardContent className="text-center py-12">
               <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
