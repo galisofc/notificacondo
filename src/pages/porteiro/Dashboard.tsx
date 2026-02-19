@@ -36,15 +36,15 @@ export default function PorteiroDashboard() {
   const [stats, setStats] = useState<Stats>({
     registeredToday: 0,
     totalPending: 0,
-    pickedUpToday: 0,
+    pickedUpToday: 0
   });
   const [loading, setLoading] = useState(true);
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [loadingChart, setLoadingChart] = useState(true);
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("today");
-  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
+  const [dateRange, setDateRange] = useState<{from: Date | undefined;to: Date | undefined;}>({
     from: undefined,
-    to: undefined,
+    to: undefined
   });
 
   // Fetch porter's condominiums
@@ -52,21 +52,21 @@ export default function PorteiroDashboard() {
     const fetchCondominiums = async () => {
       if (!user) return;
 
-      const { data: userCondos } = await supabase
-        .from("user_condominiums")
-        .select("condominium_id")
-        .eq("user_id", user.id);
+      const { data: userCondos } = await supabase.
+      from("user_condominiums").
+      select("condominium_id").
+      eq("user_id", user.id);
 
       if (userCondos) {
         setCondominiumIds(userCondos.map((uc) => uc.condominium_id));
       }
 
       // Fetch user name
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      const { data: profile } = await supabase.
+      from("profiles").
+      select("full_name").
+      eq("user_id", user.id).
+      maybeSingle();
 
       if (profile) {
         setUserName(profile.full_name.split(" ")[0]);
@@ -92,7 +92,7 @@ export default function PorteiroDashboard() {
       case "custom":
         return {
           startDate: dateRange.from ? startOfDay(dateRange.from) : todayStart,
-          endDate: dateRange.to ? endOfDay(dateRange.to) : todayEnd,
+          endDate: dateRange.to ? endOfDay(dateRange.to) : todayEnd
         };
       default:
         return { startDate: todayStart, endDate: todayEnd };
@@ -111,33 +111,33 @@ export default function PorteiroDashboard() {
         const todayEnd = endOfDay(today).toISOString();
 
         // Registered in period (based on filter)
-        const { count: registeredCount } = await supabase
-          .from("packages")
-          .select("*", { count: "exact", head: true })
-          .in("condominium_id", condominiumIds)
-          .gte("received_at", startDate.toISOString())
-          .lte("received_at", endDate.toISOString());
+        const { count: registeredCount } = await supabase.
+        from("packages").
+        select("*", { count: "exact", head: true }).
+        in("condominium_id", condominiumIds).
+        gte("received_at", startDate.toISOString()).
+        lte("received_at", endDate.toISOString());
 
         // Total pending from entire database
-        const { count: pendingCount } = await supabase
-          .from("packages")
-          .select("*", { count: "exact", head: true })
-          .in("condominium_id", condominiumIds)
-          .eq("status", "pendente");
+        const { count: pendingCount } = await supabase.
+        from("packages").
+        select("*", { count: "exact", head: true }).
+        in("condominium_id", condominiumIds).
+        eq("status", "pendente");
 
         // Picked up in period (based on filter)
-        const { count: pickedUpTodayCount } = await supabase
-          .from("packages")
-          .select("*", { count: "exact", head: true })
-          .in("condominium_id", condominiumIds)
-          .eq("status", "retirada")
-          .gte("picked_up_at", startDate.toISOString())
-          .lte("picked_up_at", endDate.toISOString());
+        const { count: pickedUpTodayCount } = await supabase.
+        from("packages").
+        select("*", { count: "exact", head: true }).
+        in("condominium_id", condominiumIds).
+        eq("status", "retirada").
+        gte("picked_up_at", startDate.toISOString()).
+        lte("picked_up_at", endDate.toISOString());
 
         setStats({
           registeredToday: registeredCount || 0,
           totalPending: pendingCount || 0,
-          pickedUpToday: pickedUpTodayCount || 0,
+          pickedUpToday: pickedUpTodayCount || 0
         });
       } catch (error) {
         console.error("Error fetching stats:", error);
@@ -160,20 +160,20 @@ export default function PorteiroDashboard() {
         const days = eachDayOfInterval({ start: startDate, end: endDate });
 
         // Fetch all packages in the period
-        const { data: registeredPackages } = await supabase
-          .from("packages")
-          .select("received_at")
-          .in("condominium_id", condominiumIds)
-          .gte("received_at", startDate.toISOString())
-          .lte("received_at", endDate.toISOString());
+        const { data: registeredPackages } = await supabase.
+        from("packages").
+        select("received_at").
+        in("condominium_id", condominiumIds).
+        gte("received_at", startDate.toISOString()).
+        lte("received_at", endDate.toISOString());
 
-        const { data: pickedUpPackages } = await supabase
-          .from("packages")
-          .select("picked_up_at")
-          .in("condominium_id", condominiumIds)
-          .eq("status", "retirada")
-          .gte("picked_up_at", startDate.toISOString())
-          .lte("picked_up_at", endDate.toISOString());
+        const { data: pickedUpPackages } = await supabase.
+        from("packages").
+        select("picked_up_at").
+        in("condominium_id", condominiumIds).
+        eq("status", "retirada").
+        gte("picked_up_at", startDate.toISOString()).
+        lte("picked_up_at", endDate.toISOString());
 
         // Group by date
         const registeredByDate: Record<string, number> = {};
@@ -198,7 +198,7 @@ export default function PorteiroDashboard() {
             date: dateKey,
             label: format(day, "dd/MM", { locale: ptBR }),
             cadastradas: registeredByDate[dateKey] || 0,
-            retiradas: pickedUpByDate[dateKey] || 0,
+            retiradas: pickedUpByDate[dateKey] || 0
           };
         });
 
@@ -241,12 +241,12 @@ export default function PorteiroDashboard() {
   const chartConfig = {
     cadastradas: {
       label: "Cadastradas",
-      color: "hsl(var(--primary))",
+      color: "hsl(var(--primary))"
     },
     retiradas: {
       label: "Retiradas",
-      color: "hsl(142, 76%, 36%)",
-    },
+      color: "hsl(142, 76%, 36%)"
+    }
   };
 
   return (
@@ -275,22 +275,22 @@ export default function PorteiroDashboard() {
             <Button
               variant={periodFilter === "today" ? "default" : "outline"}
               size="sm"
-              onClick={() => setPeriodFilter("today")}
-            >
+              onClick={() => setPeriodFilter("today")}>
+
               Hoje
             </Button>
             <Button
               variant={periodFilter === "7days" ? "default" : "outline"}
               size="sm"
-              onClick={() => setPeriodFilter("7days")}
-            >
+              onClick={() => setPeriodFilter("7days")}>
+
               7 dias
             </Button>
             <Button
               variant={periodFilter === "15days" ? "default" : "outline"}
               size="sm"
-              onClick={() => setPeriodFilter("15days")}
-            >
+              onClick={() => setPeriodFilter("15days")}>
+
               15 dias
             </Button>
             <Popover>
@@ -299,12 +299,12 @@ export default function PorteiroDashboard() {
                   variant={periodFilter === "custom" ? "default" : "outline"}
                   size="sm"
                   className="gap-1"
-                  onClick={() => setPeriodFilter("custom")}
-                >
+                  onClick={() => setPeriodFilter("custom")}>
+
                   <Calendar className="h-4 w-4" />
-                  {periodFilter === "custom" && dateRange.from && dateRange.to
-                    ? `${format(dateRange.from, "dd/MM")} - ${format(dateRange.to, "dd/MM")}`
-                    : "Período"}
+                  {periodFilter === "custom" && dateRange.from && dateRange.to ?
+                  `${format(dateRange.from, "dd/MM")} - ${format(dateRange.to, "dd/MM")}` :
+                  "Período"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -318,8 +318,8 @@ export default function PorteiroDashboard() {
                     }
                   }}
                   locale={ptBR}
-                  numberOfMonths={2}
-                />
+                  numberOfMonths={2} />
+
               </PopoverContent>
             </Popover>
           </div>
@@ -366,8 +366,8 @@ export default function PorteiroDashboard() {
         </div>
 
         {/* Chart */}
-        {periodFilter !== "today" && (
-          <Card>
+        {periodFilter !== "today" &&
+        <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <TrendingUp className="h-4 w-4" />
@@ -375,69 +375,69 @@ export default function PorteiroDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {loadingChart ? (
-                <div className="h-[250px] flex items-center justify-center text-muted-foreground">
+              {loadingChart ?
+            <div className="h-[250px] flex items-center justify-center text-muted-foreground">
                   Carregando gráfico...
-                </div>
-              ) : chartData.length > 0 ? (
-                <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                </div> :
+            chartData.length > 0 ?
+            <ChartContainer config={chartConfig} className="h-[250px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis 
-                        dataKey="label" 
-                        tick={{ fontSize: 12 }} 
-                        tickLine={false}
-                        axisLine={false}
-                        className="text-muted-foreground"
-                      />
-                      <YAxis 
-                        tick={{ fontSize: 12 }} 
-                        tickLine={false}
-                        axisLine={false}
-                        allowDecimals={false}
-                        className="text-muted-foreground"
-                      />
+                      <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 12 }}
+                    tickLine={false}
+                    axisLine={false}
+                    className="text-muted-foreground" />
+
+                      <YAxis
+                    tick={{ fontSize: 12 }}
+                    tickLine={false}
+                    axisLine={false}
+                    allowDecimals={false}
+                    className="text-muted-foreground" />
+
                       <ChartTooltip content={<ChartTooltipContent />} />
                       <Legend />
                       <Line
-                        type="monotone"
-                        dataKey="cadastradas"
-                        name="Cadastradas"
-                        stroke="hsl(var(--primary))"
-                        strokeWidth={2}
-                        dot={{ r: 4 }}
-                        activeDot={{ r: 6 }}
-                      />
+                    type="monotone"
+                    dataKey="cadastradas"
+                    name="Cadastradas"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                    activeDot={{ r: 6 }} />
+
                       <Line
-                        type="monotone"
-                        dataKey="retiradas"
-                        name="Retiradas"
-                        stroke="hsl(142, 76%, 36%)"
-                        strokeWidth={2}
-                        dot={{ r: 4 }}
-                        activeDot={{ r: 6 }}
-                      />
+                    type="monotone"
+                    dataKey="retiradas"
+                    name="Retiradas"
+                    stroke="hsl(142, 76%, 36%)"
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                    activeDot={{ r: 6 }} />
+
                     </LineChart>
                   </ResponsiveContainer>
-                </ChartContainer>
-              ) : (
-                <div className="h-[250px] flex items-center justify-center text-muted-foreground">
+                </ChartContainer> :
+
+            <div className="h-[250px] flex items-center justify-center text-muted-foreground">
                   Nenhum dado disponível para o período selecionado
                 </div>
-              )}
+            }
             </CardContent>
           </Card>
-        )}
+        }
 
         {/* Quick Actions */}
         <div>
           <h2 className="text-lg font-semibold mb-4">Ações Rápidas</h2>
           <div className="grid gap-4 grid-cols-2 md:grid-cols-5">
-            <Card 
+            <Card
               className="cursor-pointer hover:bg-muted/50 transition-colors"
-              onClick={() => navigate("/porteiro/registrar")}
-            >
+              onClick={() => navigate("/porteiro/registrar")}>
+
               <CardContent className="flex flex-col items-center justify-center py-6">
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
                   <PackagePlus className="w-6 h-6 text-primary" />
@@ -446,10 +446,10 @@ export default function PorteiroDashboard() {
               </CardContent>
             </Card>
 
-            <Card 
+            <Card
               className="cursor-pointer hover:bg-muted/50 transition-colors"
-              onClick={() => navigate("/porteiro/encomendas")}
-            >
+              onClick={() => navigate("/porteiro/encomendas")}>
+
               <CardContent className="flex flex-col items-center justify-center py-6">
                 <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center mb-3">
                   <Search className="w-6 h-6 text-blue-500" />
@@ -458,27 +458,27 @@ export default function PorteiroDashboard() {
               </CardContent>
             </Card>
 
-            <Card 
+            <Card
               className="cursor-pointer hover:bg-muted/50 transition-colors"
-              onClick={() => navigate("/porteiro/encomendas")}
-            >
+              onClick={() => navigate("/porteiro/encomendas")}>
+
               <CardContent className="flex flex-col items-center justify-center py-6">
                 <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center mb-3">
                   <Clock className="w-6 h-6 text-yellow-500" />
                 </div>
-                <p className="font-medium text-sm text-center">Pendentes</p>
-                {stats.totalPending > 0 && (
-                  <span className="mt-1 px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-medium">
+                <p className="font-medium text-sm text-center">Retirar Encomenda</p>
+                {stats.totalPending > 0 &&
+                <span className="mt-1 px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-medium">
                     {stats.totalPending}
                   </span>
-                )}
+                }
               </CardContent>
             </Card>
 
-            <Card 
+            <Card
               className="cursor-pointer hover:bg-muted/50 transition-colors"
-              onClick={() => navigate("/porteiro/encomendas")}
-            >
+              onClick={() => navigate("/porteiro/encomendas")}>
+
               <CardContent className="flex flex-col items-center justify-center py-6">
                 <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center mb-3">
                   <QrCode className="w-6 h-6 text-green-500" />
@@ -487,10 +487,10 @@ export default function PorteiroDashboard() {
               </CardContent>
             </Card>
 
-            <Card 
+            <Card
               className="cursor-pointer hover:bg-muted/50 transition-colors"
-              onClick={() => navigate("/porteiro/historico")}
-            >
+              onClick={() => navigate("/porteiro/historico")}>
+
               <CardContent className="flex flex-col items-center justify-center py-6">
                 <div className="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center mb-3">
                   <FileText className="w-6 h-6 text-purple-500" />
@@ -501,6 +501,6 @@ export default function PorteiroDashboard() {
           </div>
         </div>
       </div>
-    </DashboardLayout>
-  );
+    </DashboardLayout>);
+
 }
