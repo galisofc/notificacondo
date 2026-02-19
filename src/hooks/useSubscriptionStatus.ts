@@ -22,6 +22,8 @@ export function useSubscriptionStatus(condominiumId?: string | null): Subscripti
     queryFn: async () => {
       if (!user) return null;
 
+      // Base query — sem filtrar active=true aqui para pegar também vitalícios
+      // independente do status booleano
       let query = supabase
         .from("subscriptions")
         .select(`
@@ -32,8 +34,7 @@ export function useSubscriptionStatus(condominiumId?: string | null): Subscripti
           trial_ends_at,
           plan,
           condominium_id
-        `)
-        .eq("active", true);
+        `);
 
       if (condominiumId) {
         query = query.eq("condominium_id", condominiumId);
@@ -59,9 +60,33 @@ export function useSubscriptionStatus(condominiumId?: string | null): Subscripti
         query = query.in("condominium_id", ids);
       }
 
-      const { data, error } = await query.limit(1).single();
-      if (error) return null;
-      return data;
+      // Busca todas as subscriptions do condomínio (pode ter mais de uma)
+      const { data: rows, error } = await query;
+      if (error || !rows || rows.length === 0) return null;
+
+      // Prioridade: vitalício > pago ativo > trial ativo > qualquer active=true
+      const lifetime = rows.find((r) => r.is_lifetime === true);
+      if (lifetime) return lifetime;
+
+      const now = new Date();
+
+      // Plano pago ativo (não trial, não vitalício)
+      const paidActive = rows.find(
+        (r) => r.active === true && r.is_trial === false && r.is_lifetime === false
+      );
+      if (paidActive) return paidActive;
+
+      // Trial ainda válido
+      const validTrial = rows.find((r) => {
+        if (!r.is_trial || !r.active) return false;
+        const ends = r.trial_ends_at ? new Date(r.trial_ends_at) : null;
+        return ends === null || ends >= now;
+      });
+      if (validTrial) return validTrial;
+
+      // Retorna o primeiro ativo (trial expirado ou qualquer outro estado)
+      const anyActive = rows.find((r) => r.active === true);
+      return anyActive ?? rows[0];
     },
     enabled: !!user,
     staleTime: 1000 * 60 * 5, // 5 minutos
