@@ -2167,6 +2167,13 @@ export type Database = {
         Args: { _apartment_id: string }
         Returns: string
       }
+      get_co_porters: {
+        Args: { _condominium_id: string; _user_id: string }
+        Returns: {
+          full_name: string
+          user_id: string
+        }[]
+      }
       get_cron_job_pause_status: {
         Args: never
         Returns: {
