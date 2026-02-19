@@ -219,6 +219,17 @@ serve(async (req) => {
       }
     }
 
+    // Fetch the name of who is resending the notification now
+    let senderName = "Portaria";
+    const { data: senderProfile } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (senderProfile?.full_name) {
+      senderName = senderProfile.full_name;
+    }
+
     console.log(`Package type: ${packageTypeName}, Tracking: ${trackingCode}, Porter: ${porterName}`);
 
     // ========== FETCH RESIDENTS ==========
@@ -375,6 +386,8 @@ serve(async (req) => {
         debug_info: { 
           original_photo_url: photo_url || null,
           signed_photo_url: signedPhotoUrl || null,
+          sent_by_user_id: user.id,
+          sent_by_name: senderName,
         },
       });
 

@@ -57,6 +57,7 @@ interface NotificationLog {
   success: boolean;
   error_message: string | null;
   template_name: string | null;
+  debug_info: { sent_by_name?: string } | null;
 }
 
 export function PackageDetailsDialog({
@@ -96,10 +97,10 @@ export function PackageDetailsDialog({
     try {
       const { data } = await supabase
         .from("whatsapp_notification_logs")
-        .select("id, created_at, success, error_message, template_name")
+        .select("id, created_at, success, error_message, template_name, debug_info")
         .eq("package_id", package_.id)
         .order("created_at", { ascending: false });
-      setNotificationLogs(data || []);
+      setNotificationLogs((data || []) as NotificationLog[]);
     } catch (err) {
       console.error("Error fetching notification logs:", err);
     } finally {
@@ -331,20 +332,20 @@ export function PackageDetailsDialog({
                       className={cn(
                         "flex items-start gap-3 p-3 rounded-lg border text-sm",
                         log.success
-                          ? "bg-muted/40 border-border"
+                          ? "bg-[hsl(142,76%,97%)] border-[hsl(142,76%,80%)] dark:bg-[hsl(142,30%,12%)] dark:border-[hsl(142,30%,25%)]"
                           : "bg-destructive/5 border-destructive/20"
                       )}
                     >
                       <div className="mt-0.5 shrink-0">
                         {log.success ? (
-                          <CheckCircle2 className="w-4 h-4 text-primary" />
+                          <CheckCircle2 className="w-4 h-4 text-[hsl(142,72%,29%)] dark:text-[hsl(142,60%,50%)]" />
                         ) : (
                           <XCircle className="w-4 h-4 text-destructive" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="font-medium text-xs">
+                          <span className={cn("font-medium text-xs", log.success ? "text-[hsl(142,72%,25%)] dark:text-[hsl(142,60%,55%)]" : "")}>
                             {log.success ? "Enviada com sucesso" : "Falha no envio"}
                           </span>
                           <Badge variant="outline" className="text-xs shrink-0">
@@ -355,6 +356,12 @@ export function PackageDetailsDialog({
                           <Clock className="w-3 h-3 shrink-0" />
                           {format(new Date(log.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                         </p>
+                        {log.debug_info?.sent_by_name && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                            <User className="w-3 h-3 shrink-0" />
+                            Enviado por: <span className="font-medium">{log.debug_info.sent_by_name}</span>
+                          </p>
+                        )}
                         {!log.success && log.error_message && (
                           <p className="text-xs text-destructive mt-1 truncate">
                             {log.error_message}
