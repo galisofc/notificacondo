@@ -16,15 +16,17 @@ export interface SubscriptionStatus {
 
 export function useSubscriptionStatus(condominiumId?: string | null): SubscriptionStatus {
   const { user } = useAuth();
-  const { isPorteiro, isSuperAdmin } = useUserRole();
+  const { isPorteiro, isSuperAdmin, loading: roleLoading } = useUserRole();
   const queryClient = useQueryClient();
   const queryKey = ["subscription-status", user?.id, condominiumId, isPorteiro, isSuperAdmin];
 
-  // Invalida o cache sempre que o condominiumId ou user mudam
+  // Invalida o cache quando condominiumId ou role mudarem
   useEffect(() => {
-    queryClient.invalidateQueries({ queryKey });
+    if (!roleLoading) {
+      queryClient.invalidateQueries({ queryKey });
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [condominiumId, user?.id]);
+  }, [condominiumId, user?.id, isSuperAdmin, isPorteiro, roleLoading]);
 
   const { data, isLoading } = useQuery({
     queryKey,
@@ -104,11 +106,13 @@ export function useSubscriptionStatus(condominiumId?: string | null): Subscripti
       const anyActive = rows.find((r) => r.active === true);
       return anyActive ?? rows[0];
     },
-    enabled: !!user,
+    // Aguarda o role carregar antes de executar para evitar resultado incorreto em cache
+    enabled: !!user && !roleLoading,
     staleTime: 1000 * 60, // 1 minuto
   });
 
-  if (isLoading) {
+  // Enquanto o role não carregou, trata como loading para não bloquear antes da hora
+  if (isLoading || roleLoading) {
     return {
       isActive: false,
       isLifetime: false,
