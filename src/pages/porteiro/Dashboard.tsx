@@ -125,14 +125,14 @@ export default function PorteiroDashboard() {
           .in("condominium_id", condominiumIds)
           .eq("status", "pendente");
 
-        // Picked up today
+        // Picked up in period (based on filter)
         const { count: pickedUpTodayCount } = await supabase
           .from("packages")
           .select("*", { count: "exact", head: true })
           .in("condominium_id", condominiumIds)
           .eq("status", "retirada")
-          .gte("picked_up_at", todayStart)
-          .lte("picked_up_at", todayEnd);
+          .gte("picked_up_at", startDate.toISOString())
+          .lte("picked_up_at", endDate.toISOString());
 
         setStats({
           registeredToday: registeredCount || 0,
