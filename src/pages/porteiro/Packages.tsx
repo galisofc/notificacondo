@@ -272,6 +272,32 @@ export default function PorteiroPackages() {
     }
   };
 
+  const handleResendNotification = async (pkg: PackageWithSignedUrl) => {
+    try {
+      const { error } = await supabase.functions.invoke("notify-package-arrival", {
+        body: { packageId: pkg.id },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Notificação reenviada!",
+        description: "O morador foi notificado via WhatsApp.",
+      });
+
+      if (selectedApartment) {
+        await fetchPackages(selectedApartment.id);
+      }
+    } catch (error) {
+      console.error("Error resending notification:", error);
+      toast({
+        title: "Erro ao reenviar",
+        description: "Não foi possível reenviar a notificação.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Filter packages by tab
   const filteredPackages = packages.filter((pkg) => {
     if (activeTab === "all") return true;
@@ -396,7 +422,7 @@ export default function PorteiroPackages() {
                   <Package className="w-4 h-4" />
                   Pendentes
                   {pendingCount > 0 && (
-                    <span className="ml-1 px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-medium">
+                    <span className="ml-1 px-2 py-0.5 rounded-full bg-warning/20 text-warning-foreground text-xs font-medium">
                       {pendingCount}
                     </span>
                   )}
@@ -447,6 +473,7 @@ export default function PorteiroPackages() {
                         description={pkg.description || undefined}
                         onClick={() => handlePackageClick(pkg)}
                         onViewDetails={() => handleViewDetails(pkg)}
+                        onResendNotification={() => handleResendNotification(pkg)}
                         showCondominium={false}
                         showPickupCode={false}
                       />
