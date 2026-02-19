@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Package, Clock, Building2, MoreVertical, Send, Info } from "lucide-react";
+import { Package, Clock, Building2, MoreVertical, Send, Info, RefreshCw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -83,6 +83,20 @@ export function PackageCard({
               {formattedDate}
             </p>
           </div>
+          {onResendNotification && status === "pendente" && (
+            <Button
+              variant="outline"
+              size="icon"
+              className="shrink-0 h-8 w-8"
+              title="Reenviar notificação WhatsApp"
+              onClick={(e) => {
+                e.stopPropagation();
+                onResendNotification();
+              }}
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+            </Button>
+          )}
         </CardContent>
       </Card>
     );
