@@ -56,51 +56,53 @@ export function PackageCard({
 
   if (compact) {
     return (
-      <Card
-        className={cn(
-          "overflow-hidden transition-all hover:shadow-md",
-          onClick && "cursor-pointer"
-        )}
-        onClick={onClick}
-      >
-        <CardContent className="p-3">
-          <div className="flex items-center gap-3">
-            <div className="shrink-0 relative">
-              <PackageCardImage src={photoUrl} compact />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                {showPickupCode && (
-                  <span className="font-mono font-bold text-sm text-primary">
-                    {pickupCode}
-                  </span>
-                )}
-                <PackageStatusBadge status={status} />
-              </div>
-              <p className="text-sm text-muted-foreground truncate uppercase">
-                {blockName} - APTO {apartmentNumber}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {formattedDate}
-              </p>
-            </div>
-          </div>
-          {onResendNotification && status === "pendente" && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full mt-3 gap-2 text-xs"
-              onClick={(e) => {
-                e.stopPropagation();
-                onResendNotification();
-              }}
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-              Reenviar notificação WhatsApp
-            </Button>
+      <div className="flex flex-col gap-1">
+        <Card
+          className={cn(
+            "overflow-hidden transition-all hover:shadow-md",
+            onClick && "cursor-pointer"
           )}
-        </CardContent>
-      </Card>
+          onClick={onClick}
+        >
+          <CardContent className="p-3">
+            <div className="flex items-center gap-3">
+              <div className="shrink-0 relative">
+                <PackageCardImage src={photoUrl} compact />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  {showPickupCode && (
+                    <span className="font-mono font-bold text-sm text-primary">
+                      {pickupCode}
+                    </span>
+                  )}
+                  <PackageStatusBadge status={status} />
+                </div>
+                <p className="text-sm text-muted-foreground truncate uppercase">
+                  {blockName} - APTO {apartmentNumber}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {formattedDate}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        {onResendNotification && status === "pendente" && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full gap-2 text-xs"
+            onClick={(e) => {
+              e.stopPropagation();
+              onResendNotification();
+            }}
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Reenviar notificação WhatsApp
+          </Button>
+        )}
+      </div>
     );
   }
 
