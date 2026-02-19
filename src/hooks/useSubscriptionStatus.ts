@@ -16,11 +16,11 @@ export interface SubscriptionStatus {
 
 export function useSubscriptionStatus(condominiumId?: string | null): SubscriptionStatus {
   const { user } = useAuth();
-  const { isPorteiro } = useUserRole();
+  const { isPorteiro, isSuperAdmin } = useUserRole();
   const queryClient = useQueryClient();
-  const queryKey = ["subscription-status", user?.id, condominiumId, isPorteiro];
+  const queryKey = ["subscription-status", user?.id, condominiumId, isPorteiro, isSuperAdmin];
 
-  // Invalida o cache sempre que o condominiumId muda (evita dados obsoletos)
+  // Invalida o cache sempre que o condominiumId ou user mudam
   useEffect(() => {
     queryClient.invalidateQueries({ queryKey });
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -31,8 +31,18 @@ export function useSubscriptionStatus(condominiumId?: string | null): Subscripti
     queryFn: async () => {
       if (!user) return null;
 
-      // Base query — sem filtrar active=true aqui para pegar também vitalícios
-      // independente do status booleano
+      // Super admin tem acesso total — retorna subscription "fake" ativa vitalícia
+      if (isSuperAdmin) {
+        return {
+          is_lifetime: true,
+          is_trial: false,
+          active: true,
+          trial_ends_at: null,
+          plan: "enterprise",
+          condominium_id: condominiumId ?? null,
+        };
+      }
+
       let query = supabase
         .from("subscriptions")
         .select(`
@@ -69,23 +79,21 @@ export function useSubscriptionStatus(condominiumId?: string | null): Subscripti
         query = query.in("condominium_id", ids);
       }
 
-      // Busca todas as subscriptions do condomínio (pode ter mais de uma)
+      // Busca todas as subscriptions do condomínio
       const { data: rows, error } = await query;
       if (error || !rows || rows.length === 0) return null;
 
-      // Prioridade: vitalício > pago ativo > trial ativo > qualquer active=true
+      // Prioridade: vitalício > pago ativo > trial ativo > fallback
       const lifetime = rows.find((r) => r.is_lifetime === true);
       if (lifetime) return lifetime;
 
       const now = new Date();
 
-      // Plano pago ativo (não trial, não vitalício)
       const paidActive = rows.find(
         (r) => r.active === true && r.is_trial === false && r.is_lifetime === false
       );
       if (paidActive) return paidActive;
 
-      // Trial ainda válido
       const validTrial = rows.find((r) => {
         if (!r.is_trial || !r.active) return false;
         const ends = r.trial_ends_at ? new Date(r.trial_ends_at) : null;
@@ -93,7 +101,6 @@ export function useSubscriptionStatus(condominiumId?: string | null): Subscripti
       });
       if (validTrial) return validTrial;
 
-      // Retorna o primeiro ativo (trial expirado ou qualquer outro estado)
       const anyActive = rows.find((r) => r.active === true);
       return anyActive ?? rows[0];
     },
