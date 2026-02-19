@@ -77,8 +77,8 @@ interface Condominium {
 }
 
 const COLORS = {
-  pendente: "hsl(var(--chart-4))",
-  retirada: "hsl(var(--chart-2))",
+  pendente: "hsl(38, 92%, 50%)",
+  retirada: "hsl(142, 71%, 35%)",
 };
 
 interface ServerStats {
@@ -445,7 +445,12 @@ const PackagesDashboard = () => {
                         borderRadius: "8px",
                       }}
                     />
-                    <Legend />
+                    <Legend
+                      payload={[
+                        { value: "Pendentes", type: "square", color: COLORS.pendente },
+                        { value: "Retiradas", type: "square", color: COLORS.retirada },
+                      ]}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               )}
