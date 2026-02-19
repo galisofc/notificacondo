@@ -466,7 +466,7 @@ export default function PorteiroDashboard() {
                 <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center mb-3">
                   <Clock className="w-6 h-6 text-yellow-500" />
                 </div>
-                <p className="font-medium text-sm text-center">Retirar Encomenda</p>
+                <p className="font-medium text-sm text-center">Pendentes</p>
                 {stats.totalPending > 0 &&
                 <span className="mt-1 px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-medium">
                     {stats.totalPending}
