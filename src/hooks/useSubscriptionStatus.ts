@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,9 +17,17 @@ export interface SubscriptionStatus {
 export function useSubscriptionStatus(condominiumId?: string | null): SubscriptionStatus {
   const { user } = useAuth();
   const { isPorteiro } = useUserRole();
+  const queryClient = useQueryClient();
+  const queryKey = ["subscription-status", user?.id, condominiumId, isPorteiro];
+
+  // Invalida o cache sempre que o condominiumId muda (evita dados obsoletos)
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [condominiumId, user?.id]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["subscription-status", user?.id, condominiumId, isPorteiro],
+    queryKey,
     queryFn: async () => {
       if (!user) return null;
 
@@ -89,7 +98,7 @@ export function useSubscriptionStatus(condominiumId?: string | null): Subscripti
       return anyActive ?? rows[0];
     },
     enabled: !!user,
-    staleTime: 1000 * 60 * 5, // 5 minutos
+    staleTime: 1000 * 60, // 1 minuto
   });
 
   if (isLoading) {
