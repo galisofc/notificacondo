@@ -63,38 +63,40 @@ export function PackageCard({
         )}
         onClick={onClick}
       >
-        <CardContent className="p-3 flex items-center gap-3">
-          <div className="shrink-0 relative">
-            <PackageCardImage src={photoUrl} compact />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              {showPickupCode && (
-                <span className="font-mono font-bold text-sm text-primary">
-                  {pickupCode}
-                </span>
-              )}
-              <PackageStatusBadge status={status} />
+        <CardContent className="p-3">
+          <div className="flex items-center gap-3">
+            <div className="shrink-0 relative">
+              <PackageCardImage src={photoUrl} compact />
             </div>
-            <p className="text-sm text-muted-foreground truncate uppercase">
-              {blockName} - APTO {apartmentNumber}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {formattedDate}
-            </p>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                {showPickupCode && (
+                  <span className="font-mono font-bold text-sm text-primary">
+                    {pickupCode}
+                  </span>
+                )}
+                <PackageStatusBadge status={status} />
+              </div>
+              <p className="text-sm text-muted-foreground truncate uppercase">
+                {blockName} - APTO {apartmentNumber}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {formattedDate}
+              </p>
+            </div>
           </div>
           {onResendNotification && status === "pendente" && (
             <Button
               variant="outline"
-              size="icon"
-              className="shrink-0 h-8 w-8"
-              title="Reenviar notificação WhatsApp"
+              size="sm"
+              className="w-full mt-3 gap-2 text-xs"
               onClick={(e) => {
                 e.stopPropagation();
                 onResendNotification();
               }}
             >
               <RefreshCw className="h-3.5 w-3.5" />
+              Reenviar notificação WhatsApp
             </Button>
           )}
         </CardContent>
