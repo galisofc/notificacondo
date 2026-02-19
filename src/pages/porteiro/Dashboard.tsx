@@ -360,7 +360,7 @@ export default function PorteiroDashboard() {
               <div className="text-2xl font-bold text-green-600">
                 {loading ? "..." : stats.pickedUpToday}
               </div>
-              <p className="text-xs text-muted-foreground">Entregues aos moradores</p>
+              <p className="text-xs text-muted-foreground">{getPeriodLabel()}</p>
             </CardContent>
           </Card>
         </div>
