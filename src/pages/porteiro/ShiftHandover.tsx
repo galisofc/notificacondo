@@ -29,6 +29,8 @@ interface ChecklistItem {
 interface HandoverRecord {
   id: string;
   incoming_porter_name: string;
+  outgoing_porter_id: string;
+  outgoing_porter_name?: string;
   shift_ended_at: string;
   general_observations: string | null;
   created_at: string;
@@ -162,7 +164,22 @@ export default function ShiftHandover() {
         .order("created_at", { ascending: false })
         .limit(20);
       if (error) throw error;
-      return data as HandoverRecord[];
+      if (!data || data.length === 0) return [] as HandoverRecord[];
+
+      // Fetch outgoing porter names
+      const outgoingIds = [...new Set(data.map((h) => h.outgoing_porter_id))];
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("user_id, full_name")
+        .in("user_id", outgoingIds);
+
+      const profileMap: Record<string, string> = {};
+      (profilesData || []).forEach((p) => { profileMap[p.user_id] = p.full_name; });
+
+      return data.map((h) => ({
+        ...h,
+        outgoing_porter_name: profileMap[h.outgoing_porter_id] || null,
+      })) as HandoverRecord[];
     },
     enabled: !!selectedCondominium,
   });
@@ -465,8 +482,12 @@ export default function ShiftHandover() {
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="font-medium text-foreground">
-                              Passagem para: <span className="text-primary">{h.incoming_porter_name}</span>
+                            <p className="font-medium text-foreground flex items-center gap-1 flex-wrap">
+                              {h.outgoing_porter_name && (
+                                <span className="text-muted-foreground">{h.outgoing_porter_name}</span>
+                              )}
+                              <span className="text-muted-foreground">→</span>
+                              <span className="text-primary">{h.incoming_porter_name}</span>
                             </p>
                             <p className="text-sm text-muted-foreground">
                               {format(new Date(h.shift_ended_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
