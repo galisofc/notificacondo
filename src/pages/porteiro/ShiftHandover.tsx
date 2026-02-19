@@ -87,40 +87,29 @@ export default function ShiftHandover() {
     fetchCondominiums();
   }, [user]);
 
-  // Fetch porters of selected condominium
+  // Fetch porters of selected condominium using secure RPC function
   useEffect(() => {
     const fetchPorters = async () => {
       if (!selectedCondominium || !user) return;
 
-      // First get all user_ids linked to this condominium
-      const { data: ucData, error: ucError } = await supabase
-        .from("user_condominiums")
-        .select("user_id")
-        .eq("condominium_id", selectedCondominium);
+      const { data, error } = await supabase.rpc("get_co_porters", {
+        _user_id: user.id,
+        _condominium_id: selectedCondominium,
+      });
 
-      if (ucError || !ucData || ucData.length === 0) {
+      if (error) {
+        console.error("Error fetching co-porters:", error);
         setCondominiumPorters([]);
         return;
       }
 
-      const userIds = ucData.map((d) => d.user_id).filter((id) => id !== user.id);
-
-      if (userIds.length === 0) {
-        setCondominiumPorters([]);
-        return;
-      }
-
-      // Then fetch their profiles
-      const { data: profilesData } = await supabase
-        .from("profiles")
-        .select("user_id, full_name")
-        .in("user_id", userIds);
-
-      if (profilesData) {
-        const porters = profilesData
-          .filter((p) => p.full_name)
-          .map((p) => ({ id: p.user_id, full_name: p.full_name }));
-        setCondominiumPorters(porters);
+      if (data) {
+        setCondominiumPorters(
+          data.map((p: { user_id: string; full_name: string }) => ({
+            id: p.user_id,
+            full_name: p.full_name,
+          }))
+        );
       }
     };
     fetchPorters();
