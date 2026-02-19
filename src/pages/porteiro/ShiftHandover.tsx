@@ -91,18 +91,35 @@ export default function ShiftHandover() {
   useEffect(() => {
     const fetchPorters = async () => {
       if (!selectedCondominium || !user) return;
-      const { data } = await supabase
+
+      // First get all user_ids linked to this condominium
+      const { data: ucData, error: ucError } = await supabase
         .from("user_condominiums")
-        .select("user_id, profiles:user_id(full_name)")
+        .select("user_id")
         .eq("condominium_id", selectedCondominium);
 
-      if (data) {
-        const porters = data
-          .map((d: any) => ({
-            id: d.user_id,
-            full_name: d.profiles?.full_name || "",
-          }))
-          .filter((p) => p.id !== user.id && p.full_name);
+      if (ucError || !ucData || ucData.length === 0) {
+        setCondominiumPorters([]);
+        return;
+      }
+
+      const userIds = ucData.map((d) => d.user_id).filter((id) => id !== user.id);
+
+      if (userIds.length === 0) {
+        setCondominiumPorters([]);
+        return;
+      }
+
+      // Then fetch their profiles
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("user_id, full_name")
+        .in("user_id", userIds);
+
+      if (profilesData) {
+        const porters = profilesData
+          .filter((p) => p.full_name)
+          .map((p) => ({ id: p.user_id, full_name: p.full_name }));
         setCondominiumPorters(porters);
       }
     };
