@@ -275,7 +275,12 @@ export default function PorteiroPackages() {
   const handleResendNotification = async (pkg: PackageWithSignedUrl) => {
     try {
       const { error } = await supabase.functions.invoke("notify-package-arrival", {
-        body: { packageId: pkg.id },
+        body: {
+          package_id: pkg.id,
+          apartment_id: pkg.apartment_id,
+          pickup_code: pkg.pickup_code,
+          photo_url: pkg.photo_url,
+        },
       });
 
       if (error) throw error;
