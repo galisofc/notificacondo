@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Package, Clock, Building2, MoreVertical, Send, Info, RefreshCw } from "lucide-react";
+import { Package, Clock, Building2, MoreVertical, Info, RefreshCw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,6 +10,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { PackageStatusBadge } from "./PackageStatusBadge";
 import { PackageCardImage } from "./PackageCardImage";
 import { PackageStatus } from "@/lib/packageConstants";
@@ -50,143 +61,189 @@ export function PackageCard({
   compact = false,
   showPickupCode = true,
 }: PackageCardProps) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
   const formattedDate = format(new Date(receivedAt), "dd/MM/yyyy 'às' HH:mm", {
     locale: ptBR,
   });
 
+  const handleConfirm = () => {
+    setConfirmOpen(false);
+    onResendNotification?.();
+  };
+
+  const ResendButton = ({ className }: { className?: string }) => (
+    <Button
+      variant="outline"
+      size="sm"
+      className={cn("w-full gap-2 text-xs", className)}
+      onClick={(e) => {
+        e.stopPropagation();
+        setConfirmOpen(true);
+      }}
+    >
+      <RefreshCw className="h-3.5 w-3.5" />
+      Reenviar notificação WhatsApp
+    </Button>
+  );
+
   if (compact) {
     return (
-      <div className="flex flex-col gap-1">
-        <Card
-          className={cn(
-            "overflow-hidden transition-all hover:shadow-md",
-            onClick && "cursor-pointer"
-          )}
-          onClick={onClick}
-        >
-          <CardContent className="p-3">
-            <div className="flex items-center gap-3">
-              <div className="shrink-0 relative">
-                <PackageCardImage src={photoUrl} compact />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  {showPickupCode && (
-                    <span className="font-mono font-bold text-sm text-primary">
-                      {pickupCode}
-                    </span>
-                  )}
-                  <PackageStatusBadge status={status} />
-                </div>
-                <p className="text-sm text-muted-foreground truncate uppercase">
-                  {blockName} - APTO {apartmentNumber}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {formattedDate}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        {onResendNotification && status === "pendente" && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full gap-2 text-xs"
-            onClick={(e) => {
-              e.stopPropagation();
-              onResendNotification();
-            }}
+      <>
+        <div className="flex flex-col gap-1">
+          <Card
+            className={cn(
+              "overflow-hidden transition-all hover:shadow-md",
+              onClick && "cursor-pointer"
+            )}
+            onClick={onClick}
           >
-            <RefreshCw className="h-3.5 w-3.5" />
-            Reenviar notificação WhatsApp
-          </Button>
-        )}
-      </div>
+            <CardContent className="p-3">
+              <div className="flex items-center gap-3">
+                <div className="shrink-0 relative">
+                  <PackageCardImage src={photoUrl} compact />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    {showPickupCode && (
+                      <span className="font-mono font-bold text-sm text-primary">
+                        {pickupCode}
+                      </span>
+                    )}
+                    <PackageStatusBadge status={status} />
+                  </div>
+                  <p className="text-sm text-muted-foreground truncate uppercase">
+                    {blockName} - APTO {apartmentNumber}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {formattedDate}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          {onResendNotification && status === "pendente" && (
+            <ResendButton />
+          )}
+        </div>
+
+        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <RefreshCw className="w-5 h-5 text-primary" />
+                Reenviar Notificação
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Deseja enviar uma nova notificação via WhatsApp para os moradores do{" "}
+                <strong>{blockName} - Apto {apartmentNumber}</strong>?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirm}>
+                Sim, reenviar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </>
     );
   }
 
   return (
-    <div className="flex flex-col gap-1">
-      <Card
-        className={cn(
-          "overflow-hidden transition-all hover:shadow-lg group",
-          onClick && "cursor-pointer"
-        )}
-        onClick={onClick}
-      >
-        <div className="relative overflow-hidden bg-muted">
-          <PackageCardImage src={photoUrl} />
-          <div className="absolute top-3 right-3 flex items-center gap-2">
-            <PackageStatusBadge status={status} />
-            {onViewDetails && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                  <DropdownMenuItem onClick={onViewDetails}>
-                    <Info className="w-4 h-4 mr-2" />
-                    Ver Detalhes
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+    <>
+      <div className="flex flex-col gap-1">
+        <Card
+          className={cn(
+            "overflow-hidden transition-all hover:shadow-lg group",
+            onClick && "cursor-pointer"
+          )}
+          onClick={onClick}
+        >
+          <div className="relative overflow-hidden bg-muted">
+            <PackageCardImage src={photoUrl} />
+            <div className="absolute top-3 right-3 flex items-center gap-2">
+              <PackageStatusBadge status={status} />
+              {onViewDetails && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenuItem onClick={onViewDetails}>
+                      <Info className="w-4 h-4 mr-2" />
+                      Ver Detalhes
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
           </div>
-        </div>
-        <CardContent className="p-4 space-y-3">
-          {showPickupCode && (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-lg">
-                <Package className="w-4 h-4 text-primary" />
-                <span className="font-mono font-bold text-lg text-primary tracking-widest">
-                  {pickupCode}
+          <CardContent className="p-4 space-y-3">
+            {showPickupCode && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-lg">
+                  <Package className="w-4 h-4 text-primary" />
+                  <span className="font-mono font-bold text-lg text-primary tracking-widest">
+                    {pickupCode}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Building2 className="w-4 h-4" />
+                <span className="uppercase">
+                  {blockName} - APTO {apartmentNumber}
                 </span>
+                {showCondominium && condominiumName && <span> • {condominiumName}</span>}
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Clock className="w-4 h-4" />
+                <span>{formattedDate}</span>
               </div>
             </div>
-          )}
 
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Building2 className="w-4 h-4" />
-              <span className="uppercase">
-                {blockName} - APTO {apartmentNumber}
-              </span>
-              {showCondominium && condominiumName && <span> • {condominiumName}</span>}
-            </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Clock className="w-4 h-4" />
-              <span>{formattedDate}</span>
-            </div>
-          </div>
+            {description && (
+              <p className="text-sm text-muted-foreground line-clamp-2">
+                {description}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+        {onResendNotification && status === "pendente" && (
+          <ResendButton />
+        )}
+      </div>
 
-          {description && (
-            <p className="text-sm text-muted-foreground line-clamp-2">
-              {description}
-            </p>
-          )}
-        </CardContent>
-      </Card>
-      {onResendNotification && status === "pendente" && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full gap-2 text-xs"
-          onClick={(e) => {
-            e.stopPropagation();
-            onResendNotification();
-          }}
-        >
-          <RefreshCw className="h-3.5 w-3.5" />
-          Reenviar notificação WhatsApp
-        </Button>
-      )}
-    </div>
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <RefreshCw className="w-5 h-5 text-primary" />
+              Reenviar Notificação
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Deseja enviar uma nova notificação via WhatsApp para os moradores do{" "}
+              <strong>{blockName} - Apto {apartmentNumber}</strong>?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirm}>
+              Sim, reenviar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
