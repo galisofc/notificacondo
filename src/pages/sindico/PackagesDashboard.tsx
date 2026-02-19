@@ -545,7 +545,12 @@ const PackagesDashboard = () => {
                       borderRadius: "8px",
                     }}
                   />
-                  <Legend />
+                  <Legend
+                    payload={[
+                      { value: "Pendentes", type: "square", color: "hsl(38, 92%, 50%)" },
+                      { value: "Retiradas", type: "square", color: "hsl(142, 71%, 35%)" },
+                    ]}
+                  />
                   <Bar dataKey="pendente" name="Pendentes" stackId="a">
                     {blockStats.map((_, index) => (
                       <Cell
