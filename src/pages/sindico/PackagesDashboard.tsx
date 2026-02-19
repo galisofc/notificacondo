@@ -527,14 +527,14 @@ const PackagesDashboard = () => {
                 Nenhuma encomenda encontrada
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={blockStats} layout="vertical">
+              <ResponsiveContainer width="100%" height={Math.max(300, blockStats.length * 42)}>
+                <BarChart data={blockStats} layout="vertical" margin={{ left: 8, right: 16, top: 8, bottom: 8 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis type="number" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
                   <YAxis
                     type="category"
                     dataKey="name"
-                    width={100}
+                    width={110}
                     tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
                   />
                   <Tooltip
