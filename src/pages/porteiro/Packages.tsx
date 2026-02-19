@@ -53,8 +53,10 @@ export default function PorteiroPackages() {
   const [isPickupDialogOpen, setIsPickupDialogOpen] = useState(false);
   const [detailsPackage, setDetailsPackage] = useState<PackageWithSignedUrl | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
-  const [isNotificationSuccessOpen, setIsNotificationSuccessOpen] = useState(false);
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
+  const [notificationModalState, setNotificationModalState] = useState<"loading" | "success" | "error">("loading");
   const [notificationSuccessCount, setNotificationSuccessCount] = useState(0);
+  const [notificationErrorMessage, setNotificationErrorMessage] = useState("");
 
   // Fetch porter's condominiums
   useEffect(() => {
@@ -276,6 +278,8 @@ export default function PorteiroPackages() {
   };
 
   const handleResendNotification = async (pkg: PackageWithSignedUrl) => {
+    setNotificationModalState("loading");
+    setIsNotificationModalOpen(true);
     try {
       const { data, error } = await supabase.functions.invoke("notify-package-arrival", {
         body: {
@@ -290,18 +294,15 @@ export default function PorteiroPackages() {
 
       const count = data?.notifications_sent ?? 1;
       setNotificationSuccessCount(count);
-      setIsNotificationSuccessOpen(true);
+      setNotificationModalState("success");
 
       if (selectedApartment) {
         await fetchPackages(selectedApartment.id);
       }
     } catch (error) {
       console.error("Error resending notification:", error);
-      toast({
-        title: "Erro ao reenviar",
-        description: "Não foi possível reenviar a notificação.",
-        variant: "destructive",
-      });
+      setNotificationErrorMessage("Não foi possível reenviar a notificação. Tente novamente.");
+      setNotificationModalState("error");
     }
   };
 
@@ -527,27 +528,51 @@ export default function PorteiroPackages() {
       />
 
       {/* Notification Success Modal */}
-      <Dialog open={isNotificationSuccessOpen} onOpenChange={setIsNotificationSuccessOpen}>
+      {/* Notification Modal */}
+      <Dialog open={isNotificationModalOpen} onOpenChange={setIsNotificationModalOpen}>
         <DialogContent className="sm:max-w-sm text-center">
           <DialogHeader>
             <div className="flex justify-center mb-2">
-              <div className="rounded-full bg-primary/10 p-4">
-                <CheckCircle2 className="w-10 h-10 text-primary" />
-              </div>
+              {notificationModalState === "loading" && (
+                <div className="rounded-full bg-muted p-4">
+                  <Loader2 className="w-10 h-10 text-muted-foreground animate-spin" />
+                </div>
+              )}
+              {notificationModalState === "success" && (
+                <div className="rounded-full bg-primary/10 p-4">
+                  <CheckCircle2 className="w-10 h-10 text-primary" />
+                </div>
+              )}
+              {notificationModalState === "error" && (
+                <div className="rounded-full bg-destructive/10 p-4">
+                  <X className="w-10 h-10 text-destructive" />
+                </div>
+              )}
             </div>
-            <DialogTitle className="text-center text-lg">Notificação enviada!</DialogTitle>
+            <DialogTitle className="text-center text-lg">
+              {notificationModalState === "loading" && "Enviando notificação..."}
+              {notificationModalState === "success" && "Notificação enviada!"}
+              {notificationModalState === "error" && "Falha ao enviar"}
+            </DialogTitle>
             <DialogDescription className="text-center">
-              {notificationSuccessCount > 0
-                ? `${notificationSuccessCount} morador(es) foram notificados via WhatsApp com sucesso.`
-                : "O morador foi notificado via WhatsApp com sucesso."}
+              {notificationModalState === "loading" && "Aguarde, estamos enviando a notificação via WhatsApp."}
+              {notificationModalState === "success" && (
+                notificationSuccessCount > 0
+                  ? `${notificationSuccessCount} morador(es) notificado(s) via WhatsApp com sucesso.`
+                  : "O morador foi notificado via WhatsApp com sucesso."
+              )}
+              {notificationModalState === "error" && notificationErrorMessage}
             </DialogDescription>
           </DialogHeader>
-          <Button
-            className="w-full mt-2"
-            onClick={() => setIsNotificationSuccessOpen(false)}
-          >
-            OK
-          </Button>
+          {notificationModalState !== "loading" && (
+            <Button
+              className="w-full mt-2"
+              variant={notificationModalState === "error" ? "destructive" : "default"}
+              onClick={() => setIsNotificationModalOpen(false)}
+            >
+              OK
+            </Button>
+          )}
         </DialogContent>
       </Dialog>
     </DashboardLayout>
