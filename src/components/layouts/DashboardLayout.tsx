@@ -549,41 +549,35 @@ function SidebarNavigation() {
     { title: "Início", url: "/dashboard", icon: Home },
     {
       title: "Gestão",
-      icon: ClipboardList,
+      icon: Building2,
       items: [
         { title: "Condomínios", url: "/condominiums", icon: Building2 },
+        { title: "Assinaturas", url: "/sindico/subscriptions", icon: CreditCard },
+        { title: "Faturas", url: "/sindico/invoices", icon: Receipt },
       ],
     },
     {
       title: "Serviços",
       icon: Package,
       items: [
+        { title: "Encomendas", url: "/sindico/encomendas", icon: Package },
         { title: "Ocorrências", url: "/occurrences", icon: FileText, badge: openOccurrences },
         { title: "Análise de Defesas", url: "/defenses", icon: Scale, badge: pendingDefenses },
-        { title: "Encomendas", url: "/sindico/encomendas", icon: Package },
         { title: "Salão de Festas", url: "/party-hall", icon: PartyPopper },
-        { title: "Porteiros", url: "/sindico/porteiros", icon: DoorOpen },
       ],
     },
     {
       title: "Portaria",
-      icon: ClipboardList,
+      icon: DoorOpen,
       items: [
         { title: "Ocorrências Portaria", url: "/sindico/portaria/ocorrencias", icon: AlertTriangle, badge: openPorterOccurrences },
         { title: "Passagens de Plantão", url: "/sindico/portaria/plantoes", icon: ClipboardCheck },
         { title: "Checklist Portaria", url: "/sindico/portaria/checklist", icon: Cog },
+        { title: "Porteiros", url: "/sindico/porteiros", icon: Users },
       ],
     },
     { title: "Notificações", url: "/notifications", icon: Bell },
     { title: "Relatórios", url: "/reports", icon: BarChart3 },
-    {
-      title: "Assinaturas",
-      icon: Wallet,
-      items: [
-        { title: "Assinaturas", url: "/sindico/subscriptions", icon: CreditCard },
-        { title: "Faturas", url: "/sindico/invoices", icon: Receipt },
-      ],
-    },
     { title: "Configurações", url: "/sindico/settings", icon: Settings },
   ];
 
