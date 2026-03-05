@@ -1,144 +1,63 @@
 
 
-# Modulo PORTARIA para Porteiros
+# Diagnose: High Disk IO no Supabase
 
-## Resumo
+## Problema Identificado
 
-Criar um novo menu "Portaria" no painel do porteiro com duas funcionalidades:
-1. **Registro de Ocorrencias** - porteiros podem registrar ocorrencias no condominio
-2. **Passagem de Plantao** - checklist de equipamentos para troca de turno, com modelo definido pelo sindico
+A causa principal do consumo excessivo de Disk IO e a tabela **`user_roles`** sofrendo **48 milhoes de sequential scans** lendo **328 milhoes de tuplas**. Isso acontece porque a funcao `has_role()` e chamada em diversas RLS policies e, mesmo existindo um index `(user_id, role)`, o Postgres esta fazendo full table scans.
 
----
+### Numeros Criticos (desde o ultimo restart do Postgres)
 
-## 1. Banco de Dados - Novas Tabelas
+| Recurso | Scans/Reads | Problema |
+|---|---|---|
+| `user_roles` seq scans | 48M scans, 328M tuplas lidas | `has_role()` em RLS de varias tabelas |
+| `user_condominiums` index scans | 158M | `user_belongs_to_condominium()` em RLS |
+| `residents` index scans | 95M | RLS de packages, apartments |
+| `blocks` index + seq scans | 70M + 1.4M | JOINs em RLS policies |
+| `apartments` index scans | 39M | JOINs em RLS policies |
+| `audit_logs` tamanho | 20MB, 13K registros | Trigger de auditoria em todas as tabelas |
 
-### Tabela `porter_occurrences` (Ocorrencias da Portaria)
-- `id` (uuid, PK)
-- `condominium_id` (uuid, FK -> condominiums)
-- `registered_by` (uuid, FK -> auth.users) - porteiro que registrou
-- `title` (text)
-- `description` (text)
-- `category` (text) - ex: "visitante", "entrega", "manutencao", "seguranca", "outros"
-- `priority` (text) - "baixa", "media", "alta"
-- `status` (text, default "aberta") - "aberta", "resolvida"
-- `occurred_at` (timestamptz)
-- `resolved_at` (timestamptz, nullable)
-- `resolved_by` (uuid, nullable)
-- `resolution_notes` (text, nullable)
-- `created_at` / `updated_at`
+### Causas Raiz
 
-**RLS:**
-- Porteiros podem CRUD nas ocorrencias dos condominios atribuidos (via `user_belongs_to_condominium`)
-- Sindicos podem visualizar/gerenciar ocorrencias dos seus condominios
-- Super admins acesso total
+1. **RLS policies com subconsultas pesadas**: Cada SELECT/INSERT/UPDATE em tabelas como `packages`, `residents`, `apartments` dispara subconsultas que fazem JOINs em `blocks → condominiums` ou chamam `has_role()` e `user_belongs_to_condominium()`. Com ~200 pacotes e ~300 apartamentos, o custo por query e pequeno, mas o volume acumulado de chamadas e massivo.
 
-### Tabela `shift_checklist_templates` (Templates de checklist criados pelo sindico)
-- `id` (uuid, PK)
-- `condominium_id` (uuid, FK -> condominiums)
-- `item_name` (text)
-- `category` (text, default "Geral") - ex: "Equipamentos", "Seguranca", "Limpeza"
-- `is_active` (boolean, default true)
-- `display_order` (integer, default 0)
-- `created_at` / `updated_at`
+2. **`audit_logs` crescendo sem limpeza**: 20MB e a maior tabela, com 13K registros e trigger em todas as operacoes. Cada INSERT/UPDATE/DELETE em qualquer tabela auditada gera mais IO.
 
-**RLS:**
-- Sindicos podem gerenciar templates dos seus condominios
-- Porteiros podem visualizar templates dos condominios atribuidos
-- Super admins acesso total
+3. **Cron jobs frequentes**: 6 edge functions rodando a cada hora/dia, cada execucao faz queries que ativam RLS e audit triggers.
 
-### Tabela `shift_handovers` (Registros de passagem de plantao)
-- `id` (uuid, PK)
-- `condominium_id` (uuid, FK -> condominiums)
-- `outgoing_porter_id` (uuid) - porteiro que esta saindo
-- `incoming_porter_name` (text) - nome do porteiro que esta entrando
-- `shift_ended_at` (timestamptz, default now())
-- `general_observations` (text, nullable)
-- `created_at`
+## Plano de Otimizacao
 
-**RLS:**
-- Porteiros podem criar e visualizar registros dos seus condominios
-- Sindicos podem visualizar registros dos seus condominios
-- Super admins acesso total
-
-### Tabela `shift_handover_items` (Itens checados na passagem)
-- `id` (uuid, PK)
-- `handover_id` (uuid, FK -> shift_handovers)
-- `item_name` (text)
-- `category` (text, nullable)
-- `is_ok` (boolean, default true)
-- `observation` (text, nullable)
-- `created_at`
-
-**RLS:**
-- Mesmas regras do `shift_handovers` (via JOIN)
-
----
-
-## 2. Menu do Porteiro - Navegacao
-
-Atualizar o menu lateral do porteiro em `DashboardLayout.tsx` para agrupar itens:
-
-```text
-Inicio
-Condominio
------- Encomendas (grupo) ------
-  Registrar Encomenda
-  Retirar Encomenda
-  Historico
------- Portaria (grupo) ------
-  Ocorrencias
-  Passagem de Plantao
-Configuracoes
+### 1. Criar index dedicado para `has_role()` (impacto alto)
+```sql
+CREATE INDEX IF NOT EXISTS idx_user_roles_user_role 
+ON public.user_roles (user_id, role);
 ```
+Ja existe `user_roles_user_id_role_key` (UNIQUE), mas vamos verificar se o planner esta usando. O mais provavel e que as sequential scans venham da funcao `SECURITY DEFINER` com `SET search_path` interferindo.
 
----
+### 2. Limpar `audit_logs` antigos (impacto alto)
+- Criar uma rotina de limpeza que mantenha apenas os ultimos 30 dias
+- Isso reduz a maior tabela de 20MB e reduz IO do vacuum
 
-## 3. Paginas do Porteiro (Frontend)
+### 3. Otimizar `audit_logs` trigger
+- Remover auditoria da tabela `subscriptions` (2025 updates registrados - provavelmente dos cron jobs de billing)
+- Remover auditoria da tabela `packages` (10K+ operacoes - maior volume)
 
-### 3.1 Ocorrencias da Portaria (`src/pages/porteiro/PortariaOccurrences.tsx`)
-- Lista de ocorrencias registradas pelo porteiro
-- Filtros por status (aberta/resolvida), categoria, periodo
-- Botao para registrar nova ocorrencia (dialog/formulario)
-- Possibilidade de marcar como resolvida com observacoes
-- Seletor de condominio (caso o porteiro atenda mais de um)
+### 4. Reduzir frequencia dos cron jobs
+- `notify-trial-ending`: rodar 1x/dia em vez de a cada hora
+- `generate-invoices`: ja roda 1x/dia, OK
+- `start/finish-party-hall-usage`: rodar 2x/dia em vez de a cada hora
 
-### 3.2 Passagem de Plantao (`src/pages/porteiro/ShiftHandover.tsx`)
-- Formulario com:
-  - Nome do porteiro que esta assumindo
-  - Checklist automatico baseado no template do sindico para aquele condominio
-  - Cada item: checkbox "OK" + campo de observacao opcional
-  - Observacoes gerais
-- Historico de passagens anteriores
-- Seletor de condominio
+### 5. VACUUM e ANALYZE manuais
+- `packages` tem 3034 dead tuples vs 199 live - ratio muito alto
+- Executar VACUUM ANALYZE nas tabelas principais
 
----
+## Secao Tecnica
 
-## 4. Pagina do Sindico - Configuracao de Checklist
+As mudancas serao:
+1. **Migration SQL**: limpeza de audit_logs > 30 dias, criacao de funcao de cleanup periodico
+2. **Migration SQL**: remover triggers de audit em tabelas de alto volume (packages, subscriptions) ou tornar o trigger condicional
+3. **Ajuste nos cron jobs**: reduzir frequencia no `supabase/config.toml` (se os schedules estiverem la) ou na configuracao do cron
+4. **VACUUM ANALYZE** nas tabelas com dead tuples acumulados
 
-### 4.1 Configuracao do Checklist de Portaria (`src/pages/sindico/ShiftChecklistSettings.tsx`)
-- Acessivel via menu do sindico (dentro de "Servicos > Porteiros" ou novo submenu)
-- Seletor de condominio
-- CRUD de itens do checklist por categoria
-- Reordenacao dos itens
-- Ativar/desativar itens
-- Segue o mesmo padrao visual do `PartyHallSettings.tsx` (aba de checklist)
-
----
-
-## 5. Rotas
-
-Novas rotas em `App.tsx`:
-- `/porteiro/portaria/ocorrencias` - Ocorrencias da portaria
-- `/porteiro/portaria/plantao` - Passagem de plantao
-- `/sindico/portaria/checklist` - Config do checklist (sindico)
-
----
-
-## Detalhes Tecnicos
-
-- Seguir padrao existente de componentes (Card, Dialog, Select, etc.)
-- Queries com `@tanstack/react-query` para cache e refetch
-- Filtros seguindo o padrao horizontal ja estabelecido
-- Contagem de ocorrencias abertas como badge no menu lateral
-- Realtime opcional para atualizacoes em tempo real das ocorrencias
+O impacto mais imediato sera a limpeza dos audit_logs e a reducao da auditoria em tabelas de alto volume.
 
