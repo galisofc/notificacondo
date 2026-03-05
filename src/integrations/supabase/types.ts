@@ -2151,6 +2151,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_old_audit_logs: { Args: never; Returns: number }
       cleanup_old_password_recovery_attempts: {
         Args: never
         Returns: undefined
