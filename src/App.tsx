@@ -404,6 +404,42 @@ const App = () => (
                 }
               />
 
+              {/* Sindico Zeladores */}
+              <Route
+                path="/sindico/zeladores"
+                element={
+                  <ProtectedRoute requiredRole="sindico">
+                    <SindicoZeladores />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Zelador Routes */}
+              <Route
+                path="/zelador"
+                element={
+                  <ProtectedRoute requiredRole="zelador">
+                    <ZeladorDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/zelador/manutencoes"
+                element={
+                  <ProtectedRoute requiredRole="zelador">
+                    <ZeladorManutencoes />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/zelador/configuracoes"
+                element={
+                  <ProtectedRoute requiredRole="zelador">
+                    <ZeladorSettings />
+                  </ProtectedRoute>
+                }
+              />
+
               {/* Super Admin Routes */}
               <Route
                 path="/superadmin"
