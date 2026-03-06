@@ -42,7 +42,7 @@ const priorityVariants: Record<string, "default" | "secondary" | "destructive" |
   baixa: "secondary", media: "outline", alta: "default", critica: "destructive",
 };
 const periodicityLabels: Record<string, string> = {
-  semanal: "Semanal", quinzenal: "Quinzenal", mensal: "Mensal", bimestral: "Bimestral",
+  unica: "Única", semanal: "Semanal", quinzenal: "Quinzenal", mensal: "Mensal", bimestral: "Bimestral",
   trimestral: "Trimestral", semestral: "Semestral", anual: "Anual", personalizado: "Personalizado",
 };
 
@@ -153,20 +153,28 @@ export default function ZeladorManutencoes() {
       if (error) throw error;
 
       if (execForm.status === "concluida") {
-        const periodicityDaysMap: Record<string, number> = {
-          semanal: 7, quinzenal: 15, mensal: 30, bimestral: 60,
-          trimestral: 90, semestral: 180, anual: 365,
-        };
-        const days = selectedTask.periodicity === "personalizado"
-          ? (selectedTask.periodicity_days || 30)
-          : (periodicityDaysMap[selectedTask.periodicity] || 30);
-        const nextDate = new Date();
-        nextDate.setDate(nextDate.getDate() + days);
-        await supabase.from("maintenance_tasks").update({
-          last_completed_at: new Date().toISOString(),
-          next_due_date: nextDate.toISOString().split("T")[0],
-          status: "finalizada",
-        }).eq("id", selectedTask.id);
+        if (selectedTask.periodicity === "unica") {
+          // Manutenção única: apenas finaliza, sem recalcular próxima data
+          await supabase.from("maintenance_tasks").update({
+            last_completed_at: new Date().toISOString(),
+            status: "finalizada",
+          }).eq("id", selectedTask.id);
+        } else {
+          const periodicityDaysMap: Record<string, number> = {
+            semanal: 7, quinzenal: 15, mensal: 30, bimestral: 60,
+            trimestral: 90, semestral: 180, anual: 365,
+          };
+          const days = selectedTask.periodicity === "personalizado"
+            ? (selectedTask.periodicity_days || 30)
+            : (periodicityDaysMap[selectedTask.periodicity] || 30);
+          const nextDate = new Date();
+          nextDate.setDate(nextDate.getDate() + days);
+          await supabase.from("maintenance_tasks").update({
+            last_completed_at: new Date().toISOString(),
+            next_due_date: nextDate.toISOString().split("T")[0],
+            status: "finalizada",
+          }).eq("id", selectedTask.id);
+        }
       } else if (execForm.status === "parcial") {
         await supabase.from("maintenance_tasks").update({
           status: "em_execucao",
