@@ -586,6 +586,9 @@ function SidebarNavigation() {
       title: "Manutenção",
       icon: Wrench,
       items: [
+        { title: "Dashboard", url: "/sindico/manutencoes", icon: LayoutDashboard },
+        { title: "Categorias", url: "/sindico/manutencoes/categorias", icon: ClipboardList },
+        { title: "Histórico", url: "/sindico/manutencoes/historico", icon: Clock },
         { title: "Zeladores", url: "/sindico/zeladores", icon: Users },
       ],
     },
