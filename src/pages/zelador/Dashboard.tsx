@@ -113,23 +113,37 @@ export default function ZeladorDashboard() {
     ? Math.round(((execByStatus["concluida"] || 0) / totalExecutions) * 100)
     : 0;
 
-  // Timeline (last 6 months)
-  const timelineData = Array.from({ length: 6 }).map((_, i) => {
-    const monthDate = subMonths(new Date(), 5 - i);
+  // Timeline (last 8 months) - based on task due dates
+  const timelineData = Array.from({ length: 8 }).map((_, i) => {
+    const monthDate = subMonths(new Date(), 7 - i);
     const monthStart = startOfMonth(monthDate);
     const monthEnd = endOfMonth(monthDate);
-    const monthLabel = format(monthDate, "MMM/yy", { locale: ptBR });
+    const monthLabel = format(monthDate, "MMM/yyyy", { locale: ptBR });
 
-    const monthExecs = executions.filter((e: any) => {
-      const execDate = parseISO(e.executed_at);
-      return isWithinInterval(execDate, { start: monthStart, end: monthEnd });
+    // Tasks with due dates in this month
+    const monthTasks = tasks.filter((t: any) => {
+      const dueDate = parseISO(t.next_due_date);
+      return isWithinInterval(dueDate, { start: monthStart, end: monthEnd });
     });
 
-    const concluidas = monthExecs.filter((e: any) => e.status === "concluida").length;
-    const parciais = monthExecs.filter((e: any) => e.status === "parcial").length;
-    const naoRealizadas = monthExecs.filter((e: any) => e.status === "nao_realizada").length;
+    // Executions completed in this month
+    const monthExecs = executions.filter((e: any) => {
+      const execDate = parseISO(e.executed_at);
+      return isWithinInterval(execDate, { start: monthStart, end: monthEnd }) && e.status === "concluida";
+    });
+    const completedTaskIds = new Set(monthExecs.map((e: any) => e.maintenance_tasks?.title));
 
-    return { month: monthLabel, Concluídas: concluidas, Parciais: parciais, "Não realizadas": naoRealizadas };
+    const concluidas = monthExecs.length;
+    const vencidos = monthTasks.filter((t: any) => {
+      const dueDate = parseISO(t.next_due_date);
+      return dueDate < new Date() && !completedTaskIds.has(t.title);
+    }).length;
+    const pendentes = monthTasks.filter((t: any) => {
+      const dueDate = parseISO(t.next_due_date);
+      return dueDate >= new Date() && !completedTaskIds.has(t.title);
+    }).length;
+
+    return { month: monthLabel, Concluídas: concluidas, Pendentes: pendentes, Vencidos: vencidos };
   });
 
   // Task status summary
@@ -235,11 +249,11 @@ export default function ZeladorDashboard() {
               {loading ? (
                 <Skeleton className="h-64 w-full" />
               ) : (
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={timelineData} layout="vertical" margin={{ left: 10, right: 10 }}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} className="fill-muted-foreground" />
-                    <YAxis dataKey="month" type="category" width={60} tick={{ fontSize: 12 }} className="fill-muted-foreground" />
+              <ResponsiveContainer width="100%" height={360}>
+                  <BarChart data={timelineData} layout="vertical" margin={{ left: 10, right: 20, top: 5, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" horizontal={false} />
+                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} className="fill-muted-foreground" />
+                    <YAxis dataKey="month" type="category" width={75} tick={{ fontSize: 11 }} className="fill-muted-foreground" />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: "hsl(var(--popover))",
@@ -249,9 +263,9 @@ export default function ZeladorDashboard() {
                       }}
                     />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Bar dataKey="Concluídas" stackId="a" fill="hsl(var(--chart-2))" radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="Parciais" stackId="a" fill="hsl(var(--chart-4))" />
-                    <Bar dataKey="Não realizadas" stackId="a" fill="hsl(var(--chart-1))" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="Concluídas" fill="#22c55e" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="Pendentes" fill="#f59e0b" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="Vencidos" fill="#ef4444" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
