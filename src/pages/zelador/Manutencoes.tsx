@@ -12,15 +12,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Wrench, CheckCircle2, Clock, AlertTriangle, ClipboardCheck, Loader2, Calendar, Search } from "lucide-react";
+import { Wrench, CheckCircle2, Clock, AlertTriangle, ClipboardCheck, Loader2, Calendar, Search, Plus, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { differenceInDays, parseISO, format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { useUserRole } from "@/hooks/useUserRole";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface MaintenanceTask {
   id: string;
   condominium_id: string;
+  category_id: string | null;
   title: string;
   description: string | null;
   priority: string;
@@ -29,6 +30,7 @@ interface MaintenanceTask {
   next_due_date: string;
   notification_days_before: number;
   responsible_notes: string | null;
+  estimated_cost: number | null;
   maintenance_categories: { name: string } | null;
   condominiums: { name: string } | null;
 }
@@ -44,6 +46,16 @@ const priorityLabels: Record<string, string> = { baixa: "Baixa", media: "Média"
 const priorityVariants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   baixa: "secondary", media: "outline", alta: "default", critica: "destructive",
 };
+const periodicityLabels: Record<string, string> = {
+  semanal: "Semanal", quinzenal: "Quinzenal", mensal: "Mensal", bimestral: "Bimestral",
+  trimestral: "Trimestral", semestral: "Semestral", anual: "Anual", personalizado: "Personalizado",
+};
+
+const emptyTaskForm = {
+  title: "", description: "", priority: "media", periodicity: "mensal",
+  periodicity_days: "", next_due_date: "", notification_days_before: "7",
+  responsible_notes: "", estimated_cost: "", category_id: "",
+};
 
 export default function ZeladorManutencoes() {
   const { user } = useAuth();
@@ -58,6 +70,13 @@ export default function ZeladorManutencoes() {
   const [selectedTask, setSelectedTask] = useState<MaintenanceTask | null>(null);
   const [execForm, setExecForm] = useState({ observations: "", status: "concluida", cost: "" });
 
+  // Task CRUD dialog
+  const [taskDialogOpen, setTaskDialogOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<MaintenanceTask | null>(null);
+  const [taskForm, setTaskForm] = useState(emptyTaskForm);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<MaintenanceTask | null>(null);
+
   const { data: condoIds = [] } = useQuery({
     queryKey: ["zelador-condos", user?.id],
     queryFn: async () => {
@@ -70,14 +89,40 @@ export default function ZeladorManutencoes() {
     enabled: !!user?.id,
   });
 
+  const { data: condominiums = [] } = useQuery({
+    queryKey: ["zelador-condos-details", condoIds],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("condominiums")
+        .select("id, name")
+        .in("id", condoIds);
+      return data || [];
+    },
+    enabled: condoIds.length > 0,
+  });
+
+  const { data: categories = [] } = useQuery({
+    queryKey: ["zelador-categories", condoIds],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("maintenance_categories")
+        .select("id, name, condominium_id")
+        .in("condominium_id", condoIds)
+        .eq("is_active", true)
+        .order("display_order");
+      return data || [];
+    },
+    enabled: condoIds.length > 0,
+  });
+
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ["zelador-all-tasks", condoIds],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("maintenance_tasks")
         .select(`
-          id, condominium_id, title, description, priority, periodicity, periodicity_days,
-          next_due_date, notification_days_before, responsible_notes,
+          id, condominium_id, category_id, title, description, priority, periodicity, periodicity_days,
+          next_due_date, notification_days_before, responsible_notes, estimated_cost,
           maintenance_categories(name),
           condominiums(name)
         `)
@@ -97,10 +142,10 @@ export default function ZeladorManutencoes() {
     return true;
   });
 
+  // --- Execution mutation ---
   const submitMutation = useMutation({
     mutationFn: async () => {
       if (!selectedTask || !user) throw new Error("Tarefa não selecionada");
-
       const { error } = await supabase.from("maintenance_executions").insert({
         task_id: selectedTask.id,
         condominium_id: selectedTask.condominium_id,
@@ -112,7 +157,6 @@ export default function ZeladorManutencoes() {
       });
       if (error) throw error;
 
-      // If completed, recalculate next_due_date
       if (execForm.status === "concluida") {
         const periodicityDaysMap: Record<string, number> = {
           semanal: 7, quinzenal: 15, mensal: 30, bimestral: 60,
@@ -121,17 +165,12 @@ export default function ZeladorManutencoes() {
         const days = selectedTask.periodicity === "personalizado"
           ? (selectedTask.periodicity_days || 30)
           : (periodicityDaysMap[selectedTask.periodicity] || 30);
-
         const nextDate = new Date();
         nextDate.setDate(nextDate.getDate() + days);
-
-        await supabase
-          .from("maintenance_tasks")
-          .update({
-            last_completed_at: new Date().toISOString(),
-            next_due_date: nextDate.toISOString().split("T")[0],
-          })
-          .eq("id", selectedTask.id);
+        await supabase.from("maintenance_tasks").update({
+          last_completed_at: new Date().toISOString(),
+          next_due_date: nextDate.toISOString().split("T")[0],
+        }).eq("id", selectedTask.id);
       }
     },
     onSuccess: () => {
@@ -141,10 +180,82 @@ export default function ZeladorManutencoes() {
       setExecDialogOpen(false);
       toast({ title: "Execução registrada!", description: "A manutenção foi registrada com sucesso" });
     },
-    onError: (error) => {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
-    },
+    onError: (error) => toast({ title: "Erro", description: error.message, variant: "destructive" }),
   });
+
+  // --- Task CRUD mutations ---
+  const saveTaskMutation = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("Não autenticado");
+      const condominiumId = editingTask?.condominium_id || (condoIds.length === 1 ? condoIds[0] : taskForm.category_id ? categories.find(c => c.id === taskForm.category_id)?.condominium_id : condoIds[0]);
+      if (!condominiumId) throw new Error("Condomínio não encontrado");
+
+      const payload = {
+        title: taskForm.title,
+        description: taskForm.description || null,
+        priority: taskForm.priority,
+        periodicity: taskForm.periodicity as any,
+        periodicity_days: taskForm.periodicity === "personalizado" && taskForm.periodicity_days ? parseInt(taskForm.periodicity_days) : null,
+        next_due_date: taskForm.next_due_date,
+        notification_days_before: parseInt(taskForm.notification_days_before) || 7,
+        responsible_notes: taskForm.responsible_notes || null,
+        estimated_cost: taskForm.estimated_cost ? parseFloat(taskForm.estimated_cost) : null,
+        category_id: taskForm.category_id || null,
+        condominium_id: condominiumId,
+      };
+
+      if (editingTask) {
+        const { error } = await supabase.from("maintenance_tasks").update(payload).eq("id", editingTask.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("maintenance_tasks").insert({ ...payload, created_by: user.id });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["zelador-all-tasks"] });
+      setTaskDialogOpen(false);
+      toast({ title: editingTask ? "Manutenção atualizada!" : "Manutenção criada!", description: "Operação realizada com sucesso" });
+    },
+    onError: (error) => toast({ title: "Erro", description: error.message, variant: "destructive" }),
+  });
+
+  const deleteTaskMutation = useMutation({
+    mutationFn: async () => {
+      if (!taskToDelete) return;
+      const { error } = await supabase.from("maintenance_tasks").update({ is_active: false }).eq("id", taskToDelete.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["zelador-all-tasks"] });
+      setDeleteDialogOpen(false);
+      toast({ title: "Manutenção removida" });
+    },
+    onError: (error) => toast({ title: "Erro", description: error.message, variant: "destructive" }),
+  });
+
+  const openNewTaskDialog = () => {
+    setEditingTask(null);
+    setTaskForm({ ...emptyTaskForm, next_due_date: new Date().toISOString().split("T")[0] });
+    setTaskDialogOpen(true);
+  };
+
+  const openEditTaskDialog = (task: MaintenanceTask) => {
+    setEditingTask(task);
+    setTaskForm({
+      title: task.title,
+      description: task.description || "",
+      priority: task.priority,
+      periodicity: task.periodicity,
+      periodicity_days: task.periodicity_days?.toString() || "",
+      next_due_date: task.next_due_date,
+      notification_days_before: task.notification_days_before.toString(),
+      responsible_notes: task.responsible_notes || "",
+      estimated_cost: task.estimated_cost?.toString() || "",
+      category_id: task.category_id || "",
+    });
+    setTaskDialogOpen(true);
+  };
 
   const openExecDialog = (task: MaintenanceTask) => {
     setSelectedTask(task);
@@ -152,32 +263,34 @@ export default function ZeladorManutencoes() {
     setExecDialogOpen(true);
   };
 
+  const selectedCondoId = editingTask?.condominium_id || (condoIds.length === 1 ? condoIds[0] : null);
+  const filteredCategories = selectedCondoId ? categories.filter(c => c.condominium_id === selectedCondoId) : categories;
+
   return (
     <DashboardLayout>
       <div className="flex-1 space-y-6 p-4 md:p-6 lg:p-8 pt-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <ClipboardCheck className="w-6 h-6 text-primary" />
-            Manutenções
-          </h1>
-          <p className="text-muted-foreground mt-1">Registre a execução das manutenções</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+              <ClipboardCheck className="w-6 h-6 text-primary" />
+              Manutenções
+            </h1>
+            <p className="text-muted-foreground mt-1">Gerencie e registre manutenções</p>
+          </div>
+          <Button onClick={openNewTaskDialog} className="gap-2">
+            <Plus className="w-4 h-4" />
+            Nova Manutenção
+          </Button>
         </div>
 
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar tarefa..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
-            />
+            <Input placeholder="Buscar tarefa..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
+            <SelectTrigger className="w-[160px]"><SelectValue placeholder="Status" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="atrasado">Atrasadas</SelectItem>
@@ -189,9 +302,7 @@ export default function ZeladorManutencoes() {
 
         {/* Task List */}
         {isLoading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-32 w-full" />)}
-          </div>
+          <div className="space-y-4">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-32 w-full" />)}</div>
         ) : filteredTasks.length === 0 ? (
           <Card>
             <CardContent className="pt-6 text-center py-12">
@@ -200,9 +311,7 @@ export default function ZeladorManutencoes() {
                 {tasks.length === 0 ? "Nenhuma manutenção cadastrada" : "Nenhuma tarefa encontrada"}
               </h3>
               <p className="text-muted-foreground mt-2">
-                {tasks.length === 0
-                  ? "O síndico ainda não cadastrou manutenções para o condomínio"
-                  : "Tente alterar os filtros"}
+                {tasks.length === 0 ? "Clique em \"Nova Manutenção\" para começar" : "Tente alterar os filtros"}
               </p>
             </CardContent>
           </Card>
@@ -236,30 +345,30 @@ export default function ZeladorManutencoes() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    {task.description && (
-                      <p className="text-sm text-muted-foreground mb-3">{task.description}</p>
-                    )}
+                    {task.description && <p className="text-sm text-muted-foreground mb-3">{task.description}</p>}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="text-sm text-muted-foreground space-y-1">
                         <div className="flex items-center gap-1.5">
                           <Calendar className="h-3.5 w-3.5" />
                           <span>
-                            {format(parseISO(task.next_due_date), "dd/MM/yyyy")} 
-                            {daysUntilDue < 0
-                              ? ` (${Math.abs(daysUntilDue)} dias atrasada)`
-                              : daysUntilDue === 0
-                              ? " (vence hoje)"
-                              : ` (em ${daysUntilDue} dias)`}
+                            {format(parseISO(task.next_due_date), "dd/MM/yyyy")}
+                            {daysUntilDue < 0 ? ` (${Math.abs(daysUntilDue)} dias atrasada)` : daysUntilDue === 0 ? " (vence hoje)" : ` (em ${daysUntilDue} dias)`}
                           </span>
                         </div>
-                        {task.responsible_notes && (
-                          <p className="text-xs italic">📝 {task.responsible_notes}</p>
-                        )}
+                        {task.responsible_notes && <p className="text-xs italic">📝 {task.responsible_notes}</p>}
                       </div>
-                      <Button onClick={() => openExecDialog(task)} className="gap-2 flex-shrink-0">
-                        <ClipboardCheck className="w-4 h-4" />
-                        Registrar Execução
-                      </Button>
+                      <div className="flex gap-2 flex-shrink-0">
+                        <Button variant="outline" size="sm" onClick={() => openEditTaskDialog(task)}>
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => { setTaskToDelete(task); setDeleteDialogOpen(true); }}>
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                        <Button onClick={() => openExecDialog(task)} className="gap-2" size="sm">
+                          <ClipboardCheck className="w-4 h-4" />
+                          Registrar
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -267,6 +376,102 @@ export default function ZeladorManutencoes() {
             })}
           </div>
         )}
+
+        {/* Task Create/Edit Dialog */}
+        <Dialog open={taskDialogOpen} onOpenChange={setTaskDialogOpen}>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{editingTask ? "Editar Manutenção" : "Nova Manutenção"}</DialogTitle>
+              <DialogDescription>Preencha os dados da manutenção preventiva</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid gap-2">
+                <Label>Título *</Label>
+                <Input value={taskForm.title} onChange={(e) => setTaskForm(p => ({ ...p, title: e.target.value }))} placeholder="Ex: Limpeza da caixa d'água" />
+              </div>
+              <div className="grid gap-2">
+                <Label>Descrição</Label>
+                <Textarea value={taskForm.description} onChange={(e) => setTaskForm(p => ({ ...p, description: e.target.value }))} placeholder="Detalhes da manutenção..." rows={3} />
+              </div>
+              {condoIds.length > 1 && !editingTask && (
+                <div className="grid gap-2">
+                  <Label>Condomínio *</Label>
+                  <Select value={selectedCondoId || ""} onValueChange={(v) => setTaskForm(p => ({ ...p, category_id: "" }))}>
+                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      {condominiums.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Categoria</Label>
+                  <Select value={taskForm.category_id} onValueChange={(v) => setTaskForm(p => ({ ...p, category_id: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      {filteredCategories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label>Prioridade</Label>
+                  <Select value={taskForm.priority} onValueChange={(v) => setTaskForm(p => ({ ...p, priority: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="baixa">Baixa</SelectItem>
+                      <SelectItem value="media">Média</SelectItem>
+                      <SelectItem value="alta">Alta</SelectItem>
+                      <SelectItem value="critica">Crítica</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Periodicidade</Label>
+                  <Select value={taskForm.periodicity} onValueChange={(v) => setTaskForm(p => ({ ...p, periodicity: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(periodicityLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {taskForm.periodicity === "personalizado" && (
+                  <div className="grid gap-2">
+                    <Label>Intervalo (dias)</Label>
+                    <Input type="number" value={taskForm.periodicity_days} onChange={(e) => setTaskForm(p => ({ ...p, periodicity_days: e.target.value }))} />
+                  </div>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Próxima data *</Label>
+                  <Input type="date" value={taskForm.next_due_date} onChange={(e) => setTaskForm(p => ({ ...p, next_due_date: e.target.value }))} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Notificar antes (dias)</Label>
+                  <Input type="number" value={taskForm.notification_days_before} onChange={(e) => setTaskForm(p => ({ ...p, notification_days_before: e.target.value }))} />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label>Custo estimado (R$)</Label>
+                <Input type="number" step="0.01" value={taskForm.estimated_cost} onChange={(e) => setTaskForm(p => ({ ...p, estimated_cost: e.target.value }))} placeholder="0,00" />
+              </div>
+              <div className="grid gap-2">
+                <Label>Instruções / Observações</Label>
+                <Textarea value={taskForm.responsible_notes} onChange={(e) => setTaskForm(p => ({ ...p, responsible_notes: e.target.value }))} placeholder="Instruções para execução..." rows={2} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setTaskDialogOpen(false)}>Cancelar</Button>
+              <Button onClick={() => saveTaskMutation.mutate()} disabled={saveTaskMutation.isPending || !taskForm.title || !taskForm.next_due_date}>
+                {saveTaskMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {editingTask ? "Salvar" : "Criar"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Execution Dialog */}
         <Dialog open={execDialogOpen} onOpenChange={setExecDialogOpen}>
@@ -278,7 +483,7 @@ export default function ZeladorManutencoes() {
             <div className="space-y-4">
               <div className="grid gap-2">
                 <Label>Status da execução</Label>
-                <Select value={execForm.status} onValueChange={(v) => setExecForm((prev) => ({ ...prev, status: v }))}>
+                <Select value={execForm.status} onValueChange={(v) => setExecForm(p => ({ ...p, status: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="concluida">✅ Concluída</SelectItem>
@@ -289,22 +494,11 @@ export default function ZeladorManutencoes() {
               </div>
               <div className="grid gap-2">
                 <Label>Custo (R$)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={execForm.cost}
-                  onChange={(e) => setExecForm((prev) => ({ ...prev, cost: e.target.value }))}
-                  placeholder="0,00"
-                />
+                <Input type="number" step="0.01" value={execForm.cost} onChange={(e) => setExecForm(p => ({ ...p, cost: e.target.value }))} placeholder="0,00" />
               </div>
               <div className="grid gap-2">
                 <Label>Observações</Label>
-                <Textarea
-                  value={execForm.observations}
-                  onChange={(e) => setExecForm((prev) => ({ ...prev, observations: e.target.value }))}
-                  placeholder="Descreva o que foi feito..."
-                  rows={4}
-                />
+                <Textarea value={execForm.observations} onChange={(e) => setExecForm(p => ({ ...p, observations: e.target.value }))} placeholder="Descreva o que foi feito..." rows={4} />
               </div>
             </div>
             <DialogFooter>
@@ -316,6 +510,25 @@ export default function ZeladorManutencoes() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Delete Confirmation */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remover manutenção?</AlertDialogTitle>
+              <AlertDialogDescription>
+                A manutenção "{taskToDelete?.title}" será desativada. Esta ação pode ser revertida pelo síndico.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={() => deleteTaskMutation.mutate()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                {deleteTaskMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Remover
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );
