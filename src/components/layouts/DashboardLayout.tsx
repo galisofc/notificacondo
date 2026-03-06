@@ -625,6 +625,12 @@ function SidebarNavigation() {
           subtitle: "Portaria",
           icon: DoorOpen,
         };
+      case "zelador":
+        return {
+          title: "NOTIFICACONDO",
+          subtitle: "Manutenção",
+          icon: Wrench,
+        };
       default:
         return {
           title: "NOTIFICACONDO",
