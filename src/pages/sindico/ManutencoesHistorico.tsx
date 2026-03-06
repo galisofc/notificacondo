@@ -46,7 +46,7 @@ export default function ManutencoesHistorico() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("maintenance_executions")
-        .select("*, maintenance_tasks(title, condominium_id)")
+        .select("*, maintenance_tasks(title, condominium_id, maintenance_type)")
         .in("condominium_id", condoIds)
         .order("executed_at", { ascending: false })
         .limit(100);
@@ -102,6 +102,7 @@ export default function ManutencoesHistorico() {
                 <TableRow>
                   <TableHead>Data</TableHead>
                   <TableHead>Tarefa</TableHead>
+                  <TableHead className="hidden md:table-cell">Tipo</TableHead>
                   <TableHead className="hidden md:table-cell">Executado por</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="hidden md:table-cell">Custo</TableHead>
@@ -124,6 +125,11 @@ export default function ManutencoesHistorico() {
                       </TableCell>
                       <TableCell className="font-medium">
                         {exec.maintenance_tasks?.title || "—"}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <Badge variant={exec.maintenance_tasks?.maintenance_type === "corretiva" ? "destructive" : "default"} className="text-xs">
+                          {exec.maintenance_tasks?.maintenance_type === "corretiva" ? "Corretiva" : "Preventiva"}
+                        </Badge>
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
                         <div className="flex items-center gap-1.5">

@@ -1,0 +1,1 @@
+ALTER TABLE public.maintenance_tasks ADD COLUMN IF NOT EXISTS maintenance_type text NOT NULL DEFAULT 'preventiva';

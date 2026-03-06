@@ -78,6 +78,7 @@ export default function SindicoManutencoes() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<MaintenanceTask | null>(null);
   const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
@@ -93,6 +94,7 @@ export default function SindicoManutencoes() {
     responsible_notes: "",
     estimated_cost: "",
     category_id: "",
+    maintenance_type: "preventiva",
   });
 
   const { data: condominiums = [] } = useQuery({
@@ -154,6 +156,7 @@ export default function SindicoManutencoes() {
     const status = getTaskStatus(task.next_due_date, task.notification_days_before);
     const statusKey = status.label === "Atrasada" ? "atrasado" : status.label === "Próxima" ? "proximo" : "em_dia";
     if (statusFilter !== "all" && statusKey !== statusFilter) return false;
+    if (typeFilter !== "all" && (task as any).maintenance_type !== typeFilter) return false;
     if (searchTerm && !task.title.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     return true;
   });
@@ -181,6 +184,7 @@ export default function SindicoManutencoes() {
       responsible_notes: "",
       estimated_cost: "",
       category_id: "",
+      maintenance_type: "preventiva",
     });
     setEditingTask(null);
   };
@@ -203,6 +207,7 @@ export default function SindicoManutencoes() {
       responsible_notes: task.responsible_notes || "",
       estimated_cost: task.estimated_cost?.toString() || "",
       category_id: task.category_id || "",
+      maintenance_type: (task as any).maintenance_type || "preventiva",
     });
     setDialogOpen(true);
   };
@@ -230,6 +235,7 @@ export default function SindicoManutencoes() {
         estimated_cost: form.estimated_cost ? parseFloat(form.estimated_cost) : null,
         category_id: form.category_id || null,
         created_by: user!.id,
+        maintenance_type: form.maintenance_type,
       };
 
       if (editingTask) {
@@ -284,8 +290,8 @@ export default function SindicoManutencoes() {
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Manutenções Preventivas</h2>
-            <p className="text-muted-foreground">Gerencie as tarefas de manutenção dos seus condomínios</p>
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Manutenções</h2>
+            <p className="text-muted-foreground">Gerencie as tarefas de manutenção preventiva e corretiva</p>
           </div>
           <div className="flex gap-2">
             <Select value={selectedCondominium} onValueChange={setSelectedCondominium}>
@@ -357,6 +363,17 @@ export default function SindicoManutencoes() {
               className="pl-9"
             />
           </div>
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-[160px]">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Tipo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os tipos</SelectItem>
+              <SelectItem value="preventiva">Preventiva</SelectItem>
+              <SelectItem value="corretiva">Corretiva</SelectItem>
+            </SelectContent>
+          </Select>
           <Select value={priorityFilter} onValueChange={setPriorityFilter}>
             <SelectTrigger className="w-[160px]">
               <Filter className="h-4 w-4 mr-2" />
@@ -393,6 +410,7 @@ export default function SindicoManutencoes() {
                 <TableRow>
                   <TableHead>Status</TableHead>
                   <TableHead>Tarefa</TableHead>
+                  <TableHead className="hidden md:table-cell">Tipo</TableHead>
                   <TableHead className="hidden md:table-cell">Categoria</TableHead>
                   <TableHead className="hidden md:table-cell">Periodicidade</TableHead>
                   <TableHead>Próx. Vencimento</TableHead>
@@ -414,6 +432,11 @@ export default function SindicoManutencoes() {
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">{task.title}</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <Badge variant={(task as any).maintenance_type === "corretiva" ? "destructive" : "default"} className="text-xs">
+                          {(task as any).maintenance_type === "corretiva" ? "Corretiva" : "Preventiva"}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="hidden md:table-cell text-muted-foreground">
                         {task.maintenance_categories?.name || "—"}
                       </TableCell>
@@ -481,6 +504,20 @@ export default function SindicoManutencoes() {
               <div className="grid gap-2">
                 <Label>Descrição</Label>
                 <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Detalhes da tarefa..." rows={3} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Tipo *</Label>
+                  <Select value={form.maintenance_type} onValueChange={(v) => setForm({ ...form, maintenance_type: v })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="preventiva">Preventiva</SelectItem>
+                      <SelectItem value="corretiva">Corretiva</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
