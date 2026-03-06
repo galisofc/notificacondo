@@ -300,9 +300,17 @@ export default function ZeladorManutencoes() {
           </Select>
         </div>
 
-        {/* Task List */}
+        {/* Kanban Columns */}
         {isLoading ? (
-          <div className="space-y-4">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-32 w-full" />)}</div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="space-y-3">
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-32 w-full" />
+                <Skeleton className="h-32 w-full" />
+              </div>
+            ))}
+          </div>
         ) : filteredTasks.length === 0 ? (
           <Card>
             <CardContent className="pt-6 text-center py-12">
@@ -311,71 +319,105 @@ export default function ZeladorManutencoes() {
                 {tasks.length === 0 ? "Nenhuma manutenção cadastrada" : "Nenhuma tarefa encontrada"}
               </h3>
               <p className="text-muted-foreground mt-2">
-                {tasks.length === 0 ? "Clique em \"Nova Manutenção\" para começar" : "Tente alterar os filtros"}
+                {tasks.length === 0 ? 'Clique em "Nova Manutenção" para começar' : "Tente alterar os filtros"}
               </p>
             </CardContent>
           </Card>
-        ) : (
-          <div className="grid gap-4">
-            {filteredTasks.map((task) => {
-              const statusInfo = getTaskStatus(task.next_due_date, task.notification_days_before);
-              const StatusIcon = statusInfo.icon;
-              const daysUntilDue = differenceInDays(parseISO(task.next_due_date), new Date());
+        ) : (() => {
+          const overdue = filteredTasks.filter(t => getTaskStatus(t.next_due_date, t.notification_days_before).key === "atrasado");
+          const upcoming = filteredTasks.filter(t => getTaskStatus(t.next_due_date, t.notification_days_before).key === "proximo");
+          const onTrack = filteredTasks.filter(t => getTaskStatus(t.next_due_date, t.notification_days_before).key === "em_dia");
 
-              return (
-                <Card key={task.id} className={statusInfo.key === "atrasado" ? "border-destructive/50" : ""}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <CardTitle className="text-base">{task.title}</CardTitle>
-                        <CardDescription className="mt-1">
-                          {task.maintenance_categories?.name && <span className="mr-2">{task.maintenance_categories.name}</span>}
-                          {task.condominiums?.name && <span>• {task.condominiums.name}</span>}
-                        </CardDescription>
-                      </div>
-                      <div className="flex gap-2 flex-shrink-0">
-                        <Badge variant={statusInfo.key === "atrasado" ? "destructive" : statusInfo.key === "proximo" ? "outline" : "default"} className="gap-1">
-                          <StatusIcon className="h-3 w-3" />
-                          {statusInfo.label}
-                        </Badge>
-                        <Badge variant={priorityVariants[task.priority] || "outline"}>
-                          {priorityLabels[task.priority] || task.priority}
-                        </Badge>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {task.description && <p className="text-sm text-muted-foreground mb-3">{task.description}</p>}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="text-sm text-muted-foreground space-y-1">
-                        <div className="flex items-center gap-1.5">
-                          <Calendar className="h-3.5 w-3.5" />
-                          <span>
-                            {format(parseISO(task.next_due_date), "dd/MM/yyyy")}
-                            {daysUntilDue < 0 ? ` (${Math.abs(daysUntilDue)} dias atrasada)` : daysUntilDue === 0 ? " (vence hoje)" : ` (em ${daysUntilDue} dias)`}
-                          </span>
-                        </div>
-                        {task.responsible_notes && <p className="text-xs italic">📝 {task.responsible_notes}</p>}
-                      </div>
-                      <div className="flex gap-2 flex-shrink-0">
-                        <Button variant="outline" size="sm" onClick={() => openEditTaskDialog(task)}>
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => { setTaskToDelete(task); setDeleteDialogOpen(true); }}>
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
-                        <Button onClick={() => openExecDialog(task)} className="gap-2" size="sm">
-                          <ClipboardCheck className="w-4 h-4" />
-                          Registrar
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
+          const columnColors = {
+            overdue: { border: "border-destructive/60", header: "bg-destructive/10 text-destructive", accent: "border-l-destructive" },
+            upcoming: { border: "border-amber-500/60", header: "bg-amber-500/10 text-amber-700 dark:text-amber-400", accent: "border-l-amber-500" },
+            onTrack: { border: "border-emerald-500/60", header: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400", accent: "border-l-emerald-500" },
+          };
+
+          const renderTaskCard = (task: MaintenanceTask) => {
+            const daysUntilDue = differenceInDays(parseISO(task.next_due_date), new Date());
+            const statusInfo = getTaskStatus(task.next_due_date, task.notification_days_before);
+            return (
+              <div
+                key={task.id}
+                className={`rounded-lg border bg-card p-3 space-y-2 border-l-4 ${
+                  statusInfo.key === "atrasado" ? columnColors.overdue.accent :
+                  statusInfo.key === "proximo" ? columnColors.upcoming.accent :
+                  columnColors.onTrack.accent
+                }`}
+              >
+                {/* Header: condominium + code */}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-foreground">{task.condominiums?.name || "Condomínio"}</span>
+                  <span className="text-[10px] text-muted-foreground font-mono">#{task.id.slice(0, 4)}</span>
+                </div>
+
+                {/* Category badge + priority */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {task.maintenance_categories?.name && (
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                      {task.maintenance_categories.name}
+                    </Badge>
+                  )}
+                  <Badge variant={priorityVariants[task.priority] || "outline"} className="text-[10px] px-1.5 py-0">
+                    {priorityLabels[task.priority] || task.priority}
+                  </Badge>
+                </div>
+
+                {/* Title + description */}
+                <p className="text-sm font-medium text-foreground leading-tight">{task.title}</p>
+                {task.description && (
+                  <p className="text-xs text-muted-foreground line-clamp-2">{task.description}</p>
+                )}
+
+                {/* Date info */}
+                <p className="text-[10px] text-muted-foreground">
+                  {daysUntilDue < 0
+                    ? `Atrasada há ${Math.abs(daysUntilDue)} dias`
+                    : daysUntilDue === 0
+                    ? "Vence hoje"
+                    : `Em ${daysUntilDue} dias • ${format(parseISO(task.next_due_date), "dd/MM/yyyy")}`}
+                </p>
+
+                {/* Action buttons */}
+                <div className="flex gap-1.5 pt-1 border-t border-border/50">
+                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => openEditTaskDialog(task)}>
+                    <Pencil className="w-3 h-3 mr-1" /> Editar
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => openExecDialog(task)}>
+                    <ClipboardCheck className="w-3 h-3 mr-1" /> Registrar
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-destructive hover:text-destructive" onClick={() => { setTaskToDelete(task); setDeleteDialogOpen(true); }}>
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+            );
+          };
+
+          const renderColumn = (title: string, items: MaintenanceTask[], colors: typeof columnColors.overdue) => (
+            <div className="flex flex-col gap-3">
+              <div className={`flex items-center justify-between rounded-lg px-3 py-2 ${colors.header}`}>
+                <span className="text-sm font-semibold">{title} ({items.length})</span>
+              </div>
+              <div className="space-y-3 min-h-[100px]">
+                {items.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-6">Nenhuma tarefa</p>
+                ) : (
+                  items.map(renderTaskCard)
+                )}
+              </div>
+            </div>
+          );
+
+          return (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {renderColumn("Vencidas", overdue, columnColors.overdue)}
+              {renderColumn("Pendentes", upcoming, columnColors.upcoming)}
+              {renderColumn("Em dia", onTrack, columnColors.onTrack)}
+            </div>
+          );
+        })()}
 
         {/* Task Create/Edit Dialog */}
         <Dialog open={taskDialogOpen} onOpenChange={setTaskDialogOpen}>
