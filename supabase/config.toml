@@ -164,3 +164,11 @@ verify_jwt = false
 # Atualização de dados de porteiro
 [functions.update-porteiro]
 verify_jwt = false
+
+# Criação de zelador
+[functions.create-zelador]
+verify_jwt = false
+
+# Exclusão de zelador
+[functions.delete-zelador]
+verify_jwt = false
