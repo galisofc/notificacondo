@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Wrench, ClipboardCheck, Loader2, Search, Plus, Pencil, Trash2 } from "lucide-react";
+import { Wrench, ClipboardCheck, Loader2, Search, Plus, Pencil, Trash2, Play } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { differenceInDays, parseISO, format } from "date-fns";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -257,6 +257,18 @@ export default function ZeladorManutencoes() {
     setTaskDialogOpen(true);
   };
 
+  const startTaskMutation = useMutation({
+    mutationFn: async (taskId: string) => {
+      const { error } = await supabase.from("maintenance_tasks").update({ status: "em_execucao" }).eq("id", taskId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["zelador-all-tasks"] });
+      toast({ title: "Manutenção iniciada!", description: "A tarefa foi movida para Em execução" });
+    },
+    onError: (error) => toast({ title: "Erro", description: error.message, variant: "destructive" }),
+  });
+
   const openExecDialog = (task: MaintenanceTask) => {
     setSelectedTask(task);
     setExecForm({ observations: "", status: "concluida", cost: "" });
@@ -333,9 +345,21 @@ export default function ZeladorManutencoes() {
             <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => openEditTaskDialog(task)}>
               <Pencil className="w-3 h-3 mr-1" /> Editar
             </Button>
-            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => openExecDialog(task)}>
-              <ClipboardCheck className="w-3 h-3 mr-1" /> Registrar
-            </Button>
+            {task.status === "em_execucao" ? (
+              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => openExecDialog(task)}>
+                <ClipboardCheck className="w-3 h-3 mr-1" /> Finalizar
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                onClick={() => startTaskMutation.mutate(task.id)}
+                disabled={startTaskMutation.isPending}
+              >
+                <Play className="w-3 h-3 mr-1" /> Iniciar
+              </Button>
+            )}
             <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-destructive hover:text-destructive" onClick={() => { setTaskToDelete(task); setDeleteDialogOpen(true); }}>
               <Trash2 className="w-3 h-3" />
             </Button>
