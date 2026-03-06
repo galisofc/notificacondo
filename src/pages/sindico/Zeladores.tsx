@@ -68,7 +68,6 @@ export default function Zeladores() {
   const [passwordZelador, setPasswordZelador] = useState<Zelador | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [isResettingPassword, setIsResettingPassword] = useState(false);
-  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   // Success state
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
@@ -572,7 +571,7 @@ export default function Zeladores() {
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Mínimo 8 caracteres"
                 />
-                <PasswordStrengthIndicator strength={passwordStrength} />
+                <PasswordStrengthIndicator password={newPassword} />
               </div>
               {passwordZelador?.profile?.phone && (
                 <p className="text-sm text-muted-foreground">
