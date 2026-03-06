@@ -20,10 +20,10 @@ function getTaskStatus(nextDueDate: string, notificationDaysBefore: number) {
 }
 
 const CHART_COLORS = {
-  concluida: "hsl(var(--chart-2))",
-  parcial: "hsl(var(--chart-4))",
-  nao_realizada: "hsl(var(--chart-1))",
-  em_andamento: "hsl(var(--chart-3))",
+  concluida: "#22c55e",
+  parcial: "#f59e0b",
+  nao_realizada: "#ef4444",
+  em_andamento: "#3b82f6",
 };
 
 const STATUS_LABELS: Record<string, string> = {
