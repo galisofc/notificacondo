@@ -253,14 +253,14 @@ export default function RegisterPackage() {
           block_id: selectedBlock,
           apartment_id: selectedApartment,
           received_by: user.id,
-          received_by_name: porterProfile?.full_name || user.email || '',
           pickup_code: pickupCode,
           description: description || null,
           photo_url: urlData.publicUrl,
           status: "pendente",
           package_type_id: selectedPackageType || null,
           tracking_code: trackingCode || null,
-        })
+          received_by_name: porterProfile?.full_name || user.email || '',
+        } as any)
         .select()
         .single();
 
