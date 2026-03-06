@@ -722,6 +722,179 @@ export type Database = {
           },
         ]
       }
+      maintenance_categories: {
+        Row: {
+          condominium_id: string
+          created_at: string
+          display_order: number
+          icon: string | null
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          condominium_id: string
+          created_at?: string
+          display_order?: number
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          condominium_id?: string
+          created_at?: string
+          display_order?: number
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_categories_condominium_id_fkey"
+            columns: ["condominium_id"]
+            isOneToOne: false
+            referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      maintenance_executions: {
+        Row: {
+          condominium_id: string
+          cost: number | null
+          created_at: string
+          executed_at: string
+          executed_by: string | null
+          executed_by_name: string | null
+          id: string
+          observations: string | null
+          photos: string[]
+          status: Database["public"]["Enums"]["maintenance_execution_status"]
+          task_id: string
+        }
+        Insert: {
+          condominium_id: string
+          cost?: number | null
+          created_at?: string
+          executed_at?: string
+          executed_by?: string | null
+          executed_by_name?: string | null
+          id?: string
+          observations?: string | null
+          photos?: string[]
+          status?: Database["public"]["Enums"]["maintenance_execution_status"]
+          task_id: string
+        }
+        Update: {
+          condominium_id?: string
+          cost?: number | null
+          created_at?: string
+          executed_at?: string
+          executed_by?: string | null
+          executed_by_name?: string | null
+          id?: string
+          observations?: string | null
+          photos?: string[]
+          status?: Database["public"]["Enums"]["maintenance_execution_status"]
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_executions_condominium_id_fkey"
+            columns: ["condominium_id"]
+            isOneToOne: false
+            referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maintenance_executions_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "maintenance_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      maintenance_tasks: {
+        Row: {
+          category_id: string | null
+          condominium_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          estimated_cost: number | null
+          id: string
+          is_active: boolean
+          last_completed_at: string | null
+          next_due_date: string
+          notification_days_before: number
+          periodicity: Database["public"]["Enums"]["maintenance_periodicity"]
+          periodicity_days: number | null
+          priority: string
+          responsible_notes: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category_id?: string | null
+          condominium_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          estimated_cost?: number | null
+          id?: string
+          is_active?: boolean
+          last_completed_at?: string | null
+          next_due_date: string
+          notification_days_before?: number
+          periodicity: Database["public"]["Enums"]["maintenance_periodicity"]
+          periodicity_days?: number | null
+          priority?: string
+          responsible_notes?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string | null
+          condominium_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          estimated_cost?: number | null
+          id?: string
+          is_active?: boolean
+          last_completed_at?: string | null
+          next_due_date?: string
+          notification_days_before?: number
+          periodicity?: Database["public"]["Enums"]["maintenance_periodicity"]
+          periodicity_days?: number | null
+          priority?: string
+          responsible_notes?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_tasks_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "maintenance_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maintenance_tasks_condominium_id_fkey"
+            columns: ["condominium_id"]
+            isOneToOne: false
+            referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mercadopago_config: {
         Row: {
           access_token_encrypted: string
@@ -2254,8 +2427,18 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "super_admin" | "sindico" | "morador" | "porteiro"
+      app_role: "super_admin" | "sindico" | "morador" | "porteiro" | "zelador"
       fine_status: "em_aberto" | "pago" | "vencido"
+      maintenance_execution_status: "concluida" | "parcial" | "nao_realizada"
+      maintenance_periodicity:
+        | "semanal"
+        | "quinzenal"
+        | "mensal"
+        | "bimestral"
+        | "trimestral"
+        | "semestral"
+        | "anual"
+        | "personalizado"
       occurrence_status:
         | "registrada"
         | "notificado"
@@ -2393,8 +2576,19 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["super_admin", "sindico", "morador", "porteiro"],
+      app_role: ["super_admin", "sindico", "morador", "porteiro", "zelador"],
       fine_status: ["em_aberto", "pago", "vencido"],
+      maintenance_execution_status: ["concluida", "parcial", "nao_realizada"],
+      maintenance_periodicity: [
+        "semanal",
+        "quinzenal",
+        "mensal",
+        "bimestral",
+        "trimestral",
+        "semestral",
+        "anual",
+        "personalizado",
+      ],
       occurrence_status: [
         "registrada",
         "notificado",
