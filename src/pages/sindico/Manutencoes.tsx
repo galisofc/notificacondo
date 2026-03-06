@@ -363,6 +363,17 @@ export default function SindicoManutencoes() {
               className="pl-9"
             />
           </div>
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-[160px]">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Tipo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os tipos</SelectItem>
+              <SelectItem value="preventiva">Preventiva</SelectItem>
+              <SelectItem value="corretiva">Corretiva</SelectItem>
+            </SelectContent>
+          </Select>
           <Select value={priorityFilter} onValueChange={setPriorityFilter}>
             <SelectTrigger className="w-[160px]">
               <Filter className="h-4 w-4 mr-2" />
@@ -399,6 +410,7 @@ export default function SindicoManutencoes() {
                 <TableRow>
                   <TableHead>Status</TableHead>
                   <TableHead>Tarefa</TableHead>
+                  <TableHead className="hidden md:table-cell">Tipo</TableHead>
                   <TableHead className="hidden md:table-cell">Categoria</TableHead>
                   <TableHead className="hidden md:table-cell">Periodicidade</TableHead>
                   <TableHead>Próx. Vencimento</TableHead>
@@ -420,6 +432,11 @@ export default function SindicoManutencoes() {
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">{task.title}</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <Badge variant={(task as any).maintenance_type === "corretiva" ? "destructive" : "default"} className="text-xs">
+                          {(task as any).maintenance_type === "corretiva" ? "Corretiva" : "Preventiva"}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="hidden md:table-cell text-muted-foreground">
                         {task.maintenance_categories?.name || "—"}
                       </TableCell>
