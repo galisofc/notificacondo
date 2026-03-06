@@ -5,11 +5,12 @@ import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Wrench, CheckCircle2, Clock, AlertTriangle, ClipboardCheck, Calendar } from "lucide-react";
-import { differenceInDays, parseISO, format } from "date-fns";
+import { Wrench, ClipboardCheck, Calendar, TrendingUp, DollarSign, BarChart3 } from "lucide-react";
+import { differenceInDays, parseISO, format, subMonths, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from "recharts";
 
 function getTaskStatus(nextDueDate: string, notificationDaysBefore: number) {
   const daysUntilDue = differenceInDays(parseISO(nextDueDate), new Date());
@@ -17,6 +18,19 @@ function getTaskStatus(nextDueDate: string, notificationDaysBefore: number) {
   if (daysUntilDue <= notificationDaysBefore) return "proximo";
   return "em_dia";
 }
+
+const CHART_COLORS = {
+  concluida: "hsl(var(--chart-2))",
+  parcial: "hsl(var(--chart-4))",
+  nao_realizada: "hsl(var(--chart-1))",
+  em_andamento: "hsl(var(--chart-3))",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  concluida: "Concluídas",
+  parcial: "Parciais",
+  nao_realizada: "Não realizadas",
+};
 
 export default function ZeladorDashboard() {
   const { user } = useAuth();
@@ -39,7 +53,7 @@ export default function ZeladorDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("maintenance_tasks")
-        .select("id, title, next_due_date, notification_days_before, priority")
+        .select("id, title, next_due_date, notification_days_before, priority, periodicity, estimated_cost, maintenance_categories(name)")
         .in("condominium_id", condoIds)
         .eq("is_active", true);
       if (error) throw error;
@@ -48,40 +62,91 @@ export default function ZeladorDashboard() {
     enabled: condoIds.length > 0,
   });
 
-  const { data: recentExecutions = [], isLoading: execLoading } = useQuery({
-    queryKey: ["zelador-recent-execs", condoIds],
+  const { data: executions = [], isLoading: execLoading } = useQuery({
+    queryKey: ["zelador-all-execs", condoIds],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("maintenance_executions")
-        .select("id, executed_at, status, observations, maintenance_tasks(title)")
+        .select("id, executed_at, status, cost, maintenance_tasks(title)")
         .in("condominium_id", condoIds)
-        .eq("executed_by", user!.id)
-        .order("executed_at", { ascending: false })
-        .limit(5);
+        .order("executed_at", { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: condoIds.length > 0 && !!user?.id,
+    enabled: condoIds.length > 0,
   });
 
-  const stats = tasks.reduce(
-    (acc, t) => {
-      const s = getTaskStatus(t.next_due_date, t.notification_days_before);
-      if (s === "em_dia") acc.emDia++;
-      else if (s === "proximo") acc.proximas++;
-      else acc.atrasadas++;
-      return acc;
+  const { data: categories = [] } = useQuery({
+    queryKey: ["zelador-dash-categories", condoIds],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("maintenance_categories")
+        .select("id, name")
+        .in("condominium_id", condoIds)
+        .eq("is_active", true)
+        .order("display_order");
+      return data || [];
     },
-    { emDia: 0, proximas: 0, atrasadas: 0 }
-  );
+    enabled: condoIds.length > 0,
+  });
 
   const loading = tasksLoading || execLoading;
 
-  const statusLabels: Record<string, string> = {
-    concluida: "Concluída",
-    parcial: "Parcial",
-    nao_realizada: "Não realizada",
-  };
+  // --- Compute stats ---
+  const totalTasks = tasks.length;
+  const totalCost = executions.reduce((sum, e: any) => sum + (e.cost || 0), 0);
+  const totalExecutions = executions.length;
+
+  // Execution score (donut)
+  const execByStatus = executions.reduce((acc: Record<string, number>, e: any) => {
+    acc[e.status] = (acc[e.status] || 0) + 1;
+    return acc;
+  }, {});
+
+  const donutData = Object.entries(execByStatus).map(([status, count]) => ({
+    name: STATUS_LABELS[status] || status,
+    value: count as number,
+    fill: CHART_COLORS[status as keyof typeof CHART_COLORS] || "hsl(var(--chart-5))",
+  }));
+
+  const completionRate = totalExecutions > 0
+    ? Math.round(((execByStatus["concluida"] || 0) / totalExecutions) * 100)
+    : 0;
+
+  // Timeline (last 6 months)
+  const timelineData = Array.from({ length: 6 }).map((_, i) => {
+    const monthDate = subMonths(new Date(), 5 - i);
+    const monthStart = startOfMonth(monthDate);
+    const monthEnd = endOfMonth(monthDate);
+    const monthLabel = format(monthDate, "MMM/yy", { locale: ptBR });
+
+    const monthExecs = executions.filter((e: any) => {
+      const execDate = parseISO(e.executed_at);
+      return isWithinInterval(execDate, { start: monthStart, end: monthEnd });
+    });
+
+    const concluidas = monthExecs.filter((e: any) => e.status === "concluida").length;
+    const parciais = monthExecs.filter((e: any) => e.status === "parcial").length;
+    const naoRealizadas = monthExecs.filter((e: any) => e.status === "nao_realizada").length;
+
+    return { month: monthLabel, Concluídas: concluidas, Parciais: parciais, "Não realizadas": naoRealizadas };
+  });
+
+  // Task status summary
+  const taskStatusCounts = tasks.reduce(
+    (acc, t: any) => {
+      const s = getTaskStatus(t.next_due_date, t.notification_days_before);
+      acc[s]++;
+      return acc;
+    },
+    { em_dia: 0, proximo: 0, atrasado: 0 } as Record<string, number>
+  );
+
+  // Categories with task count
+  const categoriesWithCount = categories.map((cat: any) => ({
+    ...cat,
+    taskCount: tasks.filter((t: any) => t.maintenance_categories?.name === cat.name).length,
+  }));
 
   return (
     <DashboardLayout>
@@ -100,82 +165,217 @@ export default function ZeladorDashboard() {
           </Button>
         </div>
 
-        {/* Status Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Em dia</CardTitle>
-              <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+        {/* Stat Cards */}
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-28 w-full" />)}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Total de manutenções</CardTitle>
+                <BarChart3 className="w-5 h-5 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-foreground">{totalTasks}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {taskStatusCounts.atrasado > 0 && (
+                    <span className="text-destructive font-medium">{taskStatusCounts.atrasado} atrasada{taskStatusCounts.atrasado > 1 ? "s" : ""}</span>
+                  )}
+                  {taskStatusCounts.atrasado > 0 && taskStatusCounts.proximo > 0 && " · "}
+                  {taskStatusCounts.proximo > 0 && (
+                    <span className="text-amber-600 dark:text-amber-400 font-medium">{taskStatusCounts.proximo} próxima{taskStatusCounts.proximo > 1 ? "s" : ""}</span>
+                  )}
+                  {(taskStatusCounts.atrasado === 0 && taskStatusCounts.proximo === 0) && (
+                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">Todas em dia ✓</span>
+                  )}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Execuções realizadas</CardTitle>
+                <TrendingUp className="w-5 h-5 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-foreground">{totalExecutions}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {completionRate}% concluídas com sucesso
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Valor investido</CardTitle>
+                <DollarSign className="w-5 h-5 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-foreground">
+                  {totalCost.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  custo total registrado
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Charts row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Timeline */}
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="text-base">Linha do tempo de manutenções</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
-                {loading ? "—" : stats.emDia}
-              </div>
-              <p className="text-xs text-muted-foreground">manutenções em dia</p>
+              {loading ? (
+                <Skeleton className="h-64 w-full" />
+              ) : (
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={timelineData} layout="vertical" margin={{ left: 10, right: 10 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} className="fill-muted-foreground" />
+                    <YAxis dataKey="month" type="category" width={60} tick={{ fontSize: 12 }} className="fill-muted-foreground" />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--popover))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
+                        color: "hsl(var(--popover-foreground))",
+                      }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Bar dataKey="Concluídas" stackId="a" fill="hsl(var(--chart-2))" radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="Parciais" stackId="a" fill="hsl(var(--chart-4))" />
+                    <Bar dataKey="Não realizadas" stackId="a" fill="hsl(var(--chart-1))" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
+
+          {/* Score donut */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Próximas</CardTitle>
-              <Clock className="w-5 h-5 text-amber-500" />
+            <CardHeader>
+              <CardTitle className="text-base">Score de manutenções</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">
-                {loading ? "—" : stats.proximas}
-              </div>
-              <p className="text-xs text-muted-foreground">manutenções próximas</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Atrasadas</CardTitle>
-              <AlertTriangle className="w-5 h-5 text-destructive" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-destructive">
-                {loading ? "—" : stats.atrasadas}
-              </div>
-              <p className="text-xs text-muted-foreground">manutenções atrasadas</p>
+              {loading ? (
+                <Skeleton className="h-64 w-full" />
+              ) : totalExecutions === 0 ? (
+                <div className="flex items-center justify-center h-64 text-muted-foreground text-sm">
+                  Nenhuma execução registrada
+                </div>
+              ) : (
+                <div className="relative">
+                  <ResponsiveContainer width="100%" height={220}>
+                    <PieChart>
+                      <Pie
+                        data={donutData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={90}
+                        paddingAngle={2}
+                        dataKey="value"
+                        strokeWidth={0}
+                      >
+                        {donutData.map((entry, index) => (
+                          <Cell key={index} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--popover))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "8px",
+                          color: "hsl(var(--popover-foreground))",
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ marginBottom: 20 }}>
+                    <div className="text-center">
+                      <span className="text-2xl font-bold text-foreground">{completionRate}%</span>
+                      <p className="text-xs text-muted-foreground">Concluídas</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-3 mt-2">
+                    {donutData.map((entry, i) => (
+                      <div key={i} className="flex items-center gap-1.5 text-xs">
+                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.fill }} />
+                        <span className="text-muted-foreground">{entry.name} ({entry.value})</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Recent Executions */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Últimas Execuções</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-full" />)}
-              </div>
-            ) : recentExecutions.length === 0 ? (
-              <p className="text-muted-foreground text-sm text-center py-6">
-                Nenhuma execução registrada ainda.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {recentExecutions.map((exec: any) => (
-                  <div key={exec.id} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
-                    <div className="flex items-center gap-3">
-                      <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                      <div>
-                        <p className="text-sm font-medium">{exec.maintenance_tasks?.title || "—"}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {format(parseISO(exec.executed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                        </p>
-                      </div>
+        {/* Bottom row: Categories + Recent Executions */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Categories */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Categorias de Manutenção</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="space-y-2">{[1, 2, 3].map(i => <Skeleton key={i} className="h-10 w-full" />)}</div>
+              ) : categoriesWithCount.length === 0 ? (
+                <p className="text-muted-foreground text-sm text-center py-6">Nenhuma categoria cadastrada</p>
+              ) : (
+                <div className="space-y-2">
+                  {categoriesWithCount.map((cat: any) => (
+                    <div key={cat.id} className="flex items-center justify-between py-2 px-3 bg-muted/50 rounded-lg">
+                      <span className="text-sm font-medium text-foreground">{cat.name}</span>
+                      <Badge variant="secondary">{cat.taskCount} tarefa{cat.taskCount !== 1 ? "s" : ""}</Badge>
                     </div>
-                    <Badge variant={exec.status === "concluida" ? "default" : exec.status === "parcial" ? "secondary" : "destructive"}>
-                      {statusLabels[exec.status] || exec.status}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Recent Executions */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Últimas Execuções</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="space-y-3">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+              ) : executions.length === 0 ? (
+                <p className="text-muted-foreground text-sm text-center py-6">Nenhuma execução registrada ainda.</p>
+              ) : (
+                <div className="space-y-3">
+                  {executions.slice(0, 6).map((exec: any) => (
+                    <div key={exec.id} className="flex items-center justify-between border-b border-border pb-3 last:border-0 last:pb-0">
+                      <div className="flex items-center gap-3">
+                        <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{exec.maintenance_tasks?.title || "—"}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {format(parseISO(exec.executed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant={exec.status === "concluida" ? "default" : exec.status === "parcial" ? "secondary" : "destructive"}>
+                        {STATUS_LABELS[exec.status] || exec.status}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </DashboardLayout>
   );
