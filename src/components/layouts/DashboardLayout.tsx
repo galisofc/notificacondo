@@ -154,6 +154,12 @@ const getPorteiroNavItems = (pendingPackages: number, openPorterOccs: number): N
   { title: "Configurações", url: "/porteiro/configuracoes", icon: Settings },
 ];
 
+const getZeladorNavItems = (): NavStructure => [
+  { title: "Início", url: "/zelador", icon: Home },
+  { title: "Manutenções", url: "/zelador/manutencoes", icon: ClipboardCheck },
+  { title: "Configurações", url: "/zelador/configuracoes", icon: Settings },
+];
+
 function SidebarNavigation() {
   const { state, isMobile, setOpenMobile } = useSidebar();
   // In mobile, sidebar is shown as a Sheet and should always show text labels
@@ -576,6 +582,13 @@ function SidebarNavigation() {
         { title: "Porteiros", url: "/sindico/porteiros", icon: Users },
       ],
     },
+    {
+      title: "Manutenção",
+      icon: Wrench,
+      items: [
+        { title: "Zeladores", url: "/sindico/zeladores", icon: Users },
+      ],
+    },
     { title: "Notificações", url: "/notifications", icon: Bell },
     { title: "Relatórios", url: "/reports", icon: BarChart3 },
     { title: "Configurações", url: "/sindico/settings", icon: Settings },
@@ -588,6 +601,8 @@ function SidebarNavigation() {
       ? getSindicoNavItems()
       : role === "porteiro"
       ? getPorteiroNavItems(pendingPackages, openPorterOccurrencesPorteiro)
+      : role === "zelador"
+      ? getZeladorNavItems()
       : residentNavItems;
 
   const getRoleConfig = () => {
@@ -609,6 +624,12 @@ function SidebarNavigation() {
           title: "NOTIFICACONDO",
           subtitle: "Portaria",
           icon: DoorOpen,
+        };
+      case "zelador":
+        return {
+          title: "NOTIFICACONDO",
+          subtitle: "Manutenção",
+          icon: Wrench,
         };
       default:
         return {
@@ -660,6 +681,8 @@ function SidebarNavigation() {
         return "Síndico";
       case "porteiro":
         return "Porteiro";
+      case "zelador":
+        return "Zelador";
       default:
         return "Morador";
     }

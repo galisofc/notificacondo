@@ -75,6 +75,12 @@ import NotFound from "./pages/NotFound";
 import ShiftChecklistSettings from "./pages/sindico/ShiftChecklistSettings";
 import SindicoPortariaOccurrences from "./pages/sindico/PortariaOccurrences";
 import SindicoPortariaShiftHandovers from "./pages/sindico/PortariaShiftHandovers";
+import SindicoZeladores from "./pages/sindico/Zeladores";
+
+// Zelador pages
+import ZeladorDashboard from "./pages/zelador/Dashboard";
+import ZeladorManutencoes from "./pages/zelador/Manutencoes";
+import ZeladorSettings from "./pages/zelador/Settings";
 
 const queryClient = new QueryClient();
 
@@ -394,6 +400,42 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole="porteiro">
                     <ShiftHandover />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Sindico Zeladores */}
+              <Route
+                path="/sindico/zeladores"
+                element={
+                  <ProtectedRoute requiredRole="sindico">
+                    <SindicoZeladores />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Zelador Routes */}
+              <Route
+                path="/zelador"
+                element={
+                  <ProtectedRoute requiredRole="zelador">
+                    <ZeladorDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/zelador/manutencoes"
+                element={
+                  <ProtectedRoute requiredRole="zelador">
+                    <ZeladorManutencoes />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/zelador/configuracoes"
+                element={
+                  <ProtectedRoute requiredRole="zelador">
+                    <ZeladorSettings />
                   </ProtectedRoute>
                 }
               />
