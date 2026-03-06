@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Wrench, ClipboardCheck, Loader2, Search, Plus, Pencil, Trash2, Play } from "lucide-react";
+import { Wrench, ClipboardCheck, Loader2, Search, Plus, Pencil, Play } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { differenceInDays, parseISO, format } from "date-fns";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -68,8 +68,6 @@ export default function ZeladorManutencoes() {
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<MaintenanceTask | null>(null);
   const [taskForm, setTaskForm] = useState(emptyTaskForm);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [taskToDelete, setTaskToDelete] = useState<MaintenanceTask | null>(null);
 
   // Show/hide finalizadas
   const [showFinalizadas, setShowFinalizadas] = useState(false);
@@ -229,19 +227,6 @@ export default function ZeladorManutencoes() {
     onError: (error) => toast({ title: "Erro", description: error.message, variant: "destructive" }),
   });
 
-  const deleteTaskMutation = useMutation({
-    mutationFn: async () => {
-      if (!taskToDelete) return;
-      const { error } = await supabase.from("maintenance_tasks").update({ is_active: false }).eq("id", taskToDelete.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["zelador-all-tasks"] });
-      setDeleteDialogOpen(false);
-      toast({ title: "Manutenção removida" });
-    },
-    onError: (error) => toast({ title: "Erro", description: error.message, variant: "destructive" }),
-  });
 
   const openNewTaskDialog = () => {
     setEditingTask(null);
@@ -370,9 +355,6 @@ export default function ZeladorManutencoes() {
                 <Play className="w-3 h-3 mr-1" /> Iniciar
               </Button>
             )}
-            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-destructive hover:text-destructive" onClick={() => { setTaskToDelete(task); setDeleteDialogOpen(true); }}>
-              <Trash2 className="w-3 h-3" />
-            </Button>
           </div>
         )}
       </div>
