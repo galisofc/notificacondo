@@ -75,6 +75,12 @@ import NotFound from "./pages/NotFound";
 import ShiftChecklistSettings from "./pages/sindico/ShiftChecklistSettings";
 import SindicoPortariaOccurrences from "./pages/sindico/PortariaOccurrences";
 import SindicoPortariaShiftHandovers from "./pages/sindico/PortariaShiftHandovers";
+import SindicoZeladores from "./pages/sindico/Zeladores";
+
+// Zelador pages
+import ZeladorDashboard from "./pages/zelador/Dashboard";
+import ZeladorManutencoes from "./pages/zelador/Manutencoes";
+import ZeladorSettings from "./pages/zelador/Settings";
 
 const queryClient = new QueryClient();
 

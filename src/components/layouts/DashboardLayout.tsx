@@ -681,6 +681,8 @@ function SidebarNavigation() {
         return "Síndico";
       case "porteiro":
         return "Porteiro";
+      case "zelador":
+        return "Zelador";
       default:
         return "Morador";
     }
