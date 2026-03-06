@@ -593,24 +593,6 @@ export default function ZeladorManutencoes() {
           </DialogContent>
         </Dialog>
 
-        {/* Delete Confirmation */}
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Remover manutenção?</AlertDialogTitle>
-              <AlertDialogDescription>
-                A manutenção "{taskToDelete?.title}" será desativada. Esta ação pode ser revertida pelo síndico.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={() => deleteTaskMutation.mutate()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                {deleteTaskMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Remover
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </div>
     </DashboardLayout>
   );
