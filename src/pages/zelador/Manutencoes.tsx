@@ -345,9 +345,21 @@ export default function ZeladorManutencoes() {
             <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => openEditTaskDialog(task)}>
               <Pencil className="w-3 h-3 mr-1" /> Editar
             </Button>
-            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => openExecDialog(task)}>
-              <ClipboardCheck className="w-3 h-3 mr-1" /> Registrar
-            </Button>
+            {task.status === "em_execucao" ? (
+              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => openExecDialog(task)}>
+                <ClipboardCheck className="w-3 h-3 mr-1" /> Finalizar
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                onClick={() => startTaskMutation.mutate(task.id)}
+                disabled={startTaskMutation.isPending}
+              >
+                <Play className="w-3 h-3 mr-1" /> Iniciar
+              </Button>
+            )}
             <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-destructive hover:text-destructive" onClick={() => { setTaskToDelete(task); setDeleteDialogOpen(true); }}>
               <Trash2 className="w-3 h-3" />
             </Button>
