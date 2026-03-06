@@ -290,8 +290,8 @@ export default function SindicoManutencoes() {
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Manutenções Preventivas</h2>
-            <p className="text-muted-foreground">Gerencie as tarefas de manutenção dos seus condomínios</p>
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Manutenções</h2>
+            <p className="text-muted-foreground">Gerencie as tarefas de manutenção preventiva e corretiva</p>
           </div>
           <div className="flex gap-2">
             <Select value={selectedCondominium} onValueChange={setSelectedCondominium}>
