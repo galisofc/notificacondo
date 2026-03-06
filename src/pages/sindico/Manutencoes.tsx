@@ -78,6 +78,7 @@ export default function SindicoManutencoes() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<MaintenanceTask | null>(null);
   const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
@@ -93,6 +94,7 @@ export default function SindicoManutencoes() {
     responsible_notes: "",
     estimated_cost: "",
     category_id: "",
+    maintenance_type: "preventiva",
   });
 
   const { data: condominiums = [] } = useQuery({
@@ -154,6 +156,7 @@ export default function SindicoManutencoes() {
     const status = getTaskStatus(task.next_due_date, task.notification_days_before);
     const statusKey = status.label === "Atrasada" ? "atrasado" : status.label === "Próxima" ? "proximo" : "em_dia";
     if (statusFilter !== "all" && statusKey !== statusFilter) return false;
+    if (typeFilter !== "all" && (task as any).maintenance_type !== typeFilter) return false;
     if (searchTerm && !task.title.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     return true;
   });
@@ -181,6 +184,7 @@ export default function SindicoManutencoes() {
       responsible_notes: "",
       estimated_cost: "",
       category_id: "",
+      maintenance_type: "preventiva",
     });
     setEditingTask(null);
   };
@@ -203,6 +207,7 @@ export default function SindicoManutencoes() {
       responsible_notes: task.responsible_notes || "",
       estimated_cost: task.estimated_cost?.toString() || "",
       category_id: task.category_id || "",
+      maintenance_type: (task as any).maintenance_type || "preventiva",
     });
     setDialogOpen(true);
   };
@@ -230,6 +235,7 @@ export default function SindicoManutencoes() {
         estimated_cost: form.estimated_cost ? parseFloat(form.estimated_cost) : null,
         category_id: form.category_id || null,
         created_by: user!.id,
+        maintenance_type: form.maintenance_type,
       };
 
       if (editingTask) {
