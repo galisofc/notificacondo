@@ -579,7 +579,6 @@ function SidebarNavigation() {
         { title: "Ocorrências Portaria", url: "/sindico/portaria/ocorrencias", icon: AlertTriangle, badge: openPorterOccurrences },
         { title: "Passagens de Plantão", url: "/sindico/portaria/plantoes", icon: ClipboardCheck },
         { title: "Checklist Portaria", url: "/sindico/portaria/checklist", icon: Cog },
-        { title: "Porteiros", url: "/sindico/porteiros", icon: Users },
       ],
     },
     {
@@ -589,7 +588,14 @@ function SidebarNavigation() {
         { title: "Dashboard", url: "/sindico/manutencoes", icon: LayoutDashboard },
         { title: "Categorias", url: "/sindico/manutencoes/categorias", icon: ClipboardList },
         { title: "Histórico", url: "/sindico/manutencoes/historico", icon: Clock },
-        { title: "Zeladores", url: "/sindico/zeladores", icon: Users },
+      ],
+    },
+    {
+      title: "Usuários",
+      icon: Users,
+      items: [
+        { title: "Porteiros", url: "/sindico/porteiros", icon: DoorOpen },
+        { title: "Zeladores", url: "/sindico/zeladores", icon: Wrench },
       ],
     },
     { title: "Notificações", url: "/notifications", icon: Bell },
