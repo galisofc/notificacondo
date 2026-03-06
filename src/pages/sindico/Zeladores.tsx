@@ -68,7 +68,7 @@ export default function Zeladores() {
   const [passwordZelador, setPasswordZelador] = useState<Zelador | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [isResettingPassword, setIsResettingPassword] = useState(false);
-  const passwordStrength = usePasswordStrength(newPassword);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   // Success state
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
