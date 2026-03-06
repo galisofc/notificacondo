@@ -249,11 +249,11 @@ export default function ZeladorDashboard() {
               {loading ? (
                 <Skeleton className="h-64 w-full" />
               ) : (
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={timelineData} layout="vertical" margin={{ left: 10, right: 10 }}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} className="fill-muted-foreground" />
-                    <YAxis dataKey="month" type="category" width={60} tick={{ fontSize: 12 }} className="fill-muted-foreground" />
+              <ResponsiveContainer width="100%" height={360}>
+                  <BarChart data={timelineData} layout="vertical" margin={{ left: 10, right: 20, top: 5, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" horizontal={false} />
+                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} className="fill-muted-foreground" />
+                    <YAxis dataKey="month" type="category" width={75} tick={{ fontSize: 11 }} className="fill-muted-foreground" />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: "hsl(var(--popover))",
@@ -263,9 +263,9 @@ export default function ZeladorDashboard() {
                       }}
                     />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Bar dataKey="Concluídas" stackId="a" fill="hsl(var(--chart-2))" radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="Parciais" stackId="a" fill="hsl(var(--chart-4))" />
-                    <Bar dataKey="Não realizadas" stackId="a" fill="hsl(var(--chart-1))" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="Concluídas" fill="#22c55e" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="Pendentes" fill="#f59e0b" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="Vencidos" fill="#ef4444" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
