@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Wrench, CheckCircle2, Clock, AlertTriangle, ClipboardCheck, Loader2, Calendar, Search, Plus, Pencil, Trash2 } from "lucide-react";
+import { Wrench, ClipboardCheck, Loader2, Search, Plus, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { differenceInDays, parseISO, format } from "date-fns";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -31,15 +31,10 @@ interface MaintenanceTask {
   notification_days_before: number;
   responsible_notes: string | null;
   estimated_cost: number | null;
+  status: string;
+  last_completed_at: string | null;
   maintenance_categories: { name: string } | null;
   condominiums: { name: string } | null;
-}
-
-function getTaskStatus(nextDueDate: string, notificationDaysBefore: number) {
-  const daysUntilDue = differenceInDays(parseISO(nextDueDate), new Date());
-  if (daysUntilDue < 0) return { key: "atrasado", label: "Atrasada", icon: AlertTriangle, color: "text-destructive" };
-  if (daysUntilDue <= notificationDaysBefore) return { key: "proximo", label: "Próxima", icon: Clock, color: "text-amber-600 dark:text-amber-400" };
-  return { key: "em_dia", label: "Em dia", icon: CheckCircle2, color: "text-emerald-600 dark:text-emerald-400" };
 }
 
 const priorityLabels: Record<string, string> = { baixa: "Baixa", media: "Média", alta: "Alta", critica: "Crítica" };
@@ -63,7 +58,6 @@ export default function ZeladorManutencoes() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   // Execution dialog
   const [execDialogOpen, setExecDialogOpen] = useState(false);
@@ -76,6 +70,9 @@ export default function ZeladorManutencoes() {
   const [taskForm, setTaskForm] = useState(emptyTaskForm);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<MaintenanceTask | null>(null);
+
+  // Show/hide finalizadas
+  const [showFinalizadas, setShowFinalizadas] = useState(false);
 
   const { data: condoIds = [] } = useQuery({
     queryKey: ["zelador-condos", user?.id],
@@ -122,7 +119,7 @@ export default function ZeladorManutencoes() {
         .from("maintenance_tasks")
         .select(`
           id, condominium_id, category_id, title, description, priority, periodicity, periodicity_days,
-          next_due_date, notification_days_before, responsible_notes, estimated_cost,
+          next_due_date, notification_days_before, responsible_notes, estimated_cost, status, last_completed_at,
           maintenance_categories(name),
           condominiums(name)
         `)
@@ -136,8 +133,6 @@ export default function ZeladorManutencoes() {
   });
 
   const filteredTasks = tasks.filter((task) => {
-    const status = getTaskStatus(task.next_due_date, task.notification_days_before);
-    if (statusFilter !== "all" && status.key !== statusFilter) return false;
     if (searchTerm && !task.title.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     return true;
   });
@@ -170,6 +165,11 @@ export default function ZeladorManutencoes() {
         await supabase.from("maintenance_tasks").update({
           last_completed_at: new Date().toISOString(),
           next_due_date: nextDate.toISOString().split("T")[0],
+          status: "finalizada",
+        }).eq("id", selectedTask.id);
+      } else if (execForm.status === "parcial") {
+        await supabase.from("maintenance_tasks").update({
+          status: "em_execucao",
         }).eq("id", selectedTask.id);
       }
     },
@@ -266,6 +266,85 @@ export default function ZeladorManutencoes() {
   const selectedCondoId = editingTask?.condominium_id || (condoIds.length === 1 ? condoIds[0] : null);
   const filteredCategories = selectedCondoId ? categories.filter(c => c.condominium_id === selectedCondoId) : categories;
 
+  // Classify tasks into columns
+  const vencidas: MaintenanceTask[] = [];
+  const pendentes: MaintenanceTask[] = [];
+  const emExecucao: MaintenanceTask[] = [];
+  const finalizadas: MaintenanceTask[] = [];
+
+  filteredTasks.forEach(task => {
+    if (task.status === "finalizada") {
+      finalizadas.push(task);
+    } else if (task.status === "em_execucao") {
+      emExecucao.push(task);
+    } else {
+      const daysUntilDue = differenceInDays(parseISO(task.next_due_date), new Date());
+      if (daysUntilDue < 0) {
+        vencidas.push(task);
+      } else {
+        pendentes.push(task);
+      }
+    }
+  });
+
+  const columnConfig = [
+    { title: "Vencidas", items: vencidas, header: "bg-destructive/10 text-destructive", accent: "border-l-destructive" },
+    { title: "Pendentes", items: pendentes, header: "bg-amber-500/10 text-amber-700 dark:text-amber-400", accent: "border-l-amber-500" },
+    { title: "Em execução", items: emExecucao, header: "bg-blue-500/10 text-blue-700 dark:text-blue-400", accent: "border-l-blue-500" },
+  ];
+
+  const renderTaskCard = (task: MaintenanceTask, accentClass: string) => {
+    const daysUntilDue = differenceInDays(parseISO(task.next_due_date), new Date());
+    return (
+      <div key={task.id} className={`rounded-lg border bg-card p-3 space-y-2 border-l-4 ${accentClass}`}>
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold text-foreground">{task.condominiums?.name || "Condomínio"}</span>
+          <span className="text-[10px] text-muted-foreground font-mono">#{task.id.slice(0, 4)}</span>
+        </div>
+
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {task.maintenance_categories?.name && (
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+              {task.maintenance_categories.name}
+            </Badge>
+          )}
+          <Badge variant={priorityVariants[task.priority] || "outline"} className="text-[10px] px-1.5 py-0">
+            {priorityLabels[task.priority] || task.priority}
+          </Badge>
+        </div>
+
+        <p className="text-sm font-medium text-foreground leading-tight">{task.title}</p>
+        {task.description && (
+          <p className="text-xs text-muted-foreground line-clamp-2">{task.description}</p>
+        )}
+
+        <p className="text-[10px] text-muted-foreground">
+          {task.status === "finalizada"
+            ? `Finalizada • ${task.last_completed_at ? format(parseISO(task.last_completed_at), "dd/MM/yyyy") : ""}`
+            : daysUntilDue < 0
+            ? `Atrasada há ${Math.abs(daysUntilDue)} dias`
+            : daysUntilDue === 0
+            ? "Vence hoje"
+            : `Em ${daysUntilDue} dias • ${format(parseISO(task.next_due_date), "dd/MM/yyyy")}`}
+        </p>
+
+        {task.status !== "finalizada" && (
+          <div className="flex gap-1.5 pt-1 border-t border-border/50">
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => openEditTaskDialog(task)}>
+              <Pencil className="w-3 h-3 mr-1" /> Editar
+            </Button>
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => openExecDialog(task)}>
+              <ClipboardCheck className="w-3 h-3 mr-1" /> Registrar
+            </Button>
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-destructive hover:text-destructive" onClick={() => { setTaskToDelete(task); setDeleteDialogOpen(true); }}>
+              <Trash2 className="w-3 h-3" />
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <DashboardLayout>
       <div className="flex-1 space-y-6 p-4 md:p-6 lg:p-8 pt-6">
@@ -283,21 +362,10 @@ export default function ZeladorManutencoes() {
           </Button>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar tarefa..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
-          </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[160px]"><SelectValue placeholder="Status" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="atrasado">Atrasadas</SelectItem>
-              <SelectItem value="proximo">Próximas</SelectItem>
-              <SelectItem value="em_dia">Em dia</SelectItem>
-            </SelectContent>
-          </Select>
+        {/* Search */}
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Buscar tarefa..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
         </div>
 
         {/* Kanban Columns */}
@@ -323,101 +391,45 @@ export default function ZeladorManutencoes() {
               </p>
             </CardContent>
           </Card>
-        ) : (() => {
-          const overdue = filteredTasks.filter(t => getTaskStatus(t.next_due_date, t.notification_days_before).key === "atrasado");
-          const upcoming = filteredTasks.filter(t => getTaskStatus(t.next_due_date, t.notification_days_before).key === "proximo");
-          const onTrack = filteredTasks.filter(t => getTaskStatus(t.next_due_date, t.notification_days_before).key === "em_dia");
-
-          const columnColors = {
-            overdue: { border: "border-destructive/60", header: "bg-destructive/10 text-destructive", accent: "border-l-destructive" },
-            upcoming: { border: "border-amber-500/60", header: "bg-amber-500/10 text-amber-700 dark:text-amber-400", accent: "border-l-amber-500" },
-            onTrack: { border: "border-emerald-500/60", header: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400", accent: "border-l-emerald-500" },
-          };
-
-          const renderTaskCard = (task: MaintenanceTask) => {
-            const daysUntilDue = differenceInDays(parseISO(task.next_due_date), new Date());
-            const statusInfo = getTaskStatus(task.next_due_date, task.notification_days_before);
-            return (
-              <div
-                key={task.id}
-                className={`rounded-lg border bg-card p-3 space-y-2 border-l-4 ${
-                  statusInfo.key === "atrasado" ? columnColors.overdue.accent :
-                  statusInfo.key === "proximo" ? columnColors.upcoming.accent :
-                  columnColors.onTrack.accent
-                }`}
-              >
-                {/* Header: condominium + code */}
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-foreground">{task.condominiums?.name || "Condomínio"}</span>
-                  <span className="text-[10px] text-muted-foreground font-mono">#{task.id.slice(0, 4)}</span>
+        ) : (
+          <div className="space-y-6">
+            {/* Main 3 columns */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {columnConfig.map(col => (
+                <div key={col.title} className="flex flex-col gap-3">
+                  <div className={`flex items-center justify-between rounded-lg px-3 py-2 ${col.header}`}>
+                    <span className="text-sm font-semibold">{col.title} ({col.items.length})</span>
+                  </div>
+                  <div className="space-y-3 min-h-[100px] max-h-[65vh] overflow-y-auto">
+                    {col.items.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-6">Nenhuma tarefa</p>
+                    ) : (
+                      col.items.map(t => renderTaskCard(t, col.accent))
+                    )}
+                  </div>
                 </div>
+              ))}
+            </div>
 
-                {/* Category badge + priority */}
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {task.maintenance_categories?.name && (
-                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                      {task.maintenance_categories.name}
-                    </Badge>
-                  )}
-                  <Badge variant={priorityVariants[task.priority] || "outline"} className="text-[10px] px-1.5 py-0">
-                    {priorityLabels[task.priority] || task.priority}
-                  </Badge>
-                </div>
-
-                {/* Title + description */}
-                <p className="text-sm font-medium text-foreground leading-tight">{task.title}</p>
-                {task.description && (
-                  <p className="text-xs text-muted-foreground line-clamp-2">{task.description}</p>
-                )}
-
-                {/* Date info */}
-                <p className="text-[10px] text-muted-foreground">
-                  {daysUntilDue < 0
-                    ? `Atrasada há ${Math.abs(daysUntilDue)} dias`
-                    : daysUntilDue === 0
-                    ? "Vence hoje"
-                    : `Em ${daysUntilDue} dias • ${format(parseISO(task.next_due_date), "dd/MM/yyyy")}`}
-                </p>
-
-                {/* Action buttons */}
-                <div className="flex gap-1.5 pt-1 border-t border-border/50">
-                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => openEditTaskDialog(task)}>
-                    <Pencil className="w-3 h-3 mr-1" /> Editar
-                  </Button>
-                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => openExecDialog(task)}>
-                    <ClipboardCheck className="w-3 h-3 mr-1" /> Registrar
-                  </Button>
-                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-destructive hover:text-destructive" onClick={() => { setTaskToDelete(task); setDeleteDialogOpen(true); }}>
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
-                </div>
-              </div>
-            );
-          };
-
-          const renderColumn = (title: string, items: MaintenanceTask[], colors: typeof columnColors.overdue) => (
-            <div className="flex flex-col gap-3">
-              <div className={`flex items-center justify-between rounded-lg px-3 py-2 ${colors.header}`}>
-                <span className="text-sm font-semibold">{title} ({items.length})</span>
-              </div>
-              <div className="space-y-3 min-h-[100px]">
-                {items.length === 0 ? (
-                  <p className="text-xs text-muted-foreground text-center py-6">Nenhuma tarefa</p>
-                ) : (
-                  items.map(renderTaskCard)
+            {/* Finalizados section */}
+            {finalizadas.length > 0 && (
+              <div className="space-y-3">
+                <button
+                  onClick={() => setShowFinalizadas(!showFinalizadas)}
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 w-full md:w-auto"
+                >
+                  <span className="text-sm font-semibold">Finalizados ({finalizadas.length})</span>
+                  <span className="text-xs">{showFinalizadas ? "▲ Ocultar" : "▼ Mostrar"}</span>
+                </button>
+                {showFinalizadas && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {finalizadas.map(t => renderTaskCard(t, "border-l-emerald-500"))}
+                  </div>
                 )}
               </div>
-            </div>
-          );
-
-          return (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {renderColumn("Vencidas", overdue, columnColors.overdue)}
-              {renderColumn("Pendentes", upcoming, columnColors.upcoming)}
-              {renderColumn("Em dia", onTrack, columnColors.onTrack)}
-            </div>
-          );
-        })()}
+            )}
+          </div>
+        )}
 
         {/* Task Create/Edit Dialog */}
         <Dialog open={taskDialogOpen} onOpenChange={setTaskDialogOpen}>
@@ -529,7 +541,7 @@ export default function ZeladorManutencoes() {
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="concluida">✅ Concluída</SelectItem>
-                    <SelectItem value="parcial">⚠️ Parcial</SelectItem>
+                    <SelectItem value="parcial">⚠️ Parcial (Em execução)</SelectItem>
                     <SelectItem value="nao_realizada">❌ Não realizada</SelectItem>
                   </SelectContent>
                 </Select>
