@@ -76,6 +76,9 @@ import ShiftChecklistSettings from "./pages/sindico/ShiftChecklistSettings";
 import SindicoPortariaOccurrences from "./pages/sindico/PortariaOccurrences";
 import SindicoPortariaShiftHandovers from "./pages/sindico/PortariaShiftHandovers";
 import SindicoZeladores from "./pages/sindico/Zeladores";
+import SindicoManutencoes from "./pages/sindico/Manutencoes";
+import ManutencoesCategorias from "./pages/sindico/ManutencoesCategorias";
+import ManutencoesHistorico from "./pages/sindico/ManutencoesHistorico";
 
 // Zelador pages
 import ZeladorDashboard from "./pages/zelador/Dashboard";
@@ -404,12 +407,36 @@ const App = () => (
                 }
               />
 
-              {/* Sindico Zeladores */}
+              {/* Sindico Manutenção */}
               <Route
                 path="/sindico/zeladores"
                 element={
                   <ProtectedRoute requiredRole="sindico">
                     <SindicoZeladores />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/sindico/manutencoes"
+                element={
+                  <ProtectedRoute requiredRole="sindico">
+                    <SindicoManutencoes />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/sindico/manutencoes/categorias"
+                element={
+                  <ProtectedRoute requiredRole="sindico">
+                    <ManutencoesCategorias />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/sindico/manutencoes/historico"
+                element={
+                  <ProtectedRoute requiredRole="sindico">
+                    <ManutencoesHistorico />
                   </ProtectedRoute>
                 }
               />
