@@ -1,0 +1,1 @@
+ALTER TYPE public.maintenance_periodicity ADD VALUE IF NOT EXISTS 'unica';

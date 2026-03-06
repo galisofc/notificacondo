@@ -43,6 +43,7 @@ interface MaintenanceTask {
 }
 
 const periodicityLabels: Record<string, string> = {
+  unica: "Única",
   semanal: "Semanal",
   quinzenal: "Quinzenal",
   mensal: "Mensal",
