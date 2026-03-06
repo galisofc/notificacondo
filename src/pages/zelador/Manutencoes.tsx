@@ -257,6 +257,18 @@ export default function ZeladorManutencoes() {
     setTaskDialogOpen(true);
   };
 
+  const startTaskMutation = useMutation({
+    mutationFn: async (taskId: string) => {
+      const { error } = await supabase.from("maintenance_tasks").update({ status: "em_execucao" }).eq("id", taskId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["zelador-all-tasks"] });
+      toast({ title: "Manutenção iniciada!", description: "A tarefa foi movida para Em execução" });
+    },
+    onError: (error) => toast({ title: "Erro", description: error.message, variant: "destructive" }),
+  });
+
   const openExecDialog = (task: MaintenanceTask) => {
     setSelectedTask(task);
     setExecForm({ observations: "", status: "concluida", cost: "" });
