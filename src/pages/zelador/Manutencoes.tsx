@@ -49,7 +49,7 @@ const periodicityLabels: Record<string, string> = {
 const emptyTaskForm = {
   title: "", description: "", priority: "media", periodicity: "mensal",
   periodicity_days: "", next_due_date: "", notification_days_before: "7",
-  responsible_notes: "", estimated_cost: "", category_id: "",
+  responsible_notes: "", estimated_cost: "", category_id: "", maintenance_type: "preventiva",
 };
 
 export default function ZeladorManutencoes() {
@@ -194,6 +194,7 @@ export default function ZeladorManutencoes() {
         title: taskForm.title,
         description: taskForm.description || null,
         priority: taskForm.priority,
+        maintenance_type: taskForm.maintenance_type,
         periodicity: taskForm.periodicity as any,
         periodicity_days: taskForm.periodicity === "personalizado" && taskForm.periodicity_days ? parseInt(taskForm.periodicity_days) : null,
         next_due_date: taskForm.next_due_date,
@@ -253,6 +254,7 @@ export default function ZeladorManutencoes() {
       responsible_notes: task.responsible_notes || "",
       estimated_cost: task.estimated_cost?.toString() || "",
       category_id: task.category_id || "",
+      maintenance_type: (task as any).maintenance_type || "preventiva",
     });
     setTaskDialogOpen(true);
   };
@@ -484,6 +486,16 @@ export default function ZeladorManutencoes() {
               )}
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
+                  <Label>Tipo *</Label>
+                  <Select value={taskForm.maintenance_type} onValueChange={(v) => setTaskForm(p => ({ ...p, maintenance_type: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="preventiva">Preventiva</SelectItem>
+                      <SelectItem value="corretiva">Corretiva</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
                   <Label>Categoria</Label>
                   <Select value={taskForm.category_id} onValueChange={(v) => setTaskForm(p => ({ ...p, category_id: v }))}>
                     <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
@@ -492,6 +504,8 @@ export default function ZeladorManutencoes() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label>Prioridade</Label>
                   <Select value={taskForm.priority} onValueChange={(v) => setTaskForm(p => ({ ...p, priority: v }))}>
