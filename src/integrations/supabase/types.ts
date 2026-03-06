@@ -828,6 +828,7 @@ export type Database = {
           id: string
           is_active: boolean
           last_completed_at: string | null
+          maintenance_type: string
           next_due_date: string
           notification_days_before: number
           periodicity: Database["public"]["Enums"]["maintenance_periodicity"]
@@ -848,6 +849,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_completed_at?: string | null
+          maintenance_type?: string
           next_due_date: string
           notification_days_before?: number
           periodicity: Database["public"]["Enums"]["maintenance_periodicity"]
@@ -868,6 +870,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_completed_at?: string | null
+          maintenance_type?: string
           next_due_date?: string
           notification_days_before?: number
           periodicity?: Database["public"]["Enums"]["maintenance_periodicity"]
