@@ -2442,6 +2442,7 @@ export type Database = {
         | "semestral"
         | "anual"
         | "personalizado"
+        | "unica"
       occurrence_status:
         | "registrada"
         | "notificado"
@@ -2591,6 +2592,7 @@ export const Constants = {
         "semestral",
         "anual",
         "personalizado",
+        "unica",
       ],
       occurrence_status: [
         "registrada",
