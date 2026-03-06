@@ -211,6 +211,13 @@ export default function RegisterPackage() {
     setIsSubmitting(true);
 
     try {
+      // 0. Fetch porter's profile name
+      const { data: porterProfile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("user_id", user.id)
+        .single();
+
       // 1. Upload image to storage
       const pickupCode = generatePickupCode();
       const fileName = `${Date.now()}_${pickupCode}.jpg`;
@@ -246,6 +253,7 @@ export default function RegisterPackage() {
           block_id: selectedBlock,
           apartment_id: selectedApartment,
           received_by: user.id,
+          received_by_name: porterProfile?.full_name || user.email || '',
           pickup_code: pickupCode,
           description: description || null,
           photo_url: urlData.publicUrl,
