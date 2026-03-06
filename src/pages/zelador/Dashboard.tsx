@@ -113,23 +113,37 @@ export default function ZeladorDashboard() {
     ? Math.round(((execByStatus["concluida"] || 0) / totalExecutions) * 100)
     : 0;
 
-  // Timeline (last 6 months)
-  const timelineData = Array.from({ length: 6 }).map((_, i) => {
-    const monthDate = subMonths(new Date(), 5 - i);
+  // Timeline (last 8 months) - based on task due dates
+  const timelineData = Array.from({ length: 8 }).map((_, i) => {
+    const monthDate = subMonths(new Date(), 7 - i);
     const monthStart = startOfMonth(monthDate);
     const monthEnd = endOfMonth(monthDate);
-    const monthLabel = format(monthDate, "MMM/yy", { locale: ptBR });
+    const monthLabel = format(monthDate, "MMM/yyyy", { locale: ptBR });
 
-    const monthExecs = executions.filter((e: any) => {
-      const execDate = parseISO(e.executed_at);
-      return isWithinInterval(execDate, { start: monthStart, end: monthEnd });
+    // Tasks with due dates in this month
+    const monthTasks = tasks.filter((t: any) => {
+      const dueDate = parseISO(t.next_due_date);
+      return isWithinInterval(dueDate, { start: monthStart, end: monthEnd });
     });
 
-    const concluidas = monthExecs.filter((e: any) => e.status === "concluida").length;
-    const parciais = monthExecs.filter((e: any) => e.status === "parcial").length;
-    const naoRealizadas = monthExecs.filter((e: any) => e.status === "nao_realizada").length;
+    // Executions completed in this month
+    const monthExecs = executions.filter((e: any) => {
+      const execDate = parseISO(e.executed_at);
+      return isWithinInterval(execDate, { start: monthStart, end: monthEnd }) && e.status === "concluida";
+    });
+    const completedTaskIds = new Set(monthExecs.map((e: any) => e.maintenance_tasks?.title));
 
-    return { month: monthLabel, Concluídas: concluidas, Parciais: parciais, "Não realizadas": naoRealizadas };
+    const concluidas = monthExecs.length;
+    const vencidos = monthTasks.filter((t: any) => {
+      const dueDate = parseISO(t.next_due_date);
+      return dueDate < new Date() && !completedTaskIds.has(t.title);
+    }).length;
+    const pendentes = monthTasks.filter((t: any) => {
+      const dueDate = parseISO(t.next_due_date);
+      return dueDate >= new Date() && !completedTaskIds.has(t.title);
+    }).length;
+
+    return { month: monthLabel, Concluídas: concluidas, Pendentes: pendentes, Vencidos: vencidos };
   });
 
   // Task status summary
