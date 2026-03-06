@@ -13,10 +13,13 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Wrench, Plus, Trash2, Building2, Mail, Phone, Search, Copy, Check, Loader2 } from "lucide-react";
+import { Wrench, Plus, Trash2, Building2, Mail, Phone, Search, Copy, Check, Loader2, Pencil, KeyRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { MaskedInput, formatPhone } from "@/components/ui/masked-input";
+import { usePasswordStrength } from "@/hooks/usePasswordStrength";
+import { PasswordStrengthIndicator } from "@/components/ui/password-strength-indicator";
 
 interface Condominium {
   id: string;
@@ -48,23 +51,30 @@ export default function Zeladores() {
   const [selectedCondominium, setSelectedCondominium] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Form state
+  // Form state (create)
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newZelador, setNewZelador] = useState({
-    full_name: "",
-    email: "",
-    phone: "",
-    condominium_id: "",
+    full_name: "", email: "", phone: "", condominium_id: "",
   });
+
+  // Edit state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingZelador, setEditingZelador] = useState<Zelador | null>(null);
+  const [editForm, setEditForm] = useState({ full_name: "", email: "", phone: "" });
+  const [isEditing, setIsEditing] = useState(false);
+
+  // Password reset state
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [passwordZelador, setPasswordZelador] = useState<Zelador | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const passwordStrength = usePasswordStrength(newPassword);
 
   // Success state
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [successData, setSuccessData] = useState<{
-    full_name: string;
-    email: string;
-    password?: string;
-    is_new_user: boolean;
+    full_name: string; email: string; password?: string; is_new_user: boolean;
   } | null>(null);
   const [passwordCopied, setPasswordCopied] = useState(false);
 
@@ -92,7 +102,6 @@ export default function Zeladores() {
     setLoading(true);
     const condoIds = condominiums.map((c) => c.id);
 
-    // Get users with 'zelador' role
     const { data: zeladorRoles } = await supabase
       .from("user_roles")
       .select("user_id")
@@ -143,6 +152,7 @@ export default function Zeladores() {
     return matchesCondo && matchesSearch;
   });
 
+  // --- Handlers ---
   const handleAddZelador = async () => {
     if (!newZelador.full_name || !newZelador.email || !newZelador.condominium_id) {
       toast({ title: "Campos obrigatórios", description: "Preencha nome, e-mail e condomínio", variant: "destructive" });
@@ -188,19 +198,96 @@ export default function Zeladores() {
   const handleDeleteZelador = async (zelador: Zelador) => {
     try {
       const { data, error } = await supabase.functions.invoke("delete-zelador", {
-        body: {
-          user_condominium_id: zelador.id,
-          zelador_user_id: zelador.user_id,
-        },
+        body: { user_condominium_id: zelador.id, zelador_user_id: zelador.user_id },
       });
-
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-
       toast({ title: "Zelador removido", description: data.message });
       fetchZeladores();
     } catch (error: any) {
       toast({ title: "Erro ao remover zelador", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const openEditDialog = (zelador: Zelador) => {
+    setEditingZelador(zelador);
+    setEditForm({
+      full_name: zelador.profile?.full_name || "",
+      email: zelador.profile?.email || "",
+      phone: zelador.profile?.phone ? formatPhone(zelador.profile.phone) : "",
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleEditZelador = async () => {
+    if (!editingZelador || !editForm.full_name) {
+      toast({ title: "Nome é obrigatório", variant: "destructive" });
+      return;
+    }
+
+    setIsEditing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("update-porteiro", {
+        body: {
+          porter_user_id: editingZelador.user_id,
+          full_name: editForm.full_name,
+          email: editForm.email,
+          phone: editForm.phone || null,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast({ title: "Zelador atualizado!", description: "Os dados foram salvos com sucesso" });
+      setEditDialogOpen(false);
+      fetchZeladores();
+    } catch (error: any) {
+      toast({ title: "Erro ao atualizar zelador", description: error.message, variant: "destructive" });
+    } finally {
+      setIsEditing(false);
+    }
+  };
+
+  const openPasswordDialog = (zelador: Zelador) => {
+    setPasswordZelador(zelador);
+    setNewPassword("");
+    setPasswordDialogOpen(true);
+  };
+
+  const handleResetPassword = async () => {
+    if (!passwordZelador || !newPassword) {
+      toast({ title: "Informe a nova senha", variant: "destructive" });
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast({ title: "A senha deve ter pelo menos 8 caracteres", variant: "destructive" });
+      return;
+    }
+
+    setIsResettingPassword(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("update-porteiro-password", {
+        body: {
+          porter_user_id: passwordZelador.user_id,
+          new_password: newPassword,
+          condominium_id: passwordZelador.condominium_id,
+          send_whatsapp: !!passwordZelador.profile?.phone,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast({
+        title: "Senha resetada!",
+        description: data.whatsapp_sent
+          ? "Senha atualizada e enviada por WhatsApp"
+          : "Senha atualizada com sucesso",
+      });
+      setPasswordDialogOpen(false);
+    } catch (error: any) {
+      toast({ title: "Erro ao resetar senha", description: error.message, variant: "destructive" });
+    } finally {
+      setIsResettingPassword(false);
     }
   };
 
@@ -210,6 +297,11 @@ export default function Zeladores() {
       setPasswordCopied(true);
       setTimeout(() => setPasswordCopied(false), 2000);
     }
+  };
+
+  const formatDisplayPhone = (phone: string | null | undefined) => {
+    if (!phone) return "—";
+    return formatPhone(phone.replace(/\D/g, ""));
   };
 
   return (
@@ -270,10 +362,10 @@ export default function Zeladores() {
                 </div>
                 <div>
                   <Label>Telefone</Label>
-                  <Input
+                  <MaskedInput
+                    mask="phone"
                     value={newZelador.phone}
-                    onChange={(e) => setNewZelador((prev) => ({ ...prev, phone: e.target.value }))}
-                    placeholder="(11) 99999-9999"
+                    onChange={(v) => setNewZelador((prev) => ({ ...prev, phone: v }))}
                   />
                 </div>
               </div>
@@ -329,9 +421,7 @@ export default function Zeladores() {
           <CardContent>
             {loading ? (
               <div className="space-y-4">
-                {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-16 w-full" />
-                ))}
+                {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
               </div>
             ) : filteredZeladores.length === 0 ? (
               <div className="text-center py-12">
@@ -368,7 +458,7 @@ export default function Zeladores() {
                           {zelador.profile?.phone ? (
                             <div className="flex items-center gap-1">
                               <Phone className="w-3 h-3 text-muted-foreground" />
-                              {zelador.profile.phone}
+                              {formatDisplayPhone(zelador.profile.phone)}
                             </div>
                           ) : "—"}
                         </TableCell>
@@ -382,27 +472,35 @@ export default function Zeladores() {
                           {format(new Date(zelador.created_at), "dd/MM/yyyy", { locale: ptBR })}
                         </TableCell>
                         <TableCell className="text-right">
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Remover zelador</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Tem certeza que deseja remover <strong>{zelador.profile?.full_name}</strong> do condomínio <strong>{zelador.condominium?.name}</strong>?
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDeleteZelador(zelador)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                  Remover
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="icon" onClick={() => openEditDialog(zelador)} title="Editar dados">
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => openPasswordDialog(zelador)} title="Resetar senha">
+                              <KeyRound className="w-4 h-4" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" title="Remover">
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Remover zelador</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Tem certeza que deseja remover <strong>{zelador.profile?.full_name}</strong> do condomínio <strong>{zelador.condominium?.name}</strong>?
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDeleteZelador(zelador)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                    Remover
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -413,14 +511,92 @@ export default function Zeladores() {
           </CardContent>
         </Card>
 
+        {/* Edit Dialog */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Zelador</DialogTitle>
+              <DialogDescription>Atualize os dados do zelador</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Nome completo *</Label>
+                <Input
+                  value={editForm.full_name}
+                  onChange={(e) => setEditForm(p => ({ ...p, full_name: e.target.value }))}
+                  placeholder="Nome do zelador"
+                />
+              </div>
+              <div>
+                <Label>E-mail</Label>
+                <Input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm(p => ({ ...p, email: e.target.value }))}
+                  placeholder="zelador@email.com"
+                />
+              </div>
+              <div>
+                <Label>Telefone</Label>
+                <MaskedInput
+                  mask="phone"
+                  value={editForm.phone}
+                  onChange={(v) => setEditForm(p => ({ ...p, phone: v }))}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancelar</Button>
+              <Button onClick={handleEditZelador} disabled={isEditing || !editForm.full_name}>
+                {isEditing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Salvar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Password Reset Dialog */}
+        <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Resetar Senha</DialogTitle>
+              <DialogDescription>
+                Defina uma nova senha para <strong>{passwordZelador?.profile?.full_name}</strong>
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Nova senha *</Label>
+                <Input
+                  type="text"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Mínimo 8 caracteres"
+                />
+                <PasswordStrengthIndicator strength={passwordStrength} />
+              </div>
+              {passwordZelador?.profile?.phone && (
+                <p className="text-sm text-muted-foreground">
+                  📱 A nova senha será enviada por WhatsApp para {formatDisplayPhone(passwordZelador.profile.phone)}
+                </p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setPasswordDialogOpen(false)}>Cancelar</Button>
+              <Button onClick={handleResetPassword} disabled={isResettingPassword || newPassword.length < 8}>
+                {isResettingPassword && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Resetar Senha
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* Success Dialog */}
         <Dialog open={successDialogOpen} onOpenChange={setSuccessDialogOpen}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Zelador cadastrado com sucesso! ✅</DialogTitle>
-              <DialogDescription>
-                Anote as credenciais de acesso do zelador
-              </DialogDescription>
+              <DialogDescription>Anote as credenciais de acesso do zelador</DialogDescription>
             </DialogHeader>
             {successData && (
               <div className="space-y-4">
