@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
-export type UserRole = "super_admin" | "sindico" | "morador" | "porteiro" | null;
+export type UserRole = "super_admin" | "sindico" | "morador" | "porteiro" | "zelador" | null;
 
 interface ResidentInfo {
   id: string;
@@ -38,6 +38,7 @@ interface UseUserRoleReturn {
   isSindico: boolean;
   isSuperAdmin: boolean;
   isPorteiro: boolean;
+  isZelador: boolean;
   residentInfo: ResidentInfo | null;
   allResidentProfiles: ResidentInfo[];
   switchApartment: (residentId: string) => void;
@@ -126,8 +127,9 @@ export const useUserRole = (): UseUserRoleReturn => {
         // (If a user has multiple roles, we keep porteiro above sindico to avoid
         // redirecting a concierge user into the manager dashboard.)
         const rolePriority: Record<string, number> = {
-          super_admin: 4,
-          porteiro: 3,
+          super_admin: 5,
+          porteiro: 4,
+          zelador: 3,
           sindico: 2,
           morador: 1,
         };
@@ -147,13 +149,13 @@ export const useUserRole = (): UseUserRoleReturn => {
         
         setRole(userRole);
 
-        // Fetch profile info for sindico, super_admin, and porteiro
-        if (userRole === "sindico" || userRole === "super_admin" || userRole === "porteiro") {
+        // Fetch profile info for sindico, super_admin, porteiro and zelador
+        if (userRole === "sindico" || userRole === "super_admin" || userRole === "porteiro" || userRole === "zelador") {
           await fetchProfileInfo(user.id);
         }
 
-        // Fetch porter's condominiums
-        if (userRole === "porteiro") {
+        // Fetch condominiums for porteiro and zelador
+        if (userRole === "porteiro" || userRole === "zelador") {
           const { data: userCondos } = await supabase
             .from("user_condominiums")
             .select("condominium_id, condominiums(id, name)")
@@ -242,7 +244,7 @@ export const useUserRole = (): UseUserRoleReturn => {
 
   // Subscribe to realtime profile updates
   useEffect(() => {
-    if (!user || (role !== "sindico" && role !== "super_admin")) return;
+    if (!user || (role !== "sindico" && role !== "super_admin" && role !== "zelador")) return;
 
     const channel = supabase
       .channel("profile-changes")
@@ -281,6 +283,7 @@ export const useUserRole = (): UseUserRoleReturn => {
     isSindico: role === "sindico",
     isSuperAdmin: role === "super_admin",
     isPorteiro: role === "porteiro",
+    isZelador: role === "zelador",
     residentInfo,
     allResidentProfiles,
     switchApartment,
