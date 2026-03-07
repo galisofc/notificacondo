@@ -159,8 +159,8 @@ export default function SindicoManutencoes() {
 
   // Filter tasks by computed status and search
   const filteredTasks = tasks.filter((task) => {
-    const status = getTaskStatus(task.next_due_date, task.notification_days_before);
-    const statusKey = status.label === "Atrasada" ? "atrasado" : status.label === "Próxima" ? "proximo" : "em_dia";
+    const status = getTaskStatus(task.next_due_date, task.notification_days_before, (task as any).maintenance_type, task.last_completed_at);
+    const statusKey = status.label === "Atrasada" ? "atrasado" : status.label === "Próxima" ? "proximo" : status.label === "Finalizada" ? "finalizada" : "em_dia";
     if (statusFilter !== "all" && statusKey !== statusFilter) return false;
     if (typeFilter !== "all" && (task as any).maintenance_type !== typeFilter) return false;
     if (searchTerm && !task.title.toLowerCase().includes(searchTerm.toLowerCase())) return false;
@@ -169,8 +169,9 @@ export default function SindicoManutencoes() {
 
   const statusCounts = tasks.reduce(
     (acc, task) => {
-      const s = getTaskStatus(task.next_due_date, task.notification_days_before);
-      if (s.label === "Atrasada") acc.atrasado++;
+      const s = getTaskStatus(task.next_due_date, task.notification_days_before, (task as any).maintenance_type, task.last_completed_at);
+      if (s.label === "Finalizada") acc.em_dia++;
+      else if (s.label === "Atrasada") acc.atrasado++;
       else if (s.label === "Próxima") acc.proximo++;
       else acc.em_dia++;
       return acc;
@@ -426,7 +427,7 @@ export default function SindicoManutencoes() {
               </TableHeader>
               <TableBody>
                 {filteredTasks.map((task) => {
-                  const statusInfo = getTaskStatus(task.next_due_date, task.notification_days_before);
+                  const statusInfo = getTaskStatus(task.next_due_date, task.notification_days_before, (task as any).maintenance_type, task.last_completed_at);
                   const StatusIcon = statusInfo.icon;
                   const pConfig = priorityConfig[task.priority] || priorityConfig.media;
                   return (
