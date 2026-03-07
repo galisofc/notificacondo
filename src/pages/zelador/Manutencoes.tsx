@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Wrench, ClipboardCheck, Loader2, Search, Plus, Pencil, Play, GripVertical } from "lucide-react";
+import { Wrench, ClipboardCheck, Loader2, Search, Plus, Pencil, Play, GripVertical, Camera, MapPin, X, ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { differenceInDays, parseISO, format } from "date-fns";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -116,6 +116,13 @@ export default function ZeladorManutencoes() {
   const [execDialogOpen, setExecDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<MaintenanceTask | null>(null);
   const [execForm, setExecForm] = useState({ observations: "", status: "concluida", cost: "" });
+  const [execPhotos, setExecPhotos] = useState<File[]>([]);
+  const [execPhotosPreviews, setExecPhotosPreviews] = useState<string[]>([]);
+  const [execLocation, setExecLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   // Task CRUD dialog
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
@@ -192,6 +199,22 @@ export default function ZeladorManutencoes() {
   const submitMutation = useMutation({
     mutationFn: async () => {
       if (!selectedTask || !user) throw new Error("Tarefa não selecionada");
+
+      // Upload photos
+      let photoUrls: string[] = [];
+      if (execPhotos.length > 0) {
+        setUploadingPhotos(true);
+        for (const photo of execPhotos) {
+          const fileName = `${selectedTask.id}/${Date.now()}-${photo.name}`;
+          const { error: uploadError } = await supabase.storage
+            .from("maintenance-photos")
+            .upload(fileName, photo);
+          if (uploadError) throw uploadError;
+          photoUrls.push(fileName);
+        }
+        setUploadingPhotos(false);
+      }
+
       const { error } = await supabase.from("maintenance_executions").insert({
         task_id: selectedTask.id,
         condominium_id: selectedTask.condominium_id,
@@ -200,12 +223,13 @@ export default function ZeladorManutencoes() {
         observations: execForm.observations || null,
         cost: execForm.cost ? parseFloat(execForm.cost) : null,
         status: execForm.status as any,
+        photos: photoUrls,
+        location: execLocation ? { lat: execLocation.lat, lng: execLocation.lng } : null,
       });
       if (error) throw error;
 
       if (execForm.status === "concluida") {
         if (selectedTask.periodicity === "unica") {
-          // Manutenção única: apenas finaliza, sem recalcular próxima data
           await supabase.from("maintenance_tasks").update({
             last_completed_at: new Date().toISOString(),
             status: "finalizada",
@@ -237,9 +261,15 @@ export default function ZeladorManutencoes() {
       queryClient.invalidateQueries({ queryKey: ["zelador-tasks"] });
       queryClient.invalidateQueries({ queryKey: ["zelador-recent-execs"] });
       setExecDialogOpen(false);
+      setExecPhotos([]);
+      setExecPhotosPreviews([]);
+      setExecLocation(null);
       toast({ title: "Execução registrada!", description: "A manutenção foi registrada com sucesso" });
     },
-    onError: (error) => toast({ title: "Erro", description: error.message, variant: "destructive" }),
+    onError: (error) => {
+      setUploadingPhotos(false);
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    },
   });
 
   // --- Task CRUD mutations ---
@@ -329,10 +359,56 @@ export default function ZeladorManutencoes() {
     onError: (error) => toast({ title: "Erro", description: error.message, variant: "destructive" }),
   });
 
+  const captureGeolocation = () => {
+    setLocationLoading(true);
+    setLocationError(null);
+    if (!navigator.geolocation) {
+      setLocationError("Geolocalização não suportada");
+      setLocationLoading(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setExecLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
+        setLocationLoading(false);
+      },
+      (err) => {
+        setLocationError("Não foi possível obter localização");
+        setLocationLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    setExecPhotos(prev => [...prev, ...files]);
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setExecPhotosPreviews(prev => [...prev, ev.target?.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+    if (photoInputRef.current) photoInputRef.current.value = "";
+  };
+
+  const removePhoto = (index: number) => {
+    setExecPhotos(prev => prev.filter((_, i) => i !== index));
+    setExecPhotosPreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
   const openExecDialog = (task: MaintenanceTask) => {
     setSelectedTask(task);
     setExecForm({ observations: "", status: "concluida", cost: "" });
+    setExecPhotos([]);
+    setExecPhotosPreviews([]);
+    setExecLocation(null);
+    setLocationError(null);
     setExecDialogOpen(true);
+    // Auto-capture geolocation
+    captureGeolocation();
   };
 
   // --- Drag handlers ---
@@ -681,7 +757,7 @@ export default function ZeladorManutencoes() {
 
         {/* Execution Dialog */}
         <Dialog open={execDialogOpen} onOpenChange={setExecDialogOpen}>
-          <DialogContent>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Registrar Execução</DialogTitle>
               <DialogDescription>{selectedTask?.title}</DialogDescription>
@@ -698,6 +774,77 @@ export default function ZeladorManutencoes() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Photo attachment */}
+              <div className="grid gap-2">
+                <Label className="flex items-center gap-1.5">
+                  <Camera className="w-4 h-4" />
+                  Fotos da execução
+                </Label>
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  multiple
+                  className="hidden"
+                  onChange={handlePhotoSelect}
+                />
+                <div className="flex flex-wrap gap-2">
+                  {execPhotosPreviews.map((src, i) => (
+                    <div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden border border-border">
+                      <img src={src} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(i)}
+                        className="absolute top-0.5 right-0.5 bg-destructive text-destructive-foreground rounded-full p-0.5"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => photoInputRef.current?.click()}
+                    className="w-20 h-20 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                  >
+                    <ImageIcon className="w-5 h-5" />
+                    <span className="text-[10px]">Adicionar</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Geolocation */}
+              <div className="grid gap-2">
+                <Label className="flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4" />
+                  Localização
+                </Label>
+                {locationLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Obtendo localização...
+                  </div>
+                ) : execLocation ? (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-xs">
+                      <MapPin className="w-3 h-3 mr-1" />
+                      {execLocation.lat.toFixed(6)}, {execLocation.lng.toFixed(6)}
+                    </Badge>
+                    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={captureGeolocation}>
+                      Atualizar
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    {locationError && <span className="text-xs text-destructive">{locationError}</span>}
+                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={captureGeolocation}>
+                      <MapPin className="w-3 h-3 mr-1" /> Capturar localização
+                    </Button>
+                  </div>
+                )}
+              </div>
+
               <div className="grid gap-2">
                 <Label>Custo (R$)</Label>
                 <Input type="number" step="0.01" value={execForm.cost} onChange={(e) => setExecForm(p => ({ ...p, cost: e.target.value }))} placeholder="0,00" />
@@ -709,8 +856,8 @@ export default function ZeladorManutencoes() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setExecDialogOpen(false)}>Cancelar</Button>
-              <Button onClick={() => submitMutation.mutate()} disabled={submitMutation.isPending}>
-                {submitMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              <Button onClick={() => submitMutation.mutate()} disabled={submitMutation.isPending || uploadingPhotos}>
+                {(submitMutation.isPending || uploadingPhotos) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 Registrar
               </Button>
             </DialogFooter>
