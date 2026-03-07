@@ -64,6 +64,48 @@ const emptyTaskForm = {
   responsible_notes: "", estimated_cost: "", category_id: "", maintenance_type: "preventiva",
 };
 
+// --- Drag-and-drop helper components ---
+function DroppableColumn({ id, children, isOver }: { id: string; children: React.ReactNode; isOver?: boolean }) {
+  const { setNodeRef, isOver: hovering } = useDroppable({ id });
+  const active = isOver || hovering;
+  return (
+    <div
+      ref={setNodeRef}
+      className={`space-y-3 min-h-[100px] max-h-[65vh] overflow-y-auto rounded-lg transition-colors duration-200 p-1 ${
+        active ? "bg-primary/10 ring-2 ring-primary/30" : ""
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function DraggableCard({ id, children }: { id: string; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id });
+  const style = transform
+    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
+    : undefined;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`${isDragging ? "opacity-30" : ""}`}
+      {...attributes}
+    >
+      <div className="relative">
+        <div
+          {...listeners}
+          className="absolute top-2 right-2 cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted/80 z-10 touch-none"
+        >
+          <GripVertical className="w-4 h-4 text-muted-foreground" />
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export default function ZeladorManutencoes() {
   const { user } = useAuth();
   const { profileInfo } = useUserRole();
