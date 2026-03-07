@@ -344,6 +344,23 @@ export default function ManutencoesHistorico() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Lightbox para foto em tela cheia */}
+        <Dialog open={!!lightboxUrl} onOpenChange={(open) => !open && setLightboxUrl(null)}>
+          <DialogContent className="max-w-3xl p-2">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Foto da manutenção</DialogTitle>
+              <DialogDescription>Visualização ampliada da foto</DialogDescription>
+            </DialogHeader>
+            {lightboxUrl && (
+              <img
+                src={lightboxUrl}
+                alt="Foto ampliada"
+                className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
