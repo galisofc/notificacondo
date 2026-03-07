@@ -90,18 +90,11 @@ function DraggableCard({ id, children }: { id: string; children: React.ReactNode
     <div
       ref={setNodeRef}
       style={style}
-      className={`${isDragging ? "opacity-30" : ""}`}
+      className={`cursor-grab active:cursor-grabbing touch-none ${isDragging ? "opacity-30" : ""}`}
       {...attributes}
+      {...listeners}
     >
-      <div className="relative">
-        <div
-          {...listeners}
-          className="absolute top-2 right-2 cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted/80 z-10 touch-none"
-        >
-          <GripVertical className="w-4 h-4 text-muted-foreground" />
-        </div>
-        {children}
-      </div>
+      {children}
     </div>
   );
 }
