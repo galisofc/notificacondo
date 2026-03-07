@@ -229,10 +229,12 @@ export default function ZeladorManutencoes() {
       if (error) throw error;
 
       if (execForm.status === "concluida") {
-        if (selectedTask.periodicity === "unica") {
+        // Corrective tasks are one-time — always finalize without recalculating next date
+        if (selectedTask.periodicity === "unica" || (selectedTask as any).maintenance_type === "corretiva") {
           await supabase.from("maintenance_tasks").update({
             last_completed_at: new Date().toISOString(),
             status: "finalizada",
+            is_active: (selectedTask as any).maintenance_type === "corretiva" ? true : true,
           }).eq("id", selectedTask.id);
         } else {
           const periodicityDaysMap: Record<string, number> = {
