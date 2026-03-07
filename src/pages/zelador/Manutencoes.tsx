@@ -112,6 +112,12 @@ export default function ZeladorManutencoes() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+
+  // Drag sensors
+  const pointerSensor = useSensor(PointerSensor, { activationConstraint: { distance: 8 } });
+  const touchSensor = useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } });
+  const sensors = useSensors(pointerSensor, touchSensor);
 
   // Execution dialog
   const [execDialogOpen, setExecDialogOpen] = useState(false);
