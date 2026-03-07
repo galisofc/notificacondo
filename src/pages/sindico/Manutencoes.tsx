@@ -61,7 +61,12 @@ const priorityConfig: Record<string, { label: string; variant: "default" | "seco
   critica: { label: "Crítica", variant: "destructive" },
 };
 
-function getTaskStatus(nextDueDate: string, notificationDaysBefore: number) {
+function getTaskStatus(nextDueDate: string, notificationDaysBefore: number, maintenanceType?: string, lastCompletedAt?: string | null) {
+  // Corrective tasks that have been completed are finalized (one-time)
+  if (maintenanceType === "corretiva" && lastCompletedAt) {
+    return { label: "Finalizada", color: "text-blue-600 dark:text-blue-400", bgColor: "bg-blue-500/10", icon: CheckCircle2 };
+  }
+
   const today = new Date();
   const dueDate = parseISO(nextDueDate);
   const daysUntilDue = differenceInDays(dueDate, today);
