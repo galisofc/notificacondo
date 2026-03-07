@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -7,9 +7,11 @@ import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ClipboardCheck, Calendar, User, CheckCircle2, AlertCircle, MinusCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { ClipboardCheck, Calendar, User, CheckCircle2, AlertCircle, MinusCircle, Eye, MapPin, Camera, ExternalLink, Loader2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -22,6 +24,10 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
 export default function ManutencoesHistorico() {
   const { user } = useAuth();
   const [selectedCondominium, setSelectedCondominium] = useState<string>("all");
+  const [detailExec, setDetailExec] = useState<any>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [loadingPhotos, setLoadingPhotos] = useState(false);
 
   const { data: condominiums = [] } = useQuery({
     queryKey: ["condominiums", user?.id],
@@ -55,6 +61,28 @@ export default function ManutencoesHistorico() {
     },
     enabled: condoIds.length > 0,
   });
+
+  const openDetail = async (exec: any) => {
+    setDetailExec(exec);
+    setDetailOpen(true);
+    setPhotoUrls([]);
+
+    // Load signed URLs for photos
+    if (exec.photos && exec.photos.length > 0) {
+      setLoadingPhotos(true);
+      const urls: string[] = [];
+      for (const path of exec.photos) {
+        const { data } = await supabase.storage
+          .from("maintenance-photos")
+          .createSignedUrl(path, 3600);
+        if (data?.signedUrl) urls.push(data.signedUrl);
+      }
+      setPhotoUrls(urls);
+      setLoadingPhotos(false);
+    }
+  };
+
+  const location = detailExec?.location as { lat: number; lng: number } | null;
 
   return (
     <DashboardLayout>
@@ -100,6 +128,7 @@ export default function ManutencoesHistorico() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10"></TableHead>
                   <TableHead>Data</TableHead>
                   <TableHead>Tarefa</TableHead>
                   <TableHead className="hidden md:table-cell">Tipo</TableHead>
@@ -113,8 +142,21 @@ export default function ManutencoesHistorico() {
                 {executions.map((exec: any) => {
                   const sConfig = statusConfig[exec.status] || statusConfig.concluida;
                   const StatusIcon = sConfig.icon;
+                  const hasPhotos = exec.photos && exec.photos.length > 0;
+                  const hasLocation = exec.location && typeof exec.location === "object" && exec.location.lat;
                   return (
                     <TableRow key={exec.id}>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => openDetail(exec)}
+                          title="Ver detalhes"
+                        >
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1.5">
                           <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
@@ -124,7 +166,11 @@ export default function ManutencoesHistorico() {
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">
-                        {exec.maintenance_tasks?.title || "—"}
+                        <div className="flex items-center gap-1.5">
+                          {exec.maintenance_tasks?.title || "—"}
+                          {hasPhotos && <Camera className="h-3 w-3 text-muted-foreground" />}
+                          {hasLocation && <MapPin className="h-3 w-3 text-muted-foreground" />}
+                        </div>
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
                         <Badge variant={exec.maintenance_tasks?.maintenance_type === "corretiva" ? "destructive" : "default"} className="text-xs">
@@ -156,6 +202,148 @@ export default function ManutencoesHistorico() {
             </Table>
           </div>
         )}
+
+        {/* Execution Detail Modal */}
+        <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <ClipboardCheck className="h-5 w-5 text-primary" />
+                Detalhes da Execução
+              </DialogTitle>
+              <DialogDescription>
+                {detailExec?.maintenance_tasks?.title || "Manutenção"}
+              </DialogDescription>
+            </DialogHeader>
+
+            {detailExec && (
+              <div className="space-y-5">
+                {/* Info grid */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground">Data da Execução</span>
+                    <p className="text-sm font-medium flex items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                      {format(parseISO(detailExec.executed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground">Executado por</span>
+                    <p className="text-sm font-medium flex items-center gap-1.5">
+                      <User className="h-3.5 w-3.5 text-muted-foreground" />
+                      {detailExec.executed_by_name || "—"}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground">Status</span>
+                    <div>
+                      {(() => {
+                        const sc = statusConfig[detailExec.status] || statusConfig.concluida;
+                        const Icon = sc.icon;
+                        return (
+                          <Badge variant={sc.variant} className="gap-1">
+                            <Icon className="h-3 w-3" />
+                            {sc.label}
+                          </Badge>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground">Custo</span>
+                    <p className="text-sm font-medium">
+                      {detailExec.cost ? `R$ ${Number(detailExec.cost).toFixed(2)}` : "Não informado"}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground">Tipo</span>
+                    <div>
+                      <Badge
+                        variant={detailExec.maintenance_tasks?.maintenance_type === "corretiva" ? "destructive" : "default"}
+                        className="text-xs"
+                      >
+                        {detailExec.maintenance_tasks?.maintenance_type === "corretiva" ? "Corretiva" : "Preventiva"}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Observations */}
+                {detailExec.observations && (
+                  <div className="space-y-1.5">
+                    <span className="text-xs text-muted-foreground font-medium">Observações</span>
+                    <p className="text-sm bg-muted/50 rounded-lg p-3">{detailExec.observations}</p>
+                  </div>
+                )}
+
+                {/* Photos */}
+                <div className="space-y-2">
+                  <span className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
+                    <Camera className="h-3.5 w-3.5" />
+                    Fotos ({detailExec.photos?.length || 0})
+                  </span>
+                  {loadingPhotos ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Carregando fotos...
+                    </div>
+                  ) : photoUrls.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      {photoUrls.map((url, i) => (
+                        <a
+                          key={i}
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="relative group rounded-lg overflow-hidden border border-border aspect-square"
+                        >
+                          <img
+                            src={url}
+                            alt={`Foto ${i + 1}`}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                            <ExternalLink className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground py-2">Nenhuma foto anexada</p>
+                  )}
+                </div>
+
+                {/* Location */}
+                <div className="space-y-2">
+                  <span className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5" />
+                    Localização
+                  </span>
+                  {location ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="text-xs font-mono">
+                          {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
+                        </Badge>
+                      </div>
+                      <a
+                        href={`https://www.google.com/maps?q=${location.lat},${location.lng}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        Abrir no Google Maps
+                      </a>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground py-2">Localização não registrada</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
