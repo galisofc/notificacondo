@@ -440,6 +440,8 @@ export default function ZeladorManutencoes() {
         <p className="text-[10px] text-muted-foreground">
           {task.status === "finalizada"
             ? `Finalizada • ${task.last_completed_at ? format(parseISO(task.last_completed_at), "dd/MM/yyyy") : ""}`
+            : task.status === "em_execucao" && daysUntilDue < 0
+            ? `Em execução • Vencida em ${format(parseISO(task.next_due_date), "dd/MM")}`
             : daysUntilDue < 0
             ? `Atrasada há ${Math.abs(daysUntilDue)} dias`
             : daysUntilDue === 0
@@ -521,23 +523,40 @@ export default function ZeladorManutencoes() {
           </Card>
         ) : (
           <div className="space-y-6">
-            {/* Main 3 columns */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {columnConfig.map(col => (
-                <div key={col.title} className="flex flex-col gap-3">
-                  <div className={`flex items-center justify-between rounded-lg px-3 py-2 ${col.header}`}>
-                    <span className="text-sm font-semibold">{col.title} ({col.items.length})</span>
+            {/* Main 3 columns with drag-and-drop */}
+            <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {columnConfig.map(col => (
+                  <div key={col.id} className="flex flex-col gap-3">
+                    <div className={`flex items-center justify-between rounded-lg px-3 py-2 ${col.header}`}>
+                      <span className="text-sm font-semibold">{col.title} ({col.items.length})</span>
+                    </div>
+                    <DroppableColumn id={col.id}>
+                      {col.items.length === 0 ? (
+                        <p className="text-xs text-muted-foreground text-center py-6">
+                          {activeDragId ? "Solte aqui" : "Nenhuma tarefa"}
+                        </p>
+                      ) : (
+                        col.items.map(t => (
+                          <DraggableCard key={t.id} id={t.id}>
+                            {renderTaskCard(t, col.accent)}
+                          </DraggableCard>
+                        ))
+                      )}
+                    </DroppableColumn>
                   </div>
-                  <div className="space-y-3 min-h-[100px] max-h-[65vh] overflow-y-auto">
-                    {col.items.length === 0 ? (
-                      <p className="text-xs text-muted-foreground text-center py-6">Nenhuma tarefa</p>
-                    ) : (
-                      col.items.map(t => renderTaskCard(t, col.accent))
-                    )}
+                ))}
+              </div>
+
+              {/* Drag overlay */}
+              <DragOverlay>
+                {draggedTask && draggedTaskColumn ? (
+                  <div className="opacity-80 rotate-2 scale-105 shadow-xl">
+                    {renderTaskCard(draggedTask, draggedTaskColumn.accent)}
                   </div>
-                </div>
-              ))}
-            </div>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
 
             {/* Finalizados section */}
             {finalizadas.length > 0 && (
