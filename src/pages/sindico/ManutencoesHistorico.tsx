@@ -128,7 +128,6 @@ export default function ManutencoesHistorico() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-10"></TableHead>
                   <TableHead>Data</TableHead>
                   <TableHead>Tarefa</TableHead>
                   <TableHead className="hidden md:table-cell">Tipo</TableHead>
@@ -136,6 +135,7 @@ export default function ManutencoesHistorico() {
                   <TableHead>Status</TableHead>
                   <TableHead className="hidden md:table-cell">Custo</TableHead>
                   <TableHead className="hidden lg:table-cell">Observações</TableHead>
+                  <TableHead className="w-10"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
