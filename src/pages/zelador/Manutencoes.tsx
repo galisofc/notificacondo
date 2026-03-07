@@ -324,10 +324,57 @@ export default function ZeladorManutencoes() {
     onError: (error) => toast({ title: "Erro", description: error.message, variant: "destructive" }),
   });
 
+  const revertTaskMutation = useMutation({
+    mutationFn: async (taskId: string) => {
+      const { error } = await supabase.from("maintenance_tasks").update({ status: "em_dia" }).eq("id", taskId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["zelador-all-tasks"] });
+      toast({ title: "Status revertido", description: "A tarefa voltou para a coluna anterior" });
+    },
+    onError: (error) => toast({ title: "Erro", description: error.message, variant: "destructive" }),
+  });
+
   const openExecDialog = (task: MaintenanceTask) => {
     setSelectedTask(task);
     setExecForm({ observations: "", status: "concluida", cost: "" });
     setExecDialogOpen(true);
+  };
+
+  // --- Drag handlers ---
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDragId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveDragId(null);
+    const { active, over } = event;
+    if (!over) return;
+
+    const taskId = active.id as string;
+    const targetColumn = over.id as string;
+    const task = filteredTasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    // Determine which column the task is currently in
+    const daysUntilDue = differenceInDays(parseISO(task.next_due_date), new Date());
+    let currentColumn: string;
+    if (task.status === "em_execucao") currentColumn = "em_execucao";
+    else if (daysUntilDue < 0) currentColumn = "vencidas";
+    else currentColumn = "pendentes";
+
+    // Same column = no-op
+    if (currentColumn === targetColumn) return;
+
+    // Move to "em_execucao"
+    if (targetColumn === "em_execucao" && task.status !== "em_execucao") {
+      startTaskMutation.mutate(taskId);
+    }
+    // Move from "em_execucao" back to pendentes/vencidas
+    else if ((targetColumn === "pendentes" || targetColumn === "vencidas") && task.status === "em_execucao") {
+      revertTaskMutation.mutate(taskId);
+    }
   };
 
   const selectedCondoId = editingTask?.condominium_id || (condoIds.length === 1 ? condoIds[0] : null);
@@ -355,10 +402,15 @@ export default function ZeladorManutencoes() {
   });
 
   const columnConfig = [
-    { title: "Vencidas", items: vencidas, header: "bg-destructive/10 text-destructive", accent: "border-l-destructive" },
-    { title: "Pendentes", items: pendentes, header: "bg-amber-500/10 text-amber-700 dark:text-amber-400", accent: "border-l-amber-500" },
-    { title: "Em execução", items: emExecucao, header: "bg-blue-500/10 text-blue-700 dark:text-blue-400", accent: "border-l-blue-500" },
+    { id: "vencidas", title: "Vencidas", items: vencidas, header: "bg-destructive/10 text-destructive", accent: "border-l-destructive" },
+    { id: "pendentes", title: "Pendentes", items: pendentes, header: "bg-amber-500/10 text-amber-700 dark:text-amber-400", accent: "border-l-amber-500" },
+    { id: "em_execucao", title: "Em execução", items: emExecucao, header: "bg-blue-500/10 text-blue-700 dark:text-blue-400", accent: "border-l-blue-500" },
   ];
+
+  const draggedTask = activeDragId ? filteredTasks.find(t => t.id === activeDragId) : null;
+  const draggedTaskColumn = draggedTask
+    ? columnConfig.find(col => col.items.some(t => t.id === draggedTask.id))
+    : null;
 
   const renderTaskCard = (task: MaintenanceTask, accentClass: string) => {
     const daysUntilDue = differenceInDays(parseISO(task.next_due_date), new Date());
