@@ -12,10 +12,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Wrench, ClipboardCheck, Loader2, Search, Plus, Pencil, Play } from "lucide-react";
+import { Wrench, ClipboardCheck, Loader2, Search, Plus, Pencil, Play, GripVertical } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { differenceInDays, parseISO, format } from "date-fns";
 import { useUserRole } from "@/hooks/useUserRole";
+import {
+  DndContext,
+  DragOverlay,
+  useDroppable,
+  useDraggable,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+  type DragEndEvent,
+} from "@dnd-kit/core";
 
 
 interface MaintenanceTask {
@@ -52,12 +64,60 @@ const emptyTaskForm = {
   responsible_notes: "", estimated_cost: "", category_id: "", maintenance_type: "preventiva",
 };
 
+// --- Drag-and-drop helper components ---
+function DroppableColumn({ id, children, isOver }: { id: string; children: React.ReactNode; isOver?: boolean }) {
+  const { setNodeRef, isOver: hovering } = useDroppable({ id });
+  const active = isOver || hovering;
+  return (
+    <div
+      ref={setNodeRef}
+      className={`space-y-3 min-h-[100px] max-h-[65vh] overflow-y-auto rounded-lg transition-colors duration-200 p-1 ${
+        active ? "bg-primary/10 ring-2 ring-primary/30" : ""
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function DraggableCard({ id, children }: { id: string; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id });
+  const style = transform
+    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
+    : undefined;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`${isDragging ? "opacity-30" : ""}`}
+      {...attributes}
+    >
+      <div className="relative">
+        <div
+          {...listeners}
+          className="absolute top-2 right-2 cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted/80 z-10 touch-none"
+        >
+          <GripVertical className="w-4 h-4 text-muted-foreground" />
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export default function ZeladorManutencoes() {
   const { user } = useAuth();
   const { profileInfo } = useUserRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+
+  // Drag sensors
+  const pointerSensor = useSensor(PointerSensor, { activationConstraint: { distance: 8 } });
+  const touchSensor = useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } });
+  const sensors = useSensors(pointerSensor, touchSensor);
 
   // Execution dialog
   const [execDialogOpen, setExecDialogOpen] = useState(false);
@@ -264,10 +324,57 @@ export default function ZeladorManutencoes() {
     onError: (error) => toast({ title: "Erro", description: error.message, variant: "destructive" }),
   });
 
+  const revertTaskMutation = useMutation({
+    mutationFn: async (taskId: string) => {
+      const { error } = await supabase.from("maintenance_tasks").update({ status: "em_dia" }).eq("id", taskId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["zelador-all-tasks"] });
+      toast({ title: "Status revertido", description: "A tarefa voltou para a coluna anterior" });
+    },
+    onError: (error) => toast({ title: "Erro", description: error.message, variant: "destructive" }),
+  });
+
   const openExecDialog = (task: MaintenanceTask) => {
     setSelectedTask(task);
     setExecForm({ observations: "", status: "concluida", cost: "" });
     setExecDialogOpen(true);
+  };
+
+  // --- Drag handlers ---
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDragId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveDragId(null);
+    const { active, over } = event;
+    if (!over) return;
+
+    const taskId = active.id as string;
+    const targetColumn = over.id as string;
+    const task = filteredTasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    // Determine which column the task is currently in
+    const daysUntilDue = differenceInDays(parseISO(task.next_due_date), new Date());
+    let currentColumn: string;
+    if (task.status === "em_execucao") currentColumn = "em_execucao";
+    else if (daysUntilDue < 0) currentColumn = "vencidas";
+    else currentColumn = "pendentes";
+
+    // Same column = no-op
+    if (currentColumn === targetColumn) return;
+
+    // Move to "em_execucao"
+    if (targetColumn === "em_execucao" && task.status !== "em_execucao") {
+      startTaskMutation.mutate(taskId);
+    }
+    // Move from "em_execucao" back to pendentes/vencidas
+    else if ((targetColumn === "pendentes" || targetColumn === "vencidas") && task.status === "em_execucao") {
+      revertTaskMutation.mutate(taskId);
+    }
   };
 
   const selectedCondoId = editingTask?.condominium_id || (condoIds.length === 1 ? condoIds[0] : null);
@@ -295,10 +402,15 @@ export default function ZeladorManutencoes() {
   });
 
   const columnConfig = [
-    { title: "Vencidas", items: vencidas, header: "bg-destructive/10 text-destructive", accent: "border-l-destructive" },
-    { title: "Pendentes", items: pendentes, header: "bg-amber-500/10 text-amber-700 dark:text-amber-400", accent: "border-l-amber-500" },
-    { title: "Em execução", items: emExecucao, header: "bg-blue-500/10 text-blue-700 dark:text-blue-400", accent: "border-l-blue-500" },
+    { id: "vencidas", title: "Vencidas", items: vencidas, header: "bg-destructive/10 text-destructive", accent: "border-l-destructive" },
+    { id: "pendentes", title: "Pendentes", items: pendentes, header: "bg-amber-500/10 text-amber-700 dark:text-amber-400", accent: "border-l-amber-500" },
+    { id: "em_execucao", title: "Em execução", items: emExecucao, header: "bg-blue-500/10 text-blue-700 dark:text-blue-400", accent: "border-l-blue-500" },
   ];
+
+  const draggedTask = activeDragId ? filteredTasks.find(t => t.id === activeDragId) : null;
+  const draggedTaskColumn = draggedTask
+    ? columnConfig.find(col => col.items.some(t => t.id === draggedTask.id))
+    : null;
 
   const renderTaskCard = (task: MaintenanceTask, accentClass: string) => {
     const daysUntilDue = differenceInDays(parseISO(task.next_due_date), new Date());
@@ -328,6 +440,8 @@ export default function ZeladorManutencoes() {
         <p className="text-[10px] text-muted-foreground">
           {task.status === "finalizada"
             ? `Finalizada • ${task.last_completed_at ? format(parseISO(task.last_completed_at), "dd/MM/yyyy") : ""}`
+            : task.status === "em_execucao" && daysUntilDue < 0
+            ? `Em execução • Vencida em ${format(parseISO(task.next_due_date), "dd/MM")}`
             : daysUntilDue < 0
             ? `Atrasada há ${Math.abs(daysUntilDue)} dias`
             : daysUntilDue === 0
@@ -409,23 +523,40 @@ export default function ZeladorManutencoes() {
           </Card>
         ) : (
           <div className="space-y-6">
-            {/* Main 3 columns */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {columnConfig.map(col => (
-                <div key={col.title} className="flex flex-col gap-3">
-                  <div className={`flex items-center justify-between rounded-lg px-3 py-2 ${col.header}`}>
-                    <span className="text-sm font-semibold">{col.title} ({col.items.length})</span>
+            {/* Main 3 columns with drag-and-drop */}
+            <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {columnConfig.map(col => (
+                  <div key={col.id} className="flex flex-col gap-3">
+                    <div className={`flex items-center justify-between rounded-lg px-3 py-2 ${col.header}`}>
+                      <span className="text-sm font-semibold">{col.title} ({col.items.length})</span>
+                    </div>
+                    <DroppableColumn id={col.id}>
+                      {col.items.length === 0 ? (
+                        <p className="text-xs text-muted-foreground text-center py-6">
+                          {activeDragId ? "Solte aqui" : "Nenhuma tarefa"}
+                        </p>
+                      ) : (
+                        col.items.map(t => (
+                          <DraggableCard key={t.id} id={t.id}>
+                            {renderTaskCard(t, col.accent)}
+                          </DraggableCard>
+                        ))
+                      )}
+                    </DroppableColumn>
                   </div>
-                  <div className="space-y-3 min-h-[100px] max-h-[65vh] overflow-y-auto">
-                    {col.items.length === 0 ? (
-                      <p className="text-xs text-muted-foreground text-center py-6">Nenhuma tarefa</p>
-                    ) : (
-                      col.items.map(t => renderTaskCard(t, col.accent))
-                    )}
+                ))}
+              </div>
+
+              {/* Drag overlay */}
+              <DragOverlay>
+                {draggedTask && draggedTaskColumn ? (
+                  <div className="opacity-80 rotate-2 scale-105 shadow-xl">
+                    {renderTaskCard(draggedTask, draggedTaskColumn.accent)}
                   </div>
-                </div>
-              ))}
-            </div>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
 
             {/* Finalizados section */}
             {finalizadas.length > 0 && (
