@@ -116,6 +116,13 @@ export default function ZeladorManutencoes() {
   const [execDialogOpen, setExecDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<MaintenanceTask | null>(null);
   const [execForm, setExecForm] = useState({ observations: "", status: "concluida", cost: "" });
+  const [execPhotos, setExecPhotos] = useState<File[]>([]);
+  const [execPhotosPreviews, setExecPhotosPreviews] = useState<string[]>([]);
+  const [execLocation, setExecLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   // Task CRUD dialog
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
