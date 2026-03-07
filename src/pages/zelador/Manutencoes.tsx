@@ -757,7 +757,7 @@ export default function ZeladorManutencoes() {
 
         {/* Execution Dialog */}
         <Dialog open={execDialogOpen} onOpenChange={setExecDialogOpen}>
-          <DialogContent>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Registrar Execução</DialogTitle>
               <DialogDescription>{selectedTask?.title}</DialogDescription>
@@ -774,6 +774,77 @@ export default function ZeladorManutencoes() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Photo attachment */}
+              <div className="grid gap-2">
+                <Label className="flex items-center gap-1.5">
+                  <Camera className="w-4 h-4" />
+                  Fotos da execução
+                </Label>
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  multiple
+                  className="hidden"
+                  onChange={handlePhotoSelect}
+                />
+                <div className="flex flex-wrap gap-2">
+                  {execPhotosPreviews.map((src, i) => (
+                    <div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden border border-border">
+                      <img src={src} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(i)}
+                        className="absolute top-0.5 right-0.5 bg-destructive text-destructive-foreground rounded-full p-0.5"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => photoInputRef.current?.click()}
+                    className="w-20 h-20 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                  >
+                    <ImageIcon className="w-5 h-5" />
+                    <span className="text-[10px]">Adicionar</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Geolocation */}
+              <div className="grid gap-2">
+                <Label className="flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4" />
+                  Localização
+                </Label>
+                {locationLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Obtendo localização...
+                  </div>
+                ) : execLocation ? (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-xs">
+                      <MapPin className="w-3 h-3 mr-1" />
+                      {execLocation.lat.toFixed(6)}, {execLocation.lng.toFixed(6)}
+                    </Badge>
+                    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={captureGeolocation}>
+                      Atualizar
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    {locationError && <span className="text-xs text-destructive">{locationError}</span>}
+                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={captureGeolocation}>
+                      <MapPin className="w-3 h-3 mr-1" /> Capturar localização
+                    </Button>
+                  </div>
+                )}
+              </div>
+
               <div className="grid gap-2">
                 <Label>Custo (R$)</Label>
                 <Input type="number" step="0.01" value={execForm.cost} onChange={(e) => setExecForm(p => ({ ...p, cost: e.target.value }))} placeholder="0,00" />
@@ -785,8 +856,8 @@ export default function ZeladorManutencoes() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setExecDialogOpen(false)}>Cancelar</Button>
-              <Button onClick={() => submitMutation.mutate()} disabled={submitMutation.isPending}>
-                {submitMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              <Button onClick={() => submitMutation.mutate()} disabled={submitMutation.isPending || uploadingPhotos}>
+                {(submitMutation.isPending || uploadingPhotos) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 Registrar
               </Button>
             </DialogFooter>
