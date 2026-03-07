@@ -147,17 +147,6 @@ export default function ManutencoesHistorico() {
                   return (
                     <TableRow key={exec.id}>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                          onClick={() => openDetail(exec)}
-                          title="Ver detalhes"
-                        >
-                          <Eye className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                      </TableCell>
-                      <TableCell>
                         <div className="flex items-center gap-1.5">
                           <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
                           <span className="text-sm">
@@ -194,6 +183,17 @@ export default function ManutencoesHistorico() {
                       </TableCell>
                       <TableCell className="hidden lg:table-cell text-muted-foreground max-w-[200px] truncate">
                         {exec.observations || "—"}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => openDetail(exec)}
+                          title="Ver detalhes"
+                        >
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   );
