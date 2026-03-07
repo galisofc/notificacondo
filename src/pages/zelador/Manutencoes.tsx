@@ -199,6 +199,22 @@ export default function ZeladorManutencoes() {
   const submitMutation = useMutation({
     mutationFn: async () => {
       if (!selectedTask || !user) throw new Error("Tarefa não selecionada");
+
+      // Upload photos
+      let photoUrls: string[] = [];
+      if (execPhotos.length > 0) {
+        setUploadingPhotos(true);
+        for (const photo of execPhotos) {
+          const fileName = `${selectedTask.id}/${Date.now()}-${photo.name}`;
+          const { error: uploadError } = await supabase.storage
+            .from("maintenance-photos")
+            .upload(fileName, photo);
+          if (uploadError) throw uploadError;
+          photoUrls.push(fileName);
+        }
+        setUploadingPhotos(false);
+      }
+
       const { error } = await supabase.from("maintenance_executions").insert({
         task_id: selectedTask.id,
         condominium_id: selectedTask.condominium_id,
@@ -207,12 +223,13 @@ export default function ZeladorManutencoes() {
         observations: execForm.observations || null,
         cost: execForm.cost ? parseFloat(execForm.cost) : null,
         status: execForm.status as any,
+        photos: photoUrls,
+        location: execLocation ? { lat: execLocation.lat, lng: execLocation.lng } : null,
       });
       if (error) throw error;
 
       if (execForm.status === "concluida") {
         if (selectedTask.periodicity === "unica") {
-          // Manutenção única: apenas finaliza, sem recalcular próxima data
           await supabase.from("maintenance_tasks").update({
             last_completed_at: new Date().toISOString(),
             status: "finalizada",
@@ -244,9 +261,15 @@ export default function ZeladorManutencoes() {
       queryClient.invalidateQueries({ queryKey: ["zelador-tasks"] });
       queryClient.invalidateQueries({ queryKey: ["zelador-recent-execs"] });
       setExecDialogOpen(false);
+      setExecPhotos([]);
+      setExecPhotosPreviews([]);
+      setExecLocation(null);
       toast({ title: "Execução registrada!", description: "A manutenção foi registrada com sucesso" });
     },
-    onError: (error) => toast({ title: "Erro", description: error.message, variant: "destructive" }),
+    onError: (error) => {
+      setUploadingPhotos(false);
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    },
   });
 
   // --- Task CRUD mutations ---
