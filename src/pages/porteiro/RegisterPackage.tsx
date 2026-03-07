@@ -259,8 +259,7 @@ export default function RegisterPackage() {
           status: "pendente",
           package_type_id: selectedPackageType || null,
           tracking_code: trackingCode || null,
-          received_by_name: porterProfile?.full_name || user.email || '',
-        } as any)
+        })
         .select()
         .single();
 
