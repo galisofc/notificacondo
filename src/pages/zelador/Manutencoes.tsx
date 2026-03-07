@@ -359,10 +359,56 @@ export default function ZeladorManutencoes() {
     onError: (error) => toast({ title: "Erro", description: error.message, variant: "destructive" }),
   });
 
+  const captureGeolocation = () => {
+    setLocationLoading(true);
+    setLocationError(null);
+    if (!navigator.geolocation) {
+      setLocationError("Geolocalização não suportada");
+      setLocationLoading(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setExecLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
+        setLocationLoading(false);
+      },
+      (err) => {
+        setLocationError("Não foi possível obter localização");
+        setLocationLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    setExecPhotos(prev => [...prev, ...files]);
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setExecPhotosPreviews(prev => [...prev, ev.target?.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+    if (photoInputRef.current) photoInputRef.current.value = "";
+  };
+
+  const removePhoto = (index: number) => {
+    setExecPhotos(prev => prev.filter((_, i) => i !== index));
+    setExecPhotosPreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
   const openExecDialog = (task: MaintenanceTask) => {
     setSelectedTask(task);
     setExecForm({ observations: "", status: "concluida", cost: "" });
+    setExecPhotos([]);
+    setExecPhotosPreviews([]);
+    setExecLocation(null);
+    setLocationError(null);
     setExecDialogOpen(true);
+    // Auto-capture geolocation
+    captureGeolocation();
   };
 
   // --- Drag handlers ---
