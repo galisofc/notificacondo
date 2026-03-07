@@ -769,6 +769,7 @@ export type Database = {
           executed_by: string | null
           executed_by_name: string | null
           id: string
+          location: Json | null
           observations: string | null
           photos: string[]
           status: Database["public"]["Enums"]["maintenance_execution_status"]
@@ -782,6 +783,7 @@ export type Database = {
           executed_by?: string | null
           executed_by_name?: string | null
           id?: string
+          location?: Json | null
           observations?: string | null
           photos?: string[]
           status?: Database["public"]["Enums"]["maintenance_execution_status"]
@@ -795,6 +797,7 @@ export type Database = {
           executed_by?: string | null
           executed_by_name?: string | null
           id?: string
+          location?: Json | null
           observations?: string | null
           photos?: string[]
           status?: Database["public"]["Enums"]["maintenance_execution_status"]
