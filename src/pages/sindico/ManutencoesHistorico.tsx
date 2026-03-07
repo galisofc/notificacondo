@@ -28,6 +28,7 @@ export default function ManutencoesHistorico() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [loadingPhotos, setLoadingPhotos] = useState(false);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   const { data: condominiums = [] } = useQuery({
     queryKey: ["condominiums", user?.id],
@@ -290,12 +291,11 @@ export default function ManutencoesHistorico() {
                   ) : photoUrls.length > 0 ? (
                     <div className="grid grid-cols-2 gap-2">
                       {photoUrls.map((url, i) => (
-                        <a
+                        <button
                           key={i}
-                          href={url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="relative group rounded-lg overflow-hidden border border-border aspect-square"
+                          type="button"
+                          onClick={() => setLightboxUrl(url)}
+                          className="relative group rounded-lg overflow-hidden border border-border aspect-square cursor-pointer"
                         >
                           <img
                             src={url}
@@ -303,9 +303,9 @@ export default function ManutencoesHistorico() {
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                           />
                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                            <ExternalLink className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <Eye className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                           </div>
-                        </a>
+                        </button>
                       ))}
                     </div>
                   ) : (
@@ -341,6 +341,23 @@ export default function ManutencoesHistorico() {
                   )}
                 </div>
               </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Lightbox para foto em tela cheia */}
+        <Dialog open={!!lightboxUrl} onOpenChange={(open) => !open && setLightboxUrl(null)}>
+          <DialogContent className="max-w-3xl p-2">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Foto da manutenção</DialogTitle>
+              <DialogDescription>Visualização ampliada da foto</DialogDescription>
+            </DialogHeader>
+            {lightboxUrl && (
+              <img
+                src={lightboxUrl}
+                alt="Foto ampliada"
+                className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+              />
             )}
           </DialogContent>
         </Dialog>
