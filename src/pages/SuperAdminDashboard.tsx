@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Helmet } from "react-helmet-async";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
