@@ -228,6 +228,7 @@ export default function SuperAdminDashboard() {
 
   // Query para atividade recente
   const { data: recentActivity, isLoading: activityLoading } = useQuery({
+    queryKey: ["superadmin-recent-activity"],
     refetchInterval: 60000,
     refetchIntervalInBackground: false,
     queryFn: async () => {
