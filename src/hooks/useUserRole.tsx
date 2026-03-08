@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -49,7 +49,25 @@ interface UseUserRoleReturn {
 
 const SELECTED_RESIDENT_KEY = "selected_resident_id";
 
+const UserRoleContext = createContext<UseUserRoleReturn | null>(null);
+
+export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
+  const value = useUserRoleInternal();
+  return (
+    <UserRoleContext.Provider value={value}>
+      {children}
+    </UserRoleContext.Provider>
+  );
+};
+
 export const useUserRole = (): UseUserRoleReturn => {
+  const context = useContext(UserRoleContext);
+  if (context) return context;
+  // Fallback for components outside provider (should not happen in practice)
+  return useUserRoleInternal();
+};
+
+const useUserRoleInternal = (): UseUserRoleReturn => {
   const { user } = useAuth();
   const [role, setRole] = useState<UserRole>(null);
   const [loading, setLoading] = useState(true);
@@ -107,7 +125,6 @@ export const useUserRole = (): UseUserRoleReturn => {
       }
 
       try {
-        // Fetch all user roles from user_roles table
         const { data: rolesData, error: roleError } = await supabase
           .from("user_roles")
           .select("role")
@@ -116,16 +133,10 @@ export const useUserRole = (): UseUserRoleReturn => {
 
         if (roleError) {
           console.error("Error fetching user role:", roleError);
-          // Em caso de erro na query, não definir role ainda - manter loading
-          // para evitar fallback incorreto para "morador"
           setLoading(false);
           return;
         }
 
-        // Priority order for roles:
-        // super_admin > porteiro > sindico > morador
-        // (If a user has multiple roles, we keep porteiro above sindico to avoid
-        // redirecting a concierge user into the manager dashboard.)
         const rolePriority: Record<string, number> = {
           super_admin: 5,
           porteiro: 4,
@@ -137,24 +148,20 @@ export const useUserRole = (): UseUserRoleReturn => {
         let userRole: UserRole = null;
 
         if (rolesData && rolesData.length > 0) {
-          // Sort roles by priority (highest first) and select the highest
           const sortedRoles = rolesData.sort(
             (a, b) => (rolePriority[b.role] || 0) - (rolePriority[a.role] || 0)
           );
           userRole = sortedRoles[0].role as UserRole;
         } else {
-          // Usuário autenticado sem role definida - fallback para morador
           userRole = "morador";
         }
         
         setRole(userRole);
 
-        // Fetch profile info for sindico, super_admin, porteiro and zelador
         if (userRole === "sindico" || userRole === "super_admin" || userRole === "porteiro" || userRole === "zelador") {
           await fetchProfileInfo(user.id);
         }
 
-        // Fetch condominiums for porteiro and zelador
         if (userRole === "porteiro" || userRole === "zelador") {
           const { data: userCondos } = await supabase
             .from("user_condominiums")
@@ -171,7 +178,6 @@ export const useUserRole = (): UseUserRoleReturn => {
           }
         }
 
-        // If user is a resident, fetch all their resident records
         if (userRole === "morador") {
           const { data: residentData, error: residentError } = await supabase
             .from("residents")
@@ -202,7 +208,6 @@ export const useUserRole = (): UseUserRoleReturn => {
           }
 
           if (residentData && residentData.length > 0) {
-            // Map all resident records
             const allProfiles: ResidentInfo[] = residentData.map((resident) => {
               const apt = resident.apartments as any;
               return {
@@ -222,13 +227,11 @@ export const useUserRole = (): UseUserRoleReturn => {
 
             setAllResidentProfiles(allProfiles);
 
-            // Check if there's a saved preference
             const savedResidentId = localStorage.getItem(SELECTED_RESIDENT_KEY);
             const savedResident = savedResidentId 
               ? allProfiles.find(r => r.id === savedResidentId) 
               : null;
 
-            // Use saved preference or default to first
             setResidentInfo(savedResident || allProfiles[0]);
           }
         }
@@ -241,9 +244,6 @@ export const useUserRole = (): UseUserRoleReturn => {
 
     fetchUserRole();
   }, [user, fetchProfileInfo]);
-
-  // Realtime profile subscription removed to reduce Cloud consumption.
-  // Use refetchProfile() after profile edits instead.
 
   return {
     role,

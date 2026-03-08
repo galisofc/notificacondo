@@ -2,6 +2,7 @@ import { ReactNode, useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -162,24 +163,144 @@ const getZeladorNavItems = (): NavStructure => [
 
 function SidebarNavigation() {
   const { state, isMobile, setOpenMobile } = useSidebar();
-  // In mobile, sidebar is shown as a Sheet and should always show text labels
   const collapsed = isMobile ? false : state === "collapsed";
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
-  const { role, residentInfo, profileInfo, loading } = useUserRole();
+  const { role, residentInfo, profileInfo, loading, porteiroCondominiums } = useUserRole();
   const { toast } = useToast();
-  const [pendingDefenses, setPendingDefenses] = useState(0);
-  const [openOccurrences, setOpenOccurrences] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
-  const [pendingPackages, setPendingPackages] = useState(0);
-  const [openPorterOccurrencesPorteiro, setOpenPorterOccurrencesPorteiro] = useState(0);
-  const [openPorterOccurrences, setOpenPorterOccurrences] = useState(0);
-  const [condoIds, setCondoIds] = useState<string[]>([]);
-  const [porteiroCondoIds, setPorteiroCondoIds] = useState<string[]>([]);
   const prevPendingDefensesRef = useRef<number>(0);
   const prevUnreadMessagesRef = useRef<number>(0);
   const audioContextRef = useRef<AudioContext | null>(null);
+
+  // Sindico condominium IDs (cached via React Query)
+  const { data: condoIds = [] } = useQuery({
+    queryKey: ["sindico-condo-ids", user?.id],
+    queryFn: async () => {
+      const { data: condos } = await supabase
+        .from("condominiums")
+        .select("id")
+        .eq("owner_id", user!.id);
+      return condos?.map((c) => c.id) || [];
+    },
+    enabled: !!user && role === "sindico",
+    staleTime: 1000 * 60 * 5,
+  });
+
+  // Porteiro condominium IDs from context
+  const porteiroCondoIds = porteiroCondominiums.map(c => c.id);
+
+  // Badge: pending defenses for sindico
+  const { data: pendingDefenses = 0 } = useQuery({
+    queryKey: ["badge-pending-defenses", condoIds],
+    queryFn: async () => {
+      if (condoIds.length === 0) return 0;
+      const { count } = await supabase
+        .from("occurrences")
+        .select("*", { count: "exact", head: true })
+        .in("condominium_id", condoIds)
+        .eq("status", "em_defesa");
+      return count || 0;
+    },
+    enabled: !!user && role === "sindico" && condoIds.length > 0,
+    staleTime: 1000 * 60,
+    refetchInterval: 60000,
+    refetchIntervalInBackground: false,
+  });
+
+  // Badge: open occurrences for sindico
+  const { data: openOccurrences = 0 } = useQuery({
+    queryKey: ["badge-open-occurrences", condoIds],
+    queryFn: async () => {
+      if (condoIds.length === 0) return 0;
+      const { count } = await supabase
+        .from("occurrences")
+        .select("*", { count: "exact", head: true })
+        .in("condominium_id", condoIds)
+        .in("status", ["registrada", "notificado"]);
+      return count || 0;
+    },
+    enabled: !!user && role === "sindico" && condoIds.length > 0,
+    staleTime: 1000 * 60,
+    refetchInterval: 60000,
+    refetchIntervalInBackground: false,
+  });
+
+  // Badge: open porter occurrences for sindico
+  const { data: openPorterOccurrences = 0 } = useQuery({
+    queryKey: ["badge-porter-occurrences-sindico", condoIds],
+    queryFn: async () => {
+      if (condoIds.length === 0) return 0;
+      const { count } = await supabase
+        .from("porter_occurrences")
+        .select("*", { count: "exact", head: true })
+        .in("condominium_id", condoIds)
+        .eq("status", "aberta");
+      return count || 0;
+    },
+    enabled: !!user && role === "sindico" && condoIds.length > 0,
+    staleTime: 1000 * 60,
+    refetchInterval: 60000,
+    refetchIntervalInBackground: false,
+  });
+
+  // Badge: pending packages for porteiro
+  const { data: pendingPackages = 0 } = useQuery({
+    queryKey: ["badge-pending-packages", porteiroCondoIds],
+    queryFn: async () => {
+      if (porteiroCondoIds.length === 0) return 0;
+      const { count } = await supabase
+        .from("packages")
+        .select("*", { count: "exact", head: true })
+        .in("condominium_id", porteiroCondoIds)
+        .eq("status", "pendente");
+      return count || 0;
+    },
+    enabled: !!user && role === "porteiro" && porteiroCondoIds.length > 0,
+    staleTime: 1000 * 60,
+    refetchInterval: 60000,
+    refetchIntervalInBackground: false,
+  });
+
+  // Badge: open porter occurrences for porteiro
+  const { data: openPorterOccurrencesPorteiro = 0 } = useQuery({
+    queryKey: ["badge-porter-occurrences-porteiro", porteiroCondoIds],
+    queryFn: async () => {
+      if (porteiroCondoIds.length === 0) return 0;
+      const { count } = await supabase
+        .from("porter_occurrences")
+        .select("*", { count: "exact", head: true })
+        .in("condominium_id", porteiroCondoIds)
+        .eq("status", "aberta");
+      return count || 0;
+    },
+    enabled: !!user && role === "porteiro" && porteiroCondoIds.length > 0,
+    staleTime: 1000 * 60,
+    refetchInterval: 60000,
+    refetchIntervalInBackground: false,
+  });
+
+  // Badge: unread messages for super_admin
+  const { data: unreadMessagesQuery = 0 } = useQuery({
+    queryKey: ["badge-unread-messages"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("contact_messages")
+        .select("*", { count: "exact", head: true })
+        .eq("is_read", false);
+      return count || 0;
+    },
+    enabled: !!user && role === "super_admin",
+    staleTime: 1000 * 60,
+    refetchInterval: 60000,
+    refetchIntervalInBackground: false,
+  });
+
+  // Sync query result to state for realtime updates
+  useEffect(() => {
+    setUnreadMessages(unreadMessagesQuery);
+  }, [unreadMessagesQuery]);
 
   // Som para defesas pendentes (tom ascendente - urgência)
   const playDefenseNotificationSound = useCallback(() => {
@@ -220,24 +341,22 @@ function SidebarNavigation() {
       
       const ctx = audioContextRef.current;
       
-      // Primeiro tom
       const osc1 = ctx.createOscillator();
       const gain1 = ctx.createGain();
       osc1.connect(gain1);
       gain1.connect(ctx.destination);
-      osc1.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+      osc1.frequency.setValueAtTime(523.25, ctx.currentTime);
       osc1.type = "sine";
       gain1.gain.setValueAtTime(0.25, ctx.currentTime);
       gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
       osc1.start(ctx.currentTime);
       osc1.stop(ctx.currentTime + 0.15);
       
-      // Segundo tom (mais alto)
       const osc2 = ctx.createOscillator();
       const gain2 = ctx.createGain();
       osc2.connect(gain2);
       gain2.connect(ctx.destination);
-      osc2.frequency.setValueAtTime(659.25, ctx.currentTime + 0.18); // E5
+      osc2.frequency.setValueAtTime(659.25, ctx.currentTime + 0.18);
       osc2.type = "sine";
       gain2.gain.setValueAtTime(0, ctx.currentTime);
       gain2.gain.setValueAtTime(0.25, ctx.currentTime + 0.18);
@@ -249,67 +368,7 @@ function SidebarNavigation() {
     }
   }, []);
 
-  // Fetch pending defenses for sindicos
-  useEffect(() => {
-    const fetchPendingDefenses = async () => {
-      if (!user || role !== "sindico") return;
-
-      try {
-        const { data: condos } = await supabase
-          .from("condominiums")
-          .select("id")
-          .eq("owner_id", user.id);
-
-        const ids = condos?.map((c) => c.id) || [];
-        setCondoIds(ids);
-
-        if (ids.length > 0) {
-          const { count } = await supabase
-            .from("occurrences")
-            .select("*", { count: "exact", head: true })
-            .in("condominium_id", ids)
-            .eq("status", "em_defesa");
-
-          setPendingDefenses(count || 0);
-
-          // Fetch open occurrences (registrada or notificado)
-          const { count: openCount } = await supabase
-            .from("occurrences")
-            .select("*", { count: "exact", head: true })
-            .in("condominium_id", ids)
-            .in("status", ["registrada", "notificado"]);
-
-          setOpenOccurrences(openCount || 0);
-        }
-      } catch (error) {
-        console.error("Error fetching pending defenses:", error);
-      }
-    };
-
-    fetchPendingDefenses();
-  }, [user, role]);
-
-  // Fetch unread contact messages for super_admin
-  useEffect(() => {
-    const fetchUnreadMessages = async () => {
-      if (!user || role !== "super_admin") return;
-
-      try {
-        const { count } = await supabase
-          .from("contact_messages")
-          .select("*", { count: "exact", head: true })
-          .eq("is_read", false);
-
-        setUnreadMessages(count || 0);
-      } catch (error) {
-        console.error("Error fetching unread messages:", error);
-      }
-    };
-
-    fetchUnreadMessages();
-  }, [user, role]);
-
-  // Realtime subscription for contact messages (super_admin)
+  // Keep ONLY the realtime subscription for contact messages (super_admin) for sound alerts
   useEffect(() => {
     if (!user || role !== "super_admin") return;
 
@@ -325,10 +384,8 @@ function SidebarNavigation() {
         async (payload) => {
           const newMessage = payload.new as { name?: string; subject?: string };
           
-          // Play sound
           playMessageNotificationSound();
           
-          // Show toast with action button
           toast({
             title: "📬 Nova mensagem de contato",
             description: newMessage.name 
@@ -344,7 +401,6 @@ function SidebarNavigation() {
             ),
           });
 
-          // Update count
           const { count } = await supabase
             .from("contact_messages")
             .select("*", { count: "exact", head: true })
@@ -374,43 +430,7 @@ function SidebarNavigation() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, role, playMessageNotificationSound, toast]);
-
-  useEffect(() => {
-    if (!user || role !== "sindico" || condoIds.length === 0) return;
-
-    const channel = supabase
-      .channel("occurrences-status-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "occurrences",
-        },
-        async (payload) => {
-          const { count } = await supabase
-            .from("occurrences")
-            .select("*", { count: "exact", head: true })
-            .in("condominium_id", condoIds)
-            .eq("status", "em_defesa");
-
-          const newCount = count || 0;
-          
-          if (newCount > prevPendingDefensesRef.current) {
-            playDefenseNotificationSound();
-          }
-          
-          prevPendingDefensesRef.current = newCount;
-          setPendingDefenses(newCount);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, role, condoIds, playDefenseNotificationSound]);
+  }, [user, role, playMessageNotificationSound, toast, navigate]);
 
   useEffect(() => {
     prevPendingDefensesRef.current = pendingDefenses;
@@ -419,113 +439,6 @@ function SidebarNavigation() {
   useEffect(() => {
     prevUnreadMessagesRef.current = unreadMessages;
   }, [unreadMessages]);
-
-  // Fetch pending packages for porteiro
-  useEffect(() => {
-    const fetchPendingPackages = async () => {
-      if (!user || role !== "porteiro") return;
-
-      try {
-        const { data: userCondos } = await supabase
-          .from("user_condominiums")
-          .select("condominium_id")
-          .eq("user_id", user.id);
-
-        const ids = userCondos?.map((c) => c.condominium_id) || [];
-        setPorteiroCondoIds(ids);
-
-        if (ids.length > 0) {
-          const { count } = await supabase
-            .from("packages")
-            .select("*", { count: "exact", head: true })
-            .in("condominium_id", ids)
-            .eq("status", "pendente");
-
-          setPendingPackages(count || 0);
-        }
-      } catch (error) {
-        console.error("Error fetching pending packages:", error);
-      }
-    };
-
-    fetchPendingPackages();
-  }, [user, role]);
-
-  // Fetch open porter occurrences for sindico
-  useEffect(() => {
-    if (!user || role !== "sindico" || condoIds.length === 0) return;
-
-    const fetchPorterOccurrences = async () => {
-      const { count } = await supabase
-        .from("porter_occurrences")
-        .select("*", { count: "exact", head: true })
-        .in("condominium_id", condoIds)
-        .eq("status", "aberta");
-      setOpenPorterOccurrences(count || 0);
-    };
-
-    fetchPorterOccurrences();
-
-    const channel = supabase
-      .channel("porter-occurrences-badge")
-      .on("postgres_changes", { event: "*", schema: "public", table: "porter_occurrences" }, fetchPorterOccurrences)
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [user, role, condoIds]);
-
-  // Realtime subscription for packages (porteiro)
-  useEffect(() => {
-    if (!user || role !== "porteiro" || porteiroCondoIds.length === 0) return;
-
-    const channel = supabase
-      .channel("packages-status-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "packages",
-        },
-        async () => {
-          const { count } = await supabase
-            .from("packages")
-            .select("*", { count: "exact", head: true })
-            .in("condominium_id", porteiroCondoIds)
-            .eq("status", "pendente");
-
-          setPendingPackages(count || 0);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, role, porteiroCondoIds]);
-
-  // Fetch open porter occurrences for porteiro badge
-  useEffect(() => {
-    if (!user || role !== "porteiro" || porteiroCondoIds.length === 0) return;
-
-    const fetchOpenPorterOccs = async () => {
-      const { count } = await supabase
-        .from("porter_occurrences")
-        .select("*", { count: "exact", head: true })
-        .in("condominium_id", porteiroCondoIds)
-        .eq("status", "aberta");
-      setOpenPorterOccurrencesPorteiro(count || 0);
-    };
-
-    fetchOpenPorterOccs();
-
-    const channel = supabase
-      .channel("porter-occs-porteiro-badge")
-      .on("postgres_changes", { event: "*", schema: "public", table: "porter_occurrences" }, fetchOpenPorterOccs)
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [user, role, porteiroCondoIds]);
 
   const handleSignOut = async () => {
     await signOut();

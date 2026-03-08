@@ -1,6 +1,5 @@
-import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Helmet } from "react-helmet-async";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -177,31 +176,11 @@ const formatAuditAction = (tableName: string, action: string, newData: any): str
 
 export default function SuperAdminDashboard() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  
   const { date: formatDate, dateTime: formatDateTime } = useDateFormatter();
 
-  // Realtime subscription para audit_logs
-  useEffect(() => {
-    const channel = supabase
-      .channel('audit-logs-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'audit_logs'
-        },
-        () => {
-          // Invalidar a query para buscar dados atualizados
-          queryClient.invalidateQueries({ queryKey: ["superadmin-recent-activity"] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient]);
+  // Polling instead of realtime for audit_logs - refreshes every 60s when page is visible
+  // (removed WebSocket channel to reduce Cloud consumption)
   
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["superadmin-stats"],
@@ -249,6 +228,8 @@ export default function SuperAdminDashboard() {
   // Query para atividade recente
   const { data: recentActivity, isLoading: activityLoading } = useQuery({
     queryKey: ["superadmin-recent-activity"],
+    refetchInterval: 60000,
+    refetchIntervalInBackground: false,
     queryFn: async () => {
       const { data: logs, error } = await supabase
         .from("audit_logs")
