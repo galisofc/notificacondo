@@ -180,28 +180,8 @@ export default function SuperAdminDashboard() {
   const queryClient = useQueryClient();
   const { date: formatDate, dateTime: formatDateTime } = useDateFormatter();
 
-  // Realtime subscription para audit_logs
-  useEffect(() => {
-    const channel = supabase
-      .channel('audit-logs-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'audit_logs'
-        },
-        () => {
-          // Invalidar a query para buscar dados atualizados
-          queryClient.invalidateQueries({ queryKey: ["superadmin-recent-activity"] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient]);
+  // Polling instead of realtime for audit_logs - refreshes every 60s when page is visible
+  // (removed WebSocket channel to reduce Cloud consumption)
   
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["superadmin-stats"],
