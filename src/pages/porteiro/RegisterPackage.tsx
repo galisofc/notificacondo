@@ -245,7 +245,14 @@ export default function RegisterPackage() {
         .from("package-photos")
         .getPublicUrl(fileName);
 
-      // 3. Insert package record
+      // 3. Fetch porter name for denormalization
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("user_id", user.id)
+        .single();
+
+      // 4. Insert package record
       const { data: packageData, error: insertError } = await supabase
         .from("packages")
         .insert({
@@ -253,6 +260,7 @@ export default function RegisterPackage() {
           block_id: selectedBlock,
           apartment_id: selectedApartment,
           received_by: user.id,
+          received_by_name: profileData?.full_name || null,
           pickup_code: pickupCode,
           description: description || null,
           photo_url: urlData.publicUrl,
