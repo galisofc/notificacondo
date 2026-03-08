@@ -52,7 +52,8 @@ export default function EdgeFunctionLogs() {
       if (error) throw error;
       return data;
     },
-    refetchInterval: 10000,
+    refetchInterval: 60000,
+    refetchIntervalInBackground: false,
   });
 
   const { data: functionNames } = useQuery({
