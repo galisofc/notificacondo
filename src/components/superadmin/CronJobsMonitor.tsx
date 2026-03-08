@@ -82,7 +82,8 @@ export function CronJobsMonitor() {
       }
       return (data || []) as PauseStatus[];
     },
-    refetchInterval: 30000,
+    refetchInterval: 120000,
+    refetchIntervalInBackground: false,
   });
 
   // Fetch last 100 edge function logs for statistics
@@ -100,7 +101,8 @@ export function CronJobsMonitor() {
       }
       return (data || []) as EdgeFunctionLog[];
     },
-    refetchInterval: 30000,
+    refetchInterval: 120000,
+    refetchIntervalInBackground: false,
   });
 
   const jobStatuses: JobStatus[] = useMemo(() => {

@@ -383,7 +383,8 @@ export default function WabaLogs() {
       if (error) throw error;
       return data as WabaLogRow[];
     },
-    refetchInterval: 15000,
+    refetchInterval: 60000,
+    refetchIntervalInBackground: false,
   });
 
   // Filter logs based on search and status

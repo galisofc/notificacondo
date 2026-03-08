@@ -85,7 +85,17 @@ import ZeladorDashboard from "./pages/zelador/Dashboard";
 import ZeladorManutencoes from "./pages/zelador/Manutencoes";
 import ZeladorSettings from "./pages/zelador/Settings";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5,
+      gcTime: 1000 * 60 * 10,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      retry: 1,
+    },
+  },
+});
 
 const App = () => (
   <HelmetProvider>

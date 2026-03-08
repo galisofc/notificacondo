@@ -1,97 +1,144 @@
 
 
-## Plano de Otimização do Consumo de Cloud
+# Modulo PORTARIA para Porteiros
 
-O projeto está consumindo recursos excessivos por falta de cache global no React Query e por polling agressivo em páginas administrativas. Abaixo, as otimizações organizadas por impacto.
+## Resumo
+
+Criar um novo menu "Portaria" no painel do porteiro com duas funcionalidades:
+1. **Registro de Ocorrencias** - porteiros podem registrar ocorrencias no condominio
+2. **Passagem de Plantao** - checklist de equipamentos para troca de turno, com modelo definido pelo sindico
 
 ---
 
-### 1. Configurar cache global no QueryClient (MAIOR IMPACTO)
+## 1. Banco de Dados - Novas Tabelas
 
-Atualmente em `src/App.tsx` linha 88:
-```tsx
-const queryClient = new QueryClient();
+### Tabela `porter_occurrences` (Ocorrencias da Portaria)
+- `id` (uuid, PK)
+- `condominium_id` (uuid, FK -> condominiums)
+- `registered_by` (uuid, FK -> auth.users) - porteiro que registrou
+- `title` (text)
+- `description` (text)
+- `category` (text) - ex: "visitante", "entrega", "manutencao", "seguranca", "outros"
+- `priority` (text) - "baixa", "media", "alta"
+- `status` (text, default "aberta") - "aberta", "resolvida"
+- `occurred_at` (timestamptz)
+- `resolved_at` (timestamptz, nullable)
+- `resolved_by` (uuid, nullable)
+- `resolution_notes` (text, nullable)
+- `created_at` / `updated_at`
+
+**RLS:**
+- Porteiros podem CRUD nas ocorrencias dos condominios atribuidos (via `user_belongs_to_condominium`)
+- Sindicos podem visualizar/gerenciar ocorrencias dos seus condominios
+- Super admins acesso total
+
+### Tabela `shift_checklist_templates` (Templates de checklist criados pelo sindico)
+- `id` (uuid, PK)
+- `condominium_id` (uuid, FK -> condominiums)
+- `item_name` (text)
+- `category` (text, default "Geral") - ex: "Equipamentos", "Seguranca", "Limpeza"
+- `is_active` (boolean, default true)
+- `display_order` (integer, default 0)
+- `created_at` / `updated_at`
+
+**RLS:**
+- Sindicos podem gerenciar templates dos seus condominios
+- Porteiros podem visualizar templates dos condominios atribuidos
+- Super admins acesso total
+
+### Tabela `shift_handovers` (Registros de passagem de plantao)
+- `id` (uuid, PK)
+- `condominium_id` (uuid, FK -> condominiums)
+- `outgoing_porter_id` (uuid) - porteiro que esta saindo
+- `incoming_porter_name` (text) - nome do porteiro que esta entrando
+- `shift_ended_at` (timestamptz, default now())
+- `general_observations` (text, nullable)
+- `created_at`
+
+**RLS:**
+- Porteiros podem criar e visualizar registros dos seus condominios
+- Sindicos podem visualizar registros dos seus condominios
+- Super admins acesso total
+
+### Tabela `shift_handover_items` (Itens checados na passagem)
+- `id` (uuid, PK)
+- `handover_id` (uuid, FK -> shift_handovers)
+- `item_name` (text)
+- `category` (text, nullable)
+- `is_ok` (boolean, default true)
+- `observation` (text, nullable)
+- `created_at`
+
+**RLS:**
+- Mesmas regras do `shift_handovers` (via JOIN)
+
+---
+
+## 2. Menu do Porteiro - Navegacao
+
+Atualizar o menu lateral do porteiro em `DashboardLayout.tsx` para agrupar itens:
+
+```text
+Inicio
+Condominio
+------ Encomendas (grupo) ------
+  Registrar Encomenda
+  Retirar Encomenda
+  Historico
+------ Portaria (grupo) ------
+  Ocorrencias
+  Passagem de Plantao
+Configuracoes
 ```
 
-Sem configuração, o React Query usa `staleTime: 0` (toda query é considerada "stale" imediatamente) e `refetchOnWindowFocus: true`. Isso significa que **cada troca de aba ou foco na janela refaz TODAS as queries ativas**.
+---
 
-**Ação**: Configurar defaults globais:
-```tsx
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5,       // 5 minutos - dados ficam "fresh"
-      gcTime: 1000 * 60 * 10,          // 10 minutos no cache
-      refetchOnWindowFocus: false,      // NÃO refazer ao focar janela
-      refetchOnReconnect: false,        // NÃO refazer ao reconectar
-      retry: 1,                         // Só 1 retry em vez de 3
-    },
-  },
-});
-```
+## 3. Paginas do Porteiro (Frontend)
 
-Isso sozinho pode reduzir 50-70% das queries ao banco.
+### 3.1 Ocorrencias da Portaria (`src/pages/porteiro/PortariaOccurrences.tsx`)
+- Lista de ocorrencias registradas pelo porteiro
+- Filtros por status (aberta/resolvida), categoria, periodo
+- Botao para registrar nova ocorrencia (dialog/formulario)
+- Possibilidade de marcar como resolvida com observacoes
+- Seletor de condominio (caso o porteiro atenda mais de um)
+
+### 3.2 Passagem de Plantao (`src/pages/porteiro/ShiftHandover.tsx`)
+- Formulario com:
+  - Nome do porteiro que esta assumindo
+  - Checklist automatico baseado no template do sindico para aquele condominio
+  - Cada item: checkbox "OK" + campo de observacao opcional
+  - Observacoes gerais
+- Historico de passagens anteriores
+- Seletor de condominio
 
 ---
 
-### 2. Remover realtime do useUserRole (IMPACTO MÉDIO)
+## 4. Pagina do Sindico - Configuracao de Checklist
 
-Em `src/hooks/useUserRole.tsx` linhas 246-277, há uma subscription realtime na tabela `profiles` para detectar mudanças no perfil. Isso mantém uma conexão WebSocket permanente com o banco.
-
-**Ação**: Remover o `useEffect` com `supabase.channel("profile-changes")`. O `refetchProfile()` já existe e pode ser chamado manualmente quando o usuário edita o perfil.
-
----
-
-### 3. Remover realtime do usePackages para moradores (IMPACTO MÉDIO)
-
-Em `src/pages/resident/Packages.tsx` linha 34, `realtime: true` mantém uma subscription WebSocket ativa. O morador pode simplesmente usar pull-to-refresh.
-
-**Ação**: Mudar para `realtime: false`.
+### 4.1 Configuracao do Checklist de Portaria (`src/pages/sindico/ShiftChecklistSettings.tsx`)
+- Acessivel via menu do sindico (dentro de "Servicos > Porteiros" ou novo submenu)
+- Seletor de condominio
+- CRUD de itens do checklist por categoria
+- Reordenacao dos itens
+- Ativar/desativar itens
+- Segue o mesmo padrao visual do `PartyHallSettings.tsx` (aba de checklist)
 
 ---
 
-### 4. Reduzir polling nas páginas SuperAdmin (IMPACTO BAIXO-MÉDIO)
+## 5. Rotas
 
-Quatro locais com `refetchInterval` agressivo:
-- `EdgeFunctionLogs.tsx`: 10s → 60s
-- `WabaLogs.tsx`: 15s → 60s
-- `RlsPoliciesCard.tsx`: 30s → 120s
-- `CronJobsMonitor.tsx`: 30s (2 queries) → 120s
-
-**Ação**: Aumentar todos os intervalos e adicionar `refetchIntervalInBackground: false` para pausar polling quando a aba não está visível.
+Novas rotas em `App.tsx`:
+- `/porteiro/portaria/ocorrencias` - Ocorrencias da portaria
+- `/porteiro/portaria/plantao` - Passagem de plantao
+- `/sindico/portaria/checklist` - Config do checklist (sindico)
 
 ---
 
-### 5. Adicionar staleTime às queries mais chamadas (IMPACTO MÉDIO)
+## Detalhes Tecnicos
 
-Muitas queries de dados que mudam raramente (condomínios, blocos, apartamentos, categorias) não têm `staleTime`, causando refetch desnecessário a cada mount de componente.
-
-Queries prioritárias para adicionar `staleTime`:
-- Condomínios do sindico: `staleTime: 5 min`
-- Blocos/Apartamentos: `staleTime: 5 min`
-- Package types: `staleTime: 30 min`
-- Plans/App settings: `staleTime: 30 min` (useTrialDays já tem 30min)
-- Subscription status: já tem 30s, aumentar para `2 min`
-
----
-
-### 6. useUserRole é chamado em CADA ProtectedRoute
-
-Cada navegação de página invoca `useUserRole()` que faz 2-4 queries ao banco (roles, profile, condominiums, residents). Como não usa React Query, não há cache.
-
-**Ação**: O useUserRole já guarda em state e só refaz quando `user` muda. Não precisa alteração estrutural, mas o item 1 (global staleTime) não cobre isso. Recomendo manter como está, pois é executado uma vez por sessão.
-
----
-
-### Resumo de Impacto Estimado
-
-| Otimização | Redução estimada |
-|---|---|
-| Cache global QueryClient | ~50-70% das queries repetidas |
-| Remover realtime profiles | 1 WebSocket permanente |
-| Remover realtime packages | 1 WebSocket + queries por evento |
-| Reduzir polling SuperAdmin | ~80% das queries de polling |
-| staleTime em queries comuns | ~30% das queries de navegação |
-
-Todas as mudanças são em arquivos de frontend existentes, sem necessidade de migrações SQL.
+- Seguir padrao existente de componentes (Card, Dialog, Select, etc.)
+- Queries com `@tanstack/react-query` para cache e refetch
+- Filtros seguindo o padrao horizontal ja estabelecido
+- Contagem de ocorrencias abertas como badge no menu lateral
+- Realtime opcional para atualizacoes em tempo real das ocorrencias
 

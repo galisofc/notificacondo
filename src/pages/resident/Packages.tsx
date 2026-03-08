@@ -31,7 +31,7 @@ export default function ResidentPackages() {
   const { packages, loading } = usePackages({
     apartmentId: residentInfo?.apartment_id,
     status: statusFilter,
-    realtime: true,
+    realtime: false,
   });
 
   const pendingCount = packages.filter((p) => p.status === "pendente").length;

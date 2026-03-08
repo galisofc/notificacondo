@@ -45,7 +45,8 @@ export function RlsPoliciesCard() {
       setLastChecked(new Date());
       return data as RlsTableStatus[];
     },
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 120000,
+    refetchIntervalInBackground: false,
   });
 
   const handleRefresh = async () => {

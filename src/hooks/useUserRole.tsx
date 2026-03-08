@@ -242,39 +242,8 @@ export const useUserRole = (): UseUserRoleReturn => {
     fetchUserRole();
   }, [user, fetchProfileInfo]);
 
-  // Subscribe to realtime profile updates
-  useEffect(() => {
-    if (!user || (role !== "sindico" && role !== "super_admin" && role !== "zelador")) return;
-
-    const channel = supabase
-      .channel("profile-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "profiles",
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          const newData = payload.new as any;
-          if (newData) {
-            setProfileInfo({
-              id: newData.id,
-              full_name: newData.full_name,
-              email: newData.email,
-              phone: newData.phone,
-              avatar_url: newData.avatar_url,
-            });
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, role]);
+  // Realtime profile subscription removed to reduce Cloud consumption.
+  // Use refetchProfile() after profile edits instead.
 
   return {
     role,
