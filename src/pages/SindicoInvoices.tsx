@@ -130,37 +130,8 @@ const SindicoInvoices = () => {
     isEnabled: isMobile,
   });
 
-  // Subscribe to realtime updates on invoices table
-  useEffect(() => {
-    const channel = supabase
-      .channel("invoices-realtime")
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "invoices",
-        },
-        (payload) => {
-          console.log("Invoice updated via realtime:", payload);
-          // Invalidate queries to refresh the list
-          queryClient.invalidateQueries({ queryKey: ["sindico-invoices"] });
-          
-          // Show toast if payment was confirmed
-          if (payload.new?.status === "paid" && payload.old?.status !== "paid") {
-            toast({
-              title: "Pagamento confirmado!",
-              description: "Uma fatura foi paga com sucesso.",
-            });
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient, toast]);
+  // Removed realtime subscription for invoices to reduce Cloud consumption.
+  // Invoice list refreshes on pull-to-refresh or page navigation.
 
   // Fetch user profile to get email
   const { data: userProfile } = useQuery({

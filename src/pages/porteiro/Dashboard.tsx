@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend } from "recharts";
-import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfDay, endOfDay, subDays, eachDayOfInterval, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -30,9 +30,9 @@ interface ChartDataPoint {
 
 export default function PorteiroDashboard() {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const [condominiumIds, setCondominiumIds] = useState<string[]>([]);
-  const [userName, setUserName] = useState<string>("");
+  const { porteiroCondominiums, profileInfo } = useUserRole();
+  const condominiumIds = useMemo(() => porteiroCondominiums.map(c => c.id), [porteiroCondominiums]);
+  const userName = profileInfo?.full_name?.split(" ")[0] || "";
   const [stats, setStats] = useState<Stats>({
     registeredToday: 0,
     totalPending: 0,
@@ -46,35 +46,6 @@ export default function PorteiroDashboard() {
     from: undefined,
     to: undefined
   });
-
-  // Fetch porter's condominiums
-  useEffect(() => {
-    const fetchCondominiums = async () => {
-      if (!user) return;
-
-      const { data: userCondos } = await supabase.
-      from("user_condominiums").
-      select("condominium_id").
-      eq("user_id", user.id);
-
-      if (userCondos) {
-        setCondominiumIds(userCondos.map((uc) => uc.condominium_id));
-      }
-
-      // Fetch user name
-      const { data: profile } = await supabase.
-      from("profiles").
-      select("full_name").
-      eq("user_id", user.id).
-      maybeSingle();
-
-      if (profile) {
-        setUserName(profile.full_name.split(" ")[0]);
-      }
-    };
-
-    fetchCondominiums();
-  }, [user]);
 
   // Calculate date range based on filter
   const { startDate, endDate } = useMemo(() => {
