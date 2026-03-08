@@ -176,7 +176,7 @@ const formatAuditAction = (tableName: string, action: string, newData: any): str
 
 export default function SuperAdminDashboard() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  
   const { date: formatDate, dateTime: formatDateTime } = useDateFormatter();
 
   // Polling instead of realtime for audit_logs - refreshes every 60s when page is visible
