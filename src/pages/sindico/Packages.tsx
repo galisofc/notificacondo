@@ -694,7 +694,7 @@ const SindicoPackages = () => {
                             </TableCell>
                             <TableCell>
                               <span className="text-sm">
-                                {(pkg as any).received_by_name || pkg.received_by_profile?.full_name || "-"}
+                                {pkg.received_by_name || pkg.received_by_profile?.full_name || "-"}
                               </span>
                             </TableCell>
                             <TableCell>
