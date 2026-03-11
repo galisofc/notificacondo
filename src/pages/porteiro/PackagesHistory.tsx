@@ -1187,7 +1187,7 @@ const PorteiroPackagesHistory = () => {
                               {STATUS_CONFIG[pkg.status].label}
                             </Badge>
                           </TableCell>
-                          <TableCell>{(pkg as any).received_by_name || pkg.received_by_profile?.full_name || "-"}</TableCell>
+                          <TableCell>{pkg.received_by_name || pkg.received_by_profile?.full_name || "-"}</TableCell>
                           <TableCell>
                             {pkg.picked_up_by_name || pkg.picked_up_by_profile?.full_name || "-"}
                           </TableCell>
