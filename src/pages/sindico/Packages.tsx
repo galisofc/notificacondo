@@ -919,7 +919,7 @@ const SindicoPackages = () => {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Cadastrada por</p>
-                    <p className="font-medium">{(selectedPackage as any).received_by_name || selectedPackage.received_by_profile?.full_name || "N/A"}</p>
+                    <p className="font-medium">{selectedPackage.received_by_name || selectedPackage.received_by_profile?.full_name || "N/A"}</p>
                   </div>
                 </div>
               </div>
