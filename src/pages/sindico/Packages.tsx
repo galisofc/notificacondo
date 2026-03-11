@@ -296,6 +296,7 @@ const SindicoPackages = () => {
 
       return (data || []).map((pkg) => ({
         ...pkg,
+        received_by_name: profilesMap[pkg.received_by]?.full_name || null,
         received_by_profile: profilesMap[pkg.received_by] || null,
         picked_up_by_profile: pkg.picked_up_by ? profilesMap[pkg.picked_up_by] || null : null,
         resident: pkg.resident || residentsMap[pkg.apartment_id] || null,
