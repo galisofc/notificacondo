@@ -54,7 +54,7 @@ export function useEmailValidation(options: UseEmailValidationOptions = {}): Use
   const conflictRolesKey = conflictRoles.join(",");
 
   const [emailStatus, setEmailStatus] = useState<EmailStatus>("idle");
-  const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  const [timeoutId, setTimeoutId] = useState<ReturnType<typeof setTimeout> | null>(null);
 
   const isValidEmailFormat = (email: string): boolean => {
     return EMAIL_REGEX.test(email);

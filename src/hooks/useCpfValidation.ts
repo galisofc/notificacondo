@@ -28,7 +28,7 @@ export function useCpfValidation(options: UseCpfValidationOptions = {}): UseCpfV
   } = options;
 
   const [cpfStatus, setCpfStatus] = useState<CpfStatus>("idle");
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const checkCpfAvailability = useCallback(async (cpf: string) => {
     const cleanCpf = cpf.replace(/\D/g, "");
