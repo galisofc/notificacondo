@@ -155,6 +155,7 @@ const PackagesCondominiumHistory = () => {
           status,
           received_at,
           received_by,
+          received_by_name,
           picked_up_at,
           picked_up_by,
           picked_up_by_name,
