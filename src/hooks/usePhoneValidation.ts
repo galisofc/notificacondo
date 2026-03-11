@@ -71,7 +71,7 @@ export function usePhoneValidation(options: UsePhoneValidationOptions = {}): Use
   } = options;
 
   const [phoneStatus, setPhoneStatus] = useState<PhoneStatus>("idle");
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const checkPhoneValidity = useCallback((phone: string) => {
     const cleanPhone = phone.replace(/\D/g, "");
