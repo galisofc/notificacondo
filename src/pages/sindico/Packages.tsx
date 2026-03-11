@@ -93,6 +93,7 @@ interface PackageWithRelations {
   condominium: { id: string; name: string } | null;
   resident: { id: string; full_name: string; phone: string | null } | null;
   package_type: { id: string; name: string; icon: string | null } | null;
+  received_by_name?: string | null;
   received_by_profile: { full_name: string } | null;
   picked_up_by_profile: { full_name: string } | null;
 }
@@ -295,6 +296,7 @@ const SindicoPackages = () => {
 
       return (data || []).map((pkg) => ({
         ...pkg,
+        received_by_name: profilesMap[pkg.received_by]?.full_name || null,
         received_by_profile: profilesMap[pkg.received_by] || null,
         picked_up_by_profile: pkg.picked_up_by ? profilesMap[pkg.picked_up_by] || null : null,
         resident: pkg.resident || residentsMap[pkg.apartment_id] || null,
@@ -692,7 +694,7 @@ const SindicoPackages = () => {
                             </TableCell>
                             <TableCell>
                               <span className="text-sm">
-                                {(pkg as any).received_by_name || pkg.received_by_profile?.full_name || "-"}
+                                {pkg.received_by_name || pkg.received_by_profile?.full_name || "-"}
                               </span>
                             </TableCell>
                             <TableCell>
@@ -917,7 +919,7 @@ const SindicoPackages = () => {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Cadastrada por</p>
-                    <p className="font-medium">{(selectedPackage as any).received_by_name || selectedPackage.received_by_profile?.full_name || "N/A"}</p>
+                    <p className="font-medium">{selectedPackage.received_by_name || selectedPackage.received_by_profile?.full_name || "N/A"}</p>
                   </div>
                 </div>
               </div>

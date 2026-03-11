@@ -93,6 +93,7 @@ interface PackageWithRelations {
   condominium: { id: string; name: string } | null;
   resident: { id: string; full_name: string; phone: string | null } | null;
   package_type: { id: string; name: string; icon: string | null } | null;
+  received_by_name?: string | null;
   received_by_profile: { full_name: string } | null;
   picked_up_by_profile: { full_name: string } | null;
 }
@@ -355,6 +356,7 @@ const PorteiroPackagesHistory = () => {
 
       return (data || []).map((pkg) => ({
         ...pkg,
+        received_by_name: profilesMap[pkg.received_by]?.full_name || null,
         received_by_profile: profilesMap[pkg.received_by] || null,
         picked_up_by_profile: pkg.picked_up_by ? profilesMap[pkg.picked_up_by] || null : null,
       })) as PackageWithRelations[];
@@ -1185,7 +1187,7 @@ const PorteiroPackagesHistory = () => {
                               {STATUS_CONFIG[pkg.status].label}
                             </Badge>
                           </TableCell>
-                          <TableCell>{(pkg as any).received_by_name || pkg.received_by_profile?.full_name || "-"}</TableCell>
+                          <TableCell>{pkg.received_by_name || pkg.received_by_profile?.full_name || "-"}</TableCell>
                           <TableCell>
                             {pkg.picked_up_by_name || pkg.picked_up_by_profile?.full_name || "-"}
                           </TableCell>
@@ -1431,7 +1433,7 @@ const PorteiroPackagesHistory = () => {
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Recebida por</p>
-                      <p className="font-medium">{(selectedPackage as any).received_by_name || selectedPackage.received_by_profile?.full_name || "-"}</p>
+                      <p className="font-medium">{selectedPackage.received_by_name || selectedPackage.received_by_profile?.full_name || "-"}</p>
                     </div>
                     {selectedPackage.picked_up_at && (
                       <>
