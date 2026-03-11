@@ -58,6 +58,7 @@ interface PackageWithRelations {
   status: "pendente" | "retirada";
   received_at: string;
   received_by: string;
+  received_by_name: string | null;
   picked_up_at: string | null;
   picked_up_by: string | null;
   picked_up_by_name: string | null;
