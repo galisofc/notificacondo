@@ -1248,6 +1248,7 @@ export type Database = {
           pickup_code: string
           received_at: string
           received_by: string
+          received_by_name: string | null
           resident_id: string | null
           status: Database["public"]["Enums"]["package_status"]
           tracking_code: string | null
@@ -1270,6 +1271,7 @@ export type Database = {
           pickup_code: string
           received_at?: string
           received_by: string
+          received_by_name?: string | null
           resident_id?: string | null
           status?: Database["public"]["Enums"]["package_status"]
           tracking_code?: string | null
@@ -1292,6 +1294,7 @@ export type Database = {
           pickup_code?: string
           received_at?: string
           received_by?: string
+          received_by_name?: string | null
           resident_id?: string | null
           status?: Database["public"]["Enums"]["package_status"]
           tracking_code?: string | null
