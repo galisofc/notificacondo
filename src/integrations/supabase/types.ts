@@ -1773,10 +1773,14 @@ export type Database = {
           occurred_at: string
           priority: string
           registered_by: string
+          reporter_apartment_id: string | null
+          reporter_block_id: string | null
           resolution_notes: string | null
           resolved_at: string | null
           resolved_by: string | null
           status: string
+          target_apartment_id: string | null
+          target_block_id: string | null
           title: string
           updated_at: string
         }
@@ -1789,10 +1793,14 @@ export type Database = {
           occurred_at?: string
           priority?: string
           registered_by: string
+          reporter_apartment_id?: string | null
+          reporter_block_id?: string | null
           resolution_notes?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
           status?: string
+          target_apartment_id?: string | null
+          target_block_id?: string | null
           title: string
           updated_at?: string
         }
@@ -1805,10 +1813,14 @@ export type Database = {
           occurred_at?: string
           priority?: string
           registered_by?: string
+          reporter_apartment_id?: string | null
+          reporter_block_id?: string | null
           resolution_notes?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
           status?: string
+          target_apartment_id?: string | null
+          target_block_id?: string | null
           title?: string
           updated_at?: string
         }
@@ -1818,6 +1830,34 @@ export type Database = {
             columns: ["condominium_id"]
             isOneToOne: false
             referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "porter_occurrences_reporter_apartment_id_fkey"
+            columns: ["reporter_apartment_id"]
+            isOneToOne: false
+            referencedRelation: "apartments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "porter_occurrences_reporter_block_id_fkey"
+            columns: ["reporter_block_id"]
+            isOneToOne: false
+            referencedRelation: "blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "porter_occurrences_target_apartment_id_fkey"
+            columns: ["target_apartment_id"]
+            isOneToOne: false
+            referencedRelation: "apartments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "porter_occurrences_target_block_id_fkey"
+            columns: ["target_block_id"]
+            isOneToOne: false
+            referencedRelation: "blocks"
             referencedColumns: ["id"]
           },
         ]

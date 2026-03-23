@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Clock, Search, Trash2, Settings, Plus, GripVertical, X, AlertTriangle, ClipboardList, ArrowUpRight, CalendarIcon } from "lucide-react";
 import SubscriptionGate from "@/components/sindico/SubscriptionGate";
+import BlockApartmentDisplay from "@/components/common/BlockApartmentDisplay";
 import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -46,6 +47,10 @@ interface Occurrence {
   resolved_by_name: string | null;
   resolution_notes: string | null;
   created_at: string;
+  reporter_block_name?: string | null;
+  reporter_apartment_number?: string | null;
+  target_block_name?: string | null;
+  target_apartment_number?: string | null;
 }
 
 interface Category {
@@ -53,6 +58,17 @@ interface Category {
   name: string;
   display_order: number;
   is_active: boolean;
+}
+
+interface Block {
+  id: string;
+  name: string;
+}
+
+interface Apartment {
+  id: string;
+  number: string;
+  block_id: string;
 }
 
 export default function SindicoPortariaOccurrences() {
@@ -66,6 +82,17 @@ export default function SindicoPortariaOccurrences() {
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+
+  // New occurrence form
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+  const [newCategory, setNewCategory] = useState("");
+  const [newPriority, setNewPriority] = useState("media");
+  const [reporterBlockId, setReporterBlockId] = useState<string>("");
+  const [reporterApartmentId, setReporterApartmentId] = useState<string>("");
+  const [targetBlockId, setTargetBlockId] = useState<string>("");
+  const [targetApartmentId, setTargetApartmentId] = useState<string>("");
 
   // Resolve dialog
   const [resolveDialogOpen, setResolveDialogOpen] = useState(false);
@@ -98,6 +125,57 @@ export default function SindicoPortariaOccurrences() {
     fetchCondominiums();
   }, [user]);
 
+  // Fetch blocks for selected condominium
+  const { data: blocks = [] } = useQuery({
+    queryKey: ["blocks", selectedCondominium],
+    queryFn: async () => {
+      if (!selectedCondominium) return [];
+      const { data, error } = await supabase
+        .from("blocks")
+        .select("id, name")
+        .eq("condominium_id", selectedCondominium)
+        .order("name");
+      if (error) throw error;
+      return data as Block[];
+    },
+    enabled: !!selectedCondominium,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  // Fetch apartments for reporter block
+  const { data: reporterApartments = [] } = useQuery({
+    queryKey: ["apartments", reporterBlockId],
+    queryFn: async () => {
+      if (!reporterBlockId) return [];
+      const { data, error } = await supabase
+        .from("apartments")
+        .select("id, number, block_id")
+        .eq("block_id", reporterBlockId)
+        .order("number");
+      if (error) throw error;
+      return data as Apartment[];
+    },
+    enabled: !!reporterBlockId,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  // Fetch apartments for target block
+  const { data: targetApartments = [] } = useQuery({
+    queryKey: ["apartments", targetBlockId],
+    queryFn: async () => {
+      if (!targetBlockId) return [];
+      const { data, error } = await supabase
+        .from("apartments")
+        .select("id, number, block_id")
+        .eq("block_id", targetBlockId)
+        .order("number");
+      if (error) throw error;
+      return data as Apartment[];
+    },
+    enabled: !!targetBlockId,
+    staleTime: 1000 * 60 * 5,
+  });
+
   // Fetch categories
   const { data: categories = [], refetch: refetchCategories } = useQuery({
     queryKey: ["porter-occurrence-categories", selectedCondominium],
@@ -114,6 +192,13 @@ export default function SindicoPortariaOccurrences() {
     },
     enabled: !!selectedCondominium,
   });
+
+  // Set default category when categories load
+  useEffect(() => {
+    if (categories.length > 0 && !newCategory) {
+      setNewCategory(categories[0].name);
+    }
+  }, [categories, newCategory]);
 
   // Fetch ALL categories (including inactive) for management dialog
   const { data: allCategories = [], refetch: refetchAllCategories } = useQuery({
@@ -154,7 +239,7 @@ export default function SindicoPortariaOccurrences() {
     seedIfNeeded();
   }, [selectedCondominium, user, queryClient]);
 
-  // Fetch occurrences
+  // Fetch occurrences with block/apartment names
   const { data: occurrences = [], isLoading } = useQuery({
     queryKey: ["sindico-porter-occurrences", selectedCondominium, filterStatus, filterCategory],
     queryFn: async () => {
@@ -181,9 +266,29 @@ export default function SindicoPortariaOccurrences() {
         profileMap = Object.fromEntries((profiles || []).map((p) => [p.user_id, p.full_name]));
       }
 
+      // Collect block/apartment IDs for name resolution
+      const blockIds = [...new Set((data || []).flatMap((o) => [o.reporter_block_id, o.target_block_id]).filter(Boolean))] as string[];
+      const aptIds = [...new Set((data || []).flatMap((o) => [o.reporter_apartment_id, o.target_apartment_id]).filter(Boolean))] as string[];
+
+      let blockMap: Record<string, string> = {};
+      let aptMap: Record<string, string> = {};
+
+      if (blockIds.length > 0) {
+        const { data: blocksData } = await supabase.from("blocks").select("id, name").in("id", blockIds);
+        blockMap = Object.fromEntries((blocksData || []).map((b) => [b.id, b.name]));
+      }
+      if (aptIds.length > 0) {
+        const { data: aptsData } = await supabase.from("apartments").select("id, number").in("id", aptIds);
+        aptMap = Object.fromEntries((aptsData || []).map((a) => [a.id, a.number]));
+      }
+
       return (data || []).map((o) => ({
         ...o,
         resolved_by_name: o.resolved_by ? (profileMap[o.resolved_by] ?? null) : null,
+        reporter_block_name: o.reporter_block_id ? (blockMap[o.reporter_block_id] ?? null) : null,
+        reporter_apartment_number: o.reporter_apartment_id ? (aptMap[o.reporter_apartment_id] ?? null) : null,
+        target_block_name: o.target_block_id ? (blockMap[o.target_block_id] ?? null) : null,
+        target_apartment_number: o.target_apartment_id ? (aptMap[o.target_apartment_id] ?? null) : null,
       })) as Occurrence[];
     },
     enabled: !!selectedCondominium,
@@ -198,6 +303,39 @@ export default function SindicoPortariaOccurrences() {
       if (!isWithinInterval(date, { start: from, end: to })) return false;
     }
     return true;
+  });
+
+  // Create occurrence
+  const createMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("porter_occurrences").insert({
+        condominium_id: selectedCondominium,
+        registered_by: user!.id,
+        title: newTitle,
+        description: newDescription,
+        category: newCategory,
+        priority: newPriority,
+        reporter_block_id: reporterBlockId || null,
+        reporter_apartment_id: reporterApartmentId || null,
+        target_block_id: targetBlockId || null,
+        target_apartment_id: targetApartmentId || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sindico-porter-occurrences"] });
+      toast({ title: "Ocorrência registrada com sucesso!" });
+      setCreateDialogOpen(false);
+      setNewTitle("");
+      setNewDescription("");
+      setNewCategory(categories[0]?.name || "");
+      setNewPriority("media");
+      setReporterBlockId("");
+      setReporterApartmentId("");
+      setTargetBlockId("");
+      setTargetApartmentId("");
+    },
+    onError: () => toast({ title: "Erro ao registrar ocorrência", variant: "destructive" }),
   });
 
   // Resolve occurrence
@@ -304,25 +442,45 @@ export default function SindicoPortariaOccurrences() {
   const resolvedCount = occurrences.filter((o) => o.status === "resolvida").length;
 
   const statCards = [
-    {
-      title: "Em Aberto",
-      value: openCount,
-      icon: Clock,
-      gradient: "from-amber-500 to-orange-500",
-    },
-    {
-      title: "Resolvidas",
-      value: resolvedCount,
-      icon: CheckCircle2,
-      gradient: "from-accent to-emerald-600",
-    },
-    {
-      title: "Total",
-      value: occurrences.length,
-      icon: ClipboardList,
-      gradient: "from-primary to-blue-600",
-    },
+    { title: "Em Aberto", value: openCount, icon: Clock, gradient: "from-amber-500 to-orange-500" },
+    { title: "Resolvidas", value: resolvedCount, icon: CheckCircle2, gradient: "from-accent to-emerald-600" },
+    { title: "Total", value: occurrences.length, icon: ClipboardList, gradient: "from-primary to-blue-600" },
   ];
+
+  const renderBlockApartmentSelectors = (
+    prefix: string,
+    blockId: string,
+    setBlockId: (v: string) => void,
+    apartmentId: string,
+    setApartmentId: (v: string) => void,
+    apartments: Apartment[]
+  ) => (
+    <div className="space-y-2">
+      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{prefix}</Label>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label className="text-xs">Bloco</Label>
+          <Select value={blockId} onValueChange={(v) => { setBlockId(v); setApartmentId(""); }}>
+            <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Nenhum</SelectItem>
+              {blocks.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="text-xs">Apartamento</Label>
+          <Select value={apartmentId} onValueChange={setApartmentId} disabled={!blockId || blockId === "none"}>
+            <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Nenhum</SelectItem>
+              {apartments.map((a) => <SelectItem key={a.id} value={a.id}>{a.number}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <DashboardLayout>
@@ -341,13 +499,18 @@ export default function SindicoPortariaOccurrences() {
               )}
             </h1>
             <p className="text-muted-foreground mt-1">
-              Visualize e gerencie as ocorrências registradas pelos porteiros
+              Visualize e gerencie as ocorrências registradas
             </p>
           </div>
           {selectedCondominium && (
-            <Button variant="outline" className="gap-2 shrink-0" onClick={() => setCategoriesDialogOpen(true)}>
-              <Settings className="w-4 h-4" /> Categorias
-            </Button>
+            <div className="flex gap-2 shrink-0">
+              <Button className="gap-2" onClick={() => setCreateDialogOpen(true)}>
+                <Plus className="w-4 h-4" /> Nova Ocorrência
+              </Button>
+              <Button variant="outline" className="gap-2" onClick={() => setCategoriesDialogOpen(true)}>
+                <Settings className="w-4 h-4" /> Categorias
+              </Button>
+            </div>
           )}
         </div>
 
@@ -501,6 +664,37 @@ export default function SindicoPortariaOccurrences() {
                           <Badge variant="outline">{occ.category}</Badge>
                         </div>
                         <p className="text-sm text-muted-foreground">{occ.description}</p>
+
+                        {/* Block/Apartment info */}
+                        {(occ.reporter_block_name || occ.target_block_name) && (
+                          <div className="flex flex-wrap gap-4 mt-2 text-xs">
+                            {occ.reporter_block_name && (
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-muted-foreground">Registrado por:</span>
+                                <BlockApartmentDisplay
+                                  blockName={occ.reporter_block_name}
+                                  apartmentNumber={occ.reporter_apartment_number}
+                                  variant="inline"
+                                  showIcons
+                                  valueClassName="font-medium text-foreground text-xs"
+                                />
+                              </div>
+                            )}
+                            {occ.target_block_name && (
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-muted-foreground">Sobre:</span>
+                                <BlockApartmentDisplay
+                                  blockName={occ.target_block_name}
+                                  apartmentNumber={occ.target_apartment_number}
+                                  variant="inline"
+                                  showIcons
+                                  valueClassName="font-medium text-foreground text-xs"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         <p className="text-xs text-muted-foreground mt-1">
                           {format(new Date(occ.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                         </p>
@@ -553,6 +747,71 @@ export default function SindicoPortariaOccurrences() {
             ))}
           </div>
         )}
+
+        {/* Create Occurrence Dialog */}
+        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Registrar Nova Ocorrência</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Título</Label>
+                <Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Ex: Barulho excessivo no apartamento 302" />
+              </div>
+              <div>
+                <Label>Descrição</Label>
+                <Textarea value={newDescription} onChange={(e) => setNewDescription(e.target.value)} placeholder="Descreva o ocorrido..." rows={4} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Categoria</Label>
+                  <Select value={newCategory} onValueChange={setNewCategory}>
+                    <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
+                    <SelectContent>
+                      {categories.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Prioridade</Label>
+                  <Select value={newPriority} onValueChange={setNewPriority}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {PRIORITIES.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Reporter unit */}
+              {renderBlockApartmentSelectors(
+                "Registrado por (Unidade)",
+                reporterBlockId,
+                setReporterBlockId,
+                reporterApartmentId,
+                setReporterApartmentId,
+                reporterApartments
+              )}
+
+              {/* Target unit */}
+              {renderBlockApartmentSelectors(
+                "Ocorrência sobre (Unidade)",
+                targetBlockId,
+                setTargetBlockId,
+                targetApartmentId,
+                setTargetApartmentId,
+                targetApartments
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>Cancelar</Button>
+              <Button onClick={() => createMutation.mutate()} disabled={!newTitle || !newDescription || !newCategory || createMutation.isPending}>
+                {createMutation.isPending ? "Registrando..." : "Registrar"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Resolve Dialog */}
         <Dialog open={resolveDialogOpen} onOpenChange={setResolveDialogOpen}>
