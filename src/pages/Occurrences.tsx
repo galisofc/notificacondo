@@ -362,7 +362,7 @@ const Occurrences = () => {
         multa: "multas",
       };
 
-      if (formData.type === "notificacao" && realUsage.notifications >= subscription.notifications_limit) {
+      if (formData.type === "notificacao" && subscription.notifications_limit !== -1 && realUsage.notifications >= subscription.notifications_limit) {
         toast({ 
           title: "Limite atingido", 
           description: `Você atingiu o limite de ${subscription.notifications_limit} ${typeLabels.notificacao} do seu plano. Faça upgrade para continuar.`, 
@@ -372,7 +372,7 @@ const Occurrences = () => {
         return;
       }
 
-      if (formData.type === "advertencia" && realUsage.warnings >= subscription.warnings_limit) {
+      if (formData.type === "advertencia" && subscription.warnings_limit !== -1 && realUsage.warnings >= subscription.warnings_limit) {
         toast({ 
           title: "Limite atingido", 
           description: `Você atingiu o limite de ${subscription.warnings_limit} ${typeLabels.advertencia} do seu plano. Faça upgrade para continuar.`, 
@@ -382,7 +382,7 @@ const Occurrences = () => {
         return;
       }
 
-      if (formData.type === "multa" && realUsage.fines >= subscription.fines_limit) {
+      if (formData.type === "multa" && subscription.fines_limit !== -1 && realUsage.fines >= subscription.fines_limit) {
         toast({ 
           title: "Limite atingido", 
           description: `Você atingiu o limite de ${subscription.fines_limit} ${typeLabels.multa} do seu plano. Faça upgrade para continuar.`, 
