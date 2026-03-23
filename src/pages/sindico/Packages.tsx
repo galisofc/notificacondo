@@ -538,6 +538,12 @@ const SindicoPackages = () => {
             onClick={() => setStatusFilter("retirada")}
             isActive={statusFilter === "retirada"}
           />
+          <StatCard
+            title="No Período"
+            value={stats.period}
+            icon={BarChart3}
+            color="bg-blue-500"
+          />
         </div>
 
         {/* Filters */}
