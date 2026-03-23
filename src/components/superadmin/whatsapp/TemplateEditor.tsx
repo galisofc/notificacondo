@@ -38,7 +38,10 @@ import {
   RefreshCw,
   AlertCircle,
   Clock,
+  Plus,
+  Minus,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { TemplatePreview } from "./TemplatePreview";
 import { TEMPLATE_COLORS, getCategoryForSlug, VARIABLE_EXAMPLES } from "./TemplateCategories";
 import { DEFAULT_TEMPLATES } from "./DefaultTemplates";
