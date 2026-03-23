@@ -613,7 +613,7 @@ const SindicoPackages = () => {
           </CardContent>
         </Card>
 
-        {/* Table */}
+        {/* Content */}
         <Card>
           <CardContent className="p-0">
             {isLoading ? (
@@ -632,7 +632,84 @@ const SindicoPackages = () => {
               </div>
             ) : (
               <>
-                <div className="overflow-x-auto">
+                {/* Mobile Cards */}
+                <div className="md:hidden divide-y">
+                  {paginatedPackages.map((pkg) => {
+                    const statusConfig = STATUS_CONFIG[pkg.status];
+                    const StatusIcon = statusConfig.icon;
+
+                    return (
+                      <div key={pkg.id} className="p-4 space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium truncate">{pkg.resident?.full_name || "N/A"}</p>
+                            <BlockApartmentDisplay
+                              blockName={pkg.block?.name}
+                              apartmentNumber={pkg.apartment?.number}
+                              variant="inline"
+                              className="text-sm text-muted-foreground"
+                            />
+                          </div>
+                          <Badge variant="outline" className={`${statusConfig.color} shrink-0`}>
+                            <StatusIcon className="w-3 h-3 mr-1" />
+                            {statusConfig.label}
+                          </Badge>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>
+                            <p className="text-xs text-muted-foreground">Tipo</p>
+                            <p>{pkg.package_type?.name || "Encomenda"}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Código</p>
+                            <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">{pkg.pickup_code}</code>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Recebida</p>
+                            <p className="text-xs">{formatDateTime(pkg.received_at)}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatDistanceToNow(parseISO(pkg.received_at), { addSuffix: true, locale: ptBR })}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Recebido por</p>
+                            <p className="text-xs">{pkg.received_by_name || pkg.received_by_profile?.full_name || "-"}</p>
+                          </div>
+                          {pkg.status === "retirada" && pkg.picked_up_by_name && (
+                            <div className="col-span-2">
+                              <p className="text-xs text-muted-foreground">Retirado por</p>
+                              <p className="text-xs">
+                                {pkg.picked_up_by_name}
+                                {pkg.picked_up_at && ` — ${formatDateTime(pkg.picked_up_at)}`}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-1">
+                          <Button variant="outline" size="sm" className="flex-1" onClick={() => setSelectedPackage(pkg)}>
+                            <Eye className="w-4 h-4 mr-1" />
+                            Detalhes
+                          </Button>
+                          {pkg.status === "pendente" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                              onClick={() => handleDeletePackage(pkg)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Desktop Table */}
+                <div className="hidden md:block overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
