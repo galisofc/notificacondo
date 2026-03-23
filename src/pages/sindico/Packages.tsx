@@ -216,8 +216,12 @@ const SindicoPackages = () => {
     queryFn: async () => {
       if (activeCondoIds.length === 0) return { total: 0, pendente: 0, retirada: 0, period: 0 };
 
+      // First day of current month
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
       // Run all count queries in parallel
-      const [totalRes, pendenteRes, retiradaRes, subsRes] = await Promise.all([
+      const [totalRes, pendenteRes, retiradaRes, periodRes] = await Promise.all([
         supabase
           .from("packages")
           .select("id", { count: "exact", head: true })
@@ -232,43 +236,18 @@ const SindicoPackages = () => {
           .select("id", { count: "exact", head: true })
           .in("condominium_id", activeCondoIds)
           .eq("status", "retirada"),
-        // Get subscription period dates
         supabase
-          .from("subscriptions")
-          .select("current_period_start, current_period_end")
-          .in("condominium_id", activeCondoIds)
-          .eq("active", true)
-          .limit(1)
-          .maybeSingle(),
-      ]);
-
-      // Count packages within subscription period
-      let periodCount = 0;
-      if (subsRes.data?.current_period_start) {
-        const periodQuery = await supabase
           .from("packages")
           .select("id", { count: "exact", head: true })
           .in("condominium_id", activeCondoIds)
-          .gte("received_at", subsRes.data.current_period_start);
-
-        if (subsRes.data.current_period_end) {
-          const periodQueryEnd = await supabase
-            .from("packages")
-            .select("id", { count: "exact", head: true })
-            .in("condominium_id", activeCondoIds)
-            .gte("received_at", subsRes.data.current_period_start)
-            .lte("received_at", subsRes.data.current_period_end);
-          periodCount = periodQueryEnd.count ?? 0;
-        } else {
-          periodCount = periodQuery.count ?? 0;
-        }
-      }
+          .gte("received_at", monthStart),
+      ]);
 
       return {
         total: totalRes.count ?? 0,
         pendente: pendenteRes.count ?? 0,
         retirada: retiradaRes.count ?? 0,
-        period: periodCount,
+        period: periodRes.count ?? 0,
       };
     },
     enabled: !!user && activeCondoIds.length > 0,
