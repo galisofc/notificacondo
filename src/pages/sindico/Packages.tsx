@@ -393,6 +393,7 @@ const SindicoPackages = () => {
 
   const handleRefresh = () => {
     refetch();
+    queryClient.invalidateQueries({ queryKey: ["sindico-packages-counts"] });
     toast({ title: "Lista atualizada", description: "As encomendas foram atualizadas." });
   };
 
