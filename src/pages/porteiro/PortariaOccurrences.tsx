@@ -15,8 +15,9 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, CheckCircle2, Clock, Search, AlertTriangle, ClipboardList, ArrowUpRight, CalendarIcon, X } from "lucide-react";
+import { Plus, CheckCircle2, Clock, Search, AlertTriangle, ClipboardList, ArrowUpRight, CalendarIcon, X, Building2, Home } from "lucide-react";
 import SubscriptionGate from "@/components/sindico/SubscriptionGate";
+import BlockApartmentDisplay from "@/components/common/BlockApartmentDisplay";
 import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -45,6 +46,14 @@ interface Occurrence {
   resolved_by_name?: string | null;
   resolution_notes: string | null;
   created_at: string;
+  reporter_block_id: string | null;
+  reporter_apartment_id: string | null;
+  target_block_id: string | null;
+  target_apartment_id: string | null;
+  reporter_block_name?: string | null;
+  reporter_apartment_number?: string | null;
+  target_block_name?: string | null;
+  target_apartment_number?: string | null;
 }
 
 interface Category {
@@ -52,6 +61,17 @@ interface Category {
   name: string;
   display_order: number;
   is_active: boolean;
+}
+
+interface Block {
+  id: string;
+  name: string;
+}
+
+interface Apartment {
+  id: string;
+  number: string;
+  block_id: string;
 }
 
 export default function PortariaOccurrences() {
@@ -72,6 +92,10 @@ export default function PortariaOccurrences() {
   const [newDescription, setNewDescription] = useState("");
   const [newCategory, setNewCategory] = useState("");
   const [newPriority, setNewPriority] = useState("media");
+  const [reporterBlockId, setReporterBlockId] = useState<string>("");
+  const [reporterApartmentId, setReporterApartmentId] = useState<string>("");
+  const [targetBlockId, setTargetBlockId] = useState<string>("");
+  const [targetApartmentId, setTargetApartmentId] = useState<string>("");
 
   // Resolve dialog
   const [resolveDialogOpen, setResolveDialogOpen] = useState(false);
@@ -98,6 +122,57 @@ export default function PortariaOccurrences() {
     };
     fetchCondominiums();
   }, [user]);
+
+  // Fetch blocks for selected condominium
+  const { data: blocks = [] } = useQuery({
+    queryKey: ["blocks", selectedCondominium],
+    queryFn: async () => {
+      if (!selectedCondominium) return [];
+      const { data, error } = await supabase
+        .from("blocks")
+        .select("id, name")
+        .eq("condominium_id", selectedCondominium)
+        .order("name");
+      if (error) throw error;
+      return data as Block[];
+    },
+    enabled: !!selectedCondominium,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  // Fetch apartments for reporter block
+  const { data: reporterApartments = [] } = useQuery({
+    queryKey: ["apartments", reporterBlockId],
+    queryFn: async () => {
+      if (!reporterBlockId) return [];
+      const { data, error } = await supabase
+        .from("apartments")
+        .select("id, number, block_id")
+        .eq("block_id", reporterBlockId)
+        .order("number");
+      if (error) throw error;
+      return data as Apartment[];
+    },
+    enabled: !!reporterBlockId,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  // Fetch apartments for target block
+  const { data: targetApartments = [] } = useQuery({
+    queryKey: ["apartments", targetBlockId],
+    queryFn: async () => {
+      if (!targetBlockId) return [];
+      const { data, error } = await supabase
+        .from("apartments")
+        .select("id, number, block_id")
+        .eq("block_id", targetBlockId)
+        .order("number");
+      if (error) throw error;
+      return data as Apartment[];
+    },
+    enabled: !!targetBlockId,
+    staleTime: 1000 * 60 * 5,
+  });
 
   // Fetch categories
   const { data: categories = [] } = useQuery({
@@ -146,7 +221,7 @@ export default function PortariaOccurrences() {
     seedIfNeeded();
   }, [selectedCondominium, user, queryClient]);
 
-  // Fetch occurrences
+  // Fetch occurrences with block/apartment names
   const { data: occurrences = [], isLoading } = useQuery({
     queryKey: ["porter-occurrences", selectedCondominium, filterStatus, filterCategory],
     queryFn: async () => {
@@ -163,7 +238,7 @@ export default function PortariaOccurrences() {
       const { data, error } = await query;
       if (error) throw error;
 
-      // Fetch names of who resolved each occurrence
+      // Fetch profile names for resolved_by
       const resolvedByIds = [...new Set((data || []).map((o) => o.resolved_by).filter(Boolean))];
       let profileMap: Record<string, string> = {};
       if (resolvedByIds.length > 0) {
@@ -174,9 +249,29 @@ export default function PortariaOccurrences() {
         profileMap = Object.fromEntries((profiles || []).map((p) => [p.user_id, p.full_name]));
       }
 
+      // Collect block/apartment IDs for name resolution
+      const blockIds = [...new Set((data || []).flatMap((o) => [o.reporter_block_id, o.target_block_id]).filter(Boolean))] as string[];
+      const aptIds = [...new Set((data || []).flatMap((o) => [o.reporter_apartment_id, o.target_apartment_id]).filter(Boolean))] as string[];
+
+      let blockMap: Record<string, string> = {};
+      let aptMap: Record<string, string> = {};
+
+      if (blockIds.length > 0) {
+        const { data: blocksData } = await supabase.from("blocks").select("id, name").in("id", blockIds);
+        blockMap = Object.fromEntries((blocksData || []).map((b) => [b.id, b.name]));
+      }
+      if (aptIds.length > 0) {
+        const { data: aptsData } = await supabase.from("apartments").select("id, number").in("id", aptIds);
+        aptMap = Object.fromEntries((aptsData || []).map((a) => [a.id, a.number]));
+      }
+
       return (data || []).map((o) => ({
         ...o,
         resolved_by_name: o.resolved_by ? (profileMap[o.resolved_by] ?? null) : null,
+        reporter_block_name: o.reporter_block_id ? (blockMap[o.reporter_block_id] ?? null) : null,
+        reporter_apartment_number: o.reporter_apartment_id ? (aptMap[o.reporter_apartment_id] ?? null) : null,
+        target_block_name: o.target_block_id ? (blockMap[o.target_block_id] ?? null) : null,
+        target_apartment_number: o.target_apartment_id ? (aptMap[o.target_apartment_id] ?? null) : null,
       })) as Occurrence[];
     },
     enabled: !!selectedCondominium,
@@ -203,6 +298,10 @@ export default function PortariaOccurrences() {
         description: newDescription,
         category: newCategory,
         priority: newPriority,
+        reporter_block_id: reporterBlockId || null,
+        reporter_apartment_id: reporterApartmentId || null,
+        target_block_id: targetBlockId || null,
+        target_apartment_id: targetApartmentId || null,
       });
       if (error) throw error;
     },
@@ -214,6 +313,10 @@ export default function PortariaOccurrences() {
       setNewDescription("");
       setNewCategory(categories[0]?.name || "");
       setNewPriority("media");
+      setReporterBlockId("");
+      setReporterApartmentId("");
+      setTargetBlockId("");
+      setTargetApartmentId("");
     },
     onError: () => toast({ title: "Erro ao registrar ocorrência", variant: "destructive" }),
   });
@@ -251,25 +354,45 @@ export default function PortariaOccurrences() {
   const resolvedCount = occurrences.filter((o) => o.status === "resolvida").length;
 
   const statCards = [
-    {
-      title: "Em Aberto",
-      value: openCount,
-      icon: Clock,
-      gradient: "from-amber-500 to-orange-500",
-    },
-    {
-      title: "Resolvidas",
-      value: resolvedCount,
-      icon: CheckCircle2,
-      gradient: "from-accent to-emerald-600",
-    },
-    {
-      title: "Total",
-      value: occurrences.length,
-      icon: ClipboardList,
-      gradient: "from-primary to-blue-600",
-    },
+    { title: "Em Aberto", value: openCount, icon: Clock, gradient: "from-amber-500 to-orange-500" },
+    { title: "Resolvidas", value: resolvedCount, icon: CheckCircle2, gradient: "from-accent to-emerald-600" },
+    { title: "Total", value: occurrences.length, icon: ClipboardList, gradient: "from-primary to-blue-600" },
   ];
+
+  const renderBlockApartmentSelectors = (
+    prefix: string,
+    blockId: string,
+    setBlockId: (v: string) => void,
+    apartmentId: string,
+    setApartmentId: (v: string) => void,
+    apartments: Apartment[]
+  ) => (
+    <div className="space-y-2">
+      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{prefix}</Label>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label className="text-xs">Bloco</Label>
+          <Select value={blockId} onValueChange={(v) => { setBlockId(v); setApartmentId(""); }}>
+            <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Nenhum</SelectItem>
+              {blocks.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="text-xs">Apartamento</Label>
+          <Select value={apartmentId} onValueChange={setApartmentId} disabled={!blockId || blockId === "none"}>
+            <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Nenhum</SelectItem>
+              {apartments.map((a) => <SelectItem key={a.id} value={a.id}>{a.number}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <DashboardLayout>
@@ -297,7 +420,7 @@ export default function PortariaOccurrences() {
                 <Plus className="w-4 h-4" /> Nova Ocorrência
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg">
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Registrar Nova Ocorrência</DialogTitle>
               </DialogHeader>
@@ -330,6 +453,26 @@ export default function PortariaOccurrences() {
                     </Select>
                   </div>
                 </div>
+
+                {/* Reporter unit */}
+                {renderBlockApartmentSelectors(
+                  "Registrado por (Unidade)",
+                  reporterBlockId,
+                  setReporterBlockId,
+                  reporterApartmentId,
+                  setReporterApartmentId,
+                  reporterApartments
+                )}
+
+                {/* Target unit */}
+                {renderBlockApartmentSelectors(
+                  "Ocorrência sobre (Unidade)",
+                  targetBlockId,
+                  setTargetBlockId,
+                  targetApartmentId,
+                  setTargetApartmentId,
+                  targetApartments
+                )}
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
@@ -491,6 +634,37 @@ export default function PortariaOccurrences() {
                           <Badge variant="outline">{occ.category}</Badge>
                         </div>
                         <p className="text-sm text-muted-foreground">{occ.description}</p>
+
+                        {/* Block/Apartment info */}
+                        {(occ.reporter_block_name || occ.target_block_name) && (
+                          <div className="flex flex-wrap gap-4 mt-2 text-xs">
+                            {occ.reporter_block_name && (
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-muted-foreground">Registrado por:</span>
+                                <BlockApartmentDisplay
+                                  blockName={occ.reporter_block_name}
+                                  apartmentNumber={occ.reporter_apartment_number}
+                                  variant="inline"
+                                  showIcons
+                                  valueClassName="font-medium text-foreground text-xs"
+                                />
+                              </div>
+                            )}
+                            {occ.target_block_name && (
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-muted-foreground">Sobre:</span>
+                                <BlockApartmentDisplay
+                                  blockName={occ.target_block_name}
+                                  apartmentNumber={occ.target_apartment_number}
+                                  variant="inline"
+                                  showIcons
+                                  valueClassName="font-medium text-foreground text-xs"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         <p className="text-xs text-muted-foreground mt-1">
                           {format(new Date(occ.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                         </p>
