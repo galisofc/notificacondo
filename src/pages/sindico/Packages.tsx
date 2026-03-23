@@ -204,15 +204,82 @@ const SindicoPackages = () => {
     enabled: selectedBlock !== "all",
   });
 
-  // Fetch packages
+  // Helper to get condo IDs for queries
+  const activeCondoIds = useMemo(() => {
+    if (condominiumFilter === "all") return condominiums.map((c) => c.id);
+    return [condominiumFilter];
+  }, [condominiumFilter, condominiums]);
+
+  // Server-side counts (bypasses 1000 row limit)
+  const { data: serverCounts = { total: 0, pendente: 0, retirada: 0, period: 0 } } = useQuery({
+    queryKey: ["sindico-packages-counts", user?.id, activeCondoIds],
+    queryFn: async () => {
+      if (activeCondoIds.length === 0) return { total: 0, pendente: 0, retirada: 0, period: 0 };
+
+      // Run all count queries in parallel
+      const [totalRes, pendenteRes, retiradaRes, subsRes] = await Promise.all([
+        supabase
+          .from("packages")
+          .select("id", { count: "exact", head: true })
+          .in("condominium_id", activeCondoIds),
+        supabase
+          .from("packages")
+          .select("id", { count: "exact", head: true })
+          .in("condominium_id", activeCondoIds)
+          .eq("status", "pendente"),
+        supabase
+          .from("packages")
+          .select("id", { count: "exact", head: true })
+          .in("condominium_id", activeCondoIds)
+          .eq("status", "retirada"),
+        // Get subscription period dates
+        supabase
+          .from("subscriptions")
+          .select("current_period_start, current_period_end")
+          .in("condominium_id", activeCondoIds)
+          .eq("active", true)
+          .limit(1)
+          .maybeSingle(),
+      ]);
+
+      // Count packages within subscription period
+      let periodCount = 0;
+      if (subsRes.data?.current_period_start) {
+        const periodQuery = await supabase
+          .from("packages")
+          .select("id", { count: "exact", head: true })
+          .in("condominium_id", activeCondoIds)
+          .gte("received_at", subsRes.data.current_period_start);
+
+        if (subsRes.data.current_period_end) {
+          const periodQueryEnd = await supabase
+            .from("packages")
+            .select("id", { count: "exact", head: true })
+            .in("condominium_id", activeCondoIds)
+            .gte("received_at", subsRes.data.current_period_start)
+            .lte("received_at", subsRes.data.current_period_end);
+          periodCount = periodQueryEnd.count ?? 0;
+        } else {
+          periodCount = periodQuery.count ?? 0;
+        }
+      }
+
+      return {
+        total: totalRes.count ?? 0,
+        pendente: pendenteRes.count ?? 0,
+        retirada: retiradaRes.count ?? 0,
+        period: periodCount,
+      };
+    },
+    enabled: !!user && activeCondoIds.length > 0,
+    staleTime: 60_000,
+  });
+
+  // Fetch packages (paginated list - still limited to display)
   const { data: packages = [], isLoading, refetch } = useQuery({
     queryKey: ["sindico-packages", user?.id, condominiumFilter, selectedBlock, selectedApartment],
     queryFn: async () => {
-      const condoIds = condominiumFilter === "all"
-        ? condominiums.map((c) => c.id)
-        : [condominiumFilter];
-
-      if (condoIds.length === 0) return [];
+      if (activeCondoIds.length === 0) return [];
 
       let query = supabase
         .from("packages")
@@ -238,7 +305,7 @@ const SindicoPackages = () => {
           resident:residents(id, full_name, phone),
           package_type:package_types(id, name, icon)
         `)
-        .in("condominium_id", condoIds)
+        .in("condominium_id", activeCondoIds)
         .order("received_at", { ascending: false });
 
       // Apply block filter
@@ -321,18 +388,12 @@ const SindicoPackages = () => {
     currentPage * itemsPerPage
   );
 
-  // Stats
-  const stats = useMemo(() => {
-    const s = { total: 0, pendente: 0, retirada: 0 };
-    packages.forEach((pkg) => {
-      s.total++;
-      s[pkg.status]++;
-    });
-    return s;
-  }, [packages]);
+  // Stats from server-side counts (accurate, no 1000 limit)
+  const stats = serverCounts;
 
   const handleRefresh = () => {
     refetch();
+    queryClient.invalidateQueries({ queryKey: ["sindico-packages-counts"] });
     toast({ title: "Lista atualizada", description: "As encomendas foram atualizadas." });
   };
 
@@ -477,6 +538,12 @@ const SindicoPackages = () => {
             color="bg-emerald-500"
             onClick={() => setStatusFilter("retirada")}
             isActive={statusFilter === "retirada"}
+          />
+          <StatCard
+            title="No Período"
+            value={stats.period}
+            icon={BarChart3}
+            color="bg-blue-500"
           />
         </div>
 
