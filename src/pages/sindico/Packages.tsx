@@ -519,7 +519,7 @@ const SindicoPackages = () => {
             isActive={statusFilter === "retirada"}
           />
           <StatCard
-            title="No Período"
+            title="No Mês"
             value={stats.period}
             icon={BarChart3}
             color="bg-blue-500"
