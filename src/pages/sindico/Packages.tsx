@@ -388,15 +388,8 @@ const SindicoPackages = () => {
     currentPage * itemsPerPage
   );
 
-  // Stats
-  const stats = useMemo(() => {
-    const s = { total: 0, pendente: 0, retirada: 0 };
-    packages.forEach((pkg) => {
-      s.total++;
-      s[pkg.status]++;
-    });
-    return s;
-  }, [packages]);
+  // Stats from server-side counts (accurate, no 1000 limit)
+  const stats = serverCounts;
 
   const handleRefresh = () => {
     refetch();
