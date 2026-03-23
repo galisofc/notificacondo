@@ -1,0 +1,1 @@
+ALTER TABLE public.packages ADD COLUMN IF NOT EXISTS received_by_name text;
