@@ -669,20 +669,46 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
 
                 <div className="space-y-2">
                   <Label className="text-xs sm:text-sm">
-                    Ordem dos Parâmetros
+                    Parâmetros do Template
                   </Label>
                   <p className="text-[10px] sm:text-xs text-muted-foreground">
-                    Organize as variáveis na ordem em que aparecem no template WABA.
-                    Use os botões para reordenar.
+                    Selecione quais variáveis serão enviadas como parâmetros e organize na ordem do template WABA.
                   </p>
+
+                  {/* Available variables to add */}
+                  {template.variables.filter(v => !paramsOrder.includes(v)).length > 0 && (
+                    <div className="rounded-md border border-dashed p-3 space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground">Variáveis disponíveis (não selecionadas)</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {template.variables.filter(v => !paramsOrder.includes(v)).map((variable) => (
+                          <Badge
+                            key={variable}
+                            variant="outline"
+                            className="cursor-pointer hover:bg-primary/10 transition-colors text-xs gap-1"
+                            onClick={() => setParamsOrder(prev => [...prev, variable])}
+                          >
+                            <Plus className="h-3 w-3" />
+                            {`{${variable}}`}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   
+                  {/* Selected params with order */}
                   <div className="space-y-1.5 mt-2">
                     {paramsOrder.map((param, index) => (
                       <div
                         key={param}
                         className="flex items-center gap-2 p-2 rounded-md border bg-card"
                       >
-                        <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <Checkbox
+                          checked={true}
+                          onCheckedChange={() => {
+                            setParamsOrder(prev => prev.filter(p => p !== param));
+                          }}
+                          className="shrink-0"
+                        />
                         <Badge variant="outline" className="font-mono text-xs">
                           {`{{${index + 1}}}`}
                         </Badge>
@@ -709,6 +735,11 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
                         </div>
                       </div>
                     ))}
+                    {paramsOrder.length === 0 && (
+                      <p className="text-xs text-muted-foreground text-center py-3">
+                        Nenhum parâmetro selecionado. Clique nas variáveis acima para adicionar.
+                      </p>
+                    )}
                   </div>
                 </div>
 
