@@ -650,28 +650,33 @@ function PorterMessageBook({ condominiumIds }: { condominiumIds: string[] }) {
         ) : messages.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">Nenhum recado registrado.</p>
         ) : (
-          <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
-            {messages.map((msg: any) => (
-              <div key={msg.id} className="rounded-lg bg-muted/50 p-3 relative group">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs font-semibold text-primary">{msg.author_name}</p>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      {format(new Date(msg.created_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
-                    </span>
-                    {user && msg.author_id === user.id && (
-                      <button
-                        onClick={() => deleteMutation.mutate(msg.id)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive/80"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+          <div className="flex flex-col gap-2 max-h-[400px] overflow-y-auto pr-1 py-2">
+            {[...messages].reverse().map((msg: any) => {
+              const isMe = user && msg.author_id === user.id;
+              return (
+                <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`relative group max-w-[80%] rounded-2xl px-3 py-2 shadow-sm ${isMe ? 'bg-primary text-primary-foreground rounded-br-sm' : 'bg-muted rounded-bl-sm'}`}>
+                    {!isMe && (
+                      <p className={`text-xs font-semibold mb-0.5 ${isMe ? 'text-primary-foreground/80' : 'text-primary'}`}>{msg.author_name}</p>
                     )}
+                    <p className={`text-sm whitespace-pre-line ${isMe ? 'text-primary-foreground' : 'text-foreground'}`}>{msg.content}</p>
+                    <div className={`flex items-center gap-1 mt-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
+                      <span className={`text-[10px] ${isMe ? 'text-primary-foreground/60' : 'text-muted-foreground'}`}>
+                        {format(new Date(msg.created_at), "dd/MM HH:mm", { locale: ptBR })}
+                      </span>
+                      {isMe && (
+                        <button
+                          onClick={() => deleteMutation.mutate(msg.id)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity ml-1"
+                        >
+                          <Trash2 className="w-3 h-3 text-primary-foreground/60 hover:text-primary-foreground" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <p className="text-sm text-foreground mt-1 whitespace-pre-line">{msg.content}</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
         {/* Input */}
