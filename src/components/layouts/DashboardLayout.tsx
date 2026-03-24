@@ -512,6 +512,7 @@ function SidebarNavigation() {
         { title: "Zeladores", url: "/sindico/zeladores", icon: Wrench },
       ],
     },
+    { title: "Banners Portaria", url: "/sindico/banners", icon: Megaphone },
     { title: "Notificações", url: "/notifications", icon: Bell },
     { title: "Relatórios", url: "/reports", icon: BarChart3 },
     { title: "Configurações", url: "/sindico/settings", icon: Settings },

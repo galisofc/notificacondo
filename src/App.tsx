@@ -242,6 +242,14 @@ const App = () => (
                 }
               />
               <Route
+                path="/sindico/banners"
+                element={
+                  <ProtectedRoute requiredRole="sindico">
+                    <SindicoBanners />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/sindico/portaria/checklist"
                 element={
                   <ProtectedRoute requiredRole="sindico">
