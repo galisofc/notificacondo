@@ -14,7 +14,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Plus, Pencil, Trash2, Eye, GripVertical, Megaphone } from "lucide-react";
-import { SindicoBreadcrumbs } from "@/components/sindico/SindicoBreadcrumbs";
+import SindicoBreadcrumbs from "@/components/sindico/SindicoBreadcrumbs";
 
 interface Banner {
   id: string;
