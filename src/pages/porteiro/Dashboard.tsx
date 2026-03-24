@@ -674,6 +674,14 @@ function PorterMessageBook({ condominiumIds }: { condominiumIds: string[] }) {
                       </span>
                     </div>
                   </div>
+                  {!isMe && (
+                    <button
+                      onClick={() => deleteMutation.mutate(msg.id)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive/80"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               );
             })}
