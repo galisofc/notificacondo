@@ -650,7 +650,7 @@ function PorterMessageBook({ condominiumIds }: { condominiumIds: string[] }) {
         ) : messages.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">Nenhum recado registrado.</p>
         ) : (
-          <div className="flex flex-col gap-2 max-h-[400px] overflow-y-auto pr-1 py-2">
+          <div className="flex flex-col gap-2 max-h-[250px] overflow-y-auto pr-1 py-2 scrollbar-thin">
             {[...messages].reverse().map((msg: any) => {
               const isMe = user && msg.author_id === user.id;
               return (
