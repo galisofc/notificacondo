@@ -3,7 +3,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -23,13 +22,8 @@ import {
   Save, 
   X, 
   Loader2, 
-  RotateCcw, 
   Eye,
   EyeOff,
-  Sparkles,
-  GripVertical,
-  MessageSquare,
-  FileText,
   Send,
   CheckCircle2,
   CheckCircle,
@@ -39,12 +33,10 @@ import {
   AlertCircle,
   Clock,
   Plus,
-  Minus,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TemplatePreview } from "./TemplatePreview";
 import { TEMPLATE_COLORS, getCategoryForSlug, VARIABLE_EXAMPLES } from "./TemplateCategories";
-import { DEFAULT_TEMPLATES } from "./DefaultTemplates";
 import { WabaTemplateSelector } from "./WabaTemplateSelector";
 
 interface SingleButtonConfig {
@@ -115,7 +107,7 @@ const WABA_LANGUAGES = [
 export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [editContent, setEditContent] = useState(template.content);
+  const [editContent] = useState(template.content);
   const [editName, setEditName] = useState(template.name);
   const [editDescription, setEditDescription] = useState(template.description || "");
   const [showPreview, setShowPreview] = useState(true);
@@ -124,7 +116,6 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
   const [wabaTemplateName, setWabaTemplateName] = useState(template.waba_template_name || "");
   const [wabaLanguage, setWabaLanguage] = useState(template.waba_language || "pt_BR");
   const [paramsOrder, setParamsOrder] = useState<string[]>(template.params_order || template.variables);
-  const [activeTab, setActiveTab] = useState<"content" | "waba">("content");
   
   // Meta template content state
   const [metaTemplate, setMetaTemplate] = useState<MetaTemplate | null>(null);
@@ -143,7 +134,6 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
   const [testImageUrl, setTestImageUrl] = useState("");
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [isTesting, setIsTesting] = useState(false);
-  const [testPayloadFormat, setTestPayloadFormat] = useState<"meta" | "zpro_simplified">("meta");
 
   // Initialize test params when dialog opens
   const initializeTestParams = () => {
@@ -154,7 +144,6 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
     setTestParams(initialParams);
     setTestImageUrl("");
     setTestResult(null);
-    setTestPayloadFormat("meta");
   };
 
   const category = getCategoryForSlug(template.slug);
@@ -322,35 +311,7 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
     },
   });
 
-  const resetMutation = useMutation({
-    mutationFn: async ({ id, slug }: { id: string; slug: string }) => {
-      const defaultContent = DEFAULT_TEMPLATES[slug];
-      if (!defaultContent) throw new Error("Template padrão não encontrado");
-
-      const { error } = await supabase
-        .from("whatsapp_templates")
-        .update({ content: defaultContent })
-        .eq("id", id);
-
-      if (error) throw error;
-      return defaultContent;
-    },
-    onSuccess: (defaultContent) => {
-      setEditContent(defaultContent);
-      queryClient.invalidateQueries({ queryKey: ["whatsapp-templates"] });
-      toast({ title: "Template restaurado para o padrão!" });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Erro ao restaurar template",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
   const handleSave = () => {
-    // Build button config if enabled - now supports array of buttons
     const buttonConfig: ButtonConfig | null = hasButton && buttons.length > 0
       ? buttons.filter(btn => btn.text.trim() !== "")
       : null;
@@ -367,16 +328,6 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
     });
   };
 
-  const handleReset = () => {
-    if (confirm("Tem certeza que deseja restaurar este template para o padrão?")) {
-      resetMutation.mutate({ id: template.id, slug: template.slug });
-    }
-  };
-
-  const insertVariable = (variable: string) => {
-    setEditContent((prev) => prev + `{${variable}}`);
-  };
-
   const handleTestWaba = async () => {
     if (!testPhone.trim()) {
       toast({
@@ -390,7 +341,6 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
     const templateToTest = wabaTemplateName.trim() || "hello_world";
     const languageToTest = wabaTemplateName.trim() ? wabaLanguage : "en_US";
     
-    // Build params array in order
     const paramsArray = paramsOrder.map((param) => testParams[param] || `[${param}]`);
 
     setIsTesting(true);
@@ -404,7 +354,7 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
           language: languageToTest,
           params: paramsArray.length > 0 ? paramsArray : undefined,
           mediaUrl: testImageUrl.trim() || undefined,
-          payloadFormat: testPayloadFormat,
+          payloadFormat: "meta",
         },
       });
 
@@ -482,465 +432,392 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b px-3 sm:px-4">
-        <button
-          onClick={() => setActiveTab("content")}
-          className={`flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === "content"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <MessageSquare className="h-4 w-4" />
-          <span>Conteúdo</span>
-        </button>
-        <button
-          onClick={() => setActiveTab("waba")}
-          className={`flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === "waba"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <FileText className="h-4 w-4" />
-          <span>WABA Template</span>
-          {wabaTemplateName && (
-            <Badge variant="secondary" className="ml-1 text-[10px] py-0 px-1">
-              Configurado
-            </Badge>
-          )}
-        </button>
-      </div>
-
       {/* Content */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        <div className={`grid h-full ${showPreview && activeTab === "content" ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
+        <div className={`grid h-full ${showPreview && hasMetaContent ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
           {/* Editor Panel */}
-           <ScrollArea className="h-full">
-            {activeTab === "content" ? (
-              <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
-                <div className="space-y-1.5 sm:space-y-2">
-                  <Label htmlFor="template-name" className="text-xs sm:text-sm">Nome do Template</Label>
-                  <Input
-                    id="template-name"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    placeholder="Nome do template"
-                    className="h-9 sm:h-10 text-sm"
-                  />
-                </div>
-
-                <div className="space-y-1.5 sm:space-y-2">
-                  <Label htmlFor="template-description" className="text-xs sm:text-sm">Descrição</Label>
-                  <Input
-                    id="template-description"
-                    value={editDescription}
-                    onChange={(e) => setEditDescription(e.target.value)}
-                    placeholder="Descrição breve do template"
-                    className="h-9 sm:h-10 text-sm"
-                  />
-                </div>
-
-                <Separator />
-
-                <div className="space-y-1.5 sm:space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <Label htmlFor="template-content" className="text-xs sm:text-sm">Conteúdo da Mensagem</Label>
-                    <Badge variant="outline" className="text-[10px] sm:text-xs gap-1 shrink-0">
-                      <Sparkles className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                      <span className="hidden xs:inline">Formatação</span> WhatsApp
-                    </Badge>
-                  </div>
-                  <Textarea
-                    id="template-content"
-                    value={editContent}
-                    onChange={(e) => setEditContent(e.target.value)}
-                    className="min-h-[200px] sm:min-h-[300px] font-mono text-xs sm:text-sm resize-none"
-                    placeholder="Digite o conteúdo da mensagem..."
-                  />
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">
-                    Use *texto* para <strong>negrito</strong>. Use {"{variavel}"} para dados dinâmicos.
-                  </p>
-                </div>
-
-                <div className="space-y-1.5 sm:space-y-2">
-                  <Label className="text-xs sm:text-sm">Variáveis Disponíveis</Label>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground mb-1.5 sm:mb-2">
-                    Toque para inserir
-                  </p>
-                  <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                    {template.variables.map((variable) => (
-                      <Badge
-                        key={variable}
-                        variant="secondary"
-                        className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors text-[10px] sm:text-xs py-0.5 px-1.5 sm:py-1 sm:px-2"
-                        onClick={() => insertVariable(variable)}
-                      >
-                        {`{${variable}}`}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
+          <ScrollArea className="h-full">
+            <div className="p-3 sm:p-4 space-y-4">
+              {/* Nome e Descrição */}
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="template-name" className="text-xs sm:text-sm">Nome do Template</Label>
+                <Input
+                  id="template-name"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="Nome do template"
+                  className="h-9 sm:h-10 text-sm"
+                />
               </div>
-            ) : (
-              <div className="p-3 sm:p-4 space-y-4">
-                <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-3 sm:p-4">
-                  <h4 className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-1">
-                    Configuração WABA (API Oficial)
-                  </h4>
-                  <p className="text-xs text-amber-700 dark:text-amber-300">
-                    Configure aqui as informações do template aprovado na Meta para envio via API oficial do WhatsApp Business.
-                    Os templates devem ser aprovados previamente no Meta Business Manager.
-                  </p>
-                </div>
 
-                {/* Current Template Status */}
-                {wabaTemplateName && (
-                  <div className="flex items-center gap-2 p-3 rounded-lg border bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
-                    <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-green-800 dark:text-green-200">
-                        Template Vinculado
-                      </p>
-                      <p className="text-xs font-mono text-green-700 dark:text-green-300 truncate">
-                        {wabaTemplateName} ({wabaLanguage})
-                      </p>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="template-description" className="text-xs sm:text-sm">Descrição</Label>
+                <Input
+                  id="template-description"
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  placeholder="Descrição breve do template"
+                  className="h-9 sm:h-10 text-sm"
+                />
+              </div>
+
+              <Separator />
+
+              {/* WABA Configuration */}
+              <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-3 sm:p-4">
+                <h4 className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-1">
+                  Configuração WABA (API Oficial)
+                </h4>
+                <p className="text-xs text-amber-700 dark:text-amber-300">
+                  Configure aqui as informações do template aprovado na Meta para envio via API oficial do WhatsApp Business.
+                  Os templates devem ser aprovados previamente no Meta Business Manager.
+                </p>
+              </div>
+
+              {/* Current Template Status */}
+              {wabaTemplateName && (
+                <div className="flex items-center gap-2 p-3 rounded-lg border bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
+                  <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                      Template Vinculado
+                    </p>
+                    <p className="text-xs font-mono text-green-700 dark:text-green-300 truncate">
+                      {wabaTemplateName} ({wabaLanguage})
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setWabaTemplateName("");
+                      setWabaLanguage("pt_BR");
+                    }}
+                    className="shrink-0 text-red-600 hover:text-red-700 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-950"
+                  >
+                    <Unlink className="h-4 w-4 mr-1" />
+                    Desvincular
+                  </Button>
+                </div>
+              )}
+
+              <div className="space-y-1.5 sm:space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="waba-template-name" className="text-xs sm:text-sm">
+                    Nome do Template WABA
+                  </Label>
+                  <WabaTemplateSelector
+                    currentTemplateName={wabaTemplateName || null}
+                    onSelect={(name, language) => {
+                      setWabaTemplateName(name);
+                      setWabaLanguage(language);
+                    }}
+                  />
+                </div>
+                <Input
+                  id="waba-template-name"
+                  value={wabaTemplateName}
+                  onChange={(e) => setWabaTemplateName(e.target.value)}
+                  placeholder="ex: encomenda_chegou_v1"
+                  className="h-9 sm:h-10 text-sm font-mono"
+                />
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
+                  Nome exato do template como aprovado na Meta. Você pode digitar manualmente ou selecionar da lista de templates aprovados.
+                </p>
+              </div>
+
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="waba-language" className="text-xs sm:text-sm">
+                  Idioma do Template
+                </Label>
+                <Select value={wabaLanguage} onValueChange={setWabaLanguage}>
+                  <SelectTrigger className="h-9 sm:h-10 text-sm">
+                    <SelectValue placeholder="Selecione o idioma" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {WABA_LANGUAGES.map((lang) => (
+                      <SelectItem key={lang.value} value={lang.value}>
+                        {lang.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <Label className="text-xs sm:text-sm">
+                  Parâmetros do Template
+                </Label>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
+                  Selecione quais variáveis serão enviadas como parâmetros e organize na ordem do template WABA.
+                </p>
+
+                {/* Available variables to add */}
+                {template.variables.filter(v => !paramsOrder.includes(v)).length > 0 && (
+                  <div className="rounded-md border border-dashed p-3 space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">Variáveis disponíveis (não selecionadas)</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {template.variables.filter(v => !paramsOrder.includes(v)).map((variable) => (
+                        <Badge
+                          key={variable}
+                          variant="outline"
+                          className="cursor-pointer hover:bg-primary/10 transition-colors text-xs gap-1"
+                          onClick={() => setParamsOrder(prev => [...prev, variable])}
+                        >
+                          <Plus className="h-3 w-3" />
+                          {`{${variable}}`}
+                        </Badge>
+                      ))}
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setWabaTemplateName("");
-                        setWabaLanguage("pt_BR");
-                      }}
-                      className="shrink-0 text-red-600 hover:text-red-700 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-950"
-                    >
-                      <Unlink className="h-4 w-4 mr-1" />
-                      Desvincular
-                    </Button>
                   </div>
                 )}
-
-                <div className="space-y-1.5 sm:space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <Label htmlFor="waba-template-name" className="text-xs sm:text-sm">
-                      Nome do Template WABA
-                    </Label>
-                    <WabaTemplateSelector
-                      currentTemplateName={wabaTemplateName || null}
-                      onSelect={(name, language) => {
-                        setWabaTemplateName(name);
-                        setWabaLanguage(language);
-                      }}
-                    />
-                  </div>
-                  <Input
-                    id="waba-template-name"
-                    value={wabaTemplateName}
-                    onChange={(e) => setWabaTemplateName(e.target.value)}
-                    placeholder="ex: encomenda_chegou_v1"
-                    className="h-9 sm:h-10 text-sm font-mono"
-                  />
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">
-                    Nome exato do template como aprovado na Meta. Você pode digitar manualmente ou selecionar da lista de templates aprovados.
-                  </p>
-                </div>
-
-                <div className="space-y-1.5 sm:space-y-2">
-                  <Label htmlFor="waba-language" className="text-xs sm:text-sm">
-                    Idioma do Template
-                  </Label>
-                  <Select value={wabaLanguage} onValueChange={setWabaLanguage}>
-                    <SelectTrigger className="h-9 sm:h-10 text-sm">
-                      <SelectValue placeholder="Selecione o idioma" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {WABA_LANGUAGES.map((lang) => (
-                        <SelectItem key={lang.value} value={lang.value}>
-                          {lang.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Separator />
-
-                <div className="space-y-2">
-                  <Label className="text-xs sm:text-sm">
-                    Parâmetros do Template
-                  </Label>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">
-                    Selecione quais variáveis serão enviadas como parâmetros e organize na ordem do template WABA.
-                  </p>
-
-                  {/* Available variables to add */}
-                  {template.variables.filter(v => !paramsOrder.includes(v)).length > 0 && (
-                    <div className="rounded-md border border-dashed p-3 space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground">Variáveis disponíveis (não selecionadas)</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {template.variables.filter(v => !paramsOrder.includes(v)).map((variable) => (
-                          <Badge
-                            key={variable}
-                            variant="outline"
-                            className="cursor-pointer hover:bg-primary/10 transition-colors text-xs gap-1"
-                            onClick={() => setParamsOrder(prev => [...prev, variable])}
-                          >
-                            <Plus className="h-3 w-3" />
-                            {`{${variable}}`}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Selected params with order */}
-                  <div className="space-y-1.5 mt-2">
-                    {paramsOrder.map((param, index) => (
-                      <div
-                        key={param}
-                        className="flex items-center gap-2 p-2 rounded-md border bg-card"
-                      >
-                        <Checkbox
-                          checked={true}
-                          onCheckedChange={() => {
-                            setParamsOrder(prev => prev.filter(p => p !== param));
-                          }}
-                          className="shrink-0"
-                        />
-                        <Badge variant="outline" className="font-mono text-xs">
-                          {`{{${index + 1}}}`}
-                        </Badge>
-                        <span className="text-sm flex-1">{param}</span>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => moveParamUp(index)}
-                            disabled={index === 0}
-                          >
-                            <span className="text-xs">↑</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => moveParamDown(index)}
-                            disabled={index === paramsOrder.length - 1}
-                          >
-                            <span className="text-xs">↓</span>
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                    {paramsOrder.length === 0 && (
-                      <p className="text-xs text-muted-foreground text-center py-3">
-                        Nenhum parâmetro selecionado. Clique nas variáveis acima para adicionar.
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Button Configuration - Supports up to 3 buttons */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div>
-                        <Label className="text-xs sm:text-sm">Botões de Ação</Label>
-                        <p className="text-[10px] sm:text-xs text-muted-foreground">
-                          {metaButtons?.buttons && metaButtons.buttons.length > 0
-                            ? `${metaButtons.buttons.length} botão(ões) sincronizado(s) da Meta`
-                            : "Adicione até 3 botões interativos"}
-                        </p>
-                      </div>
-                      {metaButtons?.buttons && metaButtons.buttons.length > 0 && (
-                        <Badge variant="default" className="bg-green-600 text-[10px]">
-                          Meta ({metaButtons.buttons.length})
-                        </Badge>
-                      )}
-                    </div>
-                    <Switch
-                      checked={hasButton}
-                      onCheckedChange={(checked) => {
-                        setHasButton(checked);
-                        if (checked && buttons.length === 0) {
-                          setButtons([createEmptyButton()]);
-                        }
-                      }}
-                    />
-                  </div>
-
-                  {hasButton && (
-                    <div className="space-y-4">
-                      {buttons.map((btn, index) => {
-                        // Check if this button exists in Meta's approved buttons
-                        const metaButton = metaButtons?.buttons?.[index];
-                        const isFromMeta = !!metaButton;
-                        const metaStatus = metaTemplate?.status;
-                        
-                        return (
-                        <div key={index} className={`space-y-3 p-3 rounded-lg border ${
-                          isFromMeta 
-                            ? metaStatus === "APPROVED" 
-                              ? "bg-green-500/5 border-green-500/30" 
-                              : metaStatus === "PENDING" 
-                                ? "bg-yellow-500/5 border-yellow-500/30"
-                                : "bg-muted/20"
-                            : "bg-muted/20"
-                        }`}>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <Label className="text-xs font-medium">Botão {index + 1}</Label>
-                              {isFromMeta && (
-                                <>
-                                  {metaStatus === "APPROVED" && (
-                                    <Badge className="bg-green-500/10 text-green-600 border-green-500/20 text-[10px] gap-1">
-                                      <CheckCircle className="h-2.5 w-2.5" />
-                                      Aprovado
-                                    </Badge>
-                                  )}
-                                  {metaStatus === "PENDING" && (
-                                    <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20 text-[10px] gap-1">
-                                      <Clock className="h-2.5 w-2.5 animate-pulse" />
-                                      Em Análise
-                                    </Badge>
-                                  )}
-                                  {metaStatus === "IN_APPEAL" && (
-                                    <Badge className="bg-orange-500/10 text-orange-600 border-orange-500/20 text-[10px] gap-1">
-                                      <Clock className="h-2.5 w-2.5 animate-pulse" />
-                                      Em Recurso
-                                    </Badge>
-                                  )}
-                                  {metaStatus === "REJECTED" && (
-                                    <Badge className="bg-red-500/10 text-red-600 border-red-500/20 text-[10px] gap-1">
-                                      <XCircle className="h-2.5 w-2.5" />
-                                      Rejeitado
-                                    </Badge>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                            {buttons.length > 1 && !isFromMeta && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 text-xs text-destructive hover:text-destructive"
-                                onClick={() => setButtons(buttons.filter((_, i) => i !== index))}
-                              >
-                                Remover
-                              </Button>
-                            )}
-                          </div>
-                          
-                          <div className="space-y-1.5">
-                            <Label className="text-xs">Tipo do Botão</Label>
-                            <Select 
-                              value={btn.type} 
-                              onValueChange={(v) => {
-                                const newButtons = [...buttons];
-                                newButtons[index] = { ...btn, type: v as "url" | "quick_reply" | "call" };
-                                setButtons(newButtons);
-                              }}
-                            >
-                              <SelectTrigger className="h-9 text-sm">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="url">🔗 Abrir URL</SelectItem>
-                                <SelectItem value="quick_reply">💬 Resposta Rápida</SelectItem>
-                                <SelectItem value="call">📞 Ligar</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="space-y-1.5">
-                            <Label className="text-xs">Texto do Botão</Label>
-                            <Input
-                              value={btn.text}
-                              onChange={(e) => {
-                                const newButtons = [...buttons];
-                                newButtons[index] = { ...btn, text: e.target.value };
-                                setButtons(newButtons);
-                              }}
-                              placeholder="Ex: Ver Detalhes"
-                              className="h-9 text-sm"
-                              maxLength={25}
-                            />
-                            <p className="text-[10px] text-muted-foreground">
-                              Máximo 25 caracteres
-                            </p>
-                          </div>
-
-                          {btn.type === "url" && (
-                            <>
-                              <div className="space-y-1.5">
-                                <Label className="text-xs">URL Base</Label>
-                                <Input
-                                  value={btn.url_base || ""}
-                                  onChange={(e) => {
-                                    const newButtons = [...buttons];
-                                    newButtons[index] = { ...btn, url_base: e.target.value };
-                                    setButtons(newButtons);
-                                  }}
-                                  placeholder="https://notificacondo.lovable.app/acesso/"
-                                  className="h-9 text-sm font-mono"
-                                />
-                              </div>
-
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <Label className="text-xs">Sufixo Dinâmico</Label>
-                                  <p className="text-[10px] text-muted-foreground">
-                                    Adicionar variável ao final da URL
-                                  </p>
-                                </div>
-                                <Switch
-                                  checked={btn.has_dynamic_suffix || false}
-                                  onCheckedChange={(checked) => {
-                                    const newButtons = [...buttons];
-                                    newButtons[index] = { ...btn, has_dynamic_suffix: checked };
-                                    setButtons(newButtons);
-                                  }}
-                                />
-                              </div>
-
-                              {btn.has_dynamic_suffix && (
-                                <div className="rounded-lg bg-muted p-2 text-xs">
-                                  <p className="text-muted-foreground mb-1">URL final:</p>
-                                  <code className="font-mono text-[10px]">
-                                    {btn.url_base || "https://..."}{`{{1}}`}
-                                  </code>
-                                </div>
-                              )}
-                            </>
-                          )}
-                        </div>
-                        );
-                      })}
-
-                      {buttons.length < 3 && (
+                
+                {/* Selected params with order */}
+                <div className="space-y-1.5 mt-2">
+                  {paramsOrder.map((param, index) => (
+                    <div
+                      key={param}
+                      className="flex items-center gap-2 p-2 rounded-md border bg-card"
+                    >
+                      <Checkbox
+                        checked={true}
+                        onCheckedChange={() => {
+                          setParamsOrder(prev => prev.filter(p => p !== param));
+                        }}
+                        className="shrink-0"
+                      />
+                      <Badge variant="outline" className="font-mono text-xs">
+                        {`{{${index + 1}}}`}
+                      </Badge>
+                      <span className="text-sm flex-1">{param}</span>
+                      <div className="flex gap-1">
                         <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full"
-                          onClick={() => setButtons([...buttons, createEmptyButton()])}
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => moveParamUp(index)}
+                          disabled={index === 0}
                         >
-                          + Adicionar Botão ({buttons.length}/3)
+                          <span className="text-xs">↑</span>
                         </Button>
-                      )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => moveParamDown(index)}
+                          disabled={index === paramsOrder.length - 1}
+                        >
+                          <span className="text-xs">↓</span>
+                        </Button>
+                      </div>
                     </div>
+                  ))}
+                  {paramsOrder.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-3">
+                      Nenhum parâmetro selecionado. Clique nas variáveis acima para adicionar.
+                    </p>
                   )}
                 </div>
               </div>
-            )}
+
+              <Separator />
+
+              {/* Button Configuration - Supports up to 3 buttons */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div>
+                      <Label className="text-xs sm:text-sm">Botões de Ação</Label>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">
+                        {metaButtons?.buttons && metaButtons.buttons.length > 0
+                          ? `${metaButtons.buttons.length} botão(ões) sincronizado(s) da Meta`
+                          : "Adicione até 3 botões interativos"}
+                      </p>
+                    </div>
+                    {metaButtons?.buttons && metaButtons.buttons.length > 0 && (
+                      <Badge variant="default" className="bg-green-600 text-[10px]">
+                        Meta ({metaButtons.buttons.length})
+                      </Badge>
+                    )}
+                  </div>
+                  <Switch
+                    checked={hasButton}
+                    onCheckedChange={(checked) => {
+                      setHasButton(checked);
+                      if (checked && buttons.length === 0) {
+                        setButtons([createEmptyButton()]);
+                      }
+                    }}
+                  />
+                </div>
+
+                {hasButton && (
+                  <div className="space-y-4">
+                    {buttons.map((btn, index) => {
+                      const metaButton = metaButtons?.buttons?.[index];
+                      const isFromMeta = !!metaButton;
+                      const metaStatus = metaTemplate?.status;
+                      
+                      return (
+                      <div key={index} className={`space-y-3 p-3 rounded-lg border ${
+                        isFromMeta 
+                          ? metaStatus === "APPROVED" 
+                            ? "bg-green-500/5 border-green-500/30" 
+                            : metaStatus === "PENDING" 
+                              ? "bg-yellow-500/5 border-yellow-500/30"
+                              : "bg-muted/20"
+                          : "bg-muted/20"
+                      }`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Label className="text-xs font-medium">Botão {index + 1}</Label>
+                            {isFromMeta && (
+                              <>
+                                {metaStatus === "APPROVED" && (
+                                  <Badge className="bg-green-500/10 text-green-600 border-green-500/20 text-[10px] gap-1">
+                                    <CheckCircle className="h-2.5 w-2.5" />
+                                    Aprovado
+                                  </Badge>
+                                )}
+                                {metaStatus === "PENDING" && (
+                                  <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20 text-[10px] gap-1">
+                                    <Clock className="h-2.5 w-2.5 animate-pulse" />
+                                    Em Análise
+                                  </Badge>
+                                )}
+                                {metaStatus === "IN_APPEAL" && (
+                                  <Badge className="bg-orange-500/10 text-orange-600 border-orange-500/20 text-[10px] gap-1">
+                                    <Clock className="h-2.5 w-2.5 animate-pulse" />
+                                    Em Recurso
+                                  </Badge>
+                                )}
+                                {metaStatus === "REJECTED" && (
+                                  <Badge className="bg-red-500/10 text-red-600 border-red-500/20 text-[10px] gap-1">
+                                    <XCircle className="h-2.5 w-2.5" />
+                                    Rejeitado
+                                  </Badge>
+                                )}
+                              </>
+                            )}
+                          </div>
+                          {buttons.length > 1 && !isFromMeta && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 text-xs text-destructive hover:text-destructive"
+                              onClick={() => setButtons(buttons.filter((_, i) => i !== index))}
+                            >
+                              Remover
+                            </Button>
+                          )}
+                        </div>
+                        
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Tipo do Botão</Label>
+                          <Select 
+                            value={btn.type} 
+                            onValueChange={(v) => {
+                              const newButtons = [...buttons];
+                              newButtons[index] = { ...btn, type: v as "url" | "quick_reply" | "call" };
+                              setButtons(newButtons);
+                            }}
+                          >
+                            <SelectTrigger className="h-9 text-sm">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="url">🔗 Abrir URL</SelectItem>
+                              <SelectItem value="quick_reply">💬 Resposta Rápida</SelectItem>
+                              <SelectItem value="call">📞 Ligar</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Texto do Botão</Label>
+                          <Input
+                            value={btn.text}
+                            onChange={(e) => {
+                              const newButtons = [...buttons];
+                              newButtons[index] = { ...btn, text: e.target.value };
+                              setButtons(newButtons);
+                            }}
+                            placeholder="Ex: Ver Detalhes"
+                            className="h-9 text-sm"
+                            maxLength={25}
+                          />
+                          <p className="text-[10px] text-muted-foreground">
+                            Máximo 25 caracteres
+                          </p>
+                        </div>
+
+                        {btn.type === "url" && (
+                          <>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">URL Base</Label>
+                              <Input
+                                value={btn.url_base || ""}
+                                onChange={(e) => {
+                                  const newButtons = [...buttons];
+                                  newButtons[index] = { ...btn, url_base: e.target.value };
+                                  setButtons(newButtons);
+                                }}
+                                placeholder="https://notificacondo.lovable.app/acesso/"
+                                className="h-9 text-sm font-mono"
+                              />
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <Label className="text-xs">Sufixo Dinâmico</Label>
+                                <p className="text-[10px] text-muted-foreground">
+                                  Adicionar variável ao final da URL
+                                </p>
+                              </div>
+                              <Switch
+                                checked={btn.has_dynamic_suffix || false}
+                                onCheckedChange={(checked) => {
+                                  const newButtons = [...buttons];
+                                  newButtons[index] = { ...btn, has_dynamic_suffix: checked };
+                                  setButtons(newButtons);
+                                }}
+                              />
+                            </div>
+
+                            {btn.has_dynamic_suffix && (
+                              <div className="rounded-lg bg-muted p-2 text-xs">
+                                <p className="text-muted-foreground mb-1">URL final:</p>
+                                <code className="font-mono text-[10px]">
+                                  {btn.url_base || "https://..."}{`{{1}}`}
+                                </code>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                      );
+                    })}
+
+                    {buttons.length < 3 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => setButtons([...buttons, createEmptyButton()])}
+                      >
+                        + Adicionar Botão ({buttons.length}/3)
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
           </ScrollArea>
 
-          {/* Preview Panel - Desktop only (only for content tab) */}
-          {showPreview && activeTab === "content" && (
+          {/* Preview Panel - Desktop only */}
+          {showPreview && hasMetaContent && (
             <div className="border-l bg-muted/30 hidden lg:block overflow-y-auto">
               <div className="p-4">
                 <div className="flex items-center justify-between gap-2 mb-4">
@@ -948,26 +825,19 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
                     <Eye className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium">Preview da Mensagem</span>
                   </div>
-                  {isLinked && (
-                    <Badge 
-                      variant={hasMetaContent ? "default" : "secondary"} 
-                      className={`text-[10px] ${hasMetaContent ? "bg-green-600" : ""}`}
-                    >
-                      {hasMetaContent ? "Conteúdo Meta" : "Exemplo Local"}
-                    </Badge>
-                  )}
+                  <Badge variant="default" className="text-[10px] bg-green-600">
+                    Conteúdo Meta
+                  </Badge>
                 </div>
                 
-                {/* Show loading state */}
-                {isLinked && isLoadingMeta && (
+                {isLoadingMeta && (
                   <div className="flex items-center gap-2 text-muted-foreground text-sm p-4">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Carregando conteúdo da Meta...
                   </div>
                 )}
 
-                {/* Show error state */}
-                {isLinked && !isLoadingMeta && metaLoadError && (
+                {!isLoadingMeta && metaLoadError && (
                   <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 mb-4 flex items-start gap-2">
                     <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
                     <div>
@@ -975,7 +845,7 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
                         Conteúdo da Meta não disponível
                       </p>
                       <p className="text-xs text-amber-600 dark:text-amber-500 mt-0.5">
-                        {metaLoadError}. Exibindo conteúdo local como exemplo.
+                        {metaLoadError}
                       </p>
                       <Button
                         variant="ghost"
@@ -990,134 +860,98 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
                   </div>
                 )}
 
-                {/* Meta preview with full components */}
-                {hasMetaContent ? (
-                  <div className="relative">
-                    <div className="bg-[#0b141a] rounded-xl p-4 overflow-hidden">
-                      {/* Header */}
-                      <div className="flex items-center gap-3 pb-3 border-b border-white/10">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center shrink-0">
-                          <span className="text-white font-bold text-sm">C</span>
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-white font-medium text-sm truncate">Condomínio Legal</p>
-                          <p className="text-white/60 text-xs">online</p>
-                        </div>
+                <div className="relative">
+                  <div className="bg-[#0b141a] rounded-xl p-4 overflow-hidden">
+                    <div className="flex items-center gap-3 pb-3 border-b border-white/10">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center shrink-0">
+                        <span className="text-white font-bold text-sm">C</span>
                       </div>
+                      <div className="min-w-0">
+                        <p className="text-white font-medium text-sm truncate">Condomínio Legal</p>
+                        <p className="text-white/60 text-xs">online</p>
+                      </div>
+                    </div>
 
-                      {/* Chat area */}
-                      <div className="pt-4 space-y-2">
-                        <div className="flex justify-start">
-                          <div className="max-w-[85%] bg-[#005C4B] rounded-lg rounded-tl-none p-3 shadow-sm relative">
-                            <div className="absolute -left-2 top-0 w-0 h-0 border-t-[8px] border-t-[#005C4B] border-l-[8px] border-l-transparent" />
-                            
-                            {/* Meta Header */}
-                            {metaHeader?.text && (
-                              <p className="text-white font-bold text-sm mb-2">
-                                {replaceMetaVariables(metaHeader.text)}
-                              </p>
-                            )}
-                            
-                            {/* Body */}
-                            <div className="text-white/90 text-sm whitespace-pre-wrap leading-relaxed">
-                              {getPreviewContent()}
+                    <div className="pt-4 space-y-2">
+                      <div className="flex justify-start">
+                        <div className="max-w-[85%] bg-[#005C4B] rounded-lg rounded-tl-none p-3 shadow-sm relative">
+                          <div className="absolute -left-2 top-0 w-0 h-0 border-t-[8px] border-t-[#005C4B] border-l-[8px] border-l-transparent" />
+                          
+                          {metaHeader?.text && (
+                            <p className="text-white font-bold text-sm mb-2">
+                              {replaceMetaVariables(metaHeader.text)}
+                            </p>
+                          )}
+                          
+                          <div className="text-white/90 text-sm whitespace-pre-wrap leading-relaxed">
+                            {getPreviewContent()}
+                          </div>
+                          
+                          {metaFooter?.text && (
+                            <p className="text-white/60 text-[11px] mt-2 pt-2 border-t border-white/10">
+                              {metaFooter.text}
+                            </p>
+                          )}
+                          
+                          {metaButtons?.buttons && metaButtons.buttons.length > 0 && (
+                            <div className="mt-3 pt-2 border-t border-white/10 space-y-1">
+                              {metaButtons.buttons.map((btn, idx) => (
+                                <div 
+                                  key={idx} 
+                                  className="text-center py-1.5 text-[13px] text-[#00A884] font-medium"
+                                >
+                                  {btn.text}
+                                </div>
+                              ))}
                             </div>
-                            
-                            {/* Footer */}
-                            {metaFooter?.text && (
-                              <p className="text-white/60 text-[11px] mt-2 pt-2 border-t border-white/10">
-                                {metaFooter.text}
-                              </p>
-                            )}
-                            
-                            {/* Buttons */}
-                            {metaButtons?.buttons && metaButtons.buttons.length > 0 && (
-                              <div className="mt-3 pt-2 border-t border-white/10 space-y-1">
-                                {metaButtons.buttons.map((btn, idx) => (
-                                  <div 
-                                    key={idx} 
-                                    className="text-center py-1.5 text-[13px] text-[#00A884] font-medium"
-                                  >
-                                    {btn.text}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                            
-                            <div className="flex justify-end mt-1">
-                              <span className="text-white/40 text-[10px]">14:32</span>
-                            </div>
+                          )}
+                          
+                          <div className="flex justify-end mt-1">
+                            <span className="text-white/40 text-[10px]">14:32</span>
                           </div>
                         </div>
                       </div>
                     </div>
-                    <p className="text-[10px] text-muted-foreground mt-3 text-center italic">
-                      * Conteúdo aprovado pela Meta. Os valores são exemplos.
-                    </p>
                   </div>
-                ) : (
-                  <div>
-                    <TemplatePreview content={editContent} />
-                    {isLinked && !isLoadingMeta && (
-                      <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-2 text-center italic">
-                        * Exibindo conteúdo local como exemplo (Meta não carregado).
-                      </p>
-                    )}
-                  </div>
-                )}
+                  <p className="text-[10px] text-muted-foreground mt-3 text-center italic">
+                    * Conteúdo aprovado pela Meta. Os valores são exemplos.
+                  </p>
+                </div>
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Mobile Preview - Collapsible (only for content tab) */}
-      {showPreview && activeTab === "content" && (
+      {/* Mobile Preview - Collapsible */}
+      {showPreview && hasMetaContent && (
         <div className="lg:hidden border-t bg-muted/30 p-3 sm:p-4 max-h-[40vh] overflow-y-auto">
           <div className="flex items-center justify-between gap-2 mb-2 sm:mb-3">
             <div className="flex items-center gap-2">
               <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
               <span className="text-xs sm:text-sm font-medium">Preview</span>
             </div>
-            {isLinked && (
-              <Badge 
-                variant={hasMetaContent ? "default" : "secondary"} 
-                className={`text-[10px] ${hasMetaContent ? "bg-green-600" : ""}`}
-              >
-                {hasMetaContent ? "Meta" : "Local"}
-              </Badge>
-            )}
+            <Badge variant="default" className="text-[10px] bg-green-600">
+              Meta
+            </Badge>
           </div>
-          {hasMetaContent ? (
-            <div className="bg-[#0b141a] rounded-xl p-3 overflow-hidden">
-              <div className="bg-[#005C4B] rounded-lg p-2 text-white/90 text-xs whitespace-pre-wrap">
-                {metaHeader?.text && (
-                  <p className="font-bold mb-1">{replaceMetaVariables(metaHeader.text)}</p>
-                )}
-                {getPreviewContent()}
-                {metaFooter?.text && (
-                  <p className="text-white/60 text-[10px] mt-2 pt-1 border-t border-white/10">{metaFooter.text}</p>
-                )}
-              </div>
+          <div className="bg-[#0b141a] rounded-xl p-3 overflow-hidden">
+            <div className="bg-[#005C4B] rounded-lg p-2 text-white/90 text-xs whitespace-pre-wrap">
+              {metaHeader?.text && (
+                <p className="font-bold mb-1">{replaceMetaVariables(metaHeader.text)}</p>
+              )}
+              {getPreviewContent()}
+              {metaFooter?.text && (
+                <p className="text-white/60 text-[10px] mt-2 pt-1 border-t border-white/10">{metaFooter.text}</p>
+              )}
             </div>
-          ) : (
-            <TemplatePreview content={editContent} />
-          )}
+          </div>
         </div>
       )}
 
       {/* Footer */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 sm:p-4 border-t bg-background">
-        <Button
-          variant="ghost"
-          onClick={handleReset}
-          disabled={resetMutation.isPending}
-          className="text-muted-foreground text-xs sm:text-sm h-9 order-2 sm:order-1"
-        >
-          <RotateCcw className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-          Restaurar Padrão
-        </Button>
-        <div className="flex gap-2 order-1 sm:order-2">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 p-3 sm:p-4 border-t bg-background">
+        <div className="flex gap-2">
           <Button variant="outline" onClick={onClose} className="flex-1 sm:flex-none h-9 text-xs sm:text-sm">
             Cancelar
           </Button>
@@ -1176,23 +1010,6 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
                 </p>
               </div>
             )}
-
-            {/* Payload format */}
-            <div className="space-y-2">
-              <Label className="text-sm">Formato do payload</Label>
-              <Select value={testPayloadFormat} onValueChange={(v) => setTestPayloadFormat(v as any)}>
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="meta">Meta (padrão)</SelectItem>
-                  <SelectItem value="zpro_simplified">Z-PRO (simplificado)</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Se o provedor estiver repassando o payload direto para a Meta, use “Meta (padrão)”.
-              </p>
-            </div>
 
             {/* Dynamic Params */}
             {wabaTemplateName && paramsOrder.length > 0 && (
