@@ -31,6 +31,7 @@ import SindicoSettings from "./pages/SindicoSettings";
 import SindicoInvoices from "./pages/SindicoInvoices";
 import SindicoSubscriptions from "./pages/SindicoSubscriptions";
 import SindicoPorteiros from "./pages/sindico/Porteiros";
+import SindicoBanners from "./pages/sindico/Banners";
 import PackagesDashboard from "./pages/sindico/PackagesDashboard";
 import SindicoPackages from "./pages/sindico/Packages";
 import PackagesHistory from "./pages/sindico/PackagesHistory";
