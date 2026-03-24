@@ -477,6 +477,9 @@ export default function PorteiroDashboard() {
             </Card>
           </div>
         </div>
+
+        {/* Livro de Recados */}
+        <PorterMessageBook condominiumIds={condominiumIds} />
       </div>
     </DashboardLayout>);
 
