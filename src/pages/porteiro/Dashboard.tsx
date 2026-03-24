@@ -644,26 +644,6 @@ function PorterMessageBook({ condominiumIds }: { condominiumIds: string[] }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Input */}
-        <div className="flex gap-2">
-          <Textarea
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Deixe um recado para o próximo plantão..."
-            rows={2}
-            className="resize-none"
-            maxLength={500}
-          />
-          <Button
-            size="icon"
-            className="shrink-0 self-end h-10 w-10"
-            disabled={!newMessage.trim() || sendMutation.isPending}
-            onClick={() => sendMutation.mutate()}
-          >
-            <Send className="w-4 h-4" />
-          </Button>
-        </div>
-
         {/* Messages */}
         {isLoading ? (
           <p className="text-sm text-muted-foreground text-center py-4">Carregando...</p>
@@ -694,6 +674,25 @@ function PorterMessageBook({ condominiumIds }: { condominiumIds: string[] }) {
             ))}
           </div>
         )}
+        {/* Input */}
+        <div className="flex gap-2">
+          <Textarea
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="Deixe um recado para o próximo plantão..."
+            rows={2}
+            className="resize-none"
+            maxLength={500}
+          />
+          <Button
+            size="icon"
+            className="shrink-0 self-end h-10 w-10"
+            disabled={!newMessage.trim() || sendMutation.isPending}
+            onClick={() => sendMutation.mutate()}
+          >
+            <Send className="w-4 h-4" />
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
