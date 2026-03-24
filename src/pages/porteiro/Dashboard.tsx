@@ -481,6 +481,8 @@ export default function PorteiroDashboard() {
 }
 
 function CondominiumBanners({ condominiumIds }: { condominiumIds: string[] }) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
   const { data: banners = [] } = useQuery({
     queryKey: ["porteiro-banners", condominiumIds],
     queryFn: async () => {
@@ -498,23 +500,81 @@ function CondominiumBanners({ condominiumIds }: { condominiumIds: string[] }) {
     staleTime: 1000 * 60 * 5,
   });
 
-  if (banners.length === 0) return null;
+  const total = banners.length;
+
+  const goNext = useCallback(() => {
+    setCurrentIndex((prev) => (prev + 1) % total);
+  }, [total]);
+
+  const goPrev = useCallback(() => {
+    setCurrentIndex((prev) => (prev - 1 + total) % total);
+  }, [total]);
+
+  // Auto-advance every 10s
+  useEffect(() => {
+    if (total <= 1) return;
+    const timer = setInterval(goNext, 10000);
+    return () => clearInterval(timer);
+  }, [total, goNext]);
+
+  // Reset index if banners change
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [total]);
+
+  if (total === 0) return null;
+
+  const banner = banners[currentIndex] as any;
 
   return (
-    <div className="space-y-2">
-      {banners.map((banner: any) => (
-        <div
-          key={banner.id}
-          className="rounded-lg p-4 flex items-start gap-3"
-          style={{ backgroundColor: banner.bg_color, color: banner.text_color }}
-        >
-          <Megaphone className="w-5 h-5 shrink-0 mt-0.5" />
-          <div>
-            <p className="font-semibold text-sm">{banner.title}</p>
-            <p className="text-sm mt-0.5 whitespace-pre-line">{banner.content}</p>
-          </div>
+    <div className="relative">
+      <div
+        className="rounded-lg p-4 flex items-start gap-3 animate-fade-in transition-all"
+        style={{ backgroundColor: banner.bg_color, color: banner.text_color }}
+      >
+        <Megaphone className="w-5 h-5 shrink-0 mt-0.5" />
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-sm">{banner.title}</p>
+          <p className="text-sm mt-0.5 whitespace-pre-line">{banner.content}</p>
         </div>
-      ))}
+
+        {total > 1 && (
+          <div className="flex items-center gap-1 shrink-0 self-center">
+            <button
+              onClick={goPrev}
+              className="p-1 rounded-full hover:bg-black/10 transition-colors"
+              style={{ color: banner.text_color }}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-xs font-medium min-w-[36px] text-center">
+              {currentIndex + 1}/{total}
+            </span>
+            <button
+              onClick={goNext}
+              className="p-1 rounded-full hover:bg-black/10 transition-colors"
+              style={{ color: banner.text_color }}
+            >
+              <ChevronRightIcon className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Dots indicator */}
+      {total > 1 && (
+        <div className="flex justify-center gap-1.5 mt-2">
+          {banners.map((_: any, idx: number) => (
+            <button
+              key={idx}
+              onClick={() => setCurrentIndex(idx)}
+              className={`w-2 h-2 rounded-full transition-all ${
+                idx === currentIndex ? "bg-primary scale-125" : "bg-muted-foreground/30"
+              }`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
