@@ -185,6 +185,7 @@ const PackagesHistory = () => {
           status,
           received_at,
           received_by,
+          received_by_name,
           picked_up_at,
           picked_up_by,
           picked_up_by_name,
@@ -238,7 +239,7 @@ const PackagesHistory = () => {
 
       return (data || []).map((pkg) => ({
         ...pkg,
-        received_by_name: profilesMap[pkg.received_by]?.full_name || null,
+        received_by_name: profilesMap[pkg.received_by]?.full_name || pkg.received_by_name || null,
         received_by_profile: profilesMap[pkg.received_by] || null,
         picked_up_by_profile: pkg.picked_up_by ? profilesMap[pkg.picked_up_by] || null : null,
       })) as PackageWithRelations[];
