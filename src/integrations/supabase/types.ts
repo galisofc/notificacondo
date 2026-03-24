@@ -1775,6 +1775,41 @@ export type Database = {
         }
         Relationships: []
       }
+      porter_messages: {
+        Row: {
+          author_id: string
+          author_name: string
+          condominium_id: string
+          content: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          author_id: string
+          author_name: string
+          condominium_id: string
+          content: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          author_id?: string
+          author_name?: string
+          condominium_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "porter_messages_condominium_id_fkey"
+            columns: ["condominium_id"]
+            isOneToOne: false
+            referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       porter_occurrence_categories: {
         Row: {
           condominium_id: string
