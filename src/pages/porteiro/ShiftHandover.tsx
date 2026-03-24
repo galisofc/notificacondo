@@ -176,6 +176,11 @@ export default function ShiftHandover() {
       const profileMap: Record<string, string> = {};
       (profilesData || []).forEach((p) => { profileMap[p.user_id] = p.full_name; });
 
+      // Also add current user's name from porterName state
+      if (user && porterName) {
+        profileMap[user.id] = porterName;
+      }
+
       return data.map((h) => ({
         ...h,
         outgoing_porter_name: profileMap[h.outgoing_porter_id] || null,
