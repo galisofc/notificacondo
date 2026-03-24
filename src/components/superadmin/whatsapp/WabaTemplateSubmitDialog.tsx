@@ -432,8 +432,15 @@ export function WabaTemplateSubmitDialog({
     }
   };
 
+  const linkedWabaNames = new Set(
+    localTemplates
+      .filter(lt => lt.waba_template_name)
+      .map(lt => lt.waba_template_name!.toLowerCase())
+  );
+
   const filteredTemplates = metaTemplates.filter((t) =>
-    t.name.toLowerCase().includes(searchQuery.toLowerCase())
+    t.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+    !linkedWabaNames.has(t.name.toLowerCase())
   );
 
   return (
