@@ -1,194 +1,18 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendMetaTemplate, isMetaConfigured, buildParamsArray, formatPhoneForWaba } from "../_shared/meta-whatsapp.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface ProviderConfig {
-  sendMessage: (config: WhatsAppConfig, phone: string, message: string) => Promise<{ messageId?: string; error?: string }>;
-}
-
-interface WhatsAppConfig {
-  api_url: string;
-  api_key: string;
-  instance_id: string;
-  provider: string;
-}
-
-const formatPhoneNumber = (phone: string): string => {
-  const cleaned = phone.replace(/\D/g, "");
-  if (cleaned.startsWith("55")) {
-    return cleaned;
-  }
-  return `55${cleaned}`;
-};
-
-// Helper to safely parse JSON response
-const safeParseResponse = async (response: Response, providerName: string): Promise<{ data?: any; error?: string }> => {
-  const contentType = response.headers.get("content-type") || "";
-  const text = await response.text();
-  
-  console.log(`[${providerName}] Response status: ${response.status}, content-type: ${contentType}`);
-  console.log(`[${providerName}] Response body (first 500 chars): ${text.substring(0, 500)}`);
-  
-  if (!contentType.includes("application/json") && !text.startsWith("{") && !text.startsWith("[")) {
-    console.error(`[${providerName}] Expected JSON but received: ${contentType}`);
-    return { error: `API retornou conteúdo não-JSON. Status: ${response.status}. Verifique a URL e credenciais da API.` };
-  }
-  
-  try {
-    const data = JSON.parse(text);
-    return { data };
-  } catch (e) {
-    console.error(`[${providerName}] Failed to parse JSON:`, e);
-    return { error: `Falha ao processar resposta da API: ${text.substring(0, 200)}` };
-  }
-};
-
-const providers: Record<string, ProviderConfig> = {
-  zpro: {
-    async sendMessage(config, phone, message) {
-      const formattedPhone = formatPhoneNumber(phone);
-      const baseUrl = config.api_url.replace(/\/$/, "");
-      
-      // If instance_id is empty or placeholder, fallback to api_key
-      let externalKey = config.instance_id || "";
-      if (!externalKey || externalKey === "zpro-embedded") {
-        externalKey = config.api_key;
-      }
-      
-      const params = new URLSearchParams({
-        body: message,
-        number: formattedPhone,
-        externalKey,
-        bearertoken: config.api_key,
-        isClosed: "false"
-      });
-      
-      const url = `${baseUrl}/params/?${params.toString()}`;
-      console.log(`[Z-PRO] Sending to URL: ${url.substring(0, 150)}...`);
-      
-      try {
-        const response = await fetch(url, {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
-        
-        const { data: result, error: parseError } = await safeParseResponse(response, "Z-PRO");
-        
-        if (parseError) {
-          return { error: parseError };
-        }
-        
-        if (response.ok) {
-          const extractedMessageId = result?.id || result?.messageId || result?.key?.id || result?.msgId || result?.message_id;
-          
-          if (extractedMessageId && extractedMessageId !== "sent") {
-            return { messageId: String(extractedMessageId) };
-          }
-          
-          if (result?.status === "success" || result?.status === "PENDING" || response.status === 200) {
-            const trackingId = `zpro_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-            console.log(`[Z-PRO] No message ID in response, using tracking ID: ${trackingId}`);
-            return { messageId: trackingId };
-          }
-          
-          return { messageId: `zpro_${Date.now()}` };
-        }
-        
-        return { error: result?.message || result?.error || `Erro ${response.status}` };
-      } catch (error: any) {
-        console.error(`[Z-PRO] Connection error:`, error);
-        return { error: `Erro de conexão: ${error.message}` };
-      }
-    },
-  },
-  zapi: {
-    async sendMessage(config, phone, message) {
-      const formattedPhone = formatPhoneNumber(phone);
-      const url = `${config.api_url}/instances/${config.instance_id}/token/${config.api_key}/send-text`;
-      console.log(`[Z-API] Sending to URL: ${url.replace(config.api_key, "***")}`);
-      
-      try {
-        const response = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone: formattedPhone, message }),
-        });
-        
-        const { data: result, error: parseError } = await safeParseResponse(response, "Z-API");
-        if (parseError) {
-          return { error: parseError };
-        }
-        
-        if (!response.ok) {
-          return { error: result?.message || `Erro ao enviar mensagem via Z-API (status: ${response.status})` };
-        }
-        return { messageId: result?.messageId || result?.zapiMessageId };
-      } catch (error: any) {
-        console.error(`[Z-API] Connection error:`, error);
-        return { error: `Erro de conexão: ${error.message}` };
-      }
-    },
-  },
-  evolution: {
-    async sendMessage(config, phone, message) {
-      const formattedPhone = formatPhoneNumber(phone);
-      const url = `${config.api_url}/message/sendText/${config.instance_id}`;
-      console.log(`[Evolution] Sending to URL: ${url}`);
-      
-      try {
-        const response = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", apikey: config.api_key },
-          body: JSON.stringify({ number: formattedPhone, text: message }),
-        });
-        
-        const { data: result, error: parseError } = await safeParseResponse(response, "Evolution");
-        if (parseError) {
-          return { error: parseError };
-        }
-        
-        if (!response.ok) {
-          return { error: result?.message || `Erro ao enviar mensagem via Evolution (status: ${response.status})` };
-        }
-        return { messageId: result?.key?.id };
-      } catch (error: any) {
-        console.error(`[Evolution] Connection error:`, error);
-        return { error: `Erro de conexão: ${error.message}` };
-      }
-    },
-  },
-  wppconnect: {
-    async sendMessage(config, phone, message) {
-      const formattedPhone = formatPhoneNumber(phone);
-      const url = `${config.api_url}/api/${config.instance_id}/send-message`;
-      console.log(`[WPPConnect] Sending to URL: ${url}`);
-      
-      try {
-        const response = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.api_key}` },
-          body: JSON.stringify({ phone: formattedPhone, message, isGroup: false }),
-        });
-        
-        const { data: result, error: parseError } = await safeParseResponse(response, "WPPConnect");
-        if (parseError) {
-          return { error: parseError };
-        }
-        
-        if (!response.ok || result?.status === "error") {
-          return { error: result?.message || `Erro ao enviar mensagem via WPPConnect (status: ${response.status})` };
-        }
-        return { messageId: result?.id };
-      } catch (error: any) {
-        console.error(`[WPPConnect] Connection error:`, error);
-        return { error: `Erro de conexão: ${error.message}` };
-      }
-    },
-  },
+const sanitizeForWaba = (text: string): string => {
+  return text
+    .replace(/[\n\r\t]/g, " ")
+    .replace(/\s{4,}/g, "   ")
+    .replace(/\s+/g, " ")
+    .trim();
 };
 
 serve(async (req) => {
@@ -215,7 +39,7 @@ serve(async (req) => {
       })
       .select("id")
       .single();
-    
+
     logId = logEntry?.id;
 
     // Check if function is paused
@@ -227,28 +51,23 @@ serve(async (req) => {
 
     if (pauseStatus?.paused) {
       console.log("Function is paused, skipping execution");
-      
       if (logId) {
-        await supabase
-          .from("edge_function_logs")
-          .update({
-            status: "skipped",
-            ended_at: new Date().toISOString(),
-            duration_ms: Date.now() - startTime,
-            result: { message: "Function is paused" },
-          })
-          .eq("id", logId);
+        await supabase.from("edge_function_logs").update({
+          status: "skipped",
+          ended_at: new Date().toISOString(),
+          duration_ms: Date.now() - startTime,
+          result: { message: "Function is paused" },
+        }).eq("id", logId);
       }
-
       return new Response(
         JSON.stringify({ success: true, message: "Function is paused" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Calculate tomorrow's date (in Brazil timezone)
+    // Calculate tomorrow's date (Brazil timezone UTC-3)
     const now = new Date();
-    const brazilOffset = -3 * 60; // UTC-3
+    const brazilOffset = -3 * 60;
     const localNow = new Date(now.getTime() + (brazilOffset - now.getTimezoneOffset()) * 60 * 1000);
     const tomorrow = new Date(localNow);
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -256,7 +75,7 @@ serve(async (req) => {
 
     console.log(`Checking for bookings on ${tomorrowStr}`);
 
-    // Fetch confirmed bookings for tomorrow that haven't been notified yet
+    // Fetch confirmed bookings for tomorrow not yet notified
     const { data: bookings, error: bookingsError } = await supabase
       .from("party_hall_bookings")
       .select(`
@@ -264,7 +83,7 @@ serve(async (req) => {
         booking_date,
         start_time,
         end_time,
-        notification_sent_at,
+        condominium_id,
         resident:residents!inner(
           id,
           full_name,
@@ -290,17 +109,13 @@ serve(async (req) => {
 
     if (!bookings || bookings.length === 0) {
       if (logId) {
-        await supabase
-          .from("edge_function_logs")
-          .update({
-            status: "completed",
-            ended_at: new Date().toISOString(),
-            duration_ms: Date.now() - startTime,
-            result: { message: "No bookings to notify", date: tomorrowStr },
-          })
-          .eq("id", logId);
+        await supabase.from("edge_function_logs").update({
+          status: "completed",
+          ended_at: new Date().toISOString(),
+          duration_ms: Date.now() - startTime,
+          result: { message: "No bookings to notify", date: tomorrowStr },
+        }).eq("id", logId);
       }
-
       return new Response(
         JSON.stringify({ success: true, message: "No bookings to notify", date: tomorrowStr }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -318,22 +133,32 @@ serve(async (req) => {
       throw new Error("WhatsApp configuration not found or inactive");
     }
 
-    // Get template
-    const { data: template } = await supabase
+    const useOfficialApi = (whatsappConfig as any).use_official_api === true;
+    const useWabaTemplates = (whatsappConfig as any).use_waba_templates === true;
+    console.log(`[REMINDERS] use_official_api: ${useOfficialApi}, use_waba_templates: ${useWabaTemplates}`);
+
+    // Get WABA template config
+    const { data: wabaTemplate } = await supabase
       .from("whatsapp_templates")
-      .select("content")
+      .select("content, waba_template_name, waba_language, params_order")
       .eq("slug", "party_hall_reminder")
       .eq("is_active", true)
-      .single();
+      .maybeSingle();
 
-    const provider = providers[whatsappConfig.provider];
-    if (!provider) {
-      throw new Error(`Unknown WhatsApp provider: ${whatsappConfig.provider}`);
+    const wabaTemplateName = wabaTemplate?.waba_template_name || null;
+    const wabaLanguage = wabaTemplate?.waba_language || "pt_BR";
+    const paramsOrder = wabaTemplate?.params_order || [];
+    const templateContent = wabaTemplate?.content || null;
+
+    console.log(`[REMINDERS] WABA template: ${wabaTemplateName}, paramsOrder: ${JSON.stringify(paramsOrder)}`);
+
+    // Check Meta is configured when using official API
+    if (useOfficialApi && !isMetaConfigured()) {
+      throw new Error("Meta WhatsApp API not configured (missing ACCESS_TOKEN or PHONE_ID)");
     }
 
     const results: { bookingId: string; success: boolean; error?: string }[] = [];
 
-    // Process each booking
     for (const booking of bookings) {
       const resident = booking.resident as any;
       const condo = booking.condominium as any;
@@ -345,7 +170,7 @@ serve(async (req) => {
         continue;
       }
 
-      // Fetch checklist items for this condominium
+      // Fetch checklist items
       const { data: checklistItems } = await supabase
         .from("party_hall_checklist_templates")
         .select("item_name, category")
@@ -353,25 +178,21 @@ serve(async (req) => {
         .eq("is_active", true)
         .order("display_order", { ascending: true });
 
-      // Format checklist for message
+      // Format checklist
       let checklistText = "";
+      const checklistLines: string[] = [];
       if (checklistItems && checklistItems.length > 0) {
-        // Group by category
         const grouped: Record<string, string[]> = {};
         for (const item of checklistItems) {
           const cat = item.category || "Geral";
           if (!grouped[cat]) grouped[cat] = [];
           grouped[cat].push(item.item_name);
         }
-
-        const lines: string[] = [];
         for (const [category, items] of Object.entries(grouped)) {
-          lines.push(`\n📌 *${category}:*`);
-          for (const item of items) {
-            lines.push(`   ☐ ${item}`);
-          }
+          checklistLines.push(`*${category}:*`);
+          items.forEach(item => checklistLines.push(`  • ${item}`));
         }
-        checklistText = `\n📋 *Itens Revisados:*${lines.join("\n")}`;
+        checklistText = `\n📋 *Itens Revisados:*\n${checklistLines.map(l => `📌 ${l}`).join("\n")}`;
       }
 
       // Format date
@@ -383,90 +204,136 @@ serve(async (req) => {
         year: "numeric",
       });
 
-      // Build message
-      let message: string;
-      if (template?.content) {
-        message = template.content
-          .replace("{condominio}", condo.name)
-          .replace("{nome}", resident.full_name.split(" ")[0])
-          .replace("{espaco}", hallSetting.name)
-          .replace("{data}", formattedDate)
-          .replace("{horario_inicio}", booking.start_time.slice(0, 5))
-          .replace("{horario_fim}", booking.end_time.slice(0, 5))
-          .replace("{checklist}", checklistText);
-      } else {
-        message = `🎉 *LEMBRETE DE RESERVA*
+      let sendResult: { success: boolean; messageId?: string; error?: string };
 
-🏢 *${condo.name}*
+      // Use WABA template if configured
+      if (useOfficialApi && useWabaTemplates && wabaTemplateName && paramsOrder.length > 0) {
+        console.log(`[REMINDERS] Sending WABA template "${wabaTemplateName}" for booking ${booking.id}`);
 
-Olá, *${resident.full_name.split(" ")[0]}*!
+        // Build checklist as comma-separated for WABA
+        const checklistString = checklistItems && checklistItems.length > 0
+          ? sanitizeForWaba(checklistItems.map(i => i.item_name).join(", "))
+          : "";
 
-Sua reserva do *${hallSetting.name}* está confirmada para *AMANHÃ*:
-📅 *Data:* ${formattedDate}
-⏰ *Horário:* ${booking.start_time.slice(0, 5)} às ${booking.end_time.slice(0, 5)}
-${checklistText}
+        const paramsMap: Record<string, string> = {
+          condominio: sanitizeForWaba(condo.name),
+          nome: sanitizeForWaba(resident.full_name.split(" ")[0]),
+          espaco: sanitizeForWaba(hallSetting.name),
+          data: sanitizeForWaba(formattedDate),
+          horario_inicio: booking.start_time.slice(0, 5),
+          horario_fim: booking.end_time.slice(0, 5),
+          checklist: checklistString,
+        };
 
-📋 *Lembre-se:*
-• Compareça no horário para o checklist de entrada
-• Traga documento de identificação
-• Respeite as regras do espaço
+        const { values: bodyParams, names: bodyParamNames } = buildParamsArray(paramsMap, paramsOrder);
+        console.log(`[REMINDERS] Body params: ${JSON.stringify(bodyParams)}`);
 
-Em caso de dúvidas, entre em contato com a administração.
+        sendResult = await sendMetaTemplate({
+          phone: resident.phone,
+          templateName: wabaTemplateName,
+          language: wabaLanguage,
+          bodyParams,
+          bodyParamNames,
+        });
 
-Boa festa! 🎊`;
-      }
-
-      try {
-        const result = await provider.sendMessage(
-          whatsappConfig as WhatsAppConfig,
-          resident.phone,
-          message
-        );
-
-        if (result.error) {
-          console.error(`Error sending notification for booking ${booking.id}:`, result.error);
-          results.push({ bookingId: booking.id, success: false, error: result.error });
+        // Log to whatsapp_notification_logs
+        await supabase.from("whatsapp_notification_logs").insert({
+          function_name: "notify-party-hall-reminders",
+          phone: resident.phone,
+          template_name: wabaTemplateName,
+          template_language: wabaLanguage,
+          success: sendResult.success,
+          message_id: sendResult.messageId || null,
+          error_message: sendResult.error || null,
+          request_payload: { paramsMap, bodyParams, bodyParamNames },
+          response_status: sendResult.success ? 200 : 500,
+          condominium_id: condo.id,
+        });
+      } else if (useOfficialApi) {
+        // Direct text via Meta (requires 24h window - may fail)
+        console.log(`[REMINDERS] Sending direct text via Meta for booking ${booking.id}`);
+        
+        let message: string;
+        if (templateContent) {
+          message = templateContent
+            .replace("{condominio}", condo.name)
+            .replace("{nome}", resident.full_name.split(" ")[0])
+            .replace("{espaco}", hallSetting.name)
+            .replace("{data}", formattedDate)
+            .replace("{horario_inicio}", booking.start_time.slice(0, 5))
+            .replace("{horario_fim}", booking.end_time.slice(0, 5))
+            .replace("{checklist}", checklistText);
         } else {
-          // Update booking with notification timestamp
-          await supabase
-            .from("party_hall_bookings")
-            .update({ notification_sent_at: new Date().toISOString() })
-            .eq("id", booking.id);
-
-          console.log(`Notification sent for booking ${booking.id}`);
-          results.push({ bookingId: booking.id, success: true });
+          message = `🎉 LEMBRETE DE RESERVA - ${condo.name}\n\nOlá, ${resident.full_name.split(" ")[0]}!\n\nSua reserva do ${hallSetting.name} está confirmada para AMANHÃ:\nData: ${formattedDate}\nHorário: ${booking.start_time.slice(0, 5)} às ${booking.end_time.slice(0, 5)}${checklistText}\n\nBoa festa!`;
         }
-      } catch (sendError: any) {
-        console.error(`Error processing booking ${booking.id}:`, sendError);
-        results.push({ bookingId: booking.id, success: false, error: sendError.message });
+
+        const accessToken = Deno.env.get("META_WHATSAPP_ACCESS_TOKEN")!;
+        const phoneNumberId = Deno.env.get("META_WHATSAPP_PHONE_ID")!;
+        const formattedPhone = formatPhoneForWaba(resident.phone);
+
+        try {
+          const response = await fetch(`https://graph.facebook.com/v21.0/${phoneNumberId}/messages`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({
+              messaging_product: "whatsapp",
+              to: formattedPhone,
+              type: "text",
+              text: { body: message },
+            }),
+          });
+
+          const responseData = await response.json();
+          if (response.ok) {
+            sendResult = { success: true, messageId: responseData?.messages?.[0]?.id };
+          } else {
+            sendResult = { success: false, error: responseData?.error?.message || "Erro Meta API" };
+          }
+        } catch (err: any) {
+          sendResult = { success: false, error: err.message };
+        }
+      } else {
+        // Legacy provider - skip if not configured
+        console.log(`[REMINDERS] No official API configured, skipping booking ${booking.id}`);
+        sendResult = { success: false, error: "Meta API não configurada para envio automático" };
       }
 
-      // Small delay between messages to avoid rate limiting
+      if (sendResult.success) {
+        await supabase
+          .from("party_hall_bookings")
+          .update({ notification_sent_at: new Date().toISOString() })
+          .eq("id", booking.id);
+        console.log(`Notification sent for booking ${booking.id}`);
+        results.push({ bookingId: booking.id, success: true });
+      } else {
+        console.error(`Error for booking ${booking.id}:`, sendResult.error);
+        results.push({ bookingId: booking.id, success: false, error: sendResult.error });
+      }
+
+      // Rate limit delay
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
 
     const successCount = results.filter((r) => r.success).length;
     const failureCount = results.filter((r) => !r.success).length;
-
     console.log(`Notifications completed: ${successCount} sent, ${failureCount} failed`);
 
-    // Update log entry
     if (logId) {
-      await supabase
-        .from("edge_function_logs")
-        .update({
-          status: failureCount > 0 && successCount === 0 ? "error" : "completed",
-          ended_at: new Date().toISOString(),
-          duration_ms: Date.now() - startTime,
-          result: {
-            date: tomorrowStr,
-            total: bookings.length,
-            sent: successCount,
-            failed: failureCount,
-            details: results,
-          },
-        })
-        .eq("id", logId);
+      await supabase.from("edge_function_logs").update({
+        status: failureCount > 0 && successCount === 0 ? "error" : "completed",
+        ended_at: new Date().toISOString(),
+        duration_ms: Date.now() - startTime,
+        result: {
+          date: tomorrowStr,
+          total: bookings.length,
+          sent: successCount,
+          failed: failureCount,
+          details: results,
+        },
+      }).eq("id", logId);
     }
 
     return new Response(
@@ -483,21 +350,16 @@ Boa festa! 🎊`;
   } catch (error: any) {
     console.error("Error in notify-party-hall-reminders:", error);
 
-    // Update log entry with error
     if (logId) {
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-      await supabase
-        .from("edge_function_logs")
-        .update({
-          status: "error",
-          ended_at: new Date().toISOString(),
-          duration_ms: Date.now() - startTime,
-          error_message: error.message,
-        })
-        .eq("id", logId);
+      await supabase.from("edge_function_logs").update({
+        status: "error",
+        ended_at: new Date().toISOString(),
+        duration_ms: Date.now() - startTime,
+        error_message: error.message,
+      }).eq("id", logId);
     }
 
     return new Response(
