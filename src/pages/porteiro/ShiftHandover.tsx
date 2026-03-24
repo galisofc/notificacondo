@@ -155,7 +155,7 @@ export default function ShiftHandover() {
 
   // Fetch history
   const { data: history = [], isLoading: loadingHistory } = useQuery({
-    queryKey: ["shift-handovers", selectedCondominium],
+    queryKey: ["shift-handovers", selectedCondominium, porterName],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("shift_handovers")
@@ -175,6 +175,11 @@ export default function ShiftHandover() {
 
       const profileMap: Record<string, string> = {};
       (profilesData || []).forEach((p) => { profileMap[p.user_id] = p.full_name; });
+
+      // Also add current user's name from porterName state
+      if (user && porterName) {
+        profileMap[user.id] = porterName;
+      }
 
       return data.map((h) => ({
         ...h,
