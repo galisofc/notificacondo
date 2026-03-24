@@ -162,6 +162,53 @@ export type Database = {
           },
         ]
       }
+      condominium_banners: {
+        Row: {
+          bg_color: string
+          condominium_id: string
+          content: string
+          created_at: string
+          display_order: number
+          id: string
+          is_active: boolean
+          text_color: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          bg_color?: string
+          condominium_id: string
+          content: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          text_color?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          bg_color?: string
+          condominium_id?: string
+          content?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          text_color?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "condominium_banners_condominium_id_fkey"
+            columns: ["condominium_id"]
+            isOneToOne: false
+            referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       condominium_transfers: {
         Row: {
           condominium_id: string
