@@ -479,3 +479,42 @@ export default function PorteiroDashboard() {
     </DashboardLayout>);
 
 }
+
+function CondominiumBanners({ condominiumIds }: { condominiumIds: string[] }) {
+  const { data: banners = [] } = useQuery({
+    queryKey: ["porteiro-banners", condominiumIds],
+    queryFn: async () => {
+      if (condominiumIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("condominium_banners")
+        .select("*")
+        .in("condominium_id", condominiumIds)
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: condominiumIds.length > 0,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  if (banners.length === 0) return null;
+
+  return (
+    <div className="space-y-2">
+      {banners.map((banner: any) => (
+        <div
+          key={banner.id}
+          className="rounded-lg p-4 flex items-start gap-3"
+          style={{ backgroundColor: banner.bg_color, color: banner.text_color }}
+        >
+          <Megaphone className="w-5 h-5 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold text-sm">{banner.title}</p>
+            <p className="text-sm mt-0.5 whitespace-pre-line">{banner.content}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
