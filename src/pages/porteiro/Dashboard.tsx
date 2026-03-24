@@ -240,6 +240,9 @@ export default function PorteiroDashboard() {
           </Button>
         </div>
 
+        {/* Banners do Condomínio */}
+        <CondominiumBanners condominiumIds={condominiumIds} />
+
         {/* Period Filter */}
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm text-muted-foreground">Período:</span>
