@@ -583,3 +583,117 @@ function CondominiumBanners({ condominiumIds }: { condominiumIds: string[] }) {
     </div>
   );
 }
+
+function PorterMessageBook({ condominiumIds }: { condominiumIds: string[] }) {
+  const [newMessage, setNewMessage] = useState("");
+  const { profileInfo } = useUserRole();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const { data: messages = [], isLoading } = useQuery({
+    queryKey: ["porter-messages", condominiumIds],
+    queryFn: async () => {
+      if (condominiumIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("porter_messages")
+        .select("*")
+        .in("condominium_id", condominiumIds)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: condominiumIds.length > 0,
+    staleTime: 1000 * 60 * 2,
+  });
+
+  const sendMutation = useMutation({
+    mutationFn: async () => {
+      if (!user || !newMessage.trim() || condominiumIds.length === 0) return;
+      const { error } = await supabase.from("porter_messages").insert({
+        condominium_id: condominiumIds[0],
+        author_id: user.id,
+        author_name: profileInfo?.full_name || "Porteiro",
+        content: newMessage.trim(),
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setNewMessage("");
+      queryClient.invalidateQueries({ queryKey: ["porter-messages", condominiumIds] });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("porter_messages").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["porter-messages", condominiumIds] });
+    },
+  });
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg flex items-center gap-2">
+          <BookOpen className="w-5 h-5 text-primary" />
+          Livro de Recados
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Input */}
+        <div className="flex gap-2">
+          <Textarea
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="Deixe um recado para o próximo plantão..."
+            rows={2}
+            className="resize-none"
+            maxLength={500}
+          />
+          <Button
+            size="icon"
+            className="shrink-0 self-end h-10 w-10"
+            disabled={!newMessage.trim() || sendMutation.isPending}
+            onClick={() => sendMutation.mutate()}
+          >
+            <Send className="w-4 h-4" />
+          </Button>
+        </div>
+
+        {/* Messages */}
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground text-center py-4">Carregando...</p>
+        ) : messages.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">Nenhum recado registrado.</p>
+        ) : (
+          <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+            {messages.map((msg: any) => (
+              <div key={msg.id} className="rounded-lg bg-muted/50 p-3 relative group">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold text-primary">{msg.author_name}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      {format(new Date(msg.created_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
+                    </span>
+                    {user && msg.author_id === user.id && (
+                      <button
+                        onClick={() => deleteMutation.mutate(msg.id)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive/80"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <p className="text-sm text-foreground mt-1 whitespace-pre-line">{msg.content}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
