@@ -426,9 +426,6 @@ export function TemplateEditor({ template, onClose }: TemplateEditorProps) {
             {showPreview ? <EyeOff className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
             <span className="hidden sm:inline">{showPreview ? "Ocultar" : "Preview"}</span>
           </Button>
-          <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 sm:h-9 sm:w-9">
-            <X className="h-4 w-4 sm:h-5 sm:w-5" />
-          </Button>
         </div>
       </div>
 
