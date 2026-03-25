@@ -19,7 +19,9 @@ import {
   ArrowLeft,
   ArrowRight,
   Crown,
-  Star
+  Star,
+  DoorOpen,
+  Wrench
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -91,7 +93,7 @@ const featureCategories = [
     icon: Scale,
     features: [
       { name: "Registro de ocorrências", description: "Cadastre todas as ocorrências do condomínio", all: true },
-      { name: "Notificações automáticas via WhatsApp", description: "Envio automático para moradores", all: true },
+      { name: "Notificações automáticas via WhatsApp WABA", description: "Envio via API oficial da Meta", all: true },
       { name: "Sistema de defesa online", description: "Moradores podem enviar defesas pelo sistema", all: true },
       { name: "Prova jurídica automática", description: "Comprovante de entrega com validade legal", all: true },
       { name: "Análise de defesa por IA", description: "Sugestões inteligentes para decisões", plans: ["profissional", "enterprise"] },
@@ -102,9 +104,9 @@ const featureCategories = [
     name: "Módulo de Encomendas",
     icon: Package,
     features: [
-      { name: "Registro de encomendas", description: "Cadastro rápido com foto", all: true },
-      { name: "Notificação de chegada", description: "Morador é avisado automaticamente", all: true },
-      { name: "Código de retirada", description: "Sistema seguro de confirmação", all: true },
+      { name: "Registro de encomendas", description: "Cadastro rápido com foto obrigatória", all: true },
+      { name: "Notificação de chegada", description: "Morador é avisado automaticamente via WhatsApp", all: true },
+      { name: "Código de retirada", description: "Sistema seguro de confirmação com 6 dígitos", all: true },
       { name: "Histórico completo", description: "Rastreamento de todas as encomendas", all: true },
       { name: "Múltiplos porteiros", description: "Cadastre porteiros ilimitados", plans: ["essencial", "profissional", "enterprise"] },
     ]
@@ -114,17 +116,40 @@ const featureCategories = [
     icon: PartyPopper,
     features: [
       { name: "Agenda de reservas", description: "Calendário visual de reservas", all: true },
-      { name: "Checklist de entrada/saída", description: "Verificação de itens do salão", all: true },
-      { name: "Notificações de lembrete", description: "Avisos automáticos das reservas", all: true },
+      { name: "Checklist de entrada/saída", description: "Verificação de itens com fotos", all: true },
+      { name: "Notificações de lembrete", description: "Avisos automáticos via WhatsApp", all: true },
       { name: "Regras personalizadas", description: "Configure regras do seu condomínio", all: true },
       { name: "Múltiplos espaços", description: "Gerencie vários espaços de festas", plans: ["profissional", "enterprise"] },
+    ]
+  },
+  {
+    name: "Módulo Portaria",
+    icon: DoorOpen,
+    features: [
+      { name: "Passagem de plantão", description: "Registro detalhado de troca de turno", all: true },
+      { name: "Livro de recados", description: "Comunicação entre porteiros estilo chat", all: true },
+      { name: "Banners informativos", description: "Avisos rotativos por condomínio", all: true },
+      { name: "Ocorrências da portaria", description: "Registro de incidentes com bloco/apto", all: true },
+      { name: "Checklist de ronda", description: "Itens configuráveis por turno", all: true },
+      { name: "Gestão de porteiros", description: "Cadastro com senha individual", all: true },
+    ]
+  },
+  {
+    name: "Módulo Manutenção",
+    icon: Wrench,
+    features: [
+      { name: "Dashboard de manutenções", description: "Visão geral de chamados", all: true },
+      { name: "Categorias personalizáveis", description: "Tipos de manutenção customizáveis", all: true },
+      { name: "Atribuição a zeladores", description: "Distribuição de tarefas com notificação", all: true },
+      { name: "Manutenção preventiva", description: "Agendamento periódico com alertas", all: true },
+      { name: "Histórico completo", description: "Registro com fotos, custos e observações", all: true },
     ]
   },
   {
     name: "Recursos Gerais",
     icon: Zap,
     features: [
-      { name: "Integração WhatsApp", description: "Mensagens automáticas via WhatsApp", all: true },
+      { name: "WhatsApp WABA oficial", description: "API oficial da Meta para envio confiável", all: true },
       { name: "Conformidade LGPD", description: "Dados protegidos conforme a lei", all: true },
       { name: "Suporte por email", description: "Atendimento via email", all: true },
       { name: "Suporte prioritário", description: "Atendimento preferencial", plans: ["profissional", "enterprise"] },
@@ -257,7 +282,7 @@ const Plans = () => {
               <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
                 <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/30">
                   <Scale className="w-4 h-4 text-amber-500" />
-                  <span className="text-sm font-medium text-amber-600 dark:text-amber-400">Ocorrências & Multas</span>
+                  <span className="text-sm font-medium text-amber-600 dark:text-amber-400">Ocorrências</span>
                 </div>
                 <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/30">
                   <Package className="w-4 h-4 text-blue-500" />
@@ -266,6 +291,14 @@ const Plans = () => {
                 <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/10 border border-purple-500/30">
                   <PartyPopper className="w-4 h-4 text-purple-500" />
                   <span className="text-sm font-medium text-purple-600 dark:text-purple-400">Salão de Festas</span>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/30">
+                  <DoorOpen className="w-4 h-4 text-emerald-500" />
+                  <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Portaria</span>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-orange-500/10 border border-orange-500/30">
+                  <Wrench className="w-4 h-4 text-orange-500" />
+                  <span className="text-sm font-medium text-orange-600 dark:text-orange-400">Manutenção</span>
                 </div>
               </div>
             </div>
@@ -384,11 +417,11 @@ const Plans = () => {
                           <div className="space-y-2 mb-6">
                             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20">
                               <Check className="w-4 h-4 text-primary" />
-                              <span className="text-xs text-primary font-medium">4 módulos inclusos</span>
+                              <span className="text-xs text-primary font-medium">5 módulos inclusos</span>
                             </div>
                             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20">
                               <MessageCircle className="w-4 h-4 text-green-500" />
-                              <span className="text-xs text-green-600 dark:text-green-400 font-medium">Integração WhatsApp</span>
+                              <span className="text-xs text-green-600 dark:text-green-400 font-medium">WhatsApp WABA oficial</span>
                             </div>
                           </div>
 
@@ -433,11 +466,13 @@ const Plans = () => {
             </motion.div>
 
             <Tabs defaultValue="all" className="max-w-6xl mx-auto">
-              <TabsList className="grid grid-cols-2 md:grid-cols-5 w-full mb-8">
+              <TabsList className="grid grid-cols-3 md:grid-cols-7 w-full mb-8">
                 <TabsTrigger value="all">Todos</TabsTrigger>
                 <TabsTrigger value="ocorrencias">Ocorrências</TabsTrigger>
                 <TabsTrigger value="encomendas">Encomendas</TabsTrigger>
                 <TabsTrigger value="salao">Salão</TabsTrigger>
+                <TabsTrigger value="portaria">Portaria</TabsTrigger>
+                <TabsTrigger value="manutencao">Manutenção</TabsTrigger>
                 <TabsTrigger value="geral">Geral</TabsTrigger>
               </TabsList>
 
@@ -459,8 +494,16 @@ const Plans = () => {
                 <FeatureCategoryTable category={featureCategories[2]} plans={plans || []} hasFeature={hasFeature} index={0} />
               </TabsContent>
 
-              <TabsContent value="geral">
+              <TabsContent value="portaria">
                 <FeatureCategoryTable category={featureCategories[3]} plans={plans || []} hasFeature={hasFeature} index={0} />
+              </TabsContent>
+
+              <TabsContent value="manutencao">
+                <FeatureCategoryTable category={featureCategories[4]} plans={plans || []} hasFeature={hasFeature} index={0} />
+              </TabsContent>
+
+              <TabsContent value="geral">
+                <FeatureCategoryTable category={featureCategories[5]} plans={plans || []} hasFeature={hasFeature} index={0} />
               </TabsContent>
             </Tabs>
           </section>
