@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { META_API_VERSION } from "@/lib/whatsappConstants";
 import { useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
