@@ -1,20 +1,27 @@
 
 
-## Plano: Simular Webhook para LEANDRO GALIS
+## Problema: Painel BSUIDs não mostra dados
 
-### Objetivo
-Enviar um POST simulado ao webhook `whatsapp-webhook` com o `recipient_id: 5511982731247` (telefone do LEANDRO GALIS) para capturar o BSUID dele corretamente.
+### Causa raiz
+A tabela `residents` não possui uma política RLS para `super_admin`. As políticas existentes só permitem acesso a:
+- Donos de condomínio (síndicos)
+- Porteiros de condomínios atribuídos
+- O próprio morador
 
-### Ação
-Executar um `curl` para a edge function com o payload Meta contendo:
-- `recipient_id`: `5511982731247`
-- `user_id` (BSUID): `BR.98765432109876543210`
-- `status`: `delivered`
-- `id` (wamid): `wamid.test_leandro_001`
+Quando o super admin acessa o painel, a query retorna 0 linhas porque nenhuma policy permite o SELECT.
 
-### Verificação
-Após o POST, consultar a tabela `residents` para confirmar que o campo `bsuid` do LEANDRO GALIS foi atualizado.
+### Solução
+
+**Migração SQL** — Adicionar política RLS para super_admin na tabela `residents`:
+
+```sql
+CREATE POLICY "Super admins can view all residents"
+ON public.residents
+FOR SELECT
+TO authenticated
+USING (has_role(auth.uid(), 'super_admin'::app_role));
+```
 
 ### Arquivos
-Nenhuma alteração de código — apenas execução de teste via curl + query SQL.
+- Apenas migração SQL (nenhuma alteração de código no frontend)
 
