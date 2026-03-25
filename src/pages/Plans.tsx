@@ -466,11 +466,13 @@ const Plans = () => {
             </motion.div>
 
             <Tabs defaultValue="all" className="max-w-6xl mx-auto">
-              <TabsList className="grid grid-cols-2 md:grid-cols-5 w-full mb-8">
+              <TabsList className="grid grid-cols-3 md:grid-cols-7 w-full mb-8">
                 <TabsTrigger value="all">Todos</TabsTrigger>
                 <TabsTrigger value="ocorrencias">Ocorrências</TabsTrigger>
                 <TabsTrigger value="encomendas">Encomendas</TabsTrigger>
                 <TabsTrigger value="salao">Salão</TabsTrigger>
+                <TabsTrigger value="portaria">Portaria</TabsTrigger>
+                <TabsTrigger value="manutencao">Manutenção</TabsTrigger>
                 <TabsTrigger value="geral">Geral</TabsTrigger>
               </TabsList>
 
@@ -492,8 +494,16 @@ const Plans = () => {
                 <FeatureCategoryTable category={featureCategories[2]} plans={plans || []} hasFeature={hasFeature} index={0} />
               </TabsContent>
 
-              <TabsContent value="geral">
+              <TabsContent value="portaria">
                 <FeatureCategoryTable category={featureCategories[3]} plans={plans || []} hasFeature={hasFeature} index={0} />
+              </TabsContent>
+
+              <TabsContent value="manutencao">
+                <FeatureCategoryTable category={featureCategories[4]} plans={plans || []} hasFeature={hasFeature} index={0} />
+              </TabsContent>
+
+              <TabsContent value="geral">
+                <FeatureCategoryTable category={featureCategories[5]} plans={plans || []} hasFeature={hasFeature} index={0} />
               </TabsContent>
             </Tabs>
           </section>
