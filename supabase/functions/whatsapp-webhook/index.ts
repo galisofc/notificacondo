@@ -14,11 +14,17 @@ interface MetaWebhookEntry {
         display_phone_number: string;
         phone_number_id: string;
       };
+      contacts?: Array<{
+        profile?: { name?: string };
+        wa_id?: string;
+        user_id?: string;
+      }>;
       statuses?: Array<{
         id: string;
         status: string;
         timestamp: string;
-        recipient_id: string;
+        recipient_id?: string;
+        recipient_user_id?: string;
         user_id?: string;
         errors?: Array<{
           code: number;
