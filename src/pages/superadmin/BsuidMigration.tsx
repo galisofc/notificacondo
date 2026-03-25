@@ -23,6 +23,8 @@ const BsuidMigration = () => {
   const [filter, setFilter] = useState<"all" | "with" | "without">("all");
   const [page, setPage] = useState(0);
   const [selectedPayload, setSelectedPayload] = useState<any>(null);
+  const [logsPage, setLogsPage] = useState(0);
+  const LOGS_PAGE_SIZE = 10;
 
   // Stats query
   const { data: stats } = useQuery({
