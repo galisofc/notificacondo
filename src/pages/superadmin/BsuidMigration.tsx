@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Users, CheckCircle2, Clock, Search, ChevronLeft, ChevronRight, Activity, RefreshCw, Eye, Webhook } from "lucide-react";
+import { Users, CheckCircle2, Clock, Search, ChevronLeft, ChevronRight, RefreshCw, Eye, Webhook } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
