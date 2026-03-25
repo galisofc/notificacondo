@@ -71,20 +71,6 @@ const BsuidMigration = () => {
     staleTime: 15000,
   });
 
-  // Webhook logs query
-  const { data: webhookLogs, isLoading: logsLoading, refetch: refetchLogs } = useQuery({
-    queryKey: ["bsuid-webhook-logs"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("whatsapp_notification_logs")
-        .select("id, created_at, phone, template_name, success, error_message, message_id, function_name")
-        .order("created_at", { ascending: false })
-        .limit(20);
-      if (error) throw error;
-      return data || [];
-    },
-    staleTime: 15000,
-  });
 
   // Raw webhook payloads query
   const { data: rawLogs, isLoading: rawLogsLoading, refetch: refetchRawLogs } = useQuery({
