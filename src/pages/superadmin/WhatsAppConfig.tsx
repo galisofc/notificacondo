@@ -345,7 +345,7 @@ export default function WhatsAppConfig() {
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Versão da API</p>
                     <Badge className="text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20">
-                      v25.0
+                      {META_API_VERSION}
                     </Badge>
                   </div>
                 </div>
