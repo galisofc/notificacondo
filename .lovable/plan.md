@@ -1,15 +1,23 @@
 
 
-## Plano: Limpar BSUIDs de teste
+## Plano: Log Visual de Webhooks no Painel BSUIDs
 
-### Ação
-Executar UPDATE na tabela `residents` para definir `bsuid = NULL` nos registros de LEANDRO GALIS e ROSIANE, removendo os BSUIDs simulados para que sejam preenchidos com valores reais após 31/03.
+### Objetivo
+Adicionar uma seção abaixo da tabela de moradores mostrando os últimos webhooks recebidos (da tabela `whatsapp_notification_logs`), com timestamp, telefone, status (sucesso/erro), template usado e message_id. Isso facilita o diagnóstico de problemas de captura de BSUID.
 
-### SQL
-```sql
-UPDATE residents SET bsuid = NULL WHERE full_name ILIKE '%leandro galis%' OR full_name ILIKE '%rosiane%';
-```
+### Mudanças
+
+#### 1. Atualizar `src/pages/superadmin/BsuidMigration.tsx`
+- Adicionar nova query para buscar os últimos 20 registros de `whatsapp_notification_logs` ordenados por `created_at` desc
+- Renderizar uma nova seção "Últimos Webhooks" abaixo da paginação com:
+  - Tabela compacta: Data/Hora, Telefone, Template, Status (badge verde/vermelho), Message ID, Erro (se houver)
+  - Importar ícones `Activity` e `AlertCircle`
+  - Usar `formatDistanceToNow` do date-fns para timestamps relativos
+- Adicionar botão de refresh para recarregar os logs
+
+### Dados consultados
+Query na tabela `whatsapp_notification_logs` com campos: `created_at`, `phone`, `template_name`, `success`, `error_message`, `message_id`, `function_name` — limitado a 20 registros mais recentes.
 
 ### Arquivos
-Nenhuma alteração de código — apenas operação de dados via insert tool.
+- `src/pages/superadmin/BsuidMigration.tsx` (atualizar)
 
