@@ -8,7 +8,7 @@
  * BSUIDs: https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids
  */
 
-const META_API_VERSION = "v20.0";
+const META_API_VERSION = "v25.0";
 const META_API_BASE_URL = `https://graph.facebook.com/${META_API_VERSION}`;
 
 // ============= Types =============
