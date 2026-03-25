@@ -312,7 +312,7 @@ export default function WhatsAppConfig() {
             {/* Connection Info */}
             {connectionInfo && testResult === "success" && (
               <div className="rounded-lg border bg-green-500/5 border-green-500/20 p-4">
-                <div className="grid gap-4 sm:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-4">
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Empresa</p>
                     <p className="text-sm font-medium text-green-600 dark:text-green-400">
@@ -339,6 +339,12 @@ export default function WhatsAppConfig() {
                       }`}
                     >
                       {connectionInfo.qualityRating || "—"}
+                    </Badge>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Versão da API</p>
+                    <Badge className="text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20">
+                      v25.0
                     </Badge>
                   </div>
                 </div>
