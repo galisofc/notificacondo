@@ -1,27 +1,15 @@
 
 
-## Problema: Painel BSUIDs não mostra dados
+## Plano: Limpar BSUIDs de teste
 
-### Causa raiz
-A tabela `residents` não possui uma política RLS para `super_admin`. As políticas existentes só permitem acesso a:
-- Donos de condomínio (síndicos)
-- Porteiros de condomínios atribuídos
-- O próprio morador
+### Ação
+Executar UPDATE na tabela `residents` para definir `bsuid = NULL` nos registros de LEANDRO GALIS e ROSIANE, removendo os BSUIDs simulados para que sejam preenchidos com valores reais após 31/03.
 
-Quando o super admin acessa o painel, a query retorna 0 linhas porque nenhuma policy permite o SELECT.
-
-### Solução
-
-**Migração SQL** — Adicionar política RLS para super_admin na tabela `residents`:
-
+### SQL
 ```sql
-CREATE POLICY "Super admins can view all residents"
-ON public.residents
-FOR SELECT
-TO authenticated
-USING (has_role(auth.uid(), 'super_admin'::app_role));
+UPDATE residents SET bsuid = NULL WHERE full_name ILIKE '%leandro galis%' OR full_name ILIKE '%rosiane%';
 ```
 
 ### Arquivos
-- Apenas migração SQL (nenhuma alteração de código no frontend)
+Nenhuma alteração de código — apenas operação de dados via insert tool.
 
