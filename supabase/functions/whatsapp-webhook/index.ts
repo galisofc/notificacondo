@@ -5,16 +5,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-/**
- * Meta WhatsApp Cloud API Webhook
- * 
- * Processes status updates from Meta's official WhatsApp Cloud API.
- * Format: https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/components
- * 
- * Also captures Business-Scoped User IDs (BSUIDs) when present.
- * Ref: https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids
- */
-
 interface MetaWebhookEntry {
   id: string;
   changes: Array<{
@@ -25,11 +15,11 @@ interface MetaWebhookEntry {
         phone_number_id: string;
       };
       statuses?: Array<{
-        id: string;              // wamid - the message ID
-        status: string;          // sent, delivered, read, failed
+        id: string;
+        status: string;
         timestamp: string;
-        recipient_id: string;    // phone number of recipient
-        user_id?: string;        // BSUID (new field from March 2026)
+        recipient_id: string;
+        user_id?: string;
         errors?: Array<{
           code: number;
           title: string;
@@ -57,19 +47,15 @@ interface MetaWebhookPayload {
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Handle Meta webhook verification (GET request)
   if (req.method === "GET") {
     const url = new URL(req.url);
     const mode = url.searchParams.get("hub.mode");
-    const token = url.searchParams.get("hub.verify_token");
     const challenge = url.searchParams.get("hub.challenge");
 
-    // For now accept any verify token - you can configure a specific one via secrets
     if (mode === "subscribe" && challenge) {
       console.log("[WEBHOOK] Verification request accepted");
       return new Response(challenge, {
@@ -89,6 +75,15 @@ Deno.serve(async (req) => {
     const payload: MetaWebhookPayload = await req.json();
     console.log("[WEBHOOK] Received:", JSON.stringify(payload).substring(0, 500));
 
+    // Save raw payload
+    const { data: rawLog } = await supabase
+      .from("webhook_raw_logs")
+      .insert({ payload, source: "meta" })
+      .select("id")
+      .single();
+
+    const rawLogId = rawLog?.id;
+
     if (payload.object !== "whatsapp_business_account") {
       console.log("[WEBHOOK] Ignoring non-WhatsApp payload:", payload.object);
       return new Response(
@@ -99,12 +94,14 @@ Deno.serve(async (req) => {
 
     let totalUpdated = 0;
     let totalBsuidsCapured = 0;
+    let totalStatuses = 0;
 
     for (const entry of payload.entry) {
       for (const change of entry.changes) {
         if (change.field !== "messages") continue;
 
         const statuses = change.value.statuses || [];
+        totalStatuses += statuses.length;
 
         for (const status of statuses) {
           const messageId = status.id;
@@ -114,7 +111,6 @@ Deno.serve(async (req) => {
 
           console.log(`[WEBHOOK] Status: ${status.status} -> ${normalizedStatus} | msgId: ${messageId} | phone: ${recipientPhone} | bsuid: ${bsuid || "none"}`);
 
-          // Set timestamps based on status
           const now = new Date().toISOString();
           const updateData: Record<string, unknown> = {
             zpro_status: normalizedStatus,
@@ -127,7 +123,6 @@ Deno.serve(async (req) => {
             updateData.delivered_at = now;
           }
 
-          // Update notification record by message ID
           const { data, error } = await supabase
             .from("notifications_sent")
             .update(updateData)
@@ -140,7 +135,6 @@ Deno.serve(async (req) => {
             totalUpdated += data?.length || 0;
           }
 
-          // Also try to update whatsapp_notification_logs if exists
           await supabase
             .from("whatsapp_notification_logs")
             .update({ status: normalizedStatus })
@@ -149,14 +143,11 @@ Deno.serve(async (req) => {
           // Capture BSUID if present
           if (bsuid && recipientPhone) {
             const cleanPhone = recipientPhone.replace(/\D/g, "");
-            
-            // Try matching with different phone formats
             const phoneVariants = [cleanPhone];
             if (cleanPhone.startsWith("55")) {
-              phoneVariants.push(cleanPhone.substring(2)); // without country code
+              phoneVariants.push(cleanPhone.substring(2));
             }
-            
-            // Find resident by phone and save BSUID
+
             for (const phoneVar of phoneVariants) {
               const { data: residents, error: findError } = await supabase
                 .from("residents")
@@ -177,17 +168,28 @@ Deno.serve(async (req) => {
                     console.log(`[WEBHOOK] BSUID captured for resident ${resident.id}: ${bsuid}`);
                   }
                 }
-                break; // Found matches, no need to try other variants
+                break;
               }
             }
           }
 
-          // Log errors from Meta
           if (status.errors && status.errors.length > 0) {
             console.error(`[WEBHOOK] Message errors for ${messageId}:`, JSON.stringify(status.errors));
           }
         }
       }
+    }
+
+    // Update raw log with counters
+    if (rawLogId) {
+      await supabase
+        .from("webhook_raw_logs")
+        .update({
+          statuses_count: totalStatuses,
+          bsuids_captured: totalBsuidsCapured,
+          notifications_updated: totalUpdated,
+        })
+        .eq("id", rawLogId);
     }
 
     console.log(`[WEBHOOK] Processing complete: ${totalUpdated} notifications updated, ${totalBsuidsCapured} BSUIDs captured`);
