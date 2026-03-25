@@ -76,13 +76,15 @@ const BsuidMigration = () => {
 
   // Raw webhook payloads query
   const { data: rawLogs, isLoading: rawLogsLoading, refetch: refetchRawLogs } = useQuery({
-    queryKey: ["bsuid-raw-logs"],
+    queryKey: ["bsuid-raw-logs", logsPage],
     queryFn: async () => {
+      const from = logsPage * LOGS_PAGE_SIZE;
+      const to = from + LOGS_PAGE_SIZE - 1;
       const { data, error } = await supabase
         .from("webhook_raw_logs")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(20);
+        .range(from, to);
       if (error) throw error;
       return data || [];
     },
