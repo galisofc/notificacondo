@@ -237,6 +237,64 @@ const BsuidMigration = () => {
           </div>
         </div>
       </div>
+
+        {/* Webhook Logs */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-muted-foreground" />
+              <CardTitle className="text-base">Últimos Webhooks WhatsApp</CardTitle>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => refetchLogs()}>
+              <RefreshCw className="h-4 w-4 mr-1" /> Atualizar
+            </Button>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Quando</TableHead>
+                  <TableHead>Telefone</TableHead>
+                  <TableHead className="hidden md:table-cell">Template</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="hidden lg:table-cell">Message ID</TableHead>
+                  <TableHead className="hidden lg:table-cell">Erro</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {logsLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">Carregando...</TableCell>
+                  </TableRow>
+                ) : !webhookLogs?.length ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">Nenhum log encontrado.</TableCell>
+                  </TableRow>
+                ) : (
+                  webhookLogs.map((log: any) => (
+                    <TableRow key={log.id}>
+                      <TableCell className="text-xs whitespace-nowrap">
+                        {formatDistanceToNow(new Date(log.created_at), { addSuffix: true, locale: ptBR })}
+                      </TableCell>
+                      <TableCell className="text-sm font-mono">{log.phone || "—"}</TableCell>
+                      <TableCell className="hidden md:table-cell text-xs">{log.template_name || "—"}</TableCell>
+                      <TableCell>
+                        {log.success ? (
+                          <Badge variant="default" className="bg-green-600 text-xs">Sucesso</Badge>
+                        ) : (
+                          <Badge variant="destructive" className="text-xs">Erro</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell text-xs font-mono truncate max-w-[200px]">{log.message_id || "—"}</TableCell>
+                      <TableCell className="hidden lg:table-cell text-xs text-destructive truncate max-w-[200px]">{log.error_message || "—"}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
     </DashboardLayout>
   );
 };
