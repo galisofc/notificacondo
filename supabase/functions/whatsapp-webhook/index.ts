@@ -109,11 +109,15 @@ Deno.serve(async (req) => {
         const statuses = change.value.statuses || [];
         totalStatuses += statuses.length;
 
+        const contacts = change.value.contacts || [];
+        const contactBsuid = contacts.length > 0 ? contacts[0].user_id : null;
+        const contactWaId = contacts.length > 0 ? contacts[0].wa_id : null;
+
         for (const status of statuses) {
           const messageId = status.id;
           const normalizedStatus = normalizeMetaStatus(status.status);
-          const recipientPhone = status.recipient_id;
-          const bsuid = status.user_id;
+          const recipientPhone = status.recipient_id || contactWaId;
+          const bsuid = status.user_id || status.recipient_user_id || contactBsuid;
 
           console.log(`[WEBHOOK] Status: ${status.status} -> ${normalizedStatus} | msgId: ${messageId} | phone: ${recipientPhone} | bsuid: ${bsuid || "none"}`);
 
