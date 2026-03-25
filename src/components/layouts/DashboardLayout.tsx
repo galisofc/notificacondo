@@ -110,6 +110,7 @@ const getBaseSuperAdminNavItems = (): NavStructure => [
     icon: MessageCircle,
     items: [
       { title: "Templates", url: "/superadmin/whatsapp", icon: BarChart3 },
+      { title: "BSUIDs", url: "/superadmin/bsuid-migration", icon: Users },
       { title: "Configurações", url: "/superadmin/whatsapp/config", icon: Cog },
     ],
   },
