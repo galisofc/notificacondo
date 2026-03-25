@@ -587,6 +587,14 @@ const App = () => (
                 }
               />
               <Route
+                path="/superadmin/bsuid-migration"
+                element={
+                  <ProtectedRoute requiredRole="super_admin">
+                    <BsuidMigration />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/superadmin/cron-jobs"
                 element={
                   <ProtectedRoute requiredRole="super_admin">
