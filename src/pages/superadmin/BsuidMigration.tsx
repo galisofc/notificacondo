@@ -23,6 +23,8 @@ const BsuidMigration = () => {
   const [filter, setFilter] = useState<"all" | "with" | "without">("all");
   const [page, setPage] = useState(0);
   const [selectedPayload, setSelectedPayload] = useState<any>(null);
+  const [logsPage, setLogsPage] = useState(0);
+  const LOGS_PAGE_SIZE = 10;
 
   // Stats query
   const { data: stats } = useQuery({
@@ -74,13 +76,15 @@ const BsuidMigration = () => {
 
   // Raw webhook payloads query
   const { data: rawLogs, isLoading: rawLogsLoading, refetch: refetchRawLogs } = useQuery({
-    queryKey: ["bsuid-raw-logs"],
+    queryKey: ["bsuid-raw-logs", logsPage],
     queryFn: async () => {
+      const from = logsPage * LOGS_PAGE_SIZE;
+      const to = from + LOGS_PAGE_SIZE - 1;
       const { data, error } = await supabase
         .from("webhook_raw_logs")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(20);
+        .range(from, to);
       if (error) throw error;
       return data || [];
     },
@@ -308,6 +312,22 @@ const BsuidMigration = () => {
               </TableBody>
             </Table>
           </CardContent>
+          <div className="flex items-center justify-between px-6 py-3 border-t">
+            <p className="text-sm text-muted-foreground">Página {logsPage + 1}</p>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" disabled={logsPage === 0} onClick={() => setLogsPage(p => p - 1)}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!rawLogs || rawLogs.length < LOGS_PAGE_SIZE}
+                onClick={() => setLogsPage(p => p + 1)}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </Card>
 
         {/* Payload Dialog */}
