@@ -10,7 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, CheckCircle2, Clock, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Users, CheckCircle2, Clock, Search, ChevronLeft, ChevronRight, Activity, RefreshCw } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 const PAGE_SIZE = 20;
 
