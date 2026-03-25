@@ -68,7 +68,7 @@ serve(async (req) => {
     console.log("[List WABA Templates] Fetching templates from Meta...");
 
     // Fetch templates from Meta API
-    const metaUrl = `https://graph.facebook.com/v20.0/${businessAccountId}/message_templates?limit=100`;
+    const metaUrl = `https://graph.facebook.com/v25.0/${businessAccountId}/message_templates?limit=100`;
     
     const response = await fetch(metaUrl, {
       method: "GET",
