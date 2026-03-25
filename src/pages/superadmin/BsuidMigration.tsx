@@ -10,7 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, CheckCircle2, Clock, Search, ChevronLeft, ChevronRight, Activity, RefreshCw } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Users, CheckCircle2, Clock, Search, ChevronLeft, ChevronRight, Activity, RefreshCw, Eye, Webhook } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -20,6 +22,7 @@ const BsuidMigration = () => {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "with" | "without">("all");
   const [page, setPage] = useState(0);
+  const [selectedPayload, setSelectedPayload] = useState<any>(null);
 
   // Stats query
   const { data: stats } = useQuery({
@@ -75,6 +78,21 @@ const BsuidMigration = () => {
       const { data, error } = await supabase
         .from("whatsapp_notification_logs")
         .select("id, created_at, phone, template_name, success, error_message, message_id, function_name")
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return data || [];
+    },
+    staleTime: 15000,
+  });
+
+  // Raw webhook payloads query
+  const { data: rawLogs, isLoading: rawLogsLoading, refetch: refetchRawLogs } = useQuery({
+    queryKey: ["bsuid-raw-logs"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("webhook_raw_logs")
+        .select("*")
         .order("created_at", { ascending: false })
         .limit(20);
       if (error) throw error;
@@ -293,6 +311,93 @@ const BsuidMigration = () => {
             </Table>
           </CardContent>
         </Card>
+
+        {/* Raw Webhook Payloads */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Webhook className="h-5 w-5 text-muted-foreground" />
+              <CardTitle className="text-base">Payloads do Webhook Meta</CardTitle>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => refetchRawLogs()}>
+              <RefreshCw className="h-4 w-4 mr-1" /> Atualizar
+            </Button>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Quando</TableHead>
+                  <TableHead>Source</TableHead>
+                  <TableHead className="text-center">Statuses</TableHead>
+                  <TableHead className="text-center">BSUIDs</TableHead>
+                  <TableHead className="text-center">Notificações</TableHead>
+                  <TableHead className="text-center">Payload</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rawLogsLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">Carregando...</TableCell>
+                  </TableRow>
+                ) : !rawLogs?.length ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                      Nenhum payload recebido ainda. Configure o webhook da Meta para começar a receber dados.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  rawLogs.map((log: any) => (
+                    <TableRow key={log.id}>
+                      <TableCell className="text-xs whitespace-nowrap">
+                        {formatDistanceToNow(new Date(log.created_at), { addSuffix: true, locale: ptBR })}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">{log.source}</Badge>
+                      </TableCell>
+                      <TableCell className="text-center text-sm font-medium">{log.statuses_count}</TableCell>
+                      <TableCell className="text-center">
+                        {log.bsuids_captured > 0 ? (
+                          <Badge variant="default" className="bg-green-600 text-xs">{log.bsuids_captured}</Badge>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">0</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center text-sm">{log.notifications_updated}</TableCell>
+                      <TableCell className="text-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedPayload(log.payload)}
+                          title="Ver payload completo"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        {/* Payload Dialog */}
+        <Dialog open={!!selectedPayload} onOpenChange={(open) => !open && setSelectedPayload(null)}>
+          <DialogContent className="max-w-2xl max-h-[80vh]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Webhook className="h-5 w-5" />
+                Payload do Webhook Meta
+              </DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="max-h-[60vh]">
+              <pre className="bg-muted p-4 rounded-lg text-xs font-mono whitespace-pre-wrap break-all">
+                {selectedPayload ? JSON.stringify(selectedPayload, null, 2) : ""}
+              </pre>
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

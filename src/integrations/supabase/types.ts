@@ -2298,6 +2298,36 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_raw_logs: {
+        Row: {
+          bsuids_captured: number | null
+          created_at: string
+          id: string
+          notifications_updated: number | null
+          payload: Json
+          source: string
+          statuses_count: number | null
+        }
+        Insert: {
+          bsuids_captured?: number | null
+          created_at?: string
+          id?: string
+          notifications_updated?: number | null
+          payload: Json
+          source?: string
+          statuses_count?: number | null
+        }
+        Update: {
+          bsuids_captured?: number | null
+          created_at?: string
+          id?: string
+          notifications_updated?: number | null
+          payload?: Json
+          source?: string
+          statuses_count?: number | null
+        }
+        Relationships: []
+      }
       whatsapp_config: {
         Row: {
           api_key: string
