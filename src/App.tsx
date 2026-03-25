@@ -53,6 +53,7 @@ import Logs from "./pages/superadmin/Logs";
 import MagicLinkLogs from "./pages/superadmin/MagicLinkLogs";
 import EdgeFunctionLogs from "./pages/superadmin/EdgeFunctionLogs";
 import WabaLogs from "./pages/superadmin/WabaLogs";
+import BsuidMigration from "./pages/superadmin/BsuidMigration";
 import CronJobs from "./pages/superadmin/CronJobs";
 import Transfers from "./pages/superadmin/Transfers";
 import WhatsApp from "./pages/superadmin/WhatsApp";
@@ -582,6 +583,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole="super_admin">
                     <WabaLogs />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/superadmin/bsuid-migration"
+                element={
+                  <ProtectedRoute requiredRole="super_admin">
+                    <BsuidMigration />
                   </ProtectedRoute>
                 }
               />
