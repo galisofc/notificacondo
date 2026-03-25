@@ -14,7 +14,18 @@ import {
   UserCheck,
   Clock,
   QrCode,
-  Smartphone
+  Smartphone,
+  DoorOpen,
+  Wrench,
+  ClipboardCheck,
+  BookOpen,
+  Megaphone,
+  AlertTriangle,
+  ListChecks,
+  FolderKanban,
+  Users,
+  History,
+  Signal
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -22,7 +33,7 @@ const moduloOcorrencias = [
   {
     icon: Bell,
     title: "Notificações Automáticas",
-    description: "Envio via WhatsApp (ZPRO) com link seguro e registro de IP, data, hora e dispositivo."
+    description: "Envio via WhatsApp (WABA oficial da Meta) com link seguro e registro de IP, data, hora e dispositivo."
   },
   {
     icon: Scale,
@@ -117,6 +128,72 @@ const moduloSalaoFestas = [
   }
 ];
 
+const moduloPortaria = [
+  {
+    icon: ClipboardCheck,
+    title: "Passagem de Plantão",
+    description: "Registro detalhado entre turnos com checklist, observações e nome do porteiro seguinte."
+  },
+  {
+    icon: BookOpen,
+    title: "Livro de Recados",
+    description: "Comunicação entre porteiros estilo chat com histórico persistente entre plantões."
+  },
+  {
+    icon: Megaphone,
+    title: "Banners Informativos",
+    description: "Avisos rotativos por condomínio com cores personalizáveis e rotação automática."
+  },
+  {
+    icon: AlertTriangle,
+    title: "Ocorrências da Portaria",
+    description: "Registro de incidentes com identificação de bloco/apartamento de origem e destino."
+  },
+  {
+    icon: ListChecks,
+    title: "Checklist de Ronda",
+    description: "Verificação de itens por turno com categorias configuráveis pelo síndico."
+  },
+  {
+    icon: Users,
+    title: "Gestão de Porteiros",
+    description: "Cadastro de porteiros com senha individual e controle de acesso por condomínio."
+  }
+];
+
+const moduloManutencao = [
+  {
+    icon: FolderKanban,
+    title: "Dashboard de Manutenções",
+    description: "Visão geral de todos os chamados com filtros por status, prioridade e categoria."
+  },
+  {
+    icon: ListChecks,
+    title: "Categorias Personalizáveis",
+    description: "Tipos de manutenção configuráveis por condomínio com ícones e ordenação."
+  },
+  {
+    icon: Users,
+    title: "Atribuição a Zeladores",
+    description: "Distribuição de tarefas para zeladores com notificação automática via WhatsApp."
+  },
+  {
+    icon: History,
+    title: "Histórico Completo",
+    description: "Registro de todas as manutenções com fotos, custos e observações detalhadas."
+  },
+  {
+    icon: Signal,
+    title: "Prioridades e Status",
+    description: "Controle de urgência com níveis de prioridade e acompanhamento em tempo real."
+  },
+  {
+    icon: Wrench,
+    title: "Manutenção Preventiva",
+    description: "Agendamento periódico com alertas automáticos antes do vencimento."
+  }
+];
+
 const moduloGeral = [
   {
     icon: Building2,
@@ -136,11 +213,16 @@ const moduloGeral = [
   {
     icon: UserCheck,
     title: "Multi-perfil",
-    description: "Síndico, porteiro e morador com acessos específicos e permissões diferenciadas."
+    description: "Síndico, porteiro, zelador e morador com acessos específicos e permissões diferenciadas."
+  },
+  {
+    icon: MessageSquare,
+    title: "WhatsApp WABA",
+    description: "Integração com API oficial da Meta para envio confiável de notificações e templates aprovados."
   }
 ];
 
-const FeatureCard = ({ feature, index }: { feature: typeof moduloOcorrencias[0], index: number }) => (
+const FeatureCard = ({ feature }: { feature: typeof moduloOcorrencias[0] }) => (
   <div 
     className="group p-6 rounded-2xl bg-gradient-card border border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-glow"
   >
@@ -169,24 +251,32 @@ const Features = () => {
             <span className="text-gradient">condomínio</span>
           </h2>
           <p className="text-muted-foreground text-lg">
-            Quatro módulos integrados para resolver os principais desafios da administração condominial: 
-            ocorrências, encomendas, salão de festas e portaria.
+            Cinco módulos integrados para resolver os principais desafios da administração condominial: 
+            ocorrências, encomendas, salão de festas, portaria e manutenção.
           </p>
         </div>
 
         <Tabs defaultValue="ocorrencias" className="w-full">
-          <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-3 mb-12 h-auto">
-            <TabsTrigger value="ocorrencias" className="flex flex-col gap-1 py-4 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+          <TabsList className="grid w-full max-w-3xl mx-auto grid-cols-5 mb-12 h-auto">
+            <TabsTrigger value="ocorrencias" className="flex flex-col gap-1 py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Scale className="w-5 h-5" />
-              <span className="text-xs sm:text-sm font-medium">Ocorrências</span>
+              <span className="text-[10px] sm:text-sm font-medium">Ocorrências</span>
             </TabsTrigger>
-            <TabsTrigger value="encomendas" className="flex flex-col gap-1 py-4 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <TabsTrigger value="encomendas" className="flex flex-col gap-1 py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Package className="w-5 h-5" />
-              <span className="text-xs sm:text-sm font-medium">Encomendas</span>
+              <span className="text-[10px] sm:text-sm font-medium">Encomendas</span>
             </TabsTrigger>
-            <TabsTrigger value="salao" className="flex flex-col gap-1 py-4 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <TabsTrigger value="salao" className="flex flex-col gap-1 py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <PartyPopper className="w-5 h-5" />
-              <span className="text-xs sm:text-sm font-medium">Salão de Festas</span>
+              <span className="text-[10px] sm:text-sm font-medium">Salão</span>
+            </TabsTrigger>
+            <TabsTrigger value="portaria" className="flex flex-col gap-1 py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <DoorOpen className="w-5 h-5" />
+              <span className="text-[10px] sm:text-sm font-medium">Portaria</span>
+            </TabsTrigger>
+            <TabsTrigger value="manutencao" className="flex flex-col gap-1 py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Wrench className="w-5 h-5" />
+              <span className="text-[10px] sm:text-sm font-medium">Manutenção</span>
             </TabsTrigger>
           </TabsList>
 
@@ -201,7 +291,7 @@ const Features = () => {
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {moduloOcorrencias.map((feature, index) => (
-                <FeatureCard key={index} feature={feature} index={index} />
+                <FeatureCard key={index} feature={feature} />
               ))}
             </div>
           </TabsContent>
@@ -217,7 +307,7 @@ const Features = () => {
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {moduloEncomendas.map((feature, index) => (
-                <FeatureCard key={index} feature={feature} index={index} />
+                <FeatureCard key={index} feature={feature} />
               ))}
             </div>
           </TabsContent>
@@ -233,7 +323,39 @@ const Features = () => {
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {moduloSalaoFestas.map((feature, index) => (
-                <FeatureCard key={index} feature={feature} index={index} />
+                <FeatureCard key={index} feature={feature} />
+              ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="portaria" className="mt-0">
+            <div className="text-center mb-8">
+              <h3 className="font-display text-2xl font-bold text-foreground mb-2">
+                Gestão da Portaria
+              </h3>
+              <p className="text-muted-foreground">
+                Passagem de plantão, livro de recados, banners informativos e registro de ocorrências.
+              </p>
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {moduloPortaria.map((feature, index) => (
+                <FeatureCard key={index} feature={feature} />
+              ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="manutencao" className="mt-0">
+            <div className="text-center mb-8">
+              <h3 className="font-display text-2xl font-bold text-foreground mb-2">
+                Manutenção e Zeladores
+              </h3>
+              <p className="text-muted-foreground">
+                Controle de manutenções preventivas e corretivas com atribuição a zeladores.
+              </p>
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {moduloManutencao.map((feature, index) => (
+                <FeatureCard key={index} feature={feature} />
               ))}
             </div>
           </TabsContent>
@@ -249,9 +371,9 @@ const Features = () => {
               Funcionalidades que permeiam toda a plataforma.
             </p>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6">
             {moduloGeral.map((feature, index) => (
-              <FeatureCard key={index} feature={feature} index={index} />
+              <FeatureCard key={index} feature={feature} />
             ))}
           </div>
         </div>

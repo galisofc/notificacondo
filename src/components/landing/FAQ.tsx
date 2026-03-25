@@ -4,7 +4,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { AlertTriangle, Package, PartyPopper, HelpCircle } from "lucide-react";
+import { AlertTriangle, Package, PartyPopper, HelpCircle, DoorOpen, Wrench } from "lucide-react";
 import { useTrialDays } from "@/hooks/useTrialDays";
 
 const faqCategories = [
@@ -29,7 +29,7 @@ const faqCategories = [
       },
       {
         question: "Posso personalizar os modelos de notificação?",
-        answer: "Sim! Cada condomínio pode personalizar seus templates de mensagem, incluindo as referências aos artigos da convenção, regimento interno e Código Civil aplicáveis."
+        answer: "Sim! O sistema utiliza templates WABA aprovados pela Meta, que garantem entrega confiável. Cada condomínio pode vincular templates com variáveis personalizáveis para cada tipo de notificação."
       }
     ]
   },
@@ -80,6 +80,56 @@ const faqCategories = [
       {
         question: "Posso configurar regras específicas do meu salão?",
         answer: "Sim! O síndico pode configurar horários permitidos, capacidade máxima de convidados, taxa de locação, antecedência mínima para reserva, regras de uso e itens do checklist de vistoria."
+      }
+    ]
+  },
+  {
+    id: "portaria",
+    title: "Portaria",
+    icon: DoorOpen,
+    color: "text-emerald-500",
+    bgColor: "bg-emerald-500/10",
+    questions: [
+      {
+        question: "Como funciona a passagem de plantão?",
+        answer: "O porteiro que está saindo preenche um checklist configurável pelo síndico, registra observações gerais e informa o nome do porteiro que está assumindo. Tudo fica registrado com data, hora e identificação."
+      },
+      {
+        question: "O que é o livro de recados?",
+        answer: "É um mural de comunicação entre porteiros em formato de chat, onde eles podem deixar recados importantes para o próximo turno. Todos os porteiros do condomínio podem visualizar e excluir mensagens."
+      },
+      {
+        question: "Como funcionam os banners informativos?",
+        answer: "O síndico cadastra avisos com título, conteúdo e cores personalizáveis. Os banners aparecem no topo do painel do porteiro com rotação automática, exibidos apenas para porteiros do condomínio específico."
+      },
+      {
+        question: "O síndico tem acesso às ocorrências da portaria?",
+        answer: "Sim! O síndico visualiza todas as ocorrências registradas pelos porteiros, com filtros por data, categoria e status. Pode também criar novas ocorrências e acompanhar resoluções."
+      }
+    ]
+  },
+  {
+    id: "manutencao",
+    title: "Manutenção",
+    icon: Wrench,
+    color: "text-orange-500",
+    bgColor: "bg-orange-500/10",
+    questions: [
+      {
+        question: "Como cadastrar uma manutenção?",
+        answer: "O síndico cria uma tarefa de manutenção definindo título, descrição, categoria, prioridade, periodicidade e data de vencimento. Pode também atribuir a um zelador específico e definir custo estimado."
+      },
+      {
+        question: "O zelador recebe notificação das tarefas?",
+        answer: "Sim! Quando uma tarefa é atribuída ou está próxima do vencimento, o zelador recebe notificação automática via WhatsApp com os detalhes do serviço a ser realizado."
+      },
+      {
+        question: "Posso criar categorias personalizadas?",
+        answer: "Sim! Cada condomínio pode criar suas próprias categorias de manutenção (elétrica, hidráulica, pintura, etc.) com ícones e ordenação personalizada."
+      },
+      {
+        question: "Como funciona a manutenção preventiva?",
+        answer: "O sistema permite definir periodicidade (semanal, mensal, trimestral, etc.) e gera alertas automáticos antes do vencimento. Após a conclusão, o sistema recalcula automaticamente a próxima data."
       }
     ]
   }

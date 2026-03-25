@@ -16,8 +16,8 @@ const Footer = () => {
               />
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Plataforma SaaS para gestão de notificações, advertências e multas 
-              condominiais com prova jurídica automática.
+              Plataforma SaaS completa para gestão condominial: ocorrências, encomendas, 
+              salão de festas, portaria e manutenção com WhatsApp integrado.
             </p>
           </div>
 

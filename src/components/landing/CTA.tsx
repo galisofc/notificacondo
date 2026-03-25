@@ -17,13 +17,13 @@ const CTA = () => {
           </div>
 
           <h2 className="font-display text-3xl md:text-5xl lg:text-6xl font-bold mb-6">
-            Mais do que notificar,{" "}
-            <span className="text-gradient">o NotificaCondo comprova.</span>
+            Gestão condominial completa,{" "}
+            <span className="text-gradient">em uma só plataforma.</span>
           </h2>
 
           <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
-            Junte-se a mais de 500 condomínios que já eliminaram o problema do 
-            "não fui avisado" com prova jurídica automatizada.
+            Ocorrências, encomendas, salão de festas, portaria e manutenção — 
+            5 módulos integrados com WhatsApp WABA para eliminar o "não fui avisado".
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

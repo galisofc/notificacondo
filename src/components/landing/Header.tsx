@@ -117,6 +117,13 @@ const Header = () => {
               >
                 Contato
               </Link>
+              <a 
+                href="#faq" 
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                FAQ
+              </a>
               <div className="flex flex-col gap-2 pt-4">
                 {user ? (
                   <Button 

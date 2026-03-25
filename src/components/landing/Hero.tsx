@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Shield, CheckCircle, Play, Package, PartyPopper, Scale } from "lucide-react";
+import { ArrowRight, Shield, CheckCircle, Play, Package, PartyPopper, Scale, DoorOpen, Wrench } from "lucide-react";
 import ScreenshotsModal from "./ScreenshotsModal";
 
 const Hero = () => {
@@ -28,7 +28,7 @@ const Hero = () => {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/80 border border-border/50 mb-8 animate-fade-up">
             <Shield className="w-4 h-4 text-primary" />
-            <span className="text-sm text-muted-foreground">Gestão Condominial Completa • LGPD • WhatsApp</span>
+            <span className="text-sm text-muted-foreground">5 Módulos Integrados • LGPD • WhatsApp WABA</span>
           </div>
 
           {/* Main Headline */}
@@ -38,8 +38,8 @@ const Hero = () => {
           </h1>
 
           <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto animate-fade-up" style={{ animationDelay: '0.2s' }}>
-            Ocorrências com validade jurídica, encomendas com notificação instantânea 
-            e salão de festas com checklist automatizado — tudo integrado.
+            Ocorrências com validade jurídica, encomendas com notificação instantânea, 
+            salão de festas, portaria inteligente e manutenção preventiva — tudo integrado via WhatsApp.
           </p>
 
           {/* Module Pills */}
@@ -55,6 +55,14 @@ const Hero = () => {
             <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/10 border border-purple-500/30">
               <PartyPopper className="w-4 h-4 text-purple-500" />
               <span className="text-sm font-medium text-purple-600 dark:text-purple-400">Salão de Festas</span>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/30">
+              <DoorOpen className="w-4 h-4 text-emerald-500" />
+              <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Portaria</span>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-orange-500/10 border border-orange-500/30">
+              <Wrench className="w-4 h-4 text-orange-500" />
+              <span className="text-sm font-medium text-orange-600 dark:text-orange-400">Manutenção</span>
             </div>
           </div>
 
@@ -90,7 +98,7 @@ const Hero = () => {
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle className="w-4 h-4 text-primary" />
-              <span>WhatsApp integrado</span>
+              <span>WhatsApp WABA oficial</span>
             </div>
           </div>
         </div>
@@ -98,7 +106,7 @@ const Hero = () => {
         {/* Stats */}
         <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto animate-fade-up" style={{ animationDelay: '0.5s' }}>
           {[
-            { value: "500+", label: "Condomínios" },
+            { value: "5", label: "Módulos integrados" },
             { value: "50k+", label: "Notificações enviadas" },
             { value: "10k+", label: "Encomendas gerenciadas" },
             { value: "100%", label: "Conformidade legal" },

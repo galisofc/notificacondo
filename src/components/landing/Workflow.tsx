@@ -1,4 +1,4 @@
-import { ArrowDown, CheckCircle, Scale, Package, PartyPopper } from "lucide-react";
+import { ArrowDown, CheckCircle, Scale, Package, PartyPopper, DoorOpen, Wrench } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const occurrenceSteps = [
@@ -16,9 +16,9 @@ const occurrenceSteps = [
   },
   {
     number: "03",
-    title: "Notificação Prévia",
-    description: "Envio automático via WhatsApp com link seguro e registro de ciência.",
-    details: ["API ZPRO", "Link único e seguro", "Botão 'Estou ciente'"]
+    title: "Notificação via WhatsApp",
+    description: "Envio automático via WhatsApp WABA com link seguro e registro de ciência.",
+    details: ["API oficial Meta", "Link único e seguro", "Botão 'Estou ciente'"]
   },
   {
     number: "04",
@@ -118,6 +118,84 @@ const partyHallSteps = [
   }
 ];
 
+const portariaSteps = [
+  {
+    number: "01",
+    title: "Início do Plantão",
+    description: "Porteiro faz login e visualiza banners informativos e recados do turno anterior.",
+    details: ["Login individual", "Banners do condomínio", "Recados pendentes"]
+  },
+  {
+    number: "02",
+    title: "Checklist de Ronda",
+    description: "Verificação de todos os itens de segurança e infraestrutura do condomínio.",
+    details: ["Itens configuráveis", "Categorias", "Observações por item"]
+  },
+  {
+    number: "03",
+    title: "Registro de Ocorrências",
+    description: "Registro de incidentes com identificação de unidade de origem e destino.",
+    details: ["Bloco/Apto origem", "Bloco/Apto destino", "Categorias personalizáveis"]
+  },
+  {
+    number: "04",
+    title: "Livro de Recados",
+    description: "Comunicação entre porteiros em formato chat para informações entre turnos.",
+    details: ["Estilo WhatsApp", "Persistente entre plantões", "Exclusão por qualquer porteiro"]
+  },
+  {
+    number: "05",
+    title: "Passagem de Plantão",
+    description: "Registro formal da troca de turno com checklist e observações gerais.",
+    details: ["Nome do próximo porteiro", "Checklist completo", "Observações gerais"]
+  },
+  {
+    number: "06",
+    title: "Relatório para o Síndico",
+    description: "Síndico acompanha todas as passagens de plantão e ocorrências em tempo real.",
+    details: ["Visão centralizada", "Filtros por data", "Histórico completo"]
+  }
+];
+
+const manutencaoSteps = [
+  {
+    number: "01",
+    title: "Abertura do Chamado",
+    description: "Síndico cria uma tarefa de manutenção com descrição, prioridade e prazo.",
+    details: ["Título e descrição", "Nível de prioridade", "Data de vencimento"]
+  },
+  {
+    number: "02",
+    title: "Categorização",
+    description: "Classificação da manutenção em categorias personalizáveis pelo condomínio.",
+    details: ["Categorias customizáveis", "Ícones visuais", "Tipo: preventiva/corretiva"]
+  },
+  {
+    number: "03",
+    title: "Atribuição ao Zelador",
+    description: "Distribuição da tarefa para o zelador responsável com notificação automática.",
+    details: ["Seleção do zelador", "Notificação WhatsApp", "Custo estimado"]
+  },
+  {
+    number: "04",
+    title: "Execução da Manutenção",
+    description: "Zelador registra a execução com fotos, observações e custo real.",
+    details: ["Fotos antes/depois", "Observações detalhadas", "Custo real"]
+  },
+  {
+    number: "05",
+    title: "Conclusão e Validação",
+    description: "Síndico valida a conclusão e o sistema atualiza o próximo vencimento.",
+    details: ["Aprovação do síndico", "Recálculo automático", "Próxima data"]
+  },
+  {
+    number: "06",
+    title: "Histórico e Relatórios",
+    description: "Registro completo de todas as manutenções com custos e periodicidade.",
+    details: ["Histórico por categoria", "Custos acumulados", "Relatório exportável"]
+  }
+];
+
 interface WorkflowModule {
   id: string;
   title: string;
@@ -149,12 +227,30 @@ const modules: WorkflowModule[] = [
   },
   {
     id: "salao",
-    title: "Salão de Festas",
+    title: "Salão",
     icon: <PartyPopper className="w-4 h-4" />,
     color: "purple",
     steps: partyHallSteps,
     finalTitle: "Gestão Transparente",
     finalDescription: "Reserva + Aprovação + Lembrete + Checklist = Organização e responsabilidade"
+  },
+  {
+    id: "portaria",
+    title: "Portaria",
+    icon: <DoorOpen className="w-4 h-4" />,
+    color: "emerald",
+    steps: portariaSteps,
+    finalTitle: "Portaria Inteligente",
+    finalDescription: "Plantão + Ronda + Recados + Ocorrências + Passagem = Controle total da portaria"
+  },
+  {
+    id: "manutencao",
+    title: "Manutenção",
+    icon: <Wrench className="w-4 h-4" />,
+    color: "orange",
+    steps: manutencaoSteps,
+    finalTitle: "Manutenção Sob Controle",
+    finalDescription: "Chamado + Categorização + Zelador + Execução + Histórico = Condomínio sempre em dia"
   }
 ];
 
@@ -180,6 +276,20 @@ const getColorClasses = (color: string) => {
         glow: "shadow-purple-500/25",
         badge: "bg-purple-500/10 border-purple-500/30 text-purple-600 dark:text-purple-400",
         final: "bg-purple-500/10 border-purple-500/30"
+      };
+    case "emerald":
+      return {
+        gradient: "bg-gradient-to-br from-emerald-500 to-emerald-600",
+        glow: "shadow-emerald-500/25",
+        badge: "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400",
+        final: "bg-emerald-500/10 border-emerald-500/30"
+      };
+    case "orange":
+      return {
+        gradient: "bg-gradient-to-br from-orange-500 to-orange-600",
+        glow: "shadow-orange-500/25",
+        badge: "bg-orange-500/10 border-orange-500/30 text-orange-600 dark:text-orange-400",
+        final: "bg-orange-500/10 border-orange-500/30"
       };
     default:
       return {
@@ -210,7 +320,7 @@ const Workflow = () => {
         </div>
 
         <Tabs defaultValue="ocorrencias" className="max-w-4xl mx-auto">
-          <TabsList className="grid w-full grid-cols-3 mb-12 h-auto p-1">
+          <TabsList className="grid w-full grid-cols-5 mb-12 h-auto p-1">
             {modules.map((module) => {
               const colors = getColorClasses(module.color);
               return (
@@ -222,7 +332,7 @@ const Workflow = () => {
                   <span className={`p-1.5 rounded-lg ${colors.badge} border`}>
                     {module.icon}
                   </span>
-                  <span className="hidden sm:inline font-medium">{module.title}</span>
+                  <span className="hidden sm:inline font-medium text-sm">{module.title}</span>
                 </TabsTrigger>
               );
             })}
