@@ -236,7 +236,6 @@ const BsuidMigration = () => {
             </Button>
           </div>
         </div>
-      </div>
 
         {/* Webhook Logs */}
         <Card>
