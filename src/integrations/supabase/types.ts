@@ -1992,6 +1992,7 @@ export type Database = {
       residents: {
         Row: {
           apartment_id: string
+          bsuid: string | null
           cpf: string | null
           created_at: string
           email: string
@@ -2007,6 +2008,7 @@ export type Database = {
         }
         Insert: {
           apartment_id: string
+          bsuid?: string | null
           cpf?: string | null
           created_at?: string
           email: string
@@ -2022,6 +2024,7 @@ export type Database = {
         }
         Update: {
           apartment_id?: string
+          bsuid?: string | null
           cpf?: string | null
           created_at?: string
           email?: string

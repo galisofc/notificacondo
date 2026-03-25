@@ -1,10 +1,11 @@
 /**
  * Meta WhatsApp Cloud API - Direct Integration
  * 
- * This module provides direct communication with Meta's official WhatsApp Cloud API
- * without any intermediary gateways (Z-PRO, Z-API, etc.)
+ * This module provides direct communication with Meta's official WhatsApp Cloud API.
+ * Supports both phone numbers and BSUIDs (Business-Scoped User IDs) as recipients.
  * 
  * Official Documentation: https://developers.facebook.com/docs/whatsapp/cloud-api
+ * BSUIDs: https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids
  */
 
 const META_API_VERSION = "v20.0";
@@ -37,30 +38,53 @@ export interface MetaTemplateParams {
   bodyParams?: string[];
   headerMediaUrl?: string;
   headerMediaType?: "image" | "video" | "document";
-  // Support for named parameters (some templates require explicit parameter names)
   bodyParamNames?: string[];
-  // Support for button parameters (URL button with dynamic suffix)
   buttonParams?: Array<{
     type: "button";
     subType: "url";
     index: number;
     parameters: Array<{ type: "text"; text: string }>;
   }>;
+  /** Optional BSUID - if provided, will be used instead of phone for the `to` field */
+  bsuid?: string;
 }
 
 export interface MetaTextMessageParams {
   phone: string;
   message: string;
   previewUrl?: boolean;
+  /** Optional BSUID - if provided, will be used instead of phone for the `to` field */
+  bsuid?: string;
 }
 
 export interface MetaImageMessageParams {
   phone: string;
   imageUrl: string;
   caption?: string;
+  /** Optional BSUID - if provided, will be used instead of phone for the `to` field */
+  bsuid?: string;
 }
 
 // ============= Utilities =============
+
+/**
+ * Detect if a string is a BSUID (Business-Scoped User ID)
+ * BSUIDs have the format: XX.NNNNNNNNNNNNNNNNNNN (e.g., BR.13491208655302741918)
+ */
+export function isBsuid(value: string): boolean {
+  return /^[A-Z]{2}\.\d+$/.test(value);
+}
+
+/**
+ * Resolve the recipient `to` field.
+ * Priority: BSUID > formatted phone number
+ */
+export function resolveRecipient(phone: string, bsuid?: string): string {
+  if (bsuid && isBsuid(bsuid)) {
+    return bsuid;
+  }
+  return formatPhoneForMeta(phone);
+}
 
 /**
  * Formats phone number to international format required by Meta
@@ -107,23 +131,13 @@ export function isMetaConfigured(): boolean {
 
 /**
  * Send a template message via Meta WhatsApp Cloud API
- * 
- * @example
- * await sendMetaTemplate({
- *   phone: "5511999999999",
- *   templateName: "hello_world",
- *   language: "pt_BR",
- *   bodyParams: ["João", "Bloco A", "101"],
- *   headerMediaUrl: "https://example.com/image.jpg",
- *   headerMediaType: "image"
- * });
  */
 export async function sendMetaTemplate(
   params: MetaTemplateParams,
   config?: MetaWhatsAppConfig
 ): Promise<MetaSendResult> {
   const cfg = config || getMetaConfig();
-  const formattedPhone = formatPhoneForMeta(params.phone);
+  const recipient = resolveRecipient(params.phone, params.bsuid);
   const endpoint = `${META_API_BASE_URL}/${cfg.phoneNumberId}/messages`;
   
   // Build template components
@@ -146,8 +160,6 @@ export async function sendMetaTemplate(
   }
   
   // Add body component with text parameters
-  // IMPORTANT: Meta API rejects empty text values - must use placeholder "-" for empty/null values
-  // Some templates are configured with **named** parameters and require `parameter_name`.
   if (params.bodyParams && params.bodyParams.length > 0) {
     const validParams = params.bodyParams.map((value, index) => {
       const strValue = String(value ?? "").trim();
@@ -162,7 +174,6 @@ export async function sendMetaTemplate(
         };
       }
 
-      // Fallback: positional param
       return {
         type: "text",
         text: textValue,
@@ -175,7 +186,7 @@ export async function sendMetaTemplate(
     });
   }
   
-  // Add button components if present (for URL buttons with dynamic suffix)
+  // Add button components if present
   if (params.buttonParams && params.buttonParams.length > 0) {
     for (const button of params.buttonParams) {
       components.push({
@@ -190,7 +201,7 @@ export async function sendMetaTemplate(
   // Build the full request payload
   const payload: Record<string, unknown> = {
     messaging_product: "whatsapp",
-    to: formattedPhone,
+    to: recipient,
     type: "template",
     template: {
       name: params.templateName,
@@ -200,12 +211,12 @@ export async function sendMetaTemplate(
     },
   };
   
-  // Add components only if there are any
   if (components.length > 0) {
     (payload.template as Record<string, unknown>).components = components;
   }
   
-  console.log(`[META] Sending template "${params.templateName}" to ${params.phone}`);
+  const logRecipient = params.bsuid ? `BSUID:${params.bsuid}` : params.phone;
+  console.log(`[META] Sending template "${params.templateName}" to ${logRecipient}`);
   console.log(`[META] Endpoint: ${endpoint}`);
   console.log(`[META] Payload: ${JSON.stringify(payload).substring(0, 500)}...`);
   
@@ -231,7 +242,6 @@ export async function sendMetaTemplate(
     }
     
     if (!response.ok) {
-      // Parse Meta error response
       const metaError = responseData?.error;
       const errorMessage = metaError?.message || responseData?.message || `HTTP ${response.status}`;
       const errorCode = metaError?.code?.toString() || response.status.toString();
@@ -249,7 +259,6 @@ export async function sendMetaTemplate(
       };
     }
     
-    // Extract message ID from Meta response
     const messageId = responseData?.messages?.[0]?.id;
     
     return {
@@ -284,12 +293,12 @@ export async function sendMetaText(
   config?: MetaWhatsAppConfig
 ): Promise<MetaSendResult> {
   const cfg = config || getMetaConfig();
-  const formattedPhone = formatPhoneForMeta(params.phone);
+  const recipient = resolveRecipient(params.phone, params.bsuid);
   const endpoint = `${META_API_BASE_URL}/${cfg.phoneNumberId}/messages`;
   
   const payload = {
     messaging_product: "whatsapp",
-    to: formattedPhone,
+    to: recipient,
     type: "text",
     text: {
       preview_url: params.previewUrl ?? false,
@@ -297,7 +306,8 @@ export async function sendMetaText(
     },
   };
   
-  console.log(`[META] Sending text message to ${params.phone}`);
+  const logRecipient = params.bsuid ? `BSUID:${params.bsuid}` : params.phone;
+  console.log(`[META] Sending text message to ${logRecipient}`);
   console.log(`[META] Endpoint: ${endpoint}`);
   
   try {
@@ -365,12 +375,12 @@ export async function sendMetaImage(
   config?: MetaWhatsAppConfig
 ): Promise<MetaSendResult> {
   const cfg = config || getMetaConfig();
-  const formattedPhone = formatPhoneForMeta(params.phone);
+  const recipient = resolveRecipient(params.phone, params.bsuid);
   const endpoint = `${META_API_BASE_URL}/${cfg.phoneNumberId}/messages`;
   
   const payload: Record<string, unknown> = {
     messaging_product: "whatsapp",
-    to: formattedPhone,
+    to: recipient,
     type: "image",
     image: {
       link: params.imageUrl,
@@ -381,7 +391,8 @@ export async function sendMetaImage(
     (payload.image as Record<string, unknown>).caption = params.caption;
   }
   
-  console.log(`[META] Sending image to ${params.phone}`);
+  const logRecipient = params.bsuid ? `BSUID:${params.bsuid}` : params.phone;
+  console.log(`[META] Sending image to ${logRecipient}`);
   console.log(`[META] Image URL: ${params.imageUrl.substring(0, 100)}...`);
   
   try {
@@ -444,10 +455,6 @@ export async function sendMetaImage(
 
 /**
  * Builds the params array from a variables object following the params_order
- * 
- * @param variables - Object with variable names and values (e.g., { nome: "João", bloco: "A" })
- * @param paramsOrder - Array with the order of variables (e.g., ["nome", "bloco", "apartamento"])
- * @returns Object with values array and names array
  */
 export function buildParamsArray(
   variables: Record<string, string | undefined>,
@@ -455,7 +462,6 @@ export function buildParamsArray(
 ): { values: string[]; names: string[] } {
   const values = paramsOrder.map(varName => {
     const value = variables[varName];
-    // Use "-" as placeholder if empty (Meta API rejects empty strings)
     const strValue = String(value ?? "").trim();
     return strValue || "-";
   });
@@ -468,7 +474,6 @@ export function buildParamsArray(
 
 /**
  * Test connection to Meta WhatsApp API
- * Uses the "get phone number" endpoint to verify credentials
  */
 export async function testMetaConnection(config?: MetaWhatsAppConfig): Promise<MetaSendResult> {
   const cfg = config || getMetaConfig();
