@@ -312,6 +312,22 @@ const BsuidMigration = () => {
               </TableBody>
             </Table>
           </CardContent>
+          <div className="flex items-center justify-between px-6 py-3 border-t">
+            <p className="text-sm text-muted-foreground">Página {logsPage + 1}</p>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" disabled={logsPage === 0} onClick={() => setLogsPage(p => p - 1)}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!rawLogs || rawLogs.length < LOGS_PAGE_SIZE}
+                onClick={() => setLogsPage(p => p + 1)}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </Card>
 
         {/* Payload Dialog */}
