@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Monitor, Bell, Shield, FileText, MessageSquare, BarChart3 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Monitor, Bell, Shield, FileText, MessageSquare, BarChart3, Package, DoorOpen, Wrench, CalendarCheck } from "lucide-react";
 
 interface ScreenshotsModalProps {
   open: boolean;
@@ -27,11 +27,11 @@ const screenshots = [
   },
   {
     id: 3,
-    title: "Notificação via WhatsApp",
-    description: "Envio automático de notificações com registro de ciência e comprovante de entrega.",
+    title: "Notificação via WhatsApp WABA",
+    description: "Envio automático via API oficial da Meta com templates aprovados e registro de ciência.",
     icon: MessageSquare,
     color: "from-green-500/20 to-emerald-500/20",
-    features: ["Integração WhatsApp", "Registro de ciência", "Comprovante automático", "Link seguro"],
+    features: ["API oficial Meta", "Templates aprovados", "Registro de ciência", "Link seguro"],
   },
   {
     id: 4,
@@ -43,14 +43,38 @@ const screenshots = [
   },
   {
     id: 5,
-    title: "Gestão de Multas",
-    description: "Controle completo de multas aplicadas, pagamentos e status de cada processo.",
-    icon: Bell,
-    color: "from-purple-500/20 to-pink-500/20",
-    features: ["Status em tempo real", "Valor progressivo", "Histórico de pagamentos", "Relatórios"],
+    title: "Gestão de Encomendas",
+    description: "Controle completo desde a chegada até a retirada com foto, código e notificação.",
+    icon: Package,
+    color: "from-blue-500/20 to-cyan-500/20",
+    features: ["Foto obrigatória", "Código de retirada", "Notificação instantânea", "Histórico completo"],
   },
   {
     id: 6,
+    title: "Salão de Festas",
+    description: "Agendamento online com checklist de entrada e saída automatizado.",
+    icon: CalendarCheck,
+    color: "from-purple-500/20 to-pink-500/20",
+    features: ["Calendário visual", "Checklist entrada/saída", "Lembretes WhatsApp", "Regras configuráveis"],
+  },
+  {
+    id: 7,
+    title: "Portaria Inteligente",
+    description: "Passagem de plantão, livro de recados, banners e ocorrências da portaria.",
+    icon: DoorOpen,
+    color: "from-emerald-500/20 to-green-500/20",
+    features: ["Passagem de plantão", "Livro de recados", "Banners informativos", "Ocorrências portaria"],
+  },
+  {
+    id: 8,
+    title: "Manutenção e Zeladores",
+    description: "Gestão de manutenções preventivas e corretivas com atribuição a zeladores.",
+    icon: Wrench,
+    color: "from-orange-500/20 to-amber-500/20",
+    features: ["Categorias customizáveis", "Atribuição zeladores", "Manutenção preventiva", "Histórico completo"],
+  },
+  {
+    id: 9,
     title: "Relatórios e Análises",
     description: "Relatórios detalhados para prestação de contas e análise de conformidade.",
     icon: BarChart3,
@@ -84,9 +108,7 @@ const ScreenshotsModal = ({ open, onOpenChange }: ScreenshotsModalProps) => {
         </DialogHeader>
         
         <div className="p-6">
-          {/* Main Screenshot Area */}
           <div className={`relative rounded-2xl bg-gradient-to-br ${currentScreen.color} p-8 mb-6 min-h-[300px] flex flex-col items-center justify-center border border-border/50`}>
-            {/* Navigation Arrows */}
             <Button
               variant="ghost"
               size="icon"
@@ -104,7 +126,6 @@ const ScreenshotsModal = ({ open, onOpenChange }: ScreenshotsModalProps) => {
               <ChevronRight className="w-5 h-5" />
             </Button>
 
-            {/* Screen Content */}
             <div className="text-center">
               <div className="w-20 h-20 rounded-2xl bg-background/80 backdrop-blur-sm flex items-center justify-center mx-auto mb-4 border border-border/50">
                 <Icon className="w-10 h-10 text-primary" />
@@ -114,7 +135,6 @@ const ScreenshotsModal = ({ open, onOpenChange }: ScreenshotsModalProps) => {
                 {currentScreen.description}
               </p>
               
-              {/* Features List */}
               <div className="flex flex-wrap justify-center gap-2">
                 {currentScreen.features.map((feature, idx) => (
                   <span
@@ -128,8 +148,7 @@ const ScreenshotsModal = ({ open, onOpenChange }: ScreenshotsModalProps) => {
             </div>
           </div>
 
-          {/* Thumbnails */}
-          <div className="flex justify-center gap-2 mb-4">
+          <div className="flex justify-center gap-2 mb-4 flex-wrap">
             {screenshots.map((screen, idx) => {
               const ScreenIcon = screen.icon;
               return (
@@ -148,7 +167,6 @@ const ScreenshotsModal = ({ open, onOpenChange }: ScreenshotsModalProps) => {
             })}
           </div>
 
-          {/* Counter */}
           <p className="text-center text-sm text-muted-foreground">
             {currentIndex + 1} de {screenshots.length} telas
           </p>

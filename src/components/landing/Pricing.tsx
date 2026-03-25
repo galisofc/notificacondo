@@ -13,7 +13,9 @@ import {
   Star,
   Zap,
   Crown,
-  Shield
+  Shield,
+  DoorOpen,
+  Wrench
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,33 +25,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { useTrialDays } from "@/hooks/useTrialDays";
 
-// Animation variants
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.2
-    }
+    transition: { staggerChildren: 0.1, delayChildren: 0.2 }
   }
 };
 
 const cardVariants = {
-  hidden: { 
-    opacity: 0, 
-    y: 30,
-    scale: 0.95
-  },
+  hidden: { opacity: 0, y: 30, scale: 0.95 },
   visible: { 
-    opacity: 1, 
-    y: 0,
-    scale: 1,
-    transition: {
-      type: "spring" as const,
-      stiffness: 100,
-      damping: 15
-    }
+    opacity: 1, y: 0, scale: 1,
+    transition: { type: "spring" as const, stiffness: 100, damping: 15 }
   }
 };
 
@@ -57,7 +45,6 @@ const Pricing = () => {
   const navigate = useNavigate();
   const { trialDays } = useTrialDays();
   
-  // Countdown timer - ends at midnight
   const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
   
   useEffect(() => {
@@ -65,20 +52,17 @@ const Pricing = () => {
       const now = new Date();
       const endOfDay = new Date();
       endOfDay.setHours(23, 59, 59, 999);
-      
       const diff = endOfDay.getTime() - now.getTime();
-      
       if (diff > 0) {
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-        setTimeLeft({ hours, minutes, seconds });
+        setTimeLeft({
+          hours: Math.floor(diff / (1000 * 60 * 60)),
+          minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+          seconds: Math.floor((diff % (1000 * 60)) / 1000)
+        });
       }
     };
-    
     calculateTimeLeft();
     const timer = setInterval(calculateTimeLeft, 1000);
-    
     return () => clearInterval(timer);
   }, []);
   
@@ -90,7 +74,6 @@ const Pricing = () => {
         .select('*')
         .eq('is_active', true)
         .order('display_order', { ascending: true });
-      
       if (error) throw error;
       return data;
     }
@@ -147,11 +130,11 @@ const Pricing = () => {
 
         {/* Modules Included Badge */}
         <div className="flex flex-col items-center gap-4 mb-12">
-          <p className="text-sm font-medium text-muted-foreground">Todos os planos incluem os 4 módulos:</p>
+          <p className="text-sm font-medium text-muted-foreground">Todos os planos incluem os 5 módulos:</p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/30">
               <Scale className="w-4 h-4 text-amber-500" />
-              <span className="text-sm font-medium text-amber-600 dark:text-amber-400">Ocorrências & Multas</span>
+              <span className="text-sm font-medium text-amber-600 dark:text-amber-400">Ocorrências</span>
             </div>
             <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/30">
               <Package className="w-4 h-4 text-blue-500" />
@@ -160,6 +143,14 @@ const Pricing = () => {
             <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/10 border border-purple-500/30">
               <PartyPopper className="w-4 h-4 text-purple-500" />
               <span className="text-sm font-medium text-purple-600 dark:text-purple-400">Salão de Festas</span>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/30">
+              <DoorOpen className="w-4 h-4 text-emerald-500" />
+              <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Portaria</span>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-orange-500/10 border border-orange-500/30">
+              <Wrench className="w-4 h-4 text-orange-500" />
+              <span className="text-sm font-medium text-orange-600 dark:text-orange-400">Manutenção</span>
             </div>
           </div>
         </div>
@@ -182,10 +173,7 @@ const Pricing = () => {
                 <motion.div
                   key={plan.id}
                   variants={cardVariants}
-                  whileHover={{ 
-                    y: -8, 
-                    transition: { type: "spring", stiffness: 300, damping: 20 } 
-                  }}
+                  whileHover={{ y: -8, transition: { type: "spring", stiffness: 300, damping: 20 } }}
                 >
                   <Card 
                     className={`relative h-full transition-all duration-300 hover:shadow-lg ${
@@ -215,72 +203,51 @@ const Pricing = () => {
                       >
                         <PlanIcon className="w-7 h-7 text-white" />
                       </motion.div>
-
-                      <CardTitle className="font-display text-2xl mb-2">
-                        {plan.name}
-                      </CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        {plan.description || `Plano ${plan.name}`}
-                      </p>
+                      <CardTitle className="font-display text-2xl mb-2">{plan.name}</CardTitle>
+                      <p className="text-sm text-muted-foreground">{plan.description || `Plano ${plan.name}`}</p>
                     </CardHeader>
 
                     <CardContent>
                       <div className="text-center mb-6">
                         {plan.price === 0 ? (
-                          <span className="font-display text-3xl font-bold text-foreground">
-                            Consulte
-                          </span>
+                          <span className="font-display text-3xl font-bold text-foreground">Consulte</span>
                         ) : (
                           <div>
                             <span className="text-muted-foreground text-sm">R$</span>
-                            <span className="font-display text-4xl font-bold text-foreground">
-                              {formatPrice(plan.price)}
-                            </span>
+                            <span className="font-display text-4xl font-bold text-foreground">{formatPrice(plan.price)}</span>
                             <span className="text-muted-foreground text-sm">/mês</span>
                           </div>
                         )}
                       </div>
 
-                      {/* Limits */}
                       <div className="space-y-2 mb-6 p-4 rounded-lg bg-secondary/50">
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">Notificações</span>
-                          <span className="font-medium">
-                            {plan.notifications_limit === -1 ? 'Ilimitadas' : `${plan.notifications_limit}/mês`}
-                          </span>
+                          <span className="font-medium">{plan.notifications_limit === -1 ? 'Ilimitadas' : `${plan.notifications_limit}/mês`}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">Advertências</span>
-                          <span className="font-medium">
-                            {plan.warnings_limit === -1 ? 'Ilimitadas' : `${plan.warnings_limit}/mês`}
-                          </span>
+                          <span className="font-medium">{plan.warnings_limit === -1 ? 'Ilimitadas' : `${plan.warnings_limit}/mês`}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">Multas</span>
-                          <span className="font-medium">
-                            {plan.fines_limit === -1 ? 'Ilimitadas' : plan.fines_limit === 0 ? '—' : `${plan.fines_limit}/mês`}
-                          </span>
+                          <span className="font-medium">{plan.fines_limit === -1 ? 'Ilimitadas' : plan.fines_limit === 0 ? '—' : `${plan.fines_limit}/mês`}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">Notif. Encomendas</span>
-                          <span className="font-medium">
-                            {(plan as any).package_notifications_limit === -1 ? 'Ilimitadas' : `${(plan as any).package_notifications_limit || 50}/mês`}
-                          </span>
+                          <span className="font-medium">{(plan as any).package_notifications_limit === -1 ? 'Ilimitadas' : `${(plan as any).package_notifications_limit || 50}/mês`}</span>
                         </div>
-                        <p className="text-xs text-muted-foreground/70 pt-2 border-t border-border/50">
-                          Envios extras: R$ 0,10 cada
-                        </p>
+                        <p className="text-xs text-muted-foreground/70 pt-2 border-t border-border/50">Envios extras: R$ 0,10 cada</p>
                       </div>
 
-                      {/* Badges */}
                       <div className="space-y-2 mb-6">
                         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20">
                           <Check className="w-4 h-4 text-primary" />
-                          <span className="text-xs text-primary font-medium">4 módulos inclusos</span>
+                          <span className="text-xs text-primary font-medium">5 módulos inclusos</span>
                         </div>
                         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20">
                           <MessageCircle className="w-4 h-4 text-green-500" />
-                          <span className="text-xs text-green-600 dark:text-green-400 font-medium">Integração WhatsApp</span>
+                          <span className="text-xs text-green-600 dark:text-green-400 font-medium">WhatsApp WABA oficial</span>
                         </div>
                       </div>
 
@@ -306,22 +273,13 @@ const Pricing = () => {
           </motion.div>
         )}
 
-        {/* Payment Methods */}
         <div className="text-center mt-12">
           <p className="text-sm text-muted-foreground mb-4">Pagamento seguro via</p>
           <div className="flex items-center justify-center gap-6 flex-wrap">
-            <div className="px-4 py-2 rounded-lg bg-secondary/50 text-sm text-muted-foreground">
-              Mercado Pago
-            </div>
-            <div className="px-4 py-2 rounded-lg bg-secondary/50 text-sm text-muted-foreground">
-              PIX
-            </div>
-            <div className="px-4 py-2 rounded-lg bg-secondary/50 text-sm text-muted-foreground">
-              Cartão de Crédito
-            </div>
-            <div className="px-4 py-2 rounded-lg bg-secondary/50 text-sm text-muted-foreground">
-              Boleto
-            </div>
+            <div className="px-4 py-2 rounded-lg bg-secondary/50 text-sm text-muted-foreground">Mercado Pago</div>
+            <div className="px-4 py-2 rounded-lg bg-secondary/50 text-sm text-muted-foreground">PIX</div>
+            <div className="px-4 py-2 rounded-lg bg-secondary/50 text-sm text-muted-foreground">Cartão de Crédito</div>
+            <div className="px-4 py-2 rounded-lg bg-secondary/50 text-sm text-muted-foreground">Boleto</div>
           </div>
         </div>
       </div>
