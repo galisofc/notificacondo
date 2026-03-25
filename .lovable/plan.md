@@ -1,20 +1,45 @@
 
 
-## Problema: Payloads não estão sendo salvos
+## Problema: Webhook não captura dados reais da Meta
 
 ### Diagnóstico
-- A tabela `webhook_raw_logs` está **vazia** (0 registros)
-- Não há logs recentes da edge function `whatsapp-webhook`
-- O código foi atualizado para salvar payloads, mas a edge function provavelmente **não foi redeployada** após a alteração
+Analisando os payloads **reais** salvos na `webhook_raw_logs`, identifiquei que a Meta envia os campos com nomes diferentes do que o código espera:
+
+```text
+O que o código espera          O que a Meta envia
+─────────────────────          ──────────────────
+status.recipient_id            status.recipient_user_id  (ou ausente)
+status.user_id                 (campo no nível do contato, não do status)
+```
+
+Nos logs da edge function, vemos `phone: undefined` — confirmando que `status.recipient_id` não existe no payload real. Sem o telefone, a captura de BSUID também falha.
 
 ### Solução
 
-#### 1. Redeployar a edge function `whatsapp-webhook`
-A versão em produção ainda é a antiga (sem o insert na `webhook_raw_logs`). Preciso fazer o redeploy para que o novo código entre em vigor.
+**Atualizar `supabase/functions/whatsapp-webhook/index.ts`**:
 
-#### 2. Testar com curl após deploy
-Enviar um POST simulado ao webhook para confirmar que o payload está sendo salvo na tabela.
+1. Extrair o telefone com fallback: `status.recipient_id || status.recipient_user_id`
+2. Extrair o BSUID do contato: buscar no array `change.value.contacts` o campo `user_id` (que é o BSUID real da Meta)
+3. Redeployar a edge function
+
+```typescript
+// Antes:
+const recipientPhone = status.recipient_id;
+const bsuid = status.user_id;
+
+// Depois:
+const recipientPhone = status.recipient_id || status.recipient_user_id;
+const contacts = change.value.contacts || [];
+const contactBsuid = contacts.length > 0 ? contacts[0].user_id : null;
+const bsuid = status.user_id || status.recipient_user_id || contactBsuid;
+```
+
+### Teste
+Após deploy, registrar uma encomenda real no painel do porteiro para o morador 11982731247 e verificar se:
+- O payload aparece na `webhook_raw_logs`
+- O BSUID é capturado na tabela `residents`
 
 ### Arquivos
-- Nenhuma alteração de código — apenas redeploy da edge function existente e teste
+- `supabase/functions/whatsapp-webhook/index.ts` (corrigir extração de campos)
+- Redeploy da edge function
 
