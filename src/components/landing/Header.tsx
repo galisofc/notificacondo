@@ -53,6 +53,9 @@ const Header = () => {
             <Link to="/contato" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
               Contato
             </Link>
+            <a href="#faq" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
+              FAQ
+            </a>
           </nav>
 
           {/* CTA Buttons */}
