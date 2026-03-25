@@ -14,11 +14,17 @@ interface MetaWebhookEntry {
         display_phone_number: string;
         phone_number_id: string;
       };
+      contacts?: Array<{
+        profile?: { name?: string };
+        wa_id?: string;
+        user_id?: string;
+      }>;
       statuses?: Array<{
         id: string;
         status: string;
         timestamp: string;
-        recipient_id: string;
+        recipient_id?: string;
+        recipient_user_id?: string;
         user_id?: string;
         errors?: Array<{
           code: number;
@@ -103,11 +109,15 @@ Deno.serve(async (req) => {
         const statuses = change.value.statuses || [];
         totalStatuses += statuses.length;
 
+        const contacts = change.value.contacts || [];
+        const contactBsuid = contacts.length > 0 ? contacts[0].user_id : null;
+        const contactWaId = contacts.length > 0 ? contacts[0].wa_id : null;
+
         for (const status of statuses) {
           const messageId = status.id;
           const normalizedStatus = normalizeMetaStatus(status.status);
-          const recipientPhone = status.recipient_id;
-          const bsuid = status.user_id;
+          const recipientPhone = status.recipient_id || contactWaId;
+          const bsuid = status.user_id || status.recipient_user_id || contactBsuid;
 
           console.log(`[WEBHOOK] Status: ${status.status} -> ${normalizedStatus} | msgId: ${messageId} | phone: ${recipientPhone} | bsuid: ${bsuid || "none"}`);
 
