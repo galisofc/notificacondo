@@ -120,6 +120,7 @@ interface Notification {
   location_info: unknown;
   ip_address: string | null;
   user_agent: string | null;
+  zpro_status: string | null;
 }
 
 interface TimelineItem {
@@ -130,6 +131,7 @@ interface TimelineItem {
   date: string;
   icon: React.ReactNode;
   color: string;
+  deliveryStatus?: string | null;
 }
 
 const OccurrenceDetails = () => {
