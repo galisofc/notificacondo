@@ -208,20 +208,17 @@ const OccurrenceDetails = () => {
         },
         (payload) => {
           const updated = payload.new as any;
-          if (updated.zpro_status) {
-            setNotifications((prev) =>
-              prev.map((n) =>
-                n.id === updated.id ? { ...n, zpro_status: updated.zpro_status, delivered_at: updated.delivered_at, read_at: updated.read_at } : n
-              )
+          setNotifications((prev) => {
+            const next = prev.map((n) =>
+              n.id === updated.id
+                ? { ...n, zpro_status: updated.zpro_status, delivered_at: updated.delivered_at, read_at: updated.read_at }
+                : n
             );
-            // Rebuild timeline with updated notifications
             if (occurrence) {
-              setNotifications((latestNotifs) => {
-                buildTimeline(occurrence, evidences, defenses, decisions, latestNotifs);
-                return latestNotifs;
-              });
+              buildTimeline(occurrence, evidences, defenses, decisions, next);
             }
-          }
+            return next;
+          });
         }
       )
       .subscribe();
