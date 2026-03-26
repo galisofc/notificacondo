@@ -229,6 +229,7 @@ Deno.serve(async (req) => {
 
 function normalizeMetaStatus(status: string): string {
   const statusMap: Record<string, string> = {
+    accepted: "accepted",
     sent: "sent",
     delivered: "delivered",
     read: "read",
