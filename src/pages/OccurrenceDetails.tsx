@@ -193,6 +193,44 @@ const OccurrenceDetails = () => {
     if (id) fetchData();
   }, [id]);
 
+  // Realtime: update zpro_status on notifications_sent changes
+  useEffect(() => {
+    if (!id) return;
+    const channel = supabase
+      .channel(`occ-notif-status-${id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "notifications_sent",
+          filter: `occurrence_id=eq.${id}`,
+        },
+        (payload) => {
+          const updated = payload.new as any;
+          if (updated.zpro_status) {
+            setNotifications((prev) =>
+              prev.map((n) =>
+                n.id === updated.id ? { ...n, zpro_status: updated.zpro_status, delivered_at: updated.delivered_at, read_at: updated.read_at } : n
+              )
+            );
+            // Rebuild timeline with updated notifications
+            if (occurrence) {
+              setNotifications((latestNotifs) => {
+                buildTimeline(occurrence, evidences, defenses, decisions, latestNotifs);
+                return latestNotifs;
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, occurrence, evidences, defenses, decisions]);
+
   const fetchData = async () => {
     if (!id) return;
 
