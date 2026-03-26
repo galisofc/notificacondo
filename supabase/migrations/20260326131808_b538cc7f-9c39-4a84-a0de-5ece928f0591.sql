@@ -1,1 +1,0 @@
-ALTER TABLE public.whatsapp_notification_logs ADD COLUMN status text NOT NULL DEFAULT 'accepted';

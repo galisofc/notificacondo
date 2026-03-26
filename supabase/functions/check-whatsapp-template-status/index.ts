@@ -76,7 +76,7 @@ serve(async (req) => {
     const { templateName } = await req.json();
 
     // Fetch all templates from Meta API
-    const endpoint = `https://graph.facebook.com/v25.0/${businessAccountId}/message_templates`;
+    const endpoint = `https://graph.facebook.com/v20.0/${businessAccountId}/message_templates`;
     console.log(`[Template Status] Fetching templates from: ${endpoint}`);
 
     const response = await fetch(`${endpoint}?access_token=${accessToken}&limit=100`);

@@ -533,8 +533,8 @@ const Occurrences = () => {
       }
 
       toast({
-        title: "Notificação aceita!",
-        description: "Mensagem aceita pela Meta. A entrega será confirmada automaticamente.",
+        title: "Notificação enviada!",
+        description: "O morador foi notificado via WhatsApp com sucesso.",
       });
 
       // Refresh the list
