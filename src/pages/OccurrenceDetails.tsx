@@ -399,8 +399,6 @@ const OccurrenceDetails = () => {
         },
       });
 
-      });
-
       // Add acknowledged event if notification was confirmed
       if (notif.acknowledged_at) {
         items.push({
@@ -443,6 +441,26 @@ const OccurrenceDetails = () => {
         date: dec.decided_at,
         icon: <Gavel className="w-4 h-4" />,
         color: dec.decision === "arquivada" ? "bg-muted" : "bg-red-500",
+      });
+    });
+
+    // Access logs - "Ocorrência Aberta e Lida"
+    logs.forEach((log) => {
+      const formatIpAddress = (ip: string | null) => {
+        if (!ip) return null;
+        const ips = ip.split(',').map(i => i.trim());
+        return ips[0];
+      };
+      const logIp = formatIpAddress(log.ip_address);
+
+      items.push({
+        id: `access-${log.id}`,
+        type: "accessed",
+        title: "Ocorrência Aberta e Lida",
+        description: logIp ? `IP: ${logIp}` : "Acessada pelo morador",
+        date: log.created_at,
+        icon: <Globe className="w-4 h-4" />,
+        color: "bg-green-500",
       });
     });
 
