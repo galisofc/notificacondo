@@ -80,18 +80,38 @@ export default function WhatsAppConfig() {
           .gte("created_at", last24h),
       ]);
 
-      setWebhookCount24h(countResult.count ?? 0);
+      if (lastLog.error) throw lastLog.error;
+      if (countResult.error) throw countResult.error;
+
+      const eventsIn24h = countResult.count ?? 0;
+      setWebhookCount24h(eventsIn24h);
 
       if (lastLog.data && lastLog.data.length > 0) {
         const lastDate = lastLog.data[0].created_at;
+        const isActive = lastDate >= last72h;
+
         setLastWebhookAt(lastDate);
-        setWebhookStatus(lastDate >= last72h ? "active" : "inactive");
+        setWebhookStatus(isActive ? "active" : "inactive");
+
+        toast({
+          title: isActive ? "Webhook ativo" : "Webhook sem eventos recentes",
+          description: `Último evento: ${new Date(lastDate).toLocaleString("pt-BR")} • Eventos nas últimas 24h: ${eventsIn24h}`,
+        });
       } else {
         setLastWebhookAt(null);
         setWebhookStatus("unknown");
+        toast({
+          title: "Nenhum webhook encontrado",
+          description: "Ainda não há eventos recebidos da Meta neste ambiente.",
+        });
       }
-    } catch {
+    } catch (error) {
       setWebhookStatus("unknown");
+      toast({
+        title: "Erro ao verificar webhook",
+        description: error instanceof Error ? error.message : "Não foi possível consultar os eventos recebidos.",
+        variant: "destructive",
+      });
     } finally {
       setIsCheckingWebhook(false);
     }
