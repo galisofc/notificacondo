@@ -183,7 +183,7 @@ serve(async (req) => {
               // Check if using WABA templates
               if (whatsappConfig.use_waba_templates && template.waba_template_name) {
                 // Send via WABA template
-                const wabaTemplateUrl = `https://graph.facebook.com/v21.0/${Deno.env.get("META_WHATSAPP_PHONE_ID")}/messages`;
+                const wabaTemplateUrl = `https://graph.facebook.com/v25.0/${Deno.env.get("META_WHATSAPP_PHONE_ID")}/messages`;
                 
                 const wabaPayload = {
                   messaging_product: "whatsapp",

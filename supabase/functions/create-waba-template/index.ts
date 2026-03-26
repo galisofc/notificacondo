@@ -111,7 +111,7 @@ serve(async (req) => {
     console.log(`[Create WABA Template] Creating template: ${body.name}`);
 
     // Create template via Meta API
-    const metaUrl = `https://graph.facebook.com/v20.0/${businessAccountId}/message_templates`;
+    const metaUrl = `https://graph.facebook.com/v25.0/${businessAccountId}/message_templates`;
     
     const response = await fetch(metaUrl, {
       method: "POST",
