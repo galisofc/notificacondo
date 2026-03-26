@@ -355,6 +355,7 @@ Este link é pessoal e intransferível.`;
       request_payload: result.debug?.payload || { variables, params_order: paramsOrder },
       response_body: result.debug?.response,
       response_status: result.debug?.status,
+      status: result.success ? "accepted" : "failed",
     });
 
     // Update notification with result
@@ -362,7 +363,7 @@ Este link é pessoal e intransferível.`;
       .from("notifications_sent")
       .update({
         zpro_message_id: result.messageId,
-        zpro_status: result.success ? "sent" : "failed",
+        zpro_status: result.success ? "accepted" : "failed",
       })
       .eq("id", notification.id);
 
