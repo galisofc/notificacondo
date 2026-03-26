@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import BlockApartmentDisplay from "@/components/common/BlockApartmentDisplay";
+import { DeliveryStatusTracker } from "@/components/packages/DeliveryStatusTracker";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -120,6 +121,7 @@ interface Notification {
   location_info: unknown;
   ip_address: string | null;
   user_agent: string | null;
+  zpro_status: string | null;
 }
 
 interface TimelineItem {
@@ -130,6 +132,7 @@ interface TimelineItem {
   date: string;
   icon: React.ReactNode;
   color: string;
+  deliveryStatus?: string | null;
 }
 
 const OccurrenceDetails = () => {
@@ -189,6 +192,41 @@ const OccurrenceDetails = () => {
   useEffect(() => {
     if (id) fetchData();
   }, [id]);
+
+  // Realtime: update zpro_status on notifications_sent changes
+  useEffect(() => {
+    if (!id) return;
+    const channel = supabase
+      .channel(`occ-notif-status-${id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "notifications_sent",
+          filter: `occurrence_id=eq.${id}`,
+        },
+        (payload) => {
+          const updated = payload.new as any;
+          setNotifications((prev) => {
+            const next = prev.map((n) =>
+              n.id === updated.id
+                ? { ...n, zpro_status: updated.zpro_status, delivered_at: updated.delivered_at, read_at: updated.read_at }
+                : n
+            );
+            if (occurrence) {
+              buildTimeline(occurrence, evidences, defenses, decisions, next);
+            }
+            return next;
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, occurrence, evidences, defenses, decisions]);
 
   const fetchData = async () => {
     if (!id) return;
@@ -330,6 +368,7 @@ const OccurrenceDetails = () => {
         date: notif.sent_at,
         icon: <Send className="w-4 h-4" />,
         color: "bg-amber-500",
+        deliveryStatus: notif.zpro_status,
       });
 
       // Add read event if notification was read
@@ -1394,6 +1433,9 @@ const OccurrenceDetails = () => {
                                 <p className="text-xs text-muted-foreground/70">
                                   {formatDateLocal(item.date)}
                                 </p>
+                                {item.type === "notification" && item.deliveryStatus && (
+                                  <DeliveryStatusTracker status={item.deliveryStatus} className="mt-1.5" />
+                                )}
                               </div>
                             </div>
                           ))}
