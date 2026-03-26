@@ -125,9 +125,17 @@ interface Notification {
   zpro_status: string | null;
 }
 
+interface AccessLog {
+  id: string;
+  ip_address: string | null;
+  user_agent: string | null;
+  created_at: string;
+  resident_id: string | null;
+}
+
 interface TimelineItem {
   id: string;
-  type: "created" | "notification" | "defense" | "decision" | "evidence" | "read" | "acknowledged";
+  type: "created" | "notification" | "defense" | "decision" | "evidence" | "read" | "acknowledged" | "accessed";
   title: string;
   description: React.ReactNode;
   date: string;
@@ -151,6 +159,7 @@ const OccurrenceDetails = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeline, setTimeline] = useState<TimelineItem[]>([]);
+  const [accessLogs, setAccessLogs] = useState<AccessLog[]>([]);
   const [unitHistory, setUnitHistory] = useState<{ advertencia: number; notificacao: number; multa: number; items: any[] }>({ advertencia: 0, notificacao: 0, multa: 0, items: [] });
 
   // Decision dialog
@@ -217,7 +226,7 @@ const OccurrenceDetails = () => {
                 : n
             );
             if (occurrence) {
-              buildTimeline(occurrence, evidences, defenses, decisions, next);
+              buildTimeline(occurrence, evidences, defenses, decisions, next, accessLogs);
             }
             return next;
           });
@@ -228,7 +237,7 @@ const OccurrenceDetails = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [id, occurrence, evidences, defenses, decisions]);
+  }, [id, occurrence, evidences, defenses, decisions, accessLogs]);
 
   const fetchData = async () => {
     if (!id) return;
@@ -291,6 +300,15 @@ const OccurrenceDetails = () => {
         .order("sent_at", { ascending: true });
       setNotifications(notificationsData || []);
 
+      // Fetch access logs
+      const { data: accessLogsData } = await supabase
+        .from("magic_link_access_logs")
+        .select("id, ip_address, user_agent, created_at, resident_id")
+        .eq("occurrence_id", id)
+        .eq("success", true)
+        .order("created_at", { ascending: true });
+      setAccessLogs(accessLogsData || []);
+
       // Fetch unit history if apartment_id exists
       if (occurrenceData.apartment_id) {
         const { data: historyData } = await supabase
@@ -317,7 +335,8 @@ const OccurrenceDetails = () => {
         evidencesData || [],
         defensesData || [],
         decisionsData || [],
-        notificationsData || []
+        notificationsData || [],
+        accessLogsData || []
       );
     } catch (error) {
       console.error("Error fetching occurrence:", error);
@@ -332,7 +351,8 @@ const OccurrenceDetails = () => {
     evs: Evidence[],
     defs: Defense[],
     decs: Decision[],
-    notifs: Notification[]
+    notifs: Notification[],
+    logs: AccessLog[] = []
   ) => {
     const items: TimelineItem[] = [];
 
@@ -379,27 +399,6 @@ const OccurrenceDetails = () => {
         },
       });
 
-      // Add read event if notification was read
-      if (notif.read_at) {
-        const formatIpAddress = (ip: string | null) => {
-          if (!ip) return null;
-          const ips = ip.split(',').map(i => i.trim());
-          return ips[0];
-        };
-        
-        const readIp = formatIpAddress(notif.ip_address);
-        
-        items.push({
-          id: `read-${notif.id}`,
-          type: "read",
-          title: "Notificação Lida",
-          description: readIp ? `IP: ${readIp}` : "Visualizada pelo morador",
-          date: notif.read_at,
-          icon: <MessageCircle className="w-4 h-4" />,
-          color: "bg-green-500",
-        });
-      }
-
       // Add acknowledged event if notification was confirmed
       if (notif.acknowledged_at) {
         items.push({
@@ -442,6 +441,26 @@ const OccurrenceDetails = () => {
         date: dec.decided_at,
         icon: <Gavel className="w-4 h-4" />,
         color: dec.decision === "arquivada" ? "bg-muted" : "bg-red-500",
+      });
+    });
+
+    // Access logs - "Ocorrência Aberta e Lida"
+    logs.forEach((log) => {
+      const formatIpAddress = (ip: string | null) => {
+        if (!ip) return null;
+        const ips = ip.split(',').map(i => i.trim());
+        return ips[0];
+      };
+      const logIp = formatIpAddress(log.ip_address);
+
+      items.push({
+        id: `access-${log.id}`,
+        type: "accessed",
+        title: "Ocorrência Aberta e Lida",
+        description: logIp ? `IP: ${logIp}` : "Acessada pelo morador",
+        date: log.created_at,
+        icon: <Globe className="w-4 h-4" />,
+        color: "bg-green-500",
       });
     });
 
