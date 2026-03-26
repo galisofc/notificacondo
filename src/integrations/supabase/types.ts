@@ -1037,6 +1037,7 @@ export type Database = {
       }
       notifications_sent: {
         Row: {
+          accepted_at: string | null
           acknowledged_at: string | null
           created_at: string
           delivered_at: string | null
@@ -1057,6 +1058,7 @@ export type Database = {
           zpro_status: string | null
         }
         Insert: {
+          accepted_at?: string | null
           acknowledged_at?: string | null
           created_at?: string
           delivered_at?: string | null
@@ -1077,6 +1079,7 @@ export type Database = {
           zpro_status?: string | null
         }
         Update: {
+          accepted_at?: string | null
           acknowledged_at?: string | null
           created_at?: string
           delivered_at?: string | null
@@ -2372,57 +2375,69 @@ export type Database = {
       }
       whatsapp_notification_logs: {
         Row: {
+          accepted_at: string | null
           condominium_id: string | null
           created_at: string
           debug_info: Json | null
+          delivered_at: string | null
           error_message: string | null
           function_name: string
           id: string
           message_id: string | null
           package_id: string | null
           phone: string | null
+          read_at: string | null
           request_payload: Json | null
           resident_id: string | null
           response_body: string | null
           response_status: number | null
+          sent_at: string | null
           status: string
           success: boolean
           template_language: string | null
           template_name: string | null
         }
         Insert: {
+          accepted_at?: string | null
           condominium_id?: string | null
           created_at?: string
           debug_info?: Json | null
+          delivered_at?: string | null
           error_message?: string | null
           function_name: string
           id?: string
           message_id?: string | null
           package_id?: string | null
           phone?: string | null
+          read_at?: string | null
           request_payload?: Json | null
           resident_id?: string | null
           response_body?: string | null
           response_status?: number | null
+          sent_at?: string | null
           status?: string
           success?: boolean
           template_language?: string | null
           template_name?: string | null
         }
         Update: {
+          accepted_at?: string | null
           condominium_id?: string | null
           created_at?: string
           debug_info?: Json | null
+          delivered_at?: string | null
           error_message?: string | null
           function_name?: string
           id?: string
           message_id?: string | null
           package_id?: string | null
           phone?: string | null
+          read_at?: string | null
           request_payload?: Json | null
           resident_id?: string | null
           response_body?: string | null
           response_status?: number | null
+          sent_at?: string | null
           status?: string
           success?: boolean
           template_language?: string | null
