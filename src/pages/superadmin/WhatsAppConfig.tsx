@@ -45,6 +45,12 @@ export default function WhatsAppConfig() {
     qualityRating?: string;
   } | null>(null);
 
+  // Webhook status
+  const [webhookStatus, setWebhookStatus] = useState<"checking" | "active" | "inactive" | "unknown">("checking");
+  const [lastWebhookAt, setLastWebhookAt] = useState<string | null>(null);
+  const [webhookCount24h, setWebhookCount24h] = useState<number>(0);
+  const [isCheckingWebhook, setIsCheckingWebhook] = useState(false);
+
   // Persist lastTestedAt to localStorage
   useEffect(() => {
     if (lastTestedAt) {
