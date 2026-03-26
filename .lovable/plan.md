@@ -1,27 +1,50 @@
 
 
-## Plano: Mostrar versão da API no card de conexão WhatsApp
+## Plano: Corrigir e Completar o Webhook WhatsApp
 
-### Objetivo
-Adicionar a versão da API da Meta (v25.0) no card de informações de conexão, junto com Empresa, Número e Qualidade.
+### Problemas Encontrados
 
-### Mudança
+1. **Falta verificação do `hub.verify_token`** no GET — qualquer requisição pode verificar o webhook
+2. **Status `"accepted"` não mapeado** no `normalizeMetaStatus` — a Meta envia esse status antes de `sent`, e ele não está sendo tratado
+3. **Erros de entrega não são salvos** no banco — apenas vão para `console.error`
+4. **Sem secret de verificação** configurada para o webhook
 
-**`src/pages/superadmin/WhatsAppConfig.tsx`** (linhas 315-344)
+### Mudanças
 
-Adicionar uma 4ª coluna no grid de informações de conexão, alterando `sm:grid-cols-3` para `sm:grid-cols-4`, com:
+#### 1. Adicionar secret `META_WEBHOOK_VERIFY_TOKEN`
+- Solicitar ao usuário que defina um token de verificação via ferramenta de secrets
+- Usar esse token para validar o GET de verificação do webhook
 
-```tsx
-<div>
-  <p className="text-xs text-muted-foreground mb-1">Versão da API</p>
-  <Badge className="text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20">
-    v25.0
-  </Badge>
-</div>
+#### 2. Atualizar `supabase/functions/whatsapp-webhook/index.ts`
+
+**a) Verificação do token no GET:**
+```typescript
+const verifyToken = Deno.env.get("META_WEBHOOK_VERIFY_TOKEN");
+const hubToken = url.searchParams.get("hub.verify_token");
+if (mode === "subscribe" && challenge && hubToken === verifyToken) {
+  return new Response(challenge, { status: 200 });
+}
+return new Response("Forbidden", { status: 403 });
 ```
 
-O valor será estático (`v25.0`) pois é definido no módulo compartilhado do backend. Quando a versão mudar, basta atualizar aqui também.
+**b) Adicionar `"accepted"` ao mapa de status:**
+```typescript
+const statusMap = {
+  accepted: "accepted",
+  sent: "sent",
+  delivered: "delivered",
+  read: "read",
+  failed: "failed",
+};
+```
 
-### Arquivo
-- `src/pages/superadmin/WhatsAppConfig.tsx`
+**c) Salvar erros de entrega no banco:**
+Quando `status.errors` existir, salvar o erro na tabela `whatsapp_notification_logs` (campo `error_message` ou similar) e em `notifications_sent`.
+
+**d) Atualizar status `accepted` corretamente:**
+Quando o status for `accepted`, atualizar o `zpro_status` mas sem marcar `delivered_at`.
+
+### Arquivos Afetados
+- `supabase/functions/whatsapp-webhook/index.ts`
+- Nova secret: `META_WEBHOOK_VERIFY_TOKEN`
 
