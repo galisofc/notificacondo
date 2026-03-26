@@ -1,38 +1,53 @@
 
 
-## Plano: Novo evento na timeline — "Ocorrência Aberta e Lida"
+## Plano: Corrigir timeline de encomendas na VPS externa
 
-### Objetivo
-Substituir o evento atual "Notificação Lida" por um novo evento dedicado "Ocorrência Aberta e Lida" com ícone próprio, exibindo o IP, data e horário de acesso do morador.
+### Diagnóstico
 
-### Mudanças
+O `DeliveryStatusTracker` nos cards de encomendas depende do hook `usePackageNotificationStatus`, que consulta a tabela `whatsapp_notification_logs`. Na VPS externa, a query retorna vazio porque a **política RLS para porteiros** provavelmente não foi aplicada manualmente.
 
-#### `src/pages/OccurrenceDetails.tsx`
+A política necessária é:
+```sql
+CREATE POLICY "Porteiros can view WABA logs of assigned condominiums"
+  ON public.whatsapp_notification_logs
+  FOR SELECT
+  USING (user_belongs_to_condominium(auth.uid(), condominium_id));
+```
 
-**1. Adicionar tipo `"accessed"` ao TimelineItem:**
-Incluir `"accessed"` na union type do campo `type`.
+Além disso, as colunas de timestamp (`accepted_at`, `sent_at`, `delivered_at`, `read_at`) também podem não existir na VPS.
 
-**2. Buscar dados de `magic_link_access_logs`:**
-Fazer query na tabela `magic_link_access_logs` filtrando por `occurrence_id` e `success = true`, trazendo `ip_address`, `user_agent`, `created_at` e `resident_id`.
+### Solução
 
-**3. Substituir o evento "Notificação Lida" pelo novo "Ocorrência Aberta e Lida":**
-Ao invés de gerar um item `"read"` dentro do loop de notificações, gerar itens a partir dos registros de `magic_link_access_logs`. Cada acesso vira um item na timeline com:
-- Ícone: `Globe` (ícone de rede/internet)
-- Cor: `bg-green-500`
-- Título: "Ocorrência Aberta e Lida"
-- Descrição: `IP: 177.215.112.220` (formatado, apenas o primeiro IP)
-- Data: `created_at` do log de acesso
+Não há mudança de código necessária. O problema é que as migrações não foram replicadas na VPS externa.
 
-**4. Manter o evento "Notificação Lida" do WhatsApp separado (via webhook):**
-O status `read` do WhatsApp continuará visível no stepper do DeliveryStatusTracker. O novo evento "Ocorrência Aberta e Lida" representa o acesso real ao link — são dados diferentes.
+Você precisa executar manualmente no SQL da VPS os seguintes comandos:
 
-### Detalhes técnicos
-- Nova interface `AccessLog` com campos: `id`, `ip_address`, `user_agent`, `created_at`, `resident_id`
-- Query: `supabase.from("magic_link_access_logs").select("id, ip_address, user_agent, created_at, resident_id").eq("occurrence_id", id).eq("success", true)`
-- Função `buildTimeline` recebe o array de access logs como parâmetro adicional
-- Cada access log gera um item `{ type: "accessed", title: "Ocorrência Aberta e Lida", icon: <Globe />, ... }`
-- Remove a criação do item `"read"` dentro do loop de notificações
+**1. Verificar/criar a política RLS do porteiro:**
+```sql
+-- Verificar se a policy existe
+SELECT * FROM pg_policies WHERE tablename = 'whatsapp_notification_logs' AND policyname LIKE '%Porteiros%';
 
-### Arquivos afetados
-- `src/pages/OccurrenceDetails.tsx`
+-- Se não existir, criar:
+CREATE POLICY "Porteiros can view WABA logs of assigned condominiums"
+  ON public.whatsapp_notification_logs
+  FOR SELECT
+  USING (user_belongs_to_condominium(auth.uid(), condominium_id));
+```
+
+**2. Verificar/criar colunas de timestamp:**
+```sql
+ALTER TABLE public.whatsapp_notification_logs 
+  ADD COLUMN IF NOT EXISTS accepted_at timestamptz,
+  ADD COLUMN IF NOT EXISTS sent_at timestamptz,
+  ADD COLUMN IF NOT EXISTS delivered_at timestamptz,
+  ADD COLUMN IF NOT EXISTS read_at timestamptz;
+```
+
+**3. Habilitar realtime (se não estiver):**
+```sql
+ALTER PUBLICATION supabase_realtime ADD TABLE public.whatsapp_notification_logs;
+```
+
+### Resumo
+O código está correto. O problema é a falta de sincronização das migrações na VPS externa. Execute os SQLs acima no banco de produção e o tracker aparecerá nos cards.
 
