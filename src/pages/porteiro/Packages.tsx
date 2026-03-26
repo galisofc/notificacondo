@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { PackageStatus } from "@/lib/packageConstants";
 import { getSignedPackagePhotoUrl } from "@/lib/packageStorage";
+import { usePackageNotificationStatus } from "@/hooks/usePackageNotificationStatus";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 // Extended type for packages with signed URLs
