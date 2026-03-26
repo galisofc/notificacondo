@@ -54,6 +54,11 @@ export default function PorteiroPackages() {
   const [isPickupDialogOpen, setIsPickupDialogOpen] = useState(false);
   const [detailsPackage, setDetailsPackage] = useState<PackageWithSignedUrl | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+
+  // Notification delivery statuses for cards
+  const packageIds = packages.map((p) => p.id);
+  const notificationStatusMap = usePackageNotificationStatus(packageIds);
+
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
   const [notificationModalState, setNotificationModalState] = useState<"loading" | "success" | "error">("loading");
   const [notificationSuccessCount, setNotificationSuccessCount] = useState(0);
