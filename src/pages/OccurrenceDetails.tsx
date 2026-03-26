@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import BlockApartmentDisplay from "@/components/common/BlockApartmentDisplay";
+import { DeliveryStatusTracker } from "@/components/packages/DeliveryStatusTracker";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1397,6 +1398,9 @@ const OccurrenceDetails = () => {
                                 <p className="text-xs text-muted-foreground/70">
                                   {formatDateLocal(item.date)}
                                 </p>
+                                {item.type === "notification" && item.deliveryStatus && (
+                                  <DeliveryStatusTracker status={item.deliveryStatus} className="mt-1.5" />
+                                )}
                               </div>
                             </div>
                           ))}
