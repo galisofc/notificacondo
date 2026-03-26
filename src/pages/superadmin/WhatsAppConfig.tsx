@@ -473,28 +473,89 @@ export default function WhatsAppConfig() {
         </Card>
 
         {/* Webhook Status Card */}
-        <Card>
+        <Card className={`transition-all ${webhookStatus === "active" ? "border-green-500/30" : webhookStatus === "inactive" ? "border-yellow-500/30" : ""}`}>
           <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-green-500/10 p-2">
-                <Zap className="h-5 w-5 text-green-600" />
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className={`rounded-lg p-2 ${webhookStatus === "active" ? "bg-green-500/10" : webhookStatus === "inactive" ? "bg-yellow-500/10" : "bg-muted/30"}`}>
+                  <Zap className={`h-5 w-5 ${webhookStatus === "active" ? "text-green-600" : webhookStatus === "inactive" ? "text-yellow-600" : "text-muted-foreground"}`} />
+                </div>
+                <div>
+                  <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                    Webhook
+                    {webhookStatus === "active" && (
+                      <Badge className="bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20 gap-1 text-xs">
+                        <CheckCircle className="h-3 w-3" />
+                        Ativo
+                      </Badge>
+                    )}
+                    {webhookStatus === "inactive" && (
+                      <Badge className="bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20 gap-1 text-xs">
+                        <Clock className="h-3 w-3" />
+                        Inativo (+72h)
+                      </Badge>
+                    )}
+                    {webhookStatus === "unknown" && (
+                      <Badge variant="secondary" className="gap-1 text-xs">
+                        <XCircle className="h-3 w-3" />
+                        Sem dados
+                      </Badge>
+                    )}
+                    {webhookStatus === "checking" && (
+                      <Badge variant="secondary" className="gap-1 text-xs">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        Verificando...
+                      </Badge>
+                    )}
+                  </CardTitle>
+                  <CardDescription>
+                    Status real baseado nos webhooks recebidos da Meta
+                  </CardDescription>
+                </div>
               </div>
-              <div>
-                <CardTitle className="text-base sm:text-lg">Webhook</CardTitle>
-                <CardDescription>
-                  Configuração do webhook para receber atualizações de status
-                </CardDescription>
-              </div>
+              <Button
+                onClick={checkWebhookStatus}
+                disabled={isCheckingWebhook}
+                variant="outline"
+                size="sm"
+                className="gap-2 shrink-0"
+              >
+                {isCheckingWebhook ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <TestTube className="h-4 w-4" />
+                )}
+                Verificar agora
+              </Button>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Badge className="bg-green-500/10 text-green-600 border-green-500/20 gap-1">
-                <CheckCircle className="h-3 w-3" />
-                Configurado
-              </Badge>
-              <span className="text-xs text-muted-foreground">Recebendo eventos da Meta</span>
-            </div>
+            {/* Stats */}
+            {webhookStatus !== "checking" && (
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-lg border bg-muted/30 p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Último webhook</p>
+                  <p className="text-sm font-medium">
+                    {lastWebhookAt
+                      ? new Date(lastWebhookAt).toLocaleString("pt-BR", {
+                          day: "2-digit", month: "2-digit", year: "numeric",
+                          hour: "2-digit", minute: "2-digit",
+                        })
+                      : "Nenhum recebido"}
+                  </p>
+                </div>
+                <div className="rounded-lg border bg-muted/30 p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Eventos (24h)</p>
+                  <p className="text-sm font-medium">{webhookCount24h}</p>
+                </div>
+                <div className="rounded-lg border bg-muted/30 p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Status</p>
+                  <p className={`text-sm font-medium ${webhookStatus === "active" ? "text-green-600 dark:text-green-400" : webhookStatus === "inactive" ? "text-yellow-600 dark:text-yellow-400" : "text-muted-foreground"}`}>
+                    {webhookStatus === "active" ? "Recebendo eventos" : webhookStatus === "inactive" ? "Sem eventos recentes" : "Nenhum dado"}
+                  </p>
+                </div>
+              </div>
+            )}
             
             <div className="space-y-3">
               <div className="space-y-1">
