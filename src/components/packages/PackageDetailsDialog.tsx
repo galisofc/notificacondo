@@ -58,6 +58,10 @@ interface NotificationLog {
   template_name: string | null;
   status: string | null;
   debug_info: { sent_by_name?: string } | null;
+  accepted_at: string | null;
+  sent_at: string | null;
+  delivered_at: string | null;
+  read_at: string | null;
 }
 
 // --- Main Dialog ---
@@ -99,7 +103,7 @@ export function PackageDetailsDialog({
     try {
       const { data } = await supabase
         .from("whatsapp_notification_logs")
-        .select("id, created_at, success, error_message, template_name, status, debug_info")
+        .select("id, created_at, success, error_message, template_name, status, debug_info, accepted_at, sent_at, delivered_at, read_at")
         .eq("package_id", package_.id)
         .order("created_at", { ascending: false });
       setNotificationLogs((data || []) as NotificationLog[]);
@@ -404,7 +408,17 @@ export function PackageDetailsDialog({
                         </div>
                       </div>
                       {/* Delivery status stepper */}
-                      {log.success && <DeliveryStatusTracker status={log.status} />}
+                      {log.success && (
+                        <DeliveryStatusTracker
+                          status={log.status}
+                          timestamps={{
+                            accepted_at: log.accepted_at,
+                            sent_at: log.sent_at,
+                            delivered_at: log.delivered_at,
+                            read_at: log.read_at,
+                          }}
+                        />
+                      )}
                     </div>
                   ))}
                 </div>

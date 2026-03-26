@@ -149,13 +149,16 @@ Deno.serve(async (req) => {
             zpro_status: normalizedStatus,
           };
 
-          if (normalizedStatus === "delivered") {
+          if (normalizedStatus === "accepted") {
+            updateData.accepted_at = now;
+          } else if (normalizedStatus === "sent") {
+            // sent only updates zpro_status — no extra timestamp on notifications_sent
+          } else if (normalizedStatus === "delivered") {
             updateData.delivered_at = now;
           } else if (normalizedStatus === "read") {
             updateData.read_at = now;
             updateData.delivered_at = now;
           }
-          // "accepted" and "sent" only update zpro_status — no timestamp fields
 
           const { data, error } = await supabase
             .from("notifications_sent")
@@ -171,6 +174,12 @@ Deno.serve(async (req) => {
 
           // Build update for whatsapp_notification_logs
           const logUpdate: Record<string, unknown> = { status: normalizedStatus };
+          // Save per-status timestamp
+          if (normalizedStatus === "accepted") logUpdate.accepted_at = now;
+          else if (normalizedStatus === "sent") logUpdate.sent_at = now;
+          else if (normalizedStatus === "delivered") logUpdate.delivered_at = now;
+          else if (normalizedStatus === "read") logUpdate.read_at = now;
+
           if (errorText) {
             logUpdate.error_message = errorText;
             totalErrors++;

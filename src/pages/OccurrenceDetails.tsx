@@ -117,6 +117,7 @@ interface Notification {
   delivered_at: string | null;
   read_at: string | null;
   acknowledged_at: string | null;
+  accepted_at: string | null;
   device_info: unknown;
   location_info: unknown;
   ip_address: string | null;
@@ -133,6 +134,7 @@ interface TimelineItem {
   icon: React.ReactNode;
   color: string;
   deliveryStatus?: string | null;
+  deliveryTimestamps?: import("@/components/packages/DeliveryStatusTracker").DeliveryTimestamps;
 }
 
 const OccurrenceDetails = () => {
@@ -211,7 +213,7 @@ const OccurrenceDetails = () => {
           setNotifications((prev) => {
             const next = prev.map((n) =>
               n.id === updated.id
-                ? { ...n, zpro_status: updated.zpro_status, delivered_at: updated.delivered_at, read_at: updated.read_at }
+                ? { ...n, zpro_status: updated.zpro_status, delivered_at: updated.delivered_at, read_at: updated.read_at, accepted_at: updated.accepted_at }
                 : n
             );
             if (occurrence) {
@@ -369,6 +371,12 @@ const OccurrenceDetails = () => {
         icon: <Send className="w-4 h-4" />,
         color: "bg-amber-500",
         deliveryStatus: notif.zpro_status,
+        deliveryTimestamps: {
+          accepted_at: notif.accepted_at,
+          sent_at: notif.sent_at,
+          delivered_at: notif.delivered_at,
+          read_at: notif.read_at,
+        },
       });
 
       // Add read event if notification was read
@@ -1434,7 +1442,7 @@ const OccurrenceDetails = () => {
                                   {formatDateLocal(item.date)}
                                 </p>
                                 {item.type === "notification" && item.deliveryStatus && (
-                                  <DeliveryStatusTracker status={item.deliveryStatus} className="mt-1.5" />
+                                  <DeliveryStatusTracker status={item.deliveryStatus} timestamps={item.deliveryTimestamps} className="mt-1.5" />
                                 )}
                               </div>
                             </div>
