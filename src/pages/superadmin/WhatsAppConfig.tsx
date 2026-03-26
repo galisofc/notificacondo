@@ -425,6 +425,82 @@ export default function WhatsAppConfig() {
           </CardContent>
         </Card>
 
+        {/* Webhook Status Card */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-green-500/10 p-2">
+                <Zap className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <CardTitle className="text-base sm:text-lg">Webhook</CardTitle>
+                <CardDescription>
+                  Configuração do webhook para receber atualizações de status
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Badge className="bg-green-500/10 text-green-600 border-green-500/20 gap-1">
+                <CheckCircle className="h-3 w-3" />
+                Configurado
+              </Badge>
+              <span className="text-xs text-muted-foreground">Recebendo eventos da Meta</span>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">URL do Webhook</Label>
+                <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2">
+                  <code className="text-xs break-all flex-1">
+                    {`https://${import.meta.env.VITE_SUPABASE_PROJECT_ID || 'iyeljkdrypcxvljebqtn'}.supabase.co/functions/v1/whatsapp-webhook`}
+                  </code>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Eventos Assinados</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {["messages", "message_status", "message_template_status_update"].map((evt) => (
+                    <Badge key={evt} variant="outline" className="text-[10px] font-mono">
+                      {evt}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Token de Verificação</Label>
+                <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2">
+                  <code className="text-xs font-mono text-muted-foreground">META_WEBHOOK_VERIFY_TOKEN</code>
+                  <Badge variant="outline" className="text-[10px] bg-green-500/10 text-green-600 border-green-500/20">
+                    <CheckCircle className="h-2.5 w-2.5 mr-1" />
+                    Configurado
+                  </Badge>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground">
+                Configure a URL acima no painel de Webhooks do Meta App Dashboard
+              </p>
+              <a
+                href="https://developers.facebook.com/apps"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+              >
+                Abrir Meta App Dashboard
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Test Messages Card */}
         <Card>
           <CardHeader>
