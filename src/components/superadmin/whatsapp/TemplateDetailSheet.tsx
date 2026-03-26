@@ -120,7 +120,89 @@ export function TemplateDetailSheet({
   const previewContent = contentToPreview ? replaceTemplateVariables(contentToPreview) : "";
   const hasPreviewContent = previewContent.trim().length > 0;
   const previewCopyValue = contentToPreview || template.description || template.name;
-...
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: `${label} copiado!` });
+  };
+
+  const handleUnlink = async () => {
+    if (!template) return;
+    setIsUnlinking(true);
+    try {
+      const { error } = await supabase
+        .from("whatsapp_templates")
+        .update({ waba_template_name: null, waba_language: null })
+        .eq("id", template.id);
+      if (error) throw error;
+      toast({ title: "Template desvinculado com sucesso" });
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-templates"] });
+      onRefresh();
+    } catch (err: any) {
+      toast({ title: "Erro ao desvincular", description: err.message, variant: "destructive" });
+    } finally {
+      setIsUnlinking(false);
+    }
+  };
+
+  const getStatusInfo = (status?: string) => {
+    switch (status?.toUpperCase()) {
+      case "APPROVED": return { icon: ShieldCheck, label: "Aprovado", color: "text-green-600", bg: "bg-green-500/10" };
+      case "REJECTED": return { icon: ShieldX, label: "Rejeitado", color: "text-red-600", bg: "bg-red-500/10" };
+      case "PENDING": return { icon: ShieldAlert, label: "Pendente", color: "text-amber-600", bg: "bg-amber-500/10" };
+      default: return { icon: Clock, label: status || "Desconhecido", color: "text-muted-foreground", bg: "bg-muted" };
+    }
+  };
+
+  const statusInfo = metaTemplate ? getStatusInfo(metaTemplate.status) : null;
+  const StatusIcon = statusInfo?.icon || Clock;
+
+  return (
+    <>
+      <Sheet open={!!template} onOpenChange={(open) => !open && onClose()}>
+        <SheetContent className="sm:max-w-lg overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <CategoryIcon className="h-5 w-5" />
+              {template.name}
+            </SheetTitle>
+            <SheetDescription>{template.description}</SheetDescription>
+          </SheetHeader>
+
+          <div className="mt-6 space-y-6">
+            {/* Status & Link Info */}
+            <div className="flex flex-wrap gap-2">
+              <Badge variant={template.is_active ? "default" : "secondary"}>
+                {template.is_active ? "Ativo" : "Inativo"}
+              </Badge>
+              {isLinked ? (
+                <Badge variant="outline" className="gap-1 text-green-600 border-green-600/30">
+                  <Link2 className="h-3 w-3" />
+                  {template.waba_template_name}
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="gap-1 text-muted-foreground">
+                  <LinkIcon className="h-3 w-3" />
+                  Não vinculado
+                </Badge>
+              )}
+              {statusInfo && (
+                <Badge variant="outline" className={`gap-1 ${statusInfo.color}`}>
+                  <StatusIcon className="h-3 w-3" />
+                  {statusInfo.label}
+                </Badge>
+              )}
+            </div>
+
+            {metaTemplate?.rejected_reason && (
+              <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3">
+                <p className="text-sm font-medium text-red-700 dark:text-red-400">Motivo da rejeição:</p>
+                <p className="text-sm text-red-600 dark:text-red-500 mt-1">{metaTemplate.rejected_reason}</p>
+              </div>
+            )}
+
+            <Separator />
+
             {/* Content Preview */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
