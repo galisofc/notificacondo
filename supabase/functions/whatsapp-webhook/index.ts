@@ -145,9 +145,14 @@ Deno.serve(async (req) => {
             totalUpdated += data?.length || 0;
           }
 
+          // Update whatsapp_notification_logs with delivery status
+          const logUpdateData: Record<string, unknown> = { status: normalizedStatus };
+          if (status.errors && status.errors.length > 0) {
+            logUpdateData.error_message = status.errors.map(e => `[${e.code}] ${e.title}${e.message ? ': ' + e.message : ''}`).join('; ');
+          }
           await supabase
             .from("whatsapp_notification_logs")
-            .update({ status: normalizedStatus })
+            .update(logUpdateData)
             .eq("message_id", messageId);
 
           // Capture BSUID if present
