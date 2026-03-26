@@ -490,6 +490,7 @@ export default function PorteiroPackages() {
                         onResendNotification={() => handleResendNotification(pkg)}
                         showCondominium={false}
                         showPickupCode={false}
+                        notificationStatus={notificationStatusMap[pkg.id] || null}
                       />
                     ))}
                   </div>
