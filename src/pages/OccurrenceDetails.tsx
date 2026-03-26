@@ -1442,7 +1442,7 @@ const OccurrenceDetails = () => {
                                   {formatDateLocal(item.date)}
                                 </p>
                                 {item.type === "notification" && item.deliveryStatus && (
-                                  <DeliveryStatusTracker status={item.deliveryStatus} className="mt-1.5" />
+                                  <DeliveryStatusTracker status={item.deliveryStatus} timestamps={item.deliveryTimestamps} className="mt-1.5" />
                                 )}
                               </div>
                             </div>
