@@ -1,56 +1,38 @@
 
 
-## Plano: Tooltips com horários no DeliveryStatusTracker
+## Plano: Novo evento na timeline — "Ocorrência Aberta e Lida"
 
 ### Objetivo
-Ao passar o mouse sobre cada etapa do stepper (Aceita, Enviada, Entregue, Lida), mostrar um tooltip com a data/hora exata em que aquele status foi registrado.
-
-### Problema atual
-As tabelas não armazenam timestamps individuais por status:
-- `whatsapp_notification_logs`: tem apenas `status` e `created_at`
-- `notifications_sent`: tem `sent_at`, `delivered_at`, `read_at` mas falta `accepted_at`
+Substituir o evento atual "Notificação Lida" por um novo evento dedicado "Ocorrência Aberta e Lida" com ícone próprio, exibindo o IP, data e horário de acesso do morador.
 
 ### Mudanças
 
-#### 1. Migração SQL — Adicionar colunas de timestamps
+#### `src/pages/OccurrenceDetails.tsx`
 
-**`whatsapp_notification_logs`**: adicionar `accepted_at`, `sent_at`, `delivered_at`, `read_at` (timestamp nullable)
+**1. Adicionar tipo `"accessed"` ao TimelineItem:**
+Incluir `"accessed"` na union type do campo `type`.
 
-**`notifications_sent`**: adicionar `accepted_at` (timestamp nullable)
+**2. Buscar dados de `magic_link_access_logs`:**
+Fazer query na tabela `magic_link_access_logs` filtrando por `occurrence_id` e `success = true`, trazendo `ip_address`, `user_agent`, `created_at` e `resident_id`.
 
-#### 2. Webhook — Salvar timestamps por status
+**3. Substituir o evento "Notificação Lida" pelo novo "Ocorrência Aberta e Lida":**
+Ao invés de gerar um item `"read"` dentro do loop de notificações, gerar itens a partir dos registros de `magic_link_access_logs`. Cada acesso vira um item na timeline com:
+- Ícone: `Globe` (ícone de rede/internet)
+- Cor: `bg-green-500`
+- Título: "Ocorrência Aberta e Lida"
+- Descrição: `IP: 177.215.112.220` (formatado, apenas o primeiro IP)
+- Data: `created_at` do log de acesso
 
-**`supabase/functions/whatsapp-webhook/index.ts`**
+**4. Manter o evento "Notificação Lida" do WhatsApp separado (via webhook):**
+O status `read` do WhatsApp continuará visível no stepper do DeliveryStatusTracker. O novo evento "Ocorrência Aberta e Lida" representa o acesso real ao link — são dados diferentes.
 
-Ao receber cada status callback da Meta, salvar o `now` na coluna correspondente:
-- `accepted` → `accepted_at = now`
-- `sent` → `sent_at = now`
-- `delivered` → `delivered_at = now`
-- `read` → `read_at = now`
-
-Aplicar em ambas as tabelas (`notifications_sent` e `whatsapp_notification_logs`).
-
-#### 3. DeliveryStatusTracker — Aceitar e exibir timestamps
-
-**`src/components/packages/DeliveryStatusTracker.tsx`**
-
-- Adicionar prop opcional `timestamps` com shape `{ accepted_at?, sent_at?, delivered_at?, read_at? }`
-- Envolver cada ícone do stepper com `Tooltip` (do radix/shadcn)
-- O tooltip mostra o horário formatado (ex: "26/03/2026 às 14:32") quando a etapa está ativa e o timestamp existe
-- Se não houver timestamp, mostrar apenas o label sem tooltip
-
-#### 4. Passar timestamps nos locais de uso
-
-**`src/components/packages/PackageDetailsDialog.tsx`**: incluir os campos de timestamp na query dos logs e passar para o tracker.
-
-**`src/pages/OccurrenceDetails.tsx`**: incluir `accepted_at` na query de `notifications_sent` e passar `{ accepted_at, sent_at, delivered_at, read_at }` para o tracker no timeline.
-
-**`src/components/packages/PackageCard.tsx`**: opcional — nos cards compactos, o tooltip pode não ser necessário (hover em mobile é ruim). Manter sem timestamps nos cards.
+### Detalhes técnicos
+- Nova interface `AccessLog` com campos: `id`, `ip_address`, `user_agent`, `created_at`, `resident_id`
+- Query: `supabase.from("magic_link_access_logs").select("id, ip_address, user_agent, created_at, resident_id").eq("occurrence_id", id).eq("success", true)`
+- Função `buildTimeline` recebe o array de access logs como parâmetro adicional
+- Cada access log gera um item `{ type: "accessed", title: "Ocorrência Aberta e Lida", icon: <Globe />, ... }`
+- Remove a criação do item `"read"` dentro do loop de notificações
 
 ### Arquivos afetados
-- Nova migração SQL (4 colunas em `whatsapp_notification_logs` + 1 em `notifications_sent`)
-- `supabase/functions/whatsapp-webhook/index.ts`
-- `src/components/packages/DeliveryStatusTracker.tsx`
-- `src/components/packages/PackageDetailsDialog.tsx`
 - `src/pages/OccurrenceDetails.tsx`
 
