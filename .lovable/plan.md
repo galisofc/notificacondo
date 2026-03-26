@@ -1,30 +1,44 @@
 
 
-## Plano: Verificação real do Webhook na Meta
+## Diagnóstico: Status "Entregue" e "Lido" não atualizam na VPS externa
 
-### Objetivo
-Adicionar um botão "Verificar Webhook" no card de Webhook que faz uma chamada real à API da Meta para confirmar se o webhook está corretamente configurado e recebendo eventos. O status será dinâmico (verde/amarelo/vermelho) baseado na resposta da API.
+### Causa raiz
 
-### Como funciona
-A API da Meta permite consultar as subscriptions de um App via `GET /{app-id}/subscriptions`. Porém, isso requer o App Access Token. Uma alternativa mais simples e já disponível: consultar a tabela `webhook_raw_logs` para verificar se há payloads recentes recebidos, o que prova que o webhook está funcionando.
+O webhook da Meta está configurado para enviar os callbacks de status (delivered, read) para a URL do Lovable Cloud:
+```
+https://kcnojeouypwbkkbnbold.supabase.co/functions/v1/whatsapp-webhook
+```
 
-### Implementação
+A VPS externa tem seu **próprio** Supabase com sua **própria** Edge Function `whatsapp-webhook`. Porém, a Meta continua enviando os callbacks para o Lovable Cloud, então a VPS externa **nunca recebe** as atualizações de "delivered" e "read".
 
-**1. Lógica de verificação no frontend (`src/pages/superadmin/WhatsAppConfig.tsx`):**
-- Adicionar estado `webhookStatus`: `"checking" | "active" | "inactive" | "unknown"`
-- Ao carregar a página, consultar `webhook_raw_logs` ordenado por `created_at DESC` com `limit 1`
-- Se o último registro foi recebido nas últimas 72h: status **Ativo** (verde)
-- Se foi recebido há mais de 72h: status **Inativo** (amarelo/aviso)
-- Se não há nenhum registro: status **Sem dados** (cinza)
-- Adicionar botão "Verificar agora" que refaz a consulta
+O fluxo atual:
+```text
+1. Porteiro registra encomenda (VPS externa)
+2. notify-package-arrival envia msg via Meta API (VPS externa) → status = "sent" ✓
+3. Meta envia webhook de delivered/read → Lovable Cloud ✗ (deveria ir para VPS)
+4. VPS externa nunca recebe → status fica parado em "sent"
+```
 
-**2. Atualizar o card visual:**
-- Substituir o badge estático "Configurado" por badge dinâmico baseado no status real
-- Mostrar data/hora do último webhook recebido
-- Mostrar contagem de webhooks recebidos nas últimas 24h
+### Solução
 
-### Detalhes técnicos
-- Query: `supabase.from("webhook_raw_logs").select("id, created_at, source").eq("source", "meta").order("created_at", { ascending: false }).limit(1)`
-- Query contagem 24h: `supabase.from("webhook_raw_logs").select("id", { count: "exact", head: true }).eq("source", "meta").gte("created_at", last24h)`
-- Arquivo editado: `src/pages/superadmin/WhatsAppConfig.tsx`
+Este é um problema de **configuração no painel Meta**, não de código. O usuário precisa:
+
+1. Acessar o **Meta App Dashboard** → WhatsApp → Configuration → Webhook
+2. Alterar a **Callback URL** para apontar para a VPS externa:
+   ```
+   https://[SUPABASE_URL_DA_VPS]/functions/v1/whatsapp-webhook
+   ```
+3. Manter o mesmo **Verify Token** (`META_WEBHOOK_VERIFY_TOKEN`) que está configurado nos secrets da VPS
+4. Garantir que os campos de subscription estão marcados: `messages`
+
+### Alternativa (se quiser manter dois ambientes)
+
+Se o objetivo é manter **ambos** os ambientes (Lovable Cloud + VPS) recebendo webhooks, a Meta só permite **uma URL de webhook por app**. Nesse caso, as opções são:
+
+- **Opção A**: Usar apenas a VPS externa como destino do webhook (recomendado para produção)
+- **Opção B**: Criar um proxy/relay na VPS que recebe o webhook e repassa para o outro ambiente
+
+### O que NÃO precisa mudar no código
+
+O código da Edge Function `whatsapp-webhook` já está correto — ela atualiza tanto `notifications_sent` quanto `whatsapp_notification_logs` com os timestamps de delivered/read. O problema é exclusivamente que a Meta não está enviando os callbacks para o servidor correto.
 
