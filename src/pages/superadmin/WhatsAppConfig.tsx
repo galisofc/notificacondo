@@ -58,7 +58,48 @@ export default function WhatsAppConfig() {
     }
   }, [lastTestedAt]);
 
-  // Auto-test connection on page load
+  // Check webhook status
+  const checkWebhookStatus = async () => {
+    setIsCheckingWebhook(true);
+    try {
+      const now = new Date();
+      const last72h = new Date(now.getTime() - 72 * 60 * 60 * 1000).toISOString();
+      const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+
+      const [lastLog, countResult] = await Promise.all([
+        supabase
+          .from("webhook_raw_logs")
+          .select("id, created_at")
+          .eq("source", "meta")
+          .order("created_at", { ascending: false })
+          .limit(1),
+        supabase
+          .from("webhook_raw_logs")
+          .select("id", { count: "exact", head: true })
+          .eq("source", "meta")
+          .gte("created_at", last24h),
+      ]);
+
+      setWebhookCount24h(countResult.count ?? 0);
+
+      if (lastLog.data && lastLog.data.length > 0) {
+        const lastDate = lastLog.data[0].created_at;
+        setLastWebhookAt(lastDate);
+        setWebhookStatus(lastDate >= last72h ? "active" : "inactive");
+      } else {
+        setLastWebhookAt(null);
+        setWebhookStatus("unknown");
+      }
+    } catch {
+      setWebhookStatus("unknown");
+    } finally {
+      setIsCheckingWebhook(false);
+    }
+  };
+
+  useEffect(() => { checkWebhookStatus(); }, []);
+
+
   useEffect(() => {
     const autoTestConnection = async () => {
       setIsTesting(true);
