@@ -226,7 +226,7 @@ const OccurrenceDetails = () => {
                 : n
             );
             if (occurrence) {
-              buildTimeline(occurrence, evidences, defenses, decisions, next);
+              buildTimeline(occurrence, evidences, defenses, decisions, next, accessLogs);
             }
             return next;
           });
@@ -300,6 +300,15 @@ const OccurrenceDetails = () => {
         .order("sent_at", { ascending: true });
       setNotifications(notificationsData || []);
 
+      // Fetch access logs
+      const { data: accessLogsData } = await supabase
+        .from("magic_link_access_logs")
+        .select("id, ip_address, user_agent, created_at, resident_id")
+        .eq("occurrence_id", id)
+        .eq("success", true)
+        .order("created_at", { ascending: true });
+      setAccessLogs(accessLogsData || []);
+
       // Fetch unit history if apartment_id exists
       if (occurrenceData.apartment_id) {
         const { data: historyData } = await supabase
@@ -326,7 +335,8 @@ const OccurrenceDetails = () => {
         evidencesData || [],
         defensesData || [],
         decisionsData || [],
-        notificationsData || []
+        notificationsData || [],
+        accessLogsData || []
       );
     } catch (error) {
       console.error("Error fetching occurrence:", error);
@@ -341,7 +351,8 @@ const OccurrenceDetails = () => {
     evs: Evidence[],
     defs: Defense[],
     decs: Decision[],
-    notifs: Notification[]
+    notifs: Notification[],
+    logs: AccessLog[] = []
   ) => {
     const items: TimelineItem[] = [];
 
@@ -388,26 +399,7 @@ const OccurrenceDetails = () => {
         },
       });
 
-      // Add read event if notification was read
-      if (notif.read_at) {
-        const formatIpAddress = (ip: string | null) => {
-          if (!ip) return null;
-          const ips = ip.split(',').map(i => i.trim());
-          return ips[0];
-        };
-        
-        const readIp = formatIpAddress(notif.ip_address);
-        
-        items.push({
-          id: `read-${notif.id}`,
-          type: "read",
-          title: "Notificação Lida",
-          description: readIp ? `IP: ${readIp}` : "Visualizada pelo morador",
-          date: notif.read_at,
-          icon: <MessageCircle className="w-4 h-4" />,
-          color: "bg-green-500",
-        });
-      }
+      });
 
       // Add acknowledged event if notification was confirmed
       if (notif.acknowledged_at) {
