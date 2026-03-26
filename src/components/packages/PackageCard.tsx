@@ -120,6 +120,9 @@ export function PackageCard({
                   <p className="text-xs text-muted-foreground">
                     {formattedDate}
                   </p>
+                  {notificationStatus && (
+                    <DeliveryStatusTracker status={notificationStatus} className="mt-1" />
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -212,6 +215,9 @@ export function PackageCard({
                 <Clock className="w-4 h-4" />
                 <span>{formattedDate}</span>
               </div>
+              {notificationStatus && (
+                <DeliveryStatusTracker status={notificationStatus} className="mt-1" />
+              )}
             </div>
 
             {description && (
