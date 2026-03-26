@@ -159,6 +159,7 @@ const OccurrenceDetails = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeline, setTimeline] = useState<TimelineItem[]>([]);
+  const [accessLogs, setAccessLogs] = useState<AccessLog[]>([]);
   const [unitHistory, setUnitHistory] = useState<{ advertencia: number; notificacao: number; multa: number; items: any[] }>({ advertencia: 0, notificacao: 0, multa: 0, items: [] });
 
   // Decision dialog
