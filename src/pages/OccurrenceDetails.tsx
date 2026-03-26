@@ -332,6 +332,7 @@ const OccurrenceDetails = () => {
         date: notif.sent_at,
         icon: <Send className="w-4 h-4" />,
         color: "bg-amber-500",
+        deliveryStatus: notif.zpro_status,
       });
 
       // Add read event if notification was read
