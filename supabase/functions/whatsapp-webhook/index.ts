@@ -52,17 +52,35 @@ interface MetaWebhookPayload {
   entry: MetaWebhookEntry[];
 }
 
+function normalizeMetaStatus(status: string): string {
+  const statusMap: Record<string, string> = {
+    accepted: "accepted",
+    sent: "sent",
+    delivered: "delivered",
+    read: "read",
+    failed: "failed",
+  };
+  return statusMap[status.toLowerCase()] || status.toLowerCase();
+}
+
+function formatErrors(errors: Array<{ code: number; title: string; message?: string }>): string {
+  return errors.map(e => `[${e.code}] ${e.title}${e.message ? ': ' + e.message : ''}`).join(' | ');
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // GET — Webhook verification with token validation
   if (req.method === "GET") {
     const url = new URL(req.url);
     const mode = url.searchParams.get("hub.mode");
     const challenge = url.searchParams.get("hub.challenge");
+    const hubToken = url.searchParams.get("hub.verify_token");
+    const verifyToken = Deno.env.get("META_WEBHOOK_VERIFY_TOKEN");
 
-    if (mode === "subscribe" && challenge) {
+    if (mode === "subscribe" && challenge && hubToken && hubToken === verifyToken) {
       console.log("[WEBHOOK] Verification request accepted");
       return new Response(challenge, {
         status: 200,
@@ -70,6 +88,7 @@ Deno.serve(async (req) => {
       });
     }
 
+    console.warn("[WEBHOOK] Verification rejected - invalid or missing token");
     return new Response("Forbidden", { status: 403, headers: corsHeaders });
   }
 
@@ -101,6 +120,7 @@ Deno.serve(async (req) => {
     let totalUpdated = 0;
     let totalBsuidsCapured = 0;
     let totalStatuses = 0;
+    let totalErrors = 0;
 
     for (const entry of payload.entry) {
       for (const change of entry.changes) {
@@ -118,9 +138,12 @@ Deno.serve(async (req) => {
           const normalizedStatus = normalizeMetaStatus(status.status);
           const recipientPhone = status.recipient_id || contactWaId;
           const bsuid = status.user_id || status.recipient_user_id || contactBsuid;
+          const hasErrors = status.errors && status.errors.length > 0;
+          const errorText = hasErrors ? formatErrors(status.errors!) : null;
 
-          console.log(`[WEBHOOK] Status: ${status.status} -> ${normalizedStatus} | msgId: ${messageId} | phone: ${recipientPhone} | bsuid: ${bsuid || "none"}`);
+          console.log(`[WEBHOOK] Status: ${status.status} -> ${normalizedStatus} | msgId: ${messageId} | phone: ${recipientPhone} | bsuid: ${bsuid || "none"}${hasErrors ? ' | ERRORS: ' + errorText : ''}`);
 
+          // Build update for notifications_sent
           const now = new Date().toISOString();
           const updateData: Record<string, unknown> = {
             zpro_status: normalizedStatus,
@@ -132,6 +155,7 @@ Deno.serve(async (req) => {
             updateData.read_at = now;
             updateData.delivered_at = now;
           }
+          // "accepted" and "sent" only update zpro_status — no timestamp fields
 
           const { data, error } = await supabase
             .from("notifications_sent")
@@ -145,9 +169,16 @@ Deno.serve(async (req) => {
             totalUpdated += data?.length || 0;
           }
 
+          // Build update for whatsapp_notification_logs
+          const logUpdate: Record<string, unknown> = { status: normalizedStatus };
+          if (errorText) {
+            logUpdate.error_message = errorText;
+            totalErrors++;
+          }
+
           await supabase
             .from("whatsapp_notification_logs")
-            .update({ status: normalizedStatus })
+            .update(logUpdate)
             .eq("message_id", messageId);
 
           // Capture BSUID if present
@@ -182,10 +213,6 @@ Deno.serve(async (req) => {
               }
             }
           }
-
-          if (status.errors && status.errors.length > 0) {
-            console.error(`[WEBHOOK] Message errors for ${messageId}:`, JSON.stringify(status.errors));
-          }
         }
       }
     }
@@ -202,13 +229,14 @@ Deno.serve(async (req) => {
         .eq("id", rawLogId);
     }
 
-    console.log(`[WEBHOOK] Processing complete: ${totalUpdated} notifications updated, ${totalBsuidsCapured} BSUIDs captured`);
+    console.log(`[WEBHOOK] Processing complete: ${totalUpdated} notifications updated, ${totalBsuidsCapured} BSUIDs captured, ${totalErrors} errors saved`);
 
     return new Response(
       JSON.stringify({
         success: true,
         updated: totalUpdated,
         bsuids_captured: totalBsuidsCapured,
+        errors_saved: totalErrors,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
@@ -221,13 +249,3 @@ Deno.serve(async (req) => {
     );
   }
 });
-
-function normalizeMetaStatus(status: string): string {
-  const statusMap: Record<string, string> = {
-    sent: "sent",
-    delivered: "delivered",
-    read: "read",
-    failed: "failed",
-  };
-  return statusMap[status.toLowerCase()] || status.toLowerCase();
-}
