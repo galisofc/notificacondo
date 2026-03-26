@@ -237,7 +237,7 @@ const OccurrenceDetails = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [id, occurrence, evidences, defenses, decisions]);
+  }, [id, occurrence, evidences, defenses, decisions, accessLogs]);
 
   const fetchData = async () => {
     if (!id) return;
