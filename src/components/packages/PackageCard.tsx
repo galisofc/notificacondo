@@ -24,6 +24,7 @@ import { PackageStatusBadge } from "./PackageStatusBadge";
 import { PackageCardImage } from "./PackageCardImage";
 import { PackageStatus } from "@/lib/packageConstants";
 import { cn } from "@/lib/utils";
+import { DeliveryStatusTracker } from "./DeliveryStatusTracker";
 
 interface PackageCardProps {
   id: string;
@@ -35,12 +36,12 @@ interface PackageCardProps {
   condominiumName?: string;
   receivedAt: string;
   description?: string;
+  notificationStatus?: string | null;
   onClick?: () => void;
   onResendNotification?: () => void;
   onViewDetails?: () => void;
   showCondominium?: boolean;
   compact?: boolean;
-  /** When false, the pickup code will not be rendered (useful for concierge views). */
   showPickupCode?: boolean;
 }
 

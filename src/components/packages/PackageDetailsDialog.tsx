@@ -35,6 +35,7 @@ import { PackageStatusBadge } from "./PackageStatusBadge";
 import { PackageCardImage } from "./PackageCardImage";
 import { getSignedPackagePhotoUrl } from "@/lib/packageStorage";
 import { cn } from "@/lib/utils";
+import { DeliveryStatusTracker } from "./DeliveryStatusTracker";
 
 interface PackageDetailsDialogProps {
   open: boolean;
