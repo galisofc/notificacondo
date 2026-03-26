@@ -1,59 +1,27 @@
 
-Objetivo: corrigir o falso positivo de “enviado” no WhatsApp.
 
-Diagnóstico que confirmei:
-- O envio recente da ocorrência retornou `HTTP 200` com `message_status: "accepted"` para o template `aviso_nova_ocorrencia_2`.
-- O sistema grava isso imediatamente como sucesso (`notifications_sent.zpro_status = "sent"`) e a UI mostra mensagem de êxito.
-- Não há logs recentes da função `whatsapp-webhook`.
-- Os registros atuais em `webhook_raw_logs` são payloads de teste/exemplo da Meta e não correspondem aos `message_id` reais enviados agora.
-- Resultado: hoje o sistema sabe apenas que a Meta aceitou a requisição, mas não confirma entrega ao morador.
+## Plano: Mostrar versão da API no card de conexão WhatsApp
 
-Causa provável:
-1. `accepted` está sendo tratado como “mensagem enviada ao morador”.
-2. O webhook real de status não está chegando nesta instância.
-3. O arquivo `whatsapp-webhook/index.ts` tenta atualizar `whatsapp_notification_logs.status`, mas esse campo não existe no schema atual, então esse trecho já está inconsistente.
+### Objetivo
+Adicionar a versão da API da Meta (v25.0) no card de informações de conexão, junto com Empresa, Número e Qualidade.
 
-Plano de correção:
-1. Ajustar o significado dos status no backend
-- Em `supabase/functions/send-whatsapp-notification/index.ts`, salvar status inicial como `accepted` (ou `queued`), não `sent`.
-- Manter `message_id`, payload e resposta da Meta para auditoria.
-- Aplicar o mesmo padrão aos demais envios WABA que hoje consideram `200/accepted` como entrega concluída.
+### Mudança
 
-2. Corrigir o webhook de confirmação
-- Em `supabase/functions/whatsapp-webhook/index.ts`, continuar atualizando `notifications_sent` pelo `zpro_message_id`.
-- Corrigir o update em `whatsapp_notification_logs`:
-  - opção recomendada: criar coluna `status` via migração e usar `accepted/delivered/read/failed`;
-  - alternativa mínima: remover esse update quebrado e usar apenas `notifications_sent`.
-- Persistir erros de status da Meta (`failed`, códigos, títulos) para facilitar diagnóstico real.
+**`src/pages/superadmin/WhatsAppConfig.tsx`** (linhas 315-344)
 
-3. Corrigir a UI para não prometer entrega antes da hora
-- Em `src/pages/OccurrenceDetails.tsx`, trocar o toast de:
-  - “O morador foi notificado via WhatsApp com sucesso”
-  por algo como:
-  - “Mensagem aceita pela Meta. A entrega será confirmada pelo webhook.”
-- Exibir status real:
-  - `accepted` = Aceito pela Meta
-  - `delivered` = Entregue
-  - `read` = Lido
-  - `failed` = Falhou
-- Atualizar telas de monitoramento para refletirem esse fluxo real, especialmente:
-  - `src/components/notifications/NotificationsMonitor.tsx`
-  - `src/pages/superadmin/WabaLogs.tsx`
+Adicionar uma 4ª coluna no grid de informações de conexão, alterando `sm:grid-cols-3` para `sm:grid-cols-4`, com:
 
-4. Validar a causa operacional fora do código
-- Conferir na Meta se o callback URL ativo aponta para a função `whatsapp-webhook` desta instância.
-- Confirmar que os eventos de `messages/message_status` estão assinados no app/número correto.
-- Repetir um envio de teste e verificar se o mesmo `wamid` aparece no webhook e atualiza `delivered_at/read_at`.
+```tsx
+<div>
+  <p className="text-xs text-muted-foreground mb-1">Versão da API</p>
+  <Badge className="text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20">
+    v25.0
+  </Badge>
+</div>
+```
 
-Arquivos envolvidos:
-- `supabase/functions/send-whatsapp-notification/index.ts`
-- `supabase/functions/whatsapp-webhook/index.ts`
-- `src/pages/OccurrenceDetails.tsx`
-- `src/components/notifications/NotificationsMonitor.tsx`
-- `src/pages/superadmin/WabaLogs.tsx`
-- migração para `whatsapp_notification_logs.status` (recomendado)
+O valor será estático (`v25.0`) pois é definido no módulo compartilhado do backend. Quando a versão mudar, basta atualizar aqui também.
 
-Critério de sucesso:
-- o sistema para de mostrar “enviado” quando a Meta apenas aceitou a mensagem;
-- o webhook passa a receber os callbacks reais;
-- os envios passam a evoluir corretamente entre `accepted`, `delivered`, `read` e `failed`.
+### Arquivo
+- `src/pages/superadmin/WhatsAppConfig.tsx`
+

@@ -2385,7 +2385,6 @@ export type Database = {
           resident_id: string | null
           response_body: string | null
           response_status: number | null
-          status: string
           success: boolean
           template_language: string | null
           template_name: string | null
@@ -2404,7 +2403,6 @@ export type Database = {
           resident_id?: string | null
           response_body?: string | null
           response_status?: number | null
-          status?: string
           success?: boolean
           template_language?: string | null
           template_name?: string | null
@@ -2423,7 +2421,6 @@ export type Database = {
           resident_id?: string | null
           response_body?: string | null
           response_status?: number | null
-          status?: string
           success?: boolean
           template_language?: string | null
           template_name?: string | null
