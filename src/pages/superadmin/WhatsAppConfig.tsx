@@ -534,6 +534,7 @@ export default function WhatsAppConfig() {
                 </div>
               </div>
               <Button
+                type="button"
                 onClick={checkWebhookStatus}
                 disabled={isCheckingWebhook}
                 variant="outline"
