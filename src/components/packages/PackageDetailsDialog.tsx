@@ -6,7 +6,6 @@ import {
   Send, 
   Loader2, 
   Check, 
-  X, 
   Building2, 
   Clock, 
   Package as PackageIcon,
@@ -15,7 +14,6 @@ import {
   User,
   CheckCircle2,
   XCircle,
-  Eye,
 } from "lucide-react";
 import {
   Dialog,
