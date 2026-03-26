@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { META_API_VERSION } from "@/lib/whatsappConstants";
 import { useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
@@ -345,7 +344,7 @@ export default function WhatsAppConfig() {
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Versão da API</p>
                     <Badge className="text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20">
-                      {META_API_VERSION}
+                      v25.0
                     </Badge>
                   </div>
                 </div>
