@@ -1,27 +1,28 @@
 
 
-## Plano: Mostrar versão da API no card de conexão WhatsApp
+## Plano: Atualizar API da Meta para v25.0
 
 ### Objetivo
-Adicionar a versão da API da Meta (v25.0) no card de informações de conexão, junto com Empresa, Número e Qualidade.
+Padronizar todas as chamadas à API da Meta WhatsApp Cloud para a versão `v25.0`.
 
-### Mudança
+### Mudanças
 
-**`src/pages/superadmin/WhatsAppConfig.tsx`** (linhas 315-344)
+#### 1. `supabase/functions/_shared/meta-whatsapp.ts`
+- Alterar `META_API_VERSION` de `"v20.0"` para `"v25.0"` (linha 11)
+- Isso atualiza automaticamente todas as funções que usam este módulo compartilhado
 
-Adicionar uma 4ª coluna no grid de informações de conexão, alterando `sm:grid-cols-3` para `sm:grid-cols-4`, com:
+#### 2. `supabase/functions/update-porteiro-password/index.ts`
+- Alterar URL hardcoded de `v21.0` para `v25.0` (linha 186)
 
-```tsx
-<div>
-  <p className="text-xs text-muted-foreground mb-1">Versão da API</p>
-  <Badge className="text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20">
-    v25.0
-  </Badge>
-</div>
-```
+#### 3. `supabase/functions/create-waba-template/index.ts`
+- Alterar URL hardcoded de `v20.0` para `v25.0` (linha 114)
 
-O valor será estático (`v25.0`) pois é definido no módulo compartilhado do backend. Quando a versão mudar, basta atualizar aqui também.
+#### 4. `supabase/functions/check-whatsapp-template-status/index.ts`
+- Alterar URL hardcoded de `v20.0` para `v25.0` (linha 79)
 
-### Arquivo
-- `src/pages/superadmin/WhatsAppConfig.tsx`
+#### 5. `supabase/functions/list-waba-templates/index.ts`
+- Alterar URL hardcoded de `v20.0` para `v25.0` (linha 71)
+
+### Observação
+Idealmente as funções dos itens 2-5 deveriam importar `META_API_VERSION` do módulo compartilhado para evitar duplicação, mas por ora a atualização direta resolve.
 
