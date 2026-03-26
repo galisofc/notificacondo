@@ -24,6 +24,7 @@ import { PackageStatusBadge } from "./PackageStatusBadge";
 import { PackageCardImage } from "./PackageCardImage";
 import { PackageStatus } from "@/lib/packageConstants";
 import { cn } from "@/lib/utils";
+import { DeliveryStatusTracker } from "./DeliveryStatusTracker";
 
 interface PackageCardProps {
   id: string;
@@ -35,12 +36,12 @@ interface PackageCardProps {
   condominiumName?: string;
   receivedAt: string;
   description?: string;
+  notificationStatus?: string | null;
   onClick?: () => void;
   onResendNotification?: () => void;
   onViewDetails?: () => void;
   showCondominium?: boolean;
   compact?: boolean;
-  /** When false, the pickup code will not be rendered (useful for concierge views). */
   showPickupCode?: boolean;
 }
 
@@ -52,6 +53,7 @@ export function PackageCard({
   apartmentNumber,
   blockName,
   condominiumName,
+  notificationStatus,
   receivedAt,
   description,
   onClick,
@@ -118,6 +120,9 @@ export function PackageCard({
                   <p className="text-xs text-muted-foreground">
                     {formattedDate}
                   </p>
+                  {notificationStatus && (
+                    <DeliveryStatusTracker status={notificationStatus} className="mt-1" />
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -210,6 +215,9 @@ export function PackageCard({
                 <Clock className="w-4 h-4" />
                 <span>{formattedDate}</span>
               </div>
+              {notificationStatus && (
+                <DeliveryStatusTracker status={notificationStatus} className="mt-1" />
+              )}
             </div>
 
             {description && (
