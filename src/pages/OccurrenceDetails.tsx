@@ -125,9 +125,17 @@ interface Notification {
   zpro_status: string | null;
 }
 
+interface AccessLog {
+  id: string;
+  ip_address: string | null;
+  user_agent: string | null;
+  created_at: string;
+  resident_id: string | null;
+}
+
 interface TimelineItem {
   id: string;
-  type: "created" | "notification" | "defense" | "decision" | "evidence" | "read" | "acknowledged";
+  type: "created" | "notification" | "defense" | "decision" | "evidence" | "read" | "acknowledged" | "accessed";
   title: string;
   description: React.ReactNode;
   date: string;
