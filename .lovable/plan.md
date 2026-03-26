@@ -1,50 +1,36 @@
 
 
-## Plano: Corrigir e Completar o Webhook WhatsApp
+## Plano: Indicador visual de status de entrega no PackageDetailsDialog
 
-### Problemas Encontrados
-
-1. **Falta verificação do `hub.verify_token`** no GET — qualquer requisição pode verificar o webhook
-2. **Status `"accepted"` não mapeado** no `normalizeMetaStatus` — a Meta envia esse status antes de `sent`, e ele não está sendo tratado
-3. **Erros de entrega não são salvos** no banco — apenas vão para `console.error`
-4. **Sem secret de verificação** configurada para o webhook
+### Objetivo
+Mostrar o status de entrega em tempo real (accepted → sent → delivered → read) para cada notificação nos detalhes da encomenda, usando um stepper visual com ícones.
 
 ### Mudanças
 
-#### 1. Adicionar secret `META_WEBHOOK_VERIFY_TOKEN`
-- Solicitar ao usuário que defina um token de verificação via ferramenta de secrets
-- Usar esse token para validar o GET de verificação do webhook
+#### `src/components/packages/PackageDetailsDialog.tsx`
 
-#### 2. Atualizar `supabase/functions/whatsapp-webhook/index.ts`
+1. **Atualizar a interface `NotificationLog`** para incluir o campo `status` (que já é atualizado pelo webhook com valores: accepted, sent, delivered, read, failed).
 
-**a) Verificação do token no GET:**
-```typescript
-const verifyToken = Deno.env.get("META_WEBHOOK_VERIFY_TOKEN");
-const hubToken = url.searchParams.get("hub.verify_token");
-if (mode === "subscribe" && challenge && hubToken === verifyToken) {
-  return new Response(challenge, { status: 200 });
-}
-return new Response("Forbidden", { status: 403 });
-```
+2. **Atualizar a query** de `fetchNotificationLogs` para incluir `status` no select.
 
-**b) Adicionar `"accepted"` ao mapa de status:**
-```typescript
-const statusMap = {
-  accepted: "accepted",
-  sent: "sent",
-  delivered: "delivered",
-  read: "read",
-  failed: "failed",
-};
-```
+3. **Adicionar realtime subscription** no `package_id` para que o status atualize automaticamente quando o webhook receber callbacks da Meta.
 
-**c) Salvar erros de entrega no banco:**
-Quando `status.errors` existir, salvar o erro na tabela `whatsapp_notification_logs` (campo `error_message` ou similar) e em `notifications_sent`.
+4. **Criar componente inline `DeliveryStatusTracker`** — um stepper horizontal com 4 etapas:
+   - **Aceita** (accepted) — ícone check, cor azul
+   - **Enviada** (sent) — ícone send, cor azul
+   - **Entregue** (delivered) — ícone check duplo, cor verde
+   - **Lida** (read) — ícone eye, cor verde
 
-**d) Atualizar status `accepted` corretamente:**
-Quando o status for `accepted`, atualizar o `zpro_status` mas sem marcar `delivered_at`.
+   Cada etapa mostra ativo/inativo conforme o status atual. Se `failed`, mostra indicador vermelho.
+
+5. **Renderizar o tracker** dentro de cada card de log de notificação, abaixo da data/hora, substituindo o texto simples "Enviada com sucesso" por este indicador visual progressivo.
+
+### Detalhes Técnicos
+
+- O campo `whatsapp_notification_logs.status` já recebe updates do webhook (`accepted` → `sent` → `delivered` → `read`)
+- Realtime: subscribe no canal `whatsapp_notification_logs` filtrando por `package_id` para atualizar o stepper sem refresh manual
+- O stepper usa uma lógica de progressão: `const steps = ['accepted','sent','delivered','read']` e `currentIndex = steps.indexOf(status)` para determinar quais etapas estão ativas
 
 ### Arquivos Afetados
-- `supabase/functions/whatsapp-webhook/index.ts`
-- Nova secret: `META_WEBHOOK_VERIFY_TOKEN`
+- `src/components/packages/PackageDetailsDialog.tsx`
 
