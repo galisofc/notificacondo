@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
@@ -15,6 +15,7 @@ import {
   User,
   CheckCircle2,
   XCircle,
+  Eye,
 } from "lucide-react";
 import {
   Dialog,
@@ -39,7 +40,6 @@ interface PackageDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   package_: Package | null;
-  /** When false, the pickup code will not be rendered (useful for concierge views). */
   showPickupCode?: boolean;
 }
 
@@ -57,8 +57,78 @@ interface NotificationLog {
   success: boolean;
   error_message: string | null;
   template_name: string | null;
+  status: string | null;
   debug_info: { sent_by_name?: string } | null;
 }
+
+// --- Delivery Status Tracker ---
+
+const DELIVERY_STEPS = [
+  { key: "accepted", label: "Aceita", icon: Check },
+  { key: "sent", label: "Enviada", icon: Send },
+  { key: "delivered", label: "Entregue", icon: CheckCircle2 },
+  { key: "read", label: "Lida", icon: Eye },
+] as const;
+
+function DeliveryStatusTracker({ status }: { status: string | null }) {
+  const isFailed = status === "failed";
+  const stepIndex = DELIVERY_STEPS.findIndex((s) => s.key === status);
+
+  if (isFailed) {
+    return (
+      <div className="flex items-center gap-1.5 mt-1.5">
+        <XCircle className="w-3.5 h-3.5 text-destructive" />
+        <span className="text-xs font-medium text-destructive">Falha na entrega</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-0 mt-2">
+      {DELIVERY_STEPS.map((step, i) => {
+        const isActive = stepIndex >= i;
+        const isGreen = isActive && (step.key === "delivered" || step.key === "read");
+        const isBlue = isActive && !isGreen;
+        const Icon = step.icon;
+
+        return (
+          <div key={step.key} className="flex items-center">
+            {i > 0 && (
+              <div
+                className={cn(
+                  "w-4 h-0.5 mx-0.5",
+                  isActive ? (isGreen ? "bg-emerald-500" : "bg-blue-500") : "bg-muted-foreground/20"
+                )}
+              />
+            )}
+            <div className="flex flex-col items-center gap-0.5">
+              <div
+                className={cn(
+                  "w-6 h-6 rounded-full flex items-center justify-center",
+                  isGreen && "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+                  isBlue && "bg-blue-500/15 text-blue-600 dark:text-blue-400",
+                  !isActive && "bg-muted text-muted-foreground/40"
+                )}
+              >
+                <Icon className="w-3 h-3" />
+              </div>
+              <span
+                className={cn(
+                  "text-[10px] leading-tight",
+                  isActive ? "text-foreground font-medium" : "text-muted-foreground/50"
+                )}
+              >
+                {step.label}
+              </span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// --- Main Dialog ---
 
 export function PackageDetailsDialog({
   open,
@@ -90,14 +160,14 @@ export function PackageDetailsDialog({
     }
   }, [open, package_?.photo_url]);
 
-  // Fetch notification history from whatsapp_notification_logs
-  const fetchNotificationLogs = async () => {
+  // Fetch notification history
+  const fetchNotificationLogs = useCallback(async () => {
     if (!package_?.id) return;
     setIsLoadingLogs(true);
     try {
       const { data } = await supabase
         .from("whatsapp_notification_logs")
-        .select("id, created_at, success, error_message, template_name, debug_info")
+        .select("id, created_at, success, error_message, template_name, status, debug_info")
         .eq("package_id", package_.id)
         .order("created_at", { ascending: false });
       setNotificationLogs((data || []) as NotificationLog[]);
@@ -106,7 +176,7 @@ export function PackageDetailsDialog({
     } finally {
       setIsLoadingLogs(false);
     }
-  };
+  }, [package_?.id]);
 
   useEffect(() => {
     if (open && package_?.id) {
@@ -114,6 +184,38 @@ export function PackageDetailsDialog({
     } else {
       setNotificationLogs([]);
     }
+  }, [open, package_?.id, fetchNotificationLogs]);
+
+  // Realtime subscription for status updates
+  useEffect(() => {
+    if (!open || !package_?.id) return;
+
+    const channel = supabase
+      .channel(`pkg-notif-${package_.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "whatsapp_notification_logs",
+          filter: `package_id=eq.${package_.id}`,
+        },
+        (payload) => {
+          const updated = payload.new as any;
+          setNotificationLogs((prev) =>
+            prev.map((log) =>
+              log.id === updated.id
+                ? { ...log, status: updated.status, success: updated.success, error_message: updated.error_message }
+                : log
+            )
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [open, package_?.id]);
 
   const handleResendNotification = async () => {
@@ -148,7 +250,6 @@ export function PackageDetailsDialog({
         setErrorMessage(data.message || "Nenhum morador notificado");
       }
 
-      // Refresh logs after send
       await fetchNotificationLogs();
     } catch (err: any) {
       setNotificationStatus("error");
@@ -330,44 +431,48 @@ export function PackageDetailsDialog({
                     <div
                       key={log.id}
                       className={cn(
-                        "flex items-start gap-3 p-3 rounded-lg border text-sm",
+                        "p-3 rounded-lg border text-sm",
                         log.success
                           ? "bg-[hsl(142,76%,97%)] border-[hsl(142,76%,80%)] dark:bg-[hsl(142,30%,12%)] dark:border-[hsl(142,30%,25%)]"
                           : "bg-destructive/5 border-destructive/20"
                       )}
                     >
-                      <div className="mt-0.5 shrink-0">
-                        {log.success ? (
-                          <CheckCircle2 className="w-4 h-4 text-[hsl(142,72%,29%)] dark:text-[hsl(142,60%,50%)]" />
-                        ) : (
-                          <XCircle className="w-4 h-4 text-destructive" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className={cn("font-medium text-xs", log.success ? "text-[hsl(142,72%,25%)] dark:text-[hsl(142,60%,55%)]" : "")}>
-                            {log.success ? "Enviada com sucesso" : "Falha no envio"}
-                          </span>
-                          <Badge variant="outline" className="text-xs shrink-0">
-                            #{notificationLogs.length - index}º envio
-                          </Badge>
+                      <div className="flex items-start gap-3">
+                        <div className="mt-0.5 shrink-0">
+                          {log.success ? (
+                            <CheckCircle2 className="w-4 h-4 text-[hsl(142,72%,29%)] dark:text-[hsl(142,60%,50%)]" />
+                          ) : (
+                            <XCircle className="w-4 h-4 text-destructive" />
+                          )}
                         </div>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                          <Clock className="w-3 h-3 shrink-0" />
-                          {format(new Date(log.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                        </p>
-                        {log.debug_info?.sent_by_name && (
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className={cn("font-medium text-xs", log.success ? "text-[hsl(142,72%,25%)] dark:text-[hsl(142,60%,55%)]" : "")}>
+                              {log.success ? "Enviada com sucesso" : "Falha no envio"}
+                            </span>
+                            <Badge variant="outline" className="text-xs shrink-0">
+                              #{notificationLogs.length - index}º envio
+                            </Badge>
+                          </div>
                           <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                            <User className="w-3 h-3 shrink-0" />
-                            Enviado por: <span className="font-medium">{log.debug_info.sent_by_name}</span>
+                            <Clock className="w-3 h-3 shrink-0" />
+                            {format(new Date(log.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                           </p>
-                        )}
-                        {!log.success && log.error_message && (
-                          <p className="text-xs text-destructive mt-1 truncate">
-                            {log.error_message}
-                          </p>
-                        )}
+                          {log.debug_info?.sent_by_name && (
+                            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                              <User className="w-3 h-3 shrink-0" />
+                              Enviado por: <span className="font-medium">{log.debug_info.sent_by_name}</span>
+                            </p>
+                          )}
+                          {!log.success && log.error_message && (
+                            <p className="text-xs text-destructive mt-1 truncate">
+                              {log.error_message}
+                            </p>
+                          )}
+                        </div>
                       </div>
+                      {/* Delivery status stepper */}
+                      {log.success && <DeliveryStatusTracker status={log.status} />}
                     </div>
                   ))}
                 </div>
