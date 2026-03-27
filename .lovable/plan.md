@@ -1,40 +1,27 @@
 
 
-## Problem
+## Problema
 
-All queries fetching packages hit Supabase's default 1,000-row limit. The "Total" stat card and all other counters are capped at 1,000, even when the condominium has more packages.
+Quando o sidebar está colapsado (modo ícone), os submenus dos grupos (Gestão, Portaria, etc.) ficam com `hidden` e não há como acessá-los. Linha 686: `collapsed && "hidden"`.
 
-Three queries are affected:
-1. **Main packages query** (line 151) — fetches the table data
-2. **blockStatsData query** (line 228) — fetches data for block stat cards  
-3. **pendingPackages query** (line 257) — fetches pending packages for summary modal
+## Solução
 
-## Plan
+Quando o sidebar estiver colapsado, ao passar o mouse sobre um grupo, exibir um **popover/tooltip** com os subitens do menu. Isso é um padrão comum em sidebars colapsadas.
 
-### 1. Add separate count queries using Supabase `count`
+## Plano
 
-Create dedicated count queries using `{ count: 'exact', head: true }` for:
-- **Total count** (no filters except condominium + date range)
-- **Pendente count** (filtered by status)
-- **Retirada count** (filtered by status)
+### Arquivo: `src/components/layouts/DashboardLayout.tsx`
 
-These count queries apply the same date/block/status filters as the current query but don't hit the row limit since they only return the count.
+1. **Substituir o comportamento de grupos quando colapsado**: Em vez de esconder os subitens com `hidden`, quando `collapsed === true`, envolver o grupo em um componente com hover que mostra um popover flutuante com os subitens.
 
-### 2. Paginate data-fetching queries
+2. **Implementação**: Usar `HoverCard` ou um `Popover` posicionado à direita do ícone do grupo. Na prática, a abordagem mais simples é:
+   - Quando `collapsed`, renderizar o grupo dentro de um `Tooltip` customizado ou um `div` com estado `onMouseEnter`/`onMouseLeave` que mostra um menu flutuante posicionado `absolute` à direita.
+   - O menu flutuante terá os mesmos subitens com links de navegação.
 
-For the main packages list and blockStatsData, add `.range(0, 9999)` or implement pagination to fetch beyond the 1,000 limit. For the table display, we can keep pagination at the UI level while fetching all data for stats.
-
-Alternatively, use a simpler approach: add `.limit(10000)` to the blockStatsData and main queries to raise the cap significantly.
-
-### 3. Use count-based stats instead of array length
-
-Replace `stats.total = packages.length` with the value from the dedicated count query, so the stat cards show the true total even if the table is paginated.
-
-### Technical details
-
-**Files to modify:** `src/pages/sindico/PackagesCondominiumHistory.tsx`
-
-- Add 3 new `useQuery` hooks with `supabase.from("packages").select("*", { count: "exact", head: true })` applying appropriate filters for total/pendente/retirada counts
-- Update the `stats` useMemo to use these count values instead of `packages.length`
-- The blockStatsData and main packages queries will also get `.range(0, 9999)` to support up to 10,000 rows for detailed stats and PDF export
+3. **Detalhes técnicos**:
+   - Adicionar estado local `hoveredGroup` (string | null) no componente `SidebarNavContent`
+   - No `onMouseEnter` do grupo colapsado, setar `hoveredGroup = item.title`
+   - No `onMouseLeave`, limpar com delay de ~200ms para permitir mover o mouse para o submenu
+   - Renderizar um `div` com `position: absolute; left: 100%; top: 0` contendo os subitens estilizados como um mini-menu dropdown
+   - Manter o comportamento atual (Collapsible) quando não colapsado
 
