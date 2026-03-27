@@ -475,6 +475,7 @@ function SidebarNavigation() {
         { title: "Condomínios", url: "/condominiums", icon: Building2 },
         { title: "Assinaturas", url: "/sindico/subscriptions", icon: CreditCard },
         { title: "Faturas", url: "/sindico/invoices", icon: Receipt },
+        { title: "Banners Portaria", url: "/sindico/banners", icon: Megaphone },
       ],
     },
     {
