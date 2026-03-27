@@ -177,11 +177,22 @@ Deno.serve(async (req) => {
 
           // Build update for whatsapp_notification_logs
           const logUpdate: Record<string, unknown> = { status: normalizedStatus };
-          // Save per-status timestamp
-          if (normalizedStatus === "accepted") logUpdate.accepted_at = now;
-          else if (normalizedStatus === "sent") logUpdate.sent_at = now;
-          else if (normalizedStatus === "delivered") logUpdate.delivered_at = now;
-          else if (normalizedStatus === "read") logUpdate.read_at = now;
+          // Backfill: set current + all earlier timestamps to ensure consistency
+          if (normalizedStatus === "accepted") {
+            logUpdate.accepted_at = now;
+          } else if (normalizedStatus === "sent") {
+            logUpdate.accepted_at = now;
+            logUpdate.sent_at = now;
+          } else if (normalizedStatus === "delivered") {
+            logUpdate.accepted_at = now;
+            logUpdate.sent_at = now;
+            logUpdate.delivered_at = now;
+          } else if (normalizedStatus === "read") {
+            logUpdate.accepted_at = now;
+            logUpdate.sent_at = now;
+            logUpdate.delivered_at = now;
+            logUpdate.read_at = now;
+          }
 
           if (errorText) {
             logUpdate.error_message = errorText;
