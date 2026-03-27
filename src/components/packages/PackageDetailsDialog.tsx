@@ -165,7 +165,7 @@ export function PackageDetailsDialog({
           setNotificationLogs((prev) =>
             prev.map((log) =>
               log.id === updated.id
-                ? { ...log, status: updated.status, success: updated.success, error_message: updated.error_message }
+                ? { ...log, status: updated.status, success: updated.success, error_message: updated.error_message, accepted_at: updated.accepted_at ?? log.accepted_at, sent_at: updated.sent_at ?? log.sent_at, delivered_at: updated.delivered_at ?? log.delivered_at, read_at: updated.read_at ?? log.read_at }
                 : log
             )
           );
