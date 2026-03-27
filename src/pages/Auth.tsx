@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import logoImage from "@/assets/logo.png";
+import logoImage from "@/assets/logo.webp";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { Database } from "@/integrations/supabase/types";
