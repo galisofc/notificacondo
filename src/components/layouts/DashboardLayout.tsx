@@ -475,7 +475,6 @@ function SidebarNavigation() {
         { title: "Condomínios", url: "/condominiums", icon: Building2 },
         { title: "Assinaturas", url: "/sindico/subscriptions", icon: CreditCard },
         { title: "Faturas", url: "/sindico/invoices", icon: Receipt },
-        { title: "Banners Portaria", url: "/sindico/banners", icon: Megaphone },
       ],
     },
     {
@@ -495,6 +494,7 @@ function SidebarNavigation() {
         { title: "Ocorrências Portaria", url: "/sindico/portaria/ocorrencias", icon: AlertTriangle, badge: openPorterOccurrences },
         { title: "Passagens de Plantão", url: "/sindico/portaria/plantoes", icon: ClipboardCheck },
         { title: "Checklist Portaria", url: "/sindico/portaria/checklist", icon: Cog },
+        { title: "Banners Portaria", url: "/sindico/banners", icon: Megaphone },
       ],
     },
     {
