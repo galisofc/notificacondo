@@ -149,15 +149,18 @@ Deno.serve(async (req) => {
             zpro_status: normalizedStatus,
           };
 
+          // Backfill: always set current + all earlier timestamps
           if (normalizedStatus === "accepted") {
             updateData.accepted_at = now;
           } else if (normalizedStatus === "sent") {
-            // sent only updates zpro_status — no extra timestamp on notifications_sent
+            updateData.accepted_at = now;
           } else if (normalizedStatus === "delivered") {
+            updateData.accepted_at = now;
             updateData.delivered_at = now;
           } else if (normalizedStatus === "read") {
-            updateData.read_at = now;
+            updateData.accepted_at = now;
             updateData.delivered_at = now;
+            updateData.read_at = now;
           }
 
           const { data, error } = await supabase
