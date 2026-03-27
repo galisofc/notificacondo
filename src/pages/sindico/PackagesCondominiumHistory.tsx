@@ -380,12 +380,12 @@ const PackagesCondominiumHistory = () => {
       });
   }, [pendingPackages]);
 
-  // Statistics
+  // Statistics - use count queries for accurate totals, packages array for avg pickup time
   const stats = useMemo(() => {
     const s = {
-      total: packages.length,
-      pendente: 0,
-      retirada: 0,
+      total: statusFilter !== "all" ? totalCount : (pendenteCount + retiradaCount),
+      pendente: pendenteCount,
+      retirada: retiradaCount,
       avgPickupTime: 0,
       blockStats: {} as Record<string, { blockId: string; blockName: string; total: number; pendente: number; retirada: number }>,
     };
@@ -395,7 +395,6 @@ const PackagesCondominiumHistory = () => {
 
     packages.forEach((pkg) => {
       const status = pkg.status as "pendente" | "retirada";
-      s[status]++;
 
       // Track per-block stats
       const blockId = pkg.block?.id || "no-block";
@@ -421,7 +420,7 @@ const PackagesCondominiumHistory = () => {
     }
 
     return s;
-  }, [packages]);
+  }, [packages, totalCount, pendenteCount, retiradaCount, statusFilter]);
 
   // Block stats for cards (independent of selectedBlock/statusFilter so cards don't disappear)
   const blockCardsStats = useMemo(() => {
