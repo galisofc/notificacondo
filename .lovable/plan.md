@@ -1,44 +1,40 @@
 
 
-## Diagnóstico: Status "Entregue" e "Lido" não atualizam na VPS externa
+## Problem
 
-### Causa raiz
+All queries fetching packages hit Supabase's default 1,000-row limit. The "Total" stat card and all other counters are capped at 1,000, even when the condominium has more packages.
 
-O webhook da Meta está configurado para enviar os callbacks de status (delivered, read) para a URL do Lovable Cloud:
-```
-https://kcnojeouypwbkkbnbold.supabase.co/functions/v1/whatsapp-webhook
-```
+Three queries are affected:
+1. **Main packages query** (line 151) — fetches the table data
+2. **blockStatsData query** (line 228) — fetches data for block stat cards  
+3. **pendingPackages query** (line 257) — fetches pending packages for summary modal
 
-A VPS externa tem seu **próprio** Supabase com sua **própria** Edge Function `whatsapp-webhook`. Porém, a Meta continua enviando os callbacks para o Lovable Cloud, então a VPS externa **nunca recebe** as atualizações de "delivered" e "read".
+## Plan
 
-O fluxo atual:
-```text
-1. Porteiro registra encomenda (VPS externa)
-2. notify-package-arrival envia msg via Meta API (VPS externa) → status = "sent" ✓
-3. Meta envia webhook de delivered/read → Lovable Cloud ✗ (deveria ir para VPS)
-4. VPS externa nunca recebe → status fica parado em "sent"
-```
+### 1. Add separate count queries using Supabase `count`
 
-### Solução
+Create dedicated count queries using `{ count: 'exact', head: true }` for:
+- **Total count** (no filters except condominium + date range)
+- **Pendente count** (filtered by status)
+- **Retirada count** (filtered by status)
 
-Este é um problema de **configuração no painel Meta**, não de código. O usuário precisa:
+These count queries apply the same date/block/status filters as the current query but don't hit the row limit since they only return the count.
 
-1. Acessar o **Meta App Dashboard** → WhatsApp → Configuration → Webhook
-2. Alterar a **Callback URL** para apontar para a VPS externa:
-   ```
-   https://[SUPABASE_URL_DA_VPS]/functions/v1/whatsapp-webhook
-   ```
-3. Manter o mesmo **Verify Token** (`META_WEBHOOK_VERIFY_TOKEN`) que está configurado nos secrets da VPS
-4. Garantir que os campos de subscription estão marcados: `messages`
+### 2. Paginate data-fetching queries
 
-### Alternativa (se quiser manter dois ambientes)
+For the main packages list and blockStatsData, add `.range(0, 9999)` or implement pagination to fetch beyond the 1,000 limit. For the table display, we can keep pagination at the UI level while fetching all data for stats.
 
-Se o objetivo é manter **ambos** os ambientes (Lovable Cloud + VPS) recebendo webhooks, a Meta só permite **uma URL de webhook por app**. Nesse caso, as opções são:
+Alternatively, use a simpler approach: add `.limit(10000)` to the blockStatsData and main queries to raise the cap significantly.
 
-- **Opção A**: Usar apenas a VPS externa como destino do webhook (recomendado para produção)
-- **Opção B**: Criar um proxy/relay na VPS que recebe o webhook e repassa para o outro ambiente
+### 3. Use count-based stats instead of array length
 
-### O que NÃO precisa mudar no código
+Replace `stats.total = packages.length` with the value from the dedicated count query, so the stat cards show the true total even if the table is paginated.
 
-O código da Edge Function `whatsapp-webhook` já está correto — ela atualiza tanto `notifications_sent` quanto `whatsapp_notification_logs` com os timestamps de delivered/read. O problema é exclusivamente que a Meta não está enviando os callbacks para o servidor correto.
+### Technical details
+
+**Files to modify:** `src/pages/sindico/PackagesCondominiumHistory.tsx`
+
+- Add 3 new `useQuery` hooks with `supabase.from("packages").select("*", { count: "exact", head: true })` applying appropriate filters for total/pendente/retirada counts
+- Update the `stats` useMemo to use these count values instead of `packages.length`
+- The blockStatsData and main packages queries will also get `.range(0, 9999)` to support up to 10,000 rows for detailed stats and PDF export
 
