@@ -115,7 +115,7 @@ export function PackageDetailsDialog({
           .select("id, created_at, success, error_message, template_name, status, debug_info")
           .eq("package_id", package_.id)
           .order("created_at", { ascending: false });
-        data = fallback.data;
+        data = fallback.data as any;
       }
 
       setNotificationLogs((data || []).map((d: any) => ({
