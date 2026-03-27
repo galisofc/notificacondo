@@ -57,7 +57,7 @@ export default function PorteiroPackages() {
 
   // Notification delivery statuses for cards
   const packageIds = packages.map((p) => p.id);
-  const notificationStatusMap = usePackageNotificationStatus(packageIds);
+  const { statusMap: notificationStatusMap, dataMap: notificationDataMap } = usePackageNotificationStatus(packageIds);
 
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
   const [notificationModalState, setNotificationModalState] = useState<"loading" | "success" | "error">("loading");
@@ -491,6 +491,7 @@ export default function PorteiroPackages() {
                         showCondominium={false}
                         showPickupCode={false}
                         notificationStatus={notificationStatusMap[pkg.id] || null}
+                        notificationTimestamps={notificationDataMap[pkg.id]?.timestamps}
                       />
                     ))}
                   </div>

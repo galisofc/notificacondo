@@ -1,7 +1,8 @@
 import { Check, Send, CheckCircle2, Eye, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { formatDateTime } from "@/lib/dateUtils";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 const DELIVERY_STEPS = [
   { key: "accepted", label: "Aceita", icon: Check, tsKey: "accepted_at" },
@@ -21,6 +22,14 @@ interface DeliveryStatusTrackerProps {
   status: string | null;
   className?: string;
   timestamps?: DeliveryTimestamps;
+}
+
+function formatStepTimestamp(ts: string): { date: string; time: string } {
+  const d = new Date(ts);
+  return {
+    date: format(d, "dd/MM", { locale: ptBR }),
+    time: format(d, "HH:mm", { locale: ptBR }),
+  };
 }
 
 export function DeliveryStatusTracker({ status, className, timestamps }: DeliveryStatusTrackerProps) {
@@ -45,10 +54,29 @@ export function DeliveryStatusTracker({ status, className, timestamps }: Deliver
           const isBlue = isActive && !isGreen;
           const Icon = step.icon;
           const ts = timestamps?.[step.tsKey];
-          const hasTooltip = isActive && ts;
+          const formatted = isActive && ts ? formatStepTimestamp(ts) : null;
 
           const stepContent = (
             <div className="flex flex-col items-center gap-0.5">
+              {/* Timestamp above the icon */}
+              {formatted ? (
+                <div className="flex flex-col items-center leading-none">
+                  <span className={cn(
+                    "text-[9px] font-medium",
+                    isGreen ? "text-emerald-600 dark:text-emerald-400" : "text-blue-600 dark:text-blue-400"
+                  )}>
+                    {formatted.date}
+                  </span>
+                  <span className={cn(
+                    "text-[9px] font-medium",
+                    isGreen ? "text-emerald-600 dark:text-emerald-400" : "text-blue-600 dark:text-blue-400"
+                  )}>
+                    {formatted.time}
+                  </span>
+                </div>
+              ) : (
+                <div className="h-[22px]" /> 
+              )}
               <div
                 className={cn(
                   "w-6 h-6 rounded-full flex items-center justify-center",
@@ -75,23 +103,12 @@ export function DeliveryStatusTracker({ status, className, timestamps }: Deliver
               {i > 0 && (
                 <div
                   className={cn(
-                    "w-4 h-0.5 mx-0.5",
+                    "w-4 h-0.5 mx-0.5 mt-[22px]",
                     isActive ? (isGreen ? "bg-emerald-500" : "bg-blue-500") : "bg-muted-foreground/20"
                   )}
                 />
               )}
-              {hasTooltip ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="cursor-default">{stepContent}</div>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="text-xs">
-                    {formatDateTime(ts)}
-                  </TooltipContent>
-                </Tooltip>
-              ) : (
-                stepContent
-              )}
+              {stepContent}
             </div>
           );
         })}

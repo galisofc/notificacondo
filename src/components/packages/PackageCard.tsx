@@ -24,7 +24,7 @@ import { PackageStatusBadge } from "./PackageStatusBadge";
 import { PackageCardImage } from "./PackageCardImage";
 import { PackageStatus } from "@/lib/packageConstants";
 import { cn } from "@/lib/utils";
-import { DeliveryStatusTracker } from "./DeliveryStatusTracker";
+import { DeliveryStatusTracker, type DeliveryTimestamps } from "./DeliveryStatusTracker";
 
 interface PackageCardProps {
   id: string;
@@ -37,6 +37,7 @@ interface PackageCardProps {
   receivedAt: string;
   description?: string;
   notificationStatus?: string | null;
+  notificationTimestamps?: DeliveryTimestamps;
   onClick?: () => void;
   onResendNotification?: () => void;
   onViewDetails?: () => void;
@@ -54,6 +55,7 @@ export function PackageCard({
   blockName,
   condominiumName,
   notificationStatus,
+  notificationTimestamps,
   receivedAt,
   description,
   onClick,
@@ -121,7 +123,7 @@ export function PackageCard({
                     {formattedDate}
                   </p>
                   {notificationStatus && (
-                    <DeliveryStatusTracker status={notificationStatus} className="mt-1" />
+                    <DeliveryStatusTracker status={notificationStatus} timestamps={notificationTimestamps} className="mt-1" />
                   )}
                 </div>
               </div>
@@ -216,7 +218,7 @@ export function PackageCard({
                 <span>{formattedDate}</span>
               </div>
               {notificationStatus && (
-                <DeliveryStatusTracker status={notificationStatus} className="mt-1" />
+                <DeliveryStatusTracker status={notificationStatus} timestamps={notificationTimestamps} className="mt-1" />
               )}
             </div>
 
