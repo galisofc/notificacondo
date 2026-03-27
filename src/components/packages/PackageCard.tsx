@@ -55,6 +55,7 @@ export function PackageCard({
   blockName,
   condominiumName,
   notificationStatus,
+  notificationTimestamps,
   receivedAt,
   description,
   onClick,
