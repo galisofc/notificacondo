@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import logoImage from "@/assets/logo.png";
+import logoImage from "@/assets/logo.webp";
 
 const Footer = () => {
   return (
@@ -13,6 +13,8 @@ const Footer = () => {
                 src={logoImage} 
                 alt="NotificaCondo" 
                 className="h-14 w-auto object-contain"
+                width={126}
+                height={56}
               />
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed">
