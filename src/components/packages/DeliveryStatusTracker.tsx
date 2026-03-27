@@ -56,59 +56,45 @@ export function DeliveryStatusTracker({ status, className, timestamps }: Deliver
           const ts = timestamps?.[step.tsKey];
           const formatted = isActive && ts ? formatStepTimestamp(ts) : null;
 
-          const stepContent = (
-            <div className="flex flex-col items-center gap-0.5">
-              {/* Timestamp above the icon */}
-              {formatted ? (
-                <div className="flex flex-col items-center leading-none">
-                  <span className={cn(
-                    "text-[9px] font-medium",
-                    isGreen ? "text-emerald-600 dark:text-emerald-400" : "text-blue-600 dark:text-blue-400"
-                  )}>
-                    {formatted.date}
-                  </span>
-                  <span className={cn(
-                    "text-[9px] font-medium",
-                    isGreen ? "text-emerald-600 dark:text-emerald-400" : "text-blue-600 dark:text-blue-400"
-                  )}>
-                    {formatted.time}
-                  </span>
-                </div>
-              ) : (
-                <div className="h-[22px]" /> 
-              )}
-              <div
-                className={cn(
-                  "w-6 h-6 rounded-full flex items-center justify-center",
-                  isGreen && "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
-                  isBlue && "bg-blue-500/15 text-blue-600 dark:text-blue-400",
-                  !isActive && "bg-muted text-muted-foreground/40"
-                )}
-              >
-                <Icon className="w-3 h-3" />
-              </div>
-              <span
-                className={cn(
-                  "text-[10px] leading-tight",
-                  isActive ? "text-foreground font-medium" : "text-muted-foreground/50"
-                )}
-              >
-                {step.label}
-              </span>
-            </div>
-          );
-
           return (
             <div key={step.key} className="flex items-center">
               {i > 0 && (
                 <div
                   className={cn(
-                    "w-4 h-0.5 mx-0.5 mt-[22px]",
+                    "w-4 h-0.5 mx-0.5",
                     isActive ? (isGreen ? "bg-emerald-500" : "bg-blue-500") : "bg-muted-foreground/20"
                   )}
                 />
               )}
-              {stepContent}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex flex-col items-center gap-0.5 cursor-default">
+                    <div
+                      className={cn(
+                        "w-6 h-6 rounded-full flex items-center justify-center",
+                        isGreen && "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+                        isBlue && "bg-blue-500/15 text-blue-600 dark:text-blue-400",
+                        !isActive && "bg-muted text-muted-foreground/40"
+                      )}
+                    >
+                      <Icon className="w-3 h-3" />
+                    </div>
+                    <span
+                      className={cn(
+                        "text-[10px] leading-tight",
+                        isActive ? "text-foreground font-medium" : "text-muted-foreground/50"
+                      )}
+                    >
+                      {step.label}
+                    </span>
+                  </div>
+                </TooltipTrigger>
+                {formatted && (
+                  <TooltipContent side="top" className="text-xs">
+                    {formatted.date} às {formatted.time}
+                  </TooltipContent>
+                )}
+              </Tooltip>
             </div>
           );
         })}
