@@ -3,7 +3,7 @@ import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import logoImage from "@/assets/logo.png";
+import logoImage from "@/assets/logo.webp";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -36,6 +36,8 @@ const Header = () => {
               src={logoImage} 
               alt="NotificaCondo" 
               className="h-14 w-auto object-contain"
+              width={126}
+              height={56}
             />
           </Link>
 

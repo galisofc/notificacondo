@@ -59,7 +59,7 @@ import {
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
-import logoImage from "@/assets/logo.png";
+import logoImage from "@/assets/logo.webp";
 import logoIcon from "@/assets/logo-icon.png";
 
 interface DashboardLayoutProps {
