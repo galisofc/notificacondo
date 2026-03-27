@@ -1,92 +1,88 @@
+import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/hooks/useAuth";
 import { UserRoleProvider } from "@/hooks/useUserRole";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import Contact from "./pages/Contact";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import TermsOfUse from "./pages/TermsOfUse";
-import CivilCode from "./pages/CivilCode";
-import Plans from "./pages/Plans";
-import Dashboard from "./pages/Dashboard";
-import ResidentDashboard from "./pages/ResidentDashboard";
-import ResidentOccurrences from "./pages/ResidentOccurrences";
-import ResidentOccurrenceDetails from "./pages/ResidentOccurrenceDetails";
-import ResidentProfile from "./pages/ResidentProfile";
-import Condominiums from "./pages/Condominiums";
-import CondominiumDetails from "./pages/CondominiumDetails";
-import Occurrences from "./pages/Occurrences";
-import OccurrenceDetails from "./pages/OccurrenceDetails";
-import Reports from "./pages/Reports";
-import Notifications from "./pages/Notifications";
-import DefenseAnalysis from "./pages/DefenseAnalysis";
-import SindicoSettings from "./pages/SindicoSettings";
-import SindicoInvoices from "./pages/SindicoInvoices";
-import SindicoSubscriptions from "./pages/SindicoSubscriptions";
-import SindicoPorteiros from "./pages/sindico/Porteiros";
-import SindicoBanners from "./pages/sindico/Banners";
-import PackagesDashboard from "./pages/sindico/PackagesDashboard";
-import SindicoPackages from "./pages/sindico/Packages";
-import PackagesHistory from "./pages/sindico/PackagesHistory";
-import PackagesCondominiumHistory from "./pages/sindico/PackagesCondominiumHistory";
-import PartyHall from "./pages/PartyHall";
-import PartyHallSettings from "./pages/PartyHallSettings";
-import PartyHallNotifications from "./pages/PartyHallNotifications";
-import { Navigate } from "react-router-dom";
-import ResidentAccess from "./pages/ResidentAccess";
-import ResidentPackages from "./pages/resident/Packages";
-import AuthCallback from "./pages/AuthCallback";
-import SuperAdminDashboard from "./pages/SuperAdminDashboard";
-import Sindicos from "./pages/superadmin/Sindicos";
-import SuperAdminCondominiums from "./pages/superadmin/Condominiums";
-import Subscriptions from "./pages/superadmin/Subscriptions";
-import SubscriptionDetails from "./pages/superadmin/SubscriptionDetails";
-import SuperAdminInvoices from "./pages/superadmin/Invoices";
-import Logs from "./pages/superadmin/Logs";
-import MagicLinkLogs from "./pages/superadmin/MagicLinkLogs";
-import EdgeFunctionLogs from "./pages/superadmin/EdgeFunctionLogs";
-import WabaLogs from "./pages/superadmin/WabaLogs";
-import BsuidMigration from "./pages/superadmin/BsuidMigration";
-import CronJobs from "./pages/superadmin/CronJobs";
-import Transfers from "./pages/superadmin/Transfers";
-import WhatsApp from "./pages/superadmin/WhatsApp";
-import WhatsAppConfig from "./pages/superadmin/WhatsAppConfig";
-import SuperAdminSettings from "./pages/superadmin/Settings";
-import PorteiroSettings from "./pages/porteiro/Settings";
-import ContactMessages from "./pages/superadmin/ContactMessages";
-import PackageTypes from "./pages/superadmin/PackageTypes";
-import ExportDatabase from "./pages/superadmin/ExportDatabase";
-
-// Porteiro pages
-import PorteiroDashboard from "./pages/porteiro/Dashboard";
-import RegisterPackage from "./pages/porteiro/RegisterPackage";
-import PorteiroPackages from "./pages/porteiro/Packages";
-import PorteiroCondominio from "./pages/porteiro/Condominio";
-import PorteiroPackagesHistory from "./pages/porteiro/PackagesHistory";
-import PortariaOccurrences from "./pages/porteiro/PortariaOccurrences";
-import ShiftHandover from "./pages/porteiro/ShiftHandover";
 import NotFound from "./pages/NotFound";
 
-// Sindico Portaria
-import ShiftChecklistSettings from "./pages/sindico/ShiftChecklistSettings";
-import SindicoPortariaOccurrences from "./pages/sindico/PortariaOccurrences";
-import SindicoPortariaShiftHandovers from "./pages/sindico/PortariaShiftHandovers";
-import SindicoZeladores from "./pages/sindico/Zeladores";
-import SindicoManutencoes from "./pages/sindico/Manutencoes";
-import ManutencoesCategorias from "./pages/sindico/ManutencoesCategorias";
-import ManutencoesHistorico from "./pages/sindico/ManutencoesHistorico";
-
-// Zelador pages
-import ZeladorDashboard from "./pages/zelador/Dashboard";
-import ZeladorManutencoes from "./pages/zelador/Manutencoes";
-import ZeladorSettings from "./pages/zelador/Settings";
+// Lazy-loaded pages
+const Auth = lazy(() => import("./pages/Auth"));
+const Contact = lazy(() => import("./pages/Contact"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const TermsOfUse = lazy(() => import("./pages/TermsOfUse"));
+const CivilCode = lazy(() => import("./pages/CivilCode"));
+const Plans = lazy(() => import("./pages/Plans"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const ResidentDashboard = lazy(() => import("./pages/ResidentDashboard"));
+const ResidentOccurrences = lazy(() => import("./pages/ResidentOccurrences"));
+const ResidentOccurrenceDetails = lazy(() => import("./pages/ResidentOccurrenceDetails"));
+const ResidentProfile = lazy(() => import("./pages/ResidentProfile"));
+const Condominiums = lazy(() => import("./pages/Condominiums"));
+const CondominiumDetails = lazy(() => import("./pages/CondominiumDetails"));
+const Occurrences = lazy(() => import("./pages/Occurrences"));
+const OccurrenceDetails = lazy(() => import("./pages/OccurrenceDetails"));
+const Reports = lazy(() => import("./pages/Reports"));
+const Notifications = lazy(() => import("./pages/Notifications"));
+const DefenseAnalysis = lazy(() => import("./pages/DefenseAnalysis"));
+const SindicoSettings = lazy(() => import("./pages/SindicoSettings"));
+const SindicoInvoices = lazy(() => import("./pages/SindicoInvoices"));
+const SindicoSubscriptions = lazy(() => import("./pages/SindicoSubscriptions"));
+const SindicoPorteiros = lazy(() => import("./pages/sindico/Porteiros"));
+const SindicoBanners = lazy(() => import("./pages/sindico/Banners"));
+const PackagesDashboard = lazy(() => import("./pages/sindico/PackagesDashboard"));
+const SindicoPackages = lazy(() => import("./pages/sindico/Packages"));
+const PackagesHistory = lazy(() => import("./pages/sindico/PackagesHistory"));
+const PackagesCondominiumHistory = lazy(() => import("./pages/sindico/PackagesCondominiumHistory"));
+const PartyHall = lazy(() => import("./pages/PartyHall"));
+const PartyHallSettings = lazy(() => import("./pages/PartyHallSettings"));
+const PartyHallNotifications = lazy(() => import("./pages/PartyHallNotifications"));
+const ResidentAccess = lazy(() => import("./pages/ResidentAccess"));
+const ResidentPackages = lazy(() => import("./pages/resident/Packages"));
+const AuthCallback = lazy(() => import("./pages/AuthCallback"));
+const SuperAdminDashboard = lazy(() => import("./pages/SuperAdminDashboard"));
+const Sindicos = lazy(() => import("./pages/superadmin/Sindicos"));
+const SuperAdminCondominiums = lazy(() => import("./pages/superadmin/Condominiums"));
+const Subscriptions = lazy(() => import("./pages/superadmin/Subscriptions"));
+const SubscriptionDetails = lazy(() => import("./pages/superadmin/SubscriptionDetails"));
+const SuperAdminInvoices = lazy(() => import("./pages/superadmin/Invoices"));
+const Logs = lazy(() => import("./pages/superadmin/Logs"));
+const MagicLinkLogs = lazy(() => import("./pages/superadmin/MagicLinkLogs"));
+const EdgeFunctionLogs = lazy(() => import("./pages/superadmin/EdgeFunctionLogs"));
+const WabaLogs = lazy(() => import("./pages/superadmin/WabaLogs"));
+const BsuidMigration = lazy(() => import("./pages/superadmin/BsuidMigration"));
+const CronJobs = lazy(() => import("./pages/superadmin/CronJobs"));
+const Transfers = lazy(() => import("./pages/superadmin/Transfers"));
+const WhatsApp = lazy(() => import("./pages/superadmin/WhatsApp"));
+const WhatsAppConfig = lazy(() => import("./pages/superadmin/WhatsAppConfig"));
+const SuperAdminSettings = lazy(() => import("./pages/superadmin/Settings"));
+const PorteiroSettings = lazy(() => import("./pages/porteiro/Settings"));
+const ContactMessages = lazy(() => import("./pages/superadmin/ContactMessages"));
+const PackageTypes = lazy(() => import("./pages/superadmin/PackageTypes"));
+const ExportDatabase = lazy(() => import("./pages/superadmin/ExportDatabase"));
+const PorteiroDashboard = lazy(() => import("./pages/porteiro/Dashboard"));
+const RegisterPackage = lazy(() => import("./pages/porteiro/RegisterPackage"));
+const PorteiroPackages = lazy(() => import("./pages/porteiro/Packages"));
+const PorteiroCondominio = lazy(() => import("./pages/porteiro/Condominio"));
+const PorteiroPackagesHistory = lazy(() => import("./pages/porteiro/PackagesHistory"));
+const PortariaOccurrences = lazy(() => import("./pages/porteiro/PortariaOccurrences"));
+const ShiftHandover = lazy(() => import("./pages/porteiro/ShiftHandover"));
+const ShiftChecklistSettings = lazy(() => import("./pages/sindico/ShiftChecklistSettings"));
+const SindicoPortariaOccurrences = lazy(() => import("./pages/sindico/PortariaOccurrences"));
+const SindicoPortariaShiftHandovers = lazy(() => import("./pages/sindico/PortariaShiftHandovers"));
+const SindicoZeladores = lazy(() => import("./pages/sindico/Zeladores"));
+const SindicoManutencoes = lazy(() => import("./pages/sindico/Manutencoes"));
+const ManutencoesCategorias = lazy(() => import("./pages/sindico/ManutencoesCategorias"));
+const ManutencoesHistorico = lazy(() => import("./pages/sindico/ManutencoesHistorico"));
+const ZeladorDashboard = lazy(() => import("./pages/zelador/Dashboard"));
+const ZeladorManutencoes = lazy(() => import("./pages/zelador/Manutencoes"));
+const ZeladorSettings = lazy(() => import("./pages/zelador/Settings"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -110,6 +106,7 @@ const App = () => (
           <BrowserRouter>
             <AuthProvider>
             <UserRoleProvider>
+            <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>}>
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/planos" element={<Plans />} />
@@ -515,14 +512,6 @@ const App = () => (
                 }
               />
               <Route
-                path="/superadmin/condominiums"
-                element={
-                  <ProtectedRoute requiredRole="super_admin">
-                    <SuperAdminCondominiums />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
                 path="/superadmin/subscriptions"
                 element={
                   <ProtectedRoute requiredRole="super_admin">
@@ -654,6 +643,7 @@ const App = () => (
 
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </Suspense>
             </UserRoleProvider>
             </AuthProvider>
           </BrowserRouter>
