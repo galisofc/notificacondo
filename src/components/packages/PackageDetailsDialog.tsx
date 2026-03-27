@@ -101,12 +101,36 @@ export function PackageDetailsDialog({
     if (!package_?.id) return;
     setIsLoadingLogs(true);
     try {
-      const { data } = await supabase
+      // Try with timestamp columns first, fallback without them for VPS compatibility
+      let { data, error } = await supabase
         .from("whatsapp_notification_logs")
         .select("id, created_at, success, error_message, template_name, status, debug_info, accepted_at, sent_at, delivered_at, read_at")
         .eq("package_id", package_.id)
         .order("created_at", { ascending: false });
-      setNotificationLogs((data || []) as NotificationLog[]);
+
+      if (error) {
+        console.warn("Fetching logs without timestamp columns (VPS fallback):", error.message);
+        const fallback = await supabase
+          .from("whatsapp_notification_logs")
+          .select("id, created_at, success, error_message, template_name, status, debug_info")
+          .eq("package_id", package_.id)
+          .order("created_at", { ascending: false });
+        data = fallback.data;
+      }
+
+      setNotificationLogs((data || []).map((d: any) => ({
+        id: d.id,
+        created_at: d.created_at,
+        success: d.success,
+        error_message: d.error_message,
+        template_name: d.template_name,
+        status: d.status,
+        debug_info: d.debug_info,
+        accepted_at: d.accepted_at ?? null,
+        sent_at: d.sent_at ?? null,
+        delivered_at: d.delivered_at ?? null,
+        read_at: d.read_at ?? null,
+      })));
     } catch (err) {
       console.error("Error fetching notification logs:", err);
     } finally {
