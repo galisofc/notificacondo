@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState, useRef, useCallback } from "react";
+import React, { ReactNode, useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -652,11 +652,11 @@ function SidebarNavigation() {
                   const groupBadgeCount = item.items.reduce((acc, child) => acc + (child.badge || 0), 0);
                   
                   return (
-                    <Collapsible key={item.title} defaultOpen={hasActiveChild} className="group/collapsible">
-                      <SidebarMenuItem>
-                        <CollapsibleTrigger asChild>
+                    <React.Fragment key={item.title}>
+                      {collapsed ? (
+                        <SidebarMenuItem className="relative group/hover-menu">
                           <SidebarMenuButton
-                            tooltip={collapsed ? item.title : undefined}
+                            tooltip={item.title}
                             className={cn(
                               "w-full h-11 rounded-full transition-all duration-300 ease-out",
                               hasActiveChild
@@ -664,13 +664,53 @@ function SidebarNavigation() {
                                 : "text-muted-foreground hover:text-foreground hover:bg-secondary hover:scale-[1.01]"
                             )}
                           >
-                            <div className={cn(
-                              "flex w-full items-center py-2.5",
-                              collapsed ? "justify-center px-0 gap-0" : "gap-3 px-3"
-                            )}>
-                              <item.icon className={cn("w-5 h-5 shrink-0", collapsed && "mx-auto")} />
-                              {!collapsed && (
-                                <>
+                            <div className="flex w-full items-center py-2.5 justify-center px-0 gap-0">
+                              <item.icon className="w-5 h-5 shrink-0 mx-auto" />
+                            </div>
+                          </SidebarMenuButton>
+                          <div className="invisible opacity-0 group-hover/hover-menu:visible group-hover/hover-menu:opacity-100 transition-all duration-200 absolute left-full top-0 ml-2 z-50 min-w-48 rounded-lg border bg-popover p-2 shadow-lg">
+                            <p className="px-3 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{item.title}</p>
+                            {item.items.map((subItem) => {
+                              const isSubActive = location.pathname === subItem.url;
+                              return (
+                                <NavLink
+                                  key={subItem.title}
+                                  to={subItem.url}
+                                  className={cn(
+                                    "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                                    isSubActive
+                                      ? "bg-primary text-primary-foreground"
+                                      : "text-popover-foreground hover:bg-accent"
+                                  )}
+                                  activeClassName=""
+                                  onClick={() => isMobile && setOpenMobile(false)}
+                                >
+                                  <subItem.icon className="w-4 h-4 shrink-0" />
+                                  <span className="font-medium">{subItem.title}</span>
+                                  {subItem.badge !== undefined && subItem.badge > 0 && (
+                                    <span className="flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-xs font-bold ml-auto">
+                                      {subItem.badge > 99 ? "99+" : subItem.badge}
+                                    </span>
+                                  )}
+                                </NavLink>
+                              );
+                            })}
+                          </div>
+                        </SidebarMenuItem>
+                      ) : (
+                        <Collapsible defaultOpen={hasActiveChild} className="group/collapsible">
+                          <SidebarMenuItem>
+                            <CollapsibleTrigger asChild>
+                              <SidebarMenuButton
+                                className={cn(
+                                  "w-full h-11 rounded-full transition-all duration-300 ease-out",
+                                  hasActiveChild
+                                    ? "bg-primary/10 text-primary"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-secondary hover:scale-[1.01]"
+                                )}
+                              >
+                                <div className="flex w-full items-center py-2.5 gap-3 px-3">
+                                  <item.icon className="w-5 h-5 shrink-0" />
                                   <span className="font-medium flex-1 text-sm">{item.title}</span>
                                   {groupBadgeCount > 0 && (
                                     <span className="flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-xs font-bold mr-1">
@@ -678,49 +718,49 @@ function SidebarNavigation() {
                                     </span>
                                   )}
                                   <ChevronDown className="w-4 h-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
-                                </>
-                              )}
-                            </div>
-                          </SidebarMenuButton>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent className={cn("mt-1 space-y-1", collapsed && "hidden")}>
-                          {item.items.map((subItem) => {
-                            const isSubActive = location.pathname === subItem.url;
-                            return (
-                              <SidebarMenuButton
-                                key={subItem.title}
-                                asChild
-                                isActive={isSubActive}
-                                className={cn(
-                                  "w-full h-10 rounded-full transition-all duration-300 ease-out ml-4",
-                                  isSubActive
-                                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
-                                    : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-                                )}
-                              >
-                                <NavLink
-                                  to={subItem.url}
-                                  className="flex w-full items-center gap-3 px-3 py-2"
-                                  activeClassName=""
-                                  onClick={() => isMobile && setOpenMobile(false)}
-                                >
-                                  <subItem.icon className="w-4 h-4 shrink-0" />
-                                  <span className="font-medium flex-1 text-sm">{subItem.title}</span>
-                                  {subItem.badge !== undefined && subItem.badge > 0 && (
-                                    <span className="flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-xs font-bold">
-                                      {subItem.badge > 99 ? "99+" : subItem.badge}
-                                    </span>
-                                  )}
-                                  {isSubActive && (
-                                    <ChevronRight className="w-4 h-4 text-sidebar-primary" />
-                                  )}
-                                </NavLink>
+                                </div>
                               </SidebarMenuButton>
-                            );
-                          })}
-                        </CollapsibleContent>
-                      </SidebarMenuItem>
-                    </Collapsible>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent className="mt-1 space-y-1">
+                              {item.items.map((subItem) => {
+                                const isSubActive = location.pathname === subItem.url;
+                                return (
+                                  <SidebarMenuButton
+                                    key={subItem.title}
+                                    asChild
+                                    isActive={isSubActive}
+                                    className={cn(
+                                      "w-full h-10 rounded-full transition-all duration-300 ease-out ml-4",
+                                      isSubActive
+                                        ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                                    )}
+                                  >
+                                    <NavLink
+                                      to={subItem.url}
+                                      className="flex w-full items-center gap-3 px-3 py-2"
+                                      activeClassName=""
+                                      onClick={() => isMobile && setOpenMobile(false)}
+                                    >
+                                      <subItem.icon className="w-4 h-4 shrink-0" />
+                                      <span className="font-medium flex-1 text-sm">{subItem.title}</span>
+                                      {subItem.badge !== undefined && subItem.badge > 0 && (
+                                        <span className="flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-xs font-bold">
+                                          {subItem.badge > 99 ? "99+" : subItem.badge}
+                                        </span>
+                                      )}
+                                      {isSubActive && (
+                                        <ChevronRight className="w-4 h-4 text-sidebar-primary" />
+                                      )}
+                                    </NavLink>
+                                  </SidebarMenuButton>
+                                );
+                              })}
+                            </CollapsibleContent>
+                          </SidebarMenuItem>
+                        </Collapsible>
+                      )}
+                    </React.Fragment>
                   );
                 }
                 
