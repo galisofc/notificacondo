@@ -123,7 +123,7 @@ export function PackageCard({
                     {formattedDate}
                   </p>
                   {notificationStatus && (
-                    <DeliveryStatusTracker status={notificationStatus} className="mt-1" />
+                    <DeliveryStatusTracker status={notificationStatus} timestamps={notificationTimestamps} className="mt-1" />
                   )}
                 </div>
               </div>
@@ -218,7 +218,7 @@ export function PackageCard({
                 <span>{formattedDate}</span>
               </div>
               {notificationStatus && (
-                <DeliveryStatusTracker status={notificationStatus} className="mt-1" />
+                <DeliveryStatusTracker status={notificationStatus} timestamps={notificationTimestamps} className="mt-1" />
               )}
             </div>
 
