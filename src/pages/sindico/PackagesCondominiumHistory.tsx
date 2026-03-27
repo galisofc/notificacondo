@@ -188,7 +188,7 @@ const PackagesCondominiumHistory = () => {
         query = query.lte("received_at", `${dateTo}T23:59:59`);
       }
 
-      const { data, error } = await query;
+      const { data, error } = await query.range(0, 9999);
       if (error) throw error;
 
       // Fetch profiles for received_by and picked_up_by
@@ -243,9 +243,90 @@ const PackagesCondominiumHistory = () => {
         query = query.lte("received_at", `${dateTo}T23:59:59`);
       }
 
-      const { data, error } = await query;
+      const { data, error } = await query.range(0, 9999);
       if (error) throw error;
       return data || [];
+    },
+    enabled: !!selectedCondominium,
+  });
+
+  // Count queries for accurate stats (not limited by row cap)
+  const { data: totalCount = 0 } = useQuery({
+    queryKey: ["packages-count-total", selectedCondominium, selectedBlock, statusFilter, dateFrom, dateTo],
+    queryFn: async () => {
+      let query = supabase
+        .from("packages")
+        .select("*", { count: "exact", head: true })
+        .eq("condominium_id", selectedCondominium);
+
+      if (selectedBlock !== "all") {
+        query = query.eq("block_id", selectedBlock);
+      }
+      if (statusFilter !== "all") {
+        query = query.eq("status", statusFilter as "pendente" | "retirada");
+      }
+      if (dateFrom) {
+        query = query.gte("received_at", dateFrom);
+      }
+      if (dateTo) {
+        query = query.lte("received_at", `${dateTo}T23:59:59`);
+      }
+
+      const { count, error } = await query;
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!selectedCondominium,
+  });
+
+  const { data: pendenteCount = 0 } = useQuery({
+    queryKey: ["packages-count-pendente", selectedCondominium, selectedBlock, dateFrom, dateTo],
+    queryFn: async () => {
+      let query = supabase
+        .from("packages")
+        .select("*", { count: "exact", head: true })
+        .eq("condominium_id", selectedCondominium)
+        .eq("status", "pendente");
+
+      if (selectedBlock !== "all") {
+        query = query.eq("block_id", selectedBlock);
+      }
+      if (dateFrom) {
+        query = query.gte("received_at", dateFrom);
+      }
+      if (dateTo) {
+        query = query.lte("received_at", `${dateTo}T23:59:59`);
+      }
+
+      const { count, error } = await query;
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!selectedCondominium,
+  });
+
+  const { data: retiradaCount = 0 } = useQuery({
+    queryKey: ["packages-count-retirada", selectedCondominium, selectedBlock, dateFrom, dateTo],
+    queryFn: async () => {
+      let query = supabase
+        .from("packages")
+        .select("*", { count: "exact", head: true })
+        .eq("condominium_id", selectedCondominium)
+        .eq("status", "retirada");
+
+      if (selectedBlock !== "all") {
+        query = query.eq("block_id", selectedBlock);
+      }
+      if (dateFrom) {
+        query = query.gte("received_at", dateFrom);
+      }
+      if (dateTo) {
+        query = query.lte("received_at", `${dateTo}T23:59:59`);
+      }
+
+      const { count, error } = await query;
+      if (error) throw error;
+      return count || 0;
     },
     enabled: !!selectedCondominium,
   });
@@ -262,7 +343,8 @@ const PackagesCondominiumHistory = () => {
           apartment:apartments(id, number)
         `)
         .eq("condominium_id", selectedCondominium)
-        .eq("status", "pendente");
+        .eq("status", "pendente")
+        .range(0, 9999);
 
       if (error) throw error;
       return data || [];
