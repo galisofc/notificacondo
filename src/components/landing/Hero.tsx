@@ -32,7 +32,7 @@ const Hero = () => {
           </div>
 
           {/* Main Headline */}
-          <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight animate-fade-up" style={{ animationDelay: '0.1s' }}>
+          <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
             Seu condomínio{" "}
             <span className="text-gradient">100% organizado</span>
           </h1>
